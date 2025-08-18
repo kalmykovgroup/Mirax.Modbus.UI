@@ -1,0 +1,36 @@
+/* HandelTarget.module.css */
+.targetsHidden {
+    opacity: 0;
+    pointer-events: none;  /* не ловим мышь, но остаёмся в DOM */
+    transition: opacity 120ms ease;
+}
+
+.targetsVisible {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 120ms ease;
+}
+
+
+
+/* HandelSourse.module.css */
+.sourcesHidden {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+}
+
+.sourcesVisible {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 120ms ease;
+}
+
+.sourceConnectable{
+    background: Green;
+    box-shadow: 0 0 10px 2px #40ff00;
+}
+.targetConnectable{
+    background: Green;
+    box-shadow: 0 0 10px 2px #40ff00;
+}

@@ -1,0 +1,54 @@
+.container{
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.form{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.email, .password{
+    padding: 10px;
+    height: 50px;
+    width: 250px;
+}
+
+button {
+    border-radius: 8px;
+    border: 1px solid transparent;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.25s;
+}
+
+button[data-theme="dark"]{
+
+    background-color: rgba(255, 255, 255, 0.87);
+    color: #1a1a1a;
+}
+
+button[data-theme="light"]{
+
+    background-color: #1a1a1a;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+button:hover {
+    border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+}
+

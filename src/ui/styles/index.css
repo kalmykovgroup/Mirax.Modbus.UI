@@ -1,0 +1,64 @@
+:root {
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+
+    position: relative;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+}
+
+/* Скрыть стрелки (WebKit/Chromium) */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Скрыть стрелки (Firefox) */
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* Темы отдельно */
+[data-theme="dark"] {
+    --color-bg: #242424;
+    --color-text: rgba(255, 255, 255, 0.87);
+}
+[data-theme="light"] {
+    --color-bg: rgba(255, 255, 255, 0.87);
+    --color-text: #242424;
+}
+
+
+body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}
+a {
+    font-weight: 500;
+    text-decoration: inherit;
+}
+
+html, body, #root {
+    width: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    place-items: center;
+    min-width: 320px;
+    min-height: 100vh;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+
+

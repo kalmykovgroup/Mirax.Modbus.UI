@@ -1,0 +1,17 @@
+﻿.rootContainer{
+    width: 100%;
+    height: 100%;
+    display: grid;
+    min-height: 100vh;
+    position: relative;
+    grid-template-rows:auto 1fr;
+}
+
+.systemHeader{
+    display: flex;
+    height: 50px;
+    width: 100%;
+    border: 1px solid #5e5e5e;
+    gap: 10px;
+}
+

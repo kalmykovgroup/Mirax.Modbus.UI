@@ -1,0 +1,11 @@
+
+.handlerSource{
+    width: 10px;
+    height: 10px;
+    border-radius: 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    border: none;
+    background-image: url("@app/scenario-designer/images/plus.svg");
+}

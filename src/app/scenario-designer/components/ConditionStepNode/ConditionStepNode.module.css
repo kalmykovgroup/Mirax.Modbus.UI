@@ -1,0 +1,15 @@
+.container{
+    position: relative;
+    box-sizing: border-box;
+    background-clip: content-box; /* фон остаётся у исходного размера */
+    border: 1px solid #00ff9d;
+    background: transparent;
+    border-radius: 5px ;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+}
+
+

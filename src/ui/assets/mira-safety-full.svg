@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 72" role="img" aria-label="MIRA SAFETY">
+    <!-- Цвета бренда -->
+    <defs>
+        <style>
+            .blue { fill:#247ABE; }
+            .orange { fill:#F18C16; }
+        </style>
+    </defs>
+
+    <!-- WORDMARK (MIRA + SAFETY) -->
+    <g class="blue">
+        <text x="0" y="53"
+              style="font-family: Montserrat, Inter, Arial, sans-serif;
+                 font-weight: 800; font-size: 34px; letter-spacing: .5px">
+            MIRA
+        </text>
+    </g>
+
+    <g class="orange">
+        <text x="3" y="71"
+              style="font-family: Montserrat, Inter, Arial, sans-serif;
+                 font-weight: 800; font-size: 12px; letter-spacing: 2px">
+            SAFETY
+        </text>
+    </g>
+
+    <!-- X (из твоего корректного файла), масштабирован и сдвинут вправо -->
+    <!-- Позиция/масштаб: translate(104,6) scale(.80) — можно подстроить при необходимости -->
+    <g transform="translate(93,6) scale(1.20)">
+        <g transform="translate(0,58) scale(0.1,-0.1)" class="blue" stroke="none">
+            <path d="M26 578 c39 -67 40 -68 130 -68 46 0 84 2 84 5 0 3 -10 21 -23 40 l-22 35 -88 0 c-68 0 -87 -3 -81 -12z"/>
+            <path d="M343 525 c-24 -36 -43 -72 -43 -80 0 -12 -16 -15 -85 -15 -47 0 -85 -2 -85 -4 0 -3 9 -21 21 -40 l21 -36 87 0 c65 0 88 3 88 13 0 7 32 61 72 120 48 72 66 107 56 107 -9 0 -45 -45 -82 -102 -59 -89 -68 -99 -76 -81 -7 17 1 35 42 96 55 82 57 87 39 87 -7 0 -32 -30 -55 -65z"/>
+            <path d="M452 464 c-50 -76 -80 -130 -75 -135 6 -6 44 43 96 121 48 71 87 132 87 135 0 3 -6 5 -12 5 -7 0 -50 -57 -96 -126z"/>
+            <path d="M376 291 c-8 -13 155 -260 172 -261 6 0 12 2 12 5 0 6 -157 244 -170 258 -4 5 -11 4 -14 -2z"/>
+            <path d="M151 236 c-12 -18 -21 -36 -21 -40 0 -3 38 -6 85 -6 69 0 85 -3 85 -15 0 -22 83 -145 98 -145 18 0 16 5 -39 87 -42 62 -49 79 -42 96 9 19 17 11 78 -81 37 -56 74 -102 81 -102 10 0 9 7 -4 28 -10 15 -42 65 -72 112 -30 47 -54 88 -52 92 1 5 -38 8 -87 8 l-89 0 -21 -34z"/>
+            <path d="M43 75 c-13 -19 -23 -37 -23 -40 0 -3 39 -5 88 -5 l87 0 23 35 c12 19 22 37 22 40 0 3 -39 5 -87 5 l-88 0 -22 -35z"/>
+        </g>
+    </g>
+</svg>
