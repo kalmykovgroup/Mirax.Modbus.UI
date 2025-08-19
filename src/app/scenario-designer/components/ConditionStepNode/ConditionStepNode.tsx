@@ -1,23 +1,26 @@
-import {Handle, type Node, type NodeProps, Position} from "@xyflow/react";
-import type {ConnectFrom} from "@app/scenario-designer/ScenarioEditorPage.tsx";
+import {Handle, type NodeProps, Position} from "@xyflow/react";
+
 import styles from "./ConditionStepNode.module.css";
+import type {FlowNode} from "@app/scenario-designer/types/FlowNode.ts";
+import {formatWithMode} from "@app/lib/utils/format.ts";
 
-export type ConditionStepProps = Node<{
-    isConnecting?: boolean
-    connectFrom: ConnectFrom
-}, 'ConditionStepProps'>;
 
-export function ConditionStepNode(props: NodeProps<ConditionStepProps>) {
+export function ConditionStepNode({ data, selected}: NodeProps<FlowNode>) {
 
-    const connectFrom = props.data?.connectFrom as 'source' | 'target' | null;
+    const connectFrom = data?.connectFrom as 'source' | 'target' | null;
 
     return (
-        <div className={styles.container} >
+        <div className={styles.container} aria-selected={selected}>
+            <span className={styles.coordinates}>
+                <span>x:{formatWithMode(data.x, 2, true)}</span>
+                <span>y:{formatWithMode(data.y, 2, true)}</span>
+            </span>
 
-            <span>Condition</span>
+            <span className={styles.name}>Условие</span>
+            <span className={styles.text}><span className={styles.textIf}>If</span>(value</span>
 
             <Handle
-                className={`${styles.targer} ${connectFrom === 'source' ? "targetConnectable" : null}`}
+                className={`${styles.target}`} aria-selected={connectFrom === 'source'}
                 key="t1"
                 id="t1"
                 type="target"
@@ -26,9 +29,25 @@ export function ConditionStepNode(props: NodeProps<ConditionStepProps>) {
 
 
             <Handle
-                className={`${styles.source} ${connectFrom === 'target' ? "sourceConnectable" : null}`}
+                className={`${styles.source} ${styles.sourceTop}`} aria-selected={connectFrom === 'target'}
                 key="s1"
                 id="s1"
+                type="source"
+                position={Position.Right}
+            />
+
+            <Handle
+                className={`${styles.source}`} aria-selected={connectFrom === 'target'}
+                key="s2"
+                id="s2"
+                type="source"
+                position={Position.Right}
+            />
+
+            <Handle
+                className={`${styles.source} ${styles.sourceBottom}`} aria-selected={connectFrom === 'target'}
+                key="s3"
+                id="s3"
                 type="source"
                 position={Position.Right}
             />

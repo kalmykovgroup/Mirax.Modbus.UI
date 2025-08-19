@@ -1,0 +1,1 @@
+export type ConnectFrom = 'source' | 'target' | null;

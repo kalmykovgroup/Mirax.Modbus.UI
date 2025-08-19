@@ -1,23 +1,25 @@
 import styles from "./ParallelStepNode.module.css";
-import {type NodeProps, type Node, Handle, Position} from "@xyflow/react";
-import type {ConnectFrom} from "@app/scenario-designer/ScenarioEditorPage.tsx";
+import {type NodeProps,  Handle, Position} from "@xyflow/react";
 
-export type ParallelStepNodeProps = Node<{
-    isConnecting?: boolean
-    connectFrom: ConnectFrom
-}, 'ParallelStepNodeProps'>;
+import {type FlowNode} from '@app/scenario-designer/types/FlowNode.ts'
+import {formatWithMode} from "@app/lib/utils/format.ts";
 
-export function ParallelStepNode(props: NodeProps<ParallelStepNodeProps>) {
+export function ParallelStepNode({ data, selected}: NodeProps<FlowNode>) {
 
-    const connectFrom = props.data?.connectFrom as 'source' | 'target' | null;
+    const connectFrom = data?.connectFrom as 'source' | 'target' | null;
 
     return (
-        <div className={styles.container} >
+        <div className={`${styles.container}`} aria-selected={selected} >
+            <span className={styles.coordinates}>
+                <span>x:{formatWithMode(data.x, 2, true)}</span>
+                <span>y:{formatWithMode(data.y, 2, true)}</span>
+            </span>
 
-            <span>Parallel Step</span>
+            <span className={styles.name}>Параллельный</span>
+
 
             <Handle
-                className={`${styles.targer} ${connectFrom === 'source' ? "targetConnectable" : null}`}
+                className={`${styles.target}`} aria-selected={connectFrom === 'source'}
                 key="t1"
                 id="t1"
                 type="target"
@@ -25,9 +27,24 @@ export function ParallelStepNode(props: NodeProps<ParallelStepNodeProps>) {
             />
 
             <Handle
-                className={`${styles.source} ${connectFrom === 'target' ? "sourceConnectable" : null}`}
+                className={`${styles.source} ${styles.sourceTop}`} aria-selected={connectFrom === 'target'}
                 key="s1"
                 id="s1"
+                type="source"
+                position={Position.Right}
+            />
+
+            <Handle
+                className={`${styles.source}`} aria-selected={connectFrom === 'target'}
+                key="s2"
+                id="s2"
+                type="source"
+                position={Position.Right}
+            />
+            <Handle
+                className={`${styles.source} ${styles.sourceBottom}`} aria-selected={connectFrom === 'target'}
+                key="s3"
+                id="s3"
                 type="source"
                 position={Position.Right}
             />

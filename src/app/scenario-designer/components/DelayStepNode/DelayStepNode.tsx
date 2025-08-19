@@ -1,27 +1,30 @@
-import {Handle, type Node, type NodeProps, Position} from "@xyflow/react";
-import type {ConnectFrom} from "@app/scenario-designer/ScenarioEditorPage.tsx";
+import {Handle, type NodeProps, Position} from "@xyflow/react";
 import styles from "./DelayStepNode.module.css";
+import {type FlowNode} from "@app/scenario-designer/types/FlowNode.ts";
+import {formatWithMode} from "@app/lib/utils/format.ts";
+import {FlowType} from "@app/scenario-designer/types/FlowType.ts";
 
-export type DelayNodeProps = Node<{
-    isConnecting?: boolean
-    connectFrom: ConnectFrom,
+export function DelayStepNode({ data, selected}: NodeProps<FlowNode>) {
 
-}, 'DelayNodeProps'>;
+    const connectFrom = data?.connectFrom as 'source' | 'target' | null;
 
-export function DelayStepNode(props: NodeProps<DelayNodeProps>) {
-
-    const connectFrom = props.data?.connectFrom as 'source' | 'target' | null;
+    const validateTarget = data.connectFromType != FlowType.branchNode
 
     return (
-        <div className={styles.container} >
+        <div className={styles.container} aria-selected={selected}>
+            <span className={styles.coordinates}>
+                <span>x:{formatWithMode(data.x, 2, true)}</span>
+                <span>y:{formatWithMode(data.y, 2, true)}</span>
+            </span>
 
-            <span>Delay Step</span>
+            <span className={styles.name}>Delay</span>
+
             <div className={styles.inputContainer}>
                 <input type="number"/><span>ms.</span>
             </div>
 
             <Handle
-                className={`${styles.targer} ${connectFrom === 'source' ? "targetConnectable" : null}`}
+                className={`${styles.target}`} aria-selected={connectFrom === 'source'}
                 key="t1"
                 id="t1"
                 type="target"
@@ -30,7 +33,7 @@ export function DelayStepNode(props: NodeProps<DelayNodeProps>) {
 
 
             <Handle
-                className={`${styles.source} ${connectFrom === 'target' ? "sourceConnectable" : null}`}
+                className={`${styles.source}`}  aria-selected={connectFrom === 'target' && validateTarget}
                 key="s1"
                 id="s1"
                 type="source"

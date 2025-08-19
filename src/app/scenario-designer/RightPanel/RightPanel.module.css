@@ -1,5 +1,62 @@
+@import '@ui/styles/colors.css';
+
 .container{
-    width: 200px;
     height: 500px;
-    border: 1px solid red;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 5px;
 }
+
+.btn{
+    width: 70px;
+    height: 70px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    text-align: center;
+}
+
+.btn:hover{
+    box-shadow: 0 0 10px 2px #40ff00;
+}
+
+.activityModbusBtnAdd{
+    border: 1px solid var(--color-activity-modbus);
+}
+
+.activitySystemBtnAdd{
+    border: 1px solid var(--color-activity-system);
+}
+
+.branchBtnAdd{
+    border: 1px solid var(--color-branch);
+}
+
+.conditionBtnAdd{
+    border: 1px solid var(--color-condition);
+}
+
+.jumpBtnAdd{
+    border: 1px solid var(--color-jump);
+}
+
+.parallelBtnAdd{
+    border: 1px solid var(--color-parallel);
+}
+
+.delayBtnAdd{
+    border: 1px solid var(--color-delay);
+}
+
+.signalBtnAdd{
+    border: 1px solid var(--color-signal);
+}
+
+
+
+

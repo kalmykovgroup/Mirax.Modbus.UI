@@ -1,8 +1,10 @@
+@import '@ui/styles/scenario/commonToNode.css';
+
 .container{
     position: relative;
     box-sizing: border-box;
     background-clip: content-box; /* фон остаётся у исходного размера */
-    border: 1px solid #ffb700;
+    border: 1px solid var(--color-delay);
     background: transparent;
     border-radius: 5px ;
     display: flex;
@@ -11,6 +13,28 @@
     align-items: center;
     padding: 5px;
 }
+
+.source[aria-selected="true"]{
+    background: var(--source-active-styles-bkg);
+    box-shadow: var(--source-active-styles-box-shadow);
+}
+.target[aria-selected="true"]{
+    background: var(--target-active-styles-bkg);
+    box-shadow: var(--target-active-styles-box-shadow);
+}
+
+.container[aria-selected="true"] {
+    box-shadow: 0 0 7px var(--color-delay);
+}
+
+.name{
+    position: absolute;
+    top: -13px;
+    left: 5px;
+    font-size: 10px;
+    color: var(--color-delay);
+}
+
 
 .inputContainer{
     display: flex;
@@ -23,6 +47,12 @@
     height: 20px;
     background: rgba(255, 255, 255, 0.21);
     font-variant-numeric: tabular-nums;
+    text-decoration: none;
+    background: #3e3e3e;
 }
+
+
+
+
 
 

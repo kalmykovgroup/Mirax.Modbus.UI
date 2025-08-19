@@ -39,7 +39,7 @@ export interface UpdateDelayStepRequest extends UpdateStepBase {
     timeSpan?: string | null;
 }
 
-/** Signal */
+/** SignalNode */
 export interface UpdateSignalStepRequest extends UpdateStepBase {
     kind: StepType.Signal;
     awaitSignalStepType?: AwaitSignalStepType | null;

@@ -39,7 +39,7 @@ export interface CreateDelayStepRequest extends CreateStepBase {
     timeSpan?: string | null;
 }
 
-/** Signal */
+/** SignalNode */
 export interface CreateSignalStepRequest extends CreateStepBase {
     type: StepType.Signal;
     awaitSignalStepType?: AwaitSignalStepType | null;

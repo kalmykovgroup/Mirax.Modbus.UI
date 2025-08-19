@@ -1,11 +1,15 @@
 import {defineConfig} from 'vite'
 import react from '@vitejs/plugin-react'
+
 import MakeCert from 'vite-plugin-mkcert';
 import path from 'path';
 
 // @ts-ignore
 export default defineConfig({
-    plugins: [react(), MakeCert()],
+    plugins: [
+        react(),
+        MakeCert()
+    ],
 
     server: {
         port: 5173,

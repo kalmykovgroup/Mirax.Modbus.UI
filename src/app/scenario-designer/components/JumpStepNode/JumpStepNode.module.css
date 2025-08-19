@@ -1,8 +1,10 @@
+@import '@ui/styles/scenario/commonToNode.css';
+
 .container{
     position: relative;
     box-sizing: border-box;
     background-clip: content-box; /* фон остаётся у исходного размера */
-    border: 1px solid red;
+    border: 1px solid var(--color-jump);
     background: transparent;
     border-radius: 5px ;
     display: flex;
@@ -10,6 +12,25 @@
     justify-content: center;
     align-items: center;
     padding: 5px;
+    min-width: 60px;
+    min-height: 21px;
+}
+
+.source[aria-selected="true"]{
+    background: var(--source-active-styles-bkg);
+    box-shadow: var(--source-active-styles-box-shadow);
+}
+.target[aria-selected="true"]{
+    background: var(--target-active-styles-bkg);
+    box-shadow: var(--target-active-styles-box-shadow);
+}
+
+.name{
+    position: absolute;
+    top: -13px;
+    left: 5px;
+    font-size: 10px;
+    color: var(--color-jump);
 }
 
 .hoverArea {
@@ -21,11 +42,23 @@
     background: rgba(255, 255, 255, 0.03); /* невидимый */
 }
 
-
-
-
-.source{
-
+.container[aria-selected="true"] {
+    box-shadow: 0 0 7px var(--color-jump);
 }
 
+
+.connectTop{
+top: 5px;
+}
+.connectLeftBottom{
+    top: auto;
+    bottom: 5px;
+    transform: translate(50%, 50%);
+}
+
+.connectRightBottom{
+    top: auto;
+    bottom: 5px;
+    transform: translate(-50%, 50%);
+}
 
