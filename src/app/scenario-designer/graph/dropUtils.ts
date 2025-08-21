@@ -1,6 +1,6 @@
 // src/app/scenario-designer/graph/dnd/dropUtils.ts
-import type { ReactFlowInstance } from '@xyflow/react';
-import type { FlowNode } from '@app/scenario-designer/types/FlowNode.ts';
+import type {ReactFlowInstance} from '@xyflow/react';
+import type {FlowNode} from '@app/scenario-designer/types/FlowNode.ts';
 import {FlowType} from "@app/scenario-designer/types/FlowType.ts";
 
 // ——— базовые helpers ———
@@ -16,7 +16,24 @@ export const absOf = (n: FlowNode, all: FlowNode[]) => {
 
 export const rectOf = (n: FlowNode, all: FlowNode[]) => {
     const { x, y } = absOf(n, all);
-    return { x, y, w: n.width ?? 0, h: n.height ?? 0 };
+
+    // 1) сначала измеренные размеры RF
+    let w = n.width ?? 0;
+    let h = n.height ?? 0;
+
+    // 2) если RF ещё не измерил — пробуем style.width/height (мы задаём их при создании ветки)
+    const styleW = typeof (n.style as any)?.width === 'number' ? (n.style as any).width as number : undefined;
+    const styleH = typeof (n.style as any)?.height === 'number' ? (n.style as any).height as number : undefined;
+    if (!w && styleW) w = styleW;
+    if (!h && styleH) h = styleH;
+
+    // 3) крайний случай: новая branch может быть ещё «пустая» — даём разумный дефолт
+    if ((!w || !h) && n.type === FlowType.branchNode) {
+        w = w || 300;
+        h = h || 100;
+    }
+
+    return { x, y, w, h };
 };
 
 const depthOf = (n: FlowNode, all: FlowNode[]) => {
@@ -77,11 +94,20 @@ export const commitDropToBranch = (
                 : n
         );
 
+        // гарантируем, что parent стоит перед child
+        const parentIdx = next.findIndex(n => n.id === target.id);
+        const childIdx  = next.findIndex(n => n.id === nodeId);
+        if (parentIdx !== -1 && childIdx !== -1 && childIdx < parentIdx) {
+            const [child] = next.splice(childIdx, 1);
+            const newParentIdx = next.findIndex(n => n.id === target.id);
+            next.splice(newParentIdx + 1, 0, child);
+        }
+
         if (!growBranch) return next;
 
         // 2) если размеры известны — гарантируем вместимость ветки
-        const currentAll = next; // после мапы у нас актуальные данные
-        const child = currentAll.find(n => n.id === nodeId);
+         // после мапы у нас актуальные данные
+        const child = next.find(n => n.id === nodeId);
         const childW = child?.width ?? 0;
         const childH = child?.height ?? 0;
 

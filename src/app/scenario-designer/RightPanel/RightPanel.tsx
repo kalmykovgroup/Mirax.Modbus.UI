@@ -1,7 +1,7 @@
 import styles from "./RightPanel.module.css";
 import { type FlowNode } from "@app/scenario-designer/types/FlowNode.ts";
 import React, {useRef} from "react";
-import { useReactFlow } from "@xyflow/react";
+import {useReactFlow} from "@xyflow/react";
 import {
     commitDropToBranch,
     getAll,
@@ -10,7 +10,27 @@ import {
 } from "@app/scenario-designer/graph/dropUtils.ts";
 import {FlowType} from "@app/scenario-designer/types/FlowType.ts";
 import type {StepNodeData} from "@app/scenario-designer/types/StepNodeData.ts";
+import {
+    ConditionStepDto,
+    DelayStepDto, JumpStepDto,
+    ModbusActivityStepDto, ParallelStepDto, SignalStepDto,
+    SystemActivityStepDto
+} from "@shared/contracts/Dtos/ScenarioDtos/Steps/StepBaseDto.ts";
 
+
+export function createByFlowType(type: FlowType, p: any) {
+    switch (type) {
+        case FlowType.activityModbusNode:  return ModbusActivityStepDto.create(p);
+        case FlowType.activitySystemNode:  return SystemActivityStepDto.create(p);
+        case FlowType.delayStepNode:       return DelayStepDto.create(p);
+        case FlowType.signalNode:          return SignalStepDto.create(p);
+        case FlowType.jumpStepNode:        return JumpStepDto.create(p);
+        case FlowType.parallelStepNode:    return ParallelStepDto.create(p);
+        case FlowType.conditionStepNode:   return ConditionStepDto.create(p);
+        default:
+            throw new Error(`FlowType ${type} не является шагом (или не поддержан)`);
+    }
+}
 
 export const RightPanel = () => {
     const rf = useReactFlow<FlowNode>();
@@ -52,9 +72,12 @@ export const RightPanel = () => {
                             : n
                     );
                 }
+                const object = createByFlowType(type, {
+
+                })
 
                 const data: StepNodeData<object> = {
-                    object: {},            // ← положишь сюда свой объект нужного типа
+                    object: object,            // ← положишь сюда свой объект нужного типа
                     connectFrom: null,     // не тянем соединение при спавне из панели
                     isConnecting: false,
                     x: pos.x,
@@ -68,6 +91,9 @@ export const RightPanel = () => {
                     data,                  // StepNodeData<object>
                     draggable: true,
                     selectable: true,
+                    ...(type === FlowType.branchNode
+                        ? { style: { width: 300, height: 100 } }
+                        : {}),
                 };
 
                 return nds.concat(newNode);
