@@ -1,7 +1,7 @@
 // @ts-ignore
 export enum StepType {
-    ActivitySystem = 'ActivitySystem',
-    ActivityModbus = 'ActivityModbus',
+    SystemActivity = 'SystemActivity',
+    ModbusActivity = 'ModbusActivity',
     Delay = 'Delay',
     Condition = 'Condition',
     Parallel = 'Parallel',

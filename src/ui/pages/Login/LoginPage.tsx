@@ -3,12 +3,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import styles from './LoginPage.module.css'
 import {nameof} from "@app/lib/utils/nameof.ts";
-import {useTheme} from "@app/providers/theme/useTheme.ts";
 import {useSelector} from "react-redux";
 import {useAppDispatch} from "@/store/hooks.ts";
 import {useNavigate} from "react-router-dom";
 import {ROUTES} from "@app/constants/routes.ts";
-import {useEffect, useState} from "react";
+import {useEffect} from "react";
 import {useLoginMutation} from "@shared/api/authApi.ts";
 import type {LoginResponse} from "@shared/contracts/Dtos/UserDtos/Users/Login/LoginResponse.ts";
 import {mapServerErrorsToForm, mapServerPayloadErrorsToForm} from "@app/lib/forms/serverErrorMapper.ts";
@@ -23,11 +22,11 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 export const LoginPage = () => {
-    const { theme } = useTheme();
+
     const dispatch = useAppDispatch()
     const navigate = useNavigate();
 
-    const [loginRequest, { isLoading  }] = useLoginMutation()
+    const [loginRequest] = useLoginMutation()
 
 
     const {
@@ -50,10 +49,7 @@ export const LoginPage = () => {
     const onSubmit = async (data: LoginFormData) => {
 
         try {
-
-
             const response: LoginResponse = await loginRequest({ email: data.email, password: data.password }).unwrap()
-
 
             // успех: resp — это LoginResponse (уже без ApiResponse-обёртки)
             // здесь делай редирект/тост и т.п.
@@ -95,7 +91,7 @@ export const LoginPage = () => {
     }, [isAuthenticated, navigate]);
 
     return (
-        <div className={styles.container}>
+        <div className={styles.loginContainer}>
             <Logo width={200} height={100}/>
 
             <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
@@ -126,10 +122,14 @@ export const LoginPage = () => {
                     {isSubmitting ? 'Входим...' : 'Войти'}
                 </button>
 
-                {errors.root && (
-                    <p className="text-red-500 text-sm">{errors.root.message as string}</p>
-                )}
+                <div className={styles.errorsContainer}>
+                    {errors.root && (
+                        <p className="text-red-500 text-sm">{errors.root.message as string}</p>
+                    )}
+                </div>
+
             </form>
+
         </div>
     )
 }

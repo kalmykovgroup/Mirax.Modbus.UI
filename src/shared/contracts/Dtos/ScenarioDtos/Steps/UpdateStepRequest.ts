@@ -22,14 +22,14 @@ interface UpdateActivityStepBase extends UpdateStepBase {
 
 /** Modbus Activity */
 export interface UpdateModbusActivityStepRequest extends UpdateActivityStepBase {
-    kind: StepType.ActivityModbus;
+    kind: StepType.ModbusActivity;
     modbusDeviceActionId?: string | null; // Guid
     modbusDeviceAddressId?: string | null; // Guid
 }
 
 /** System Activity */
 export interface UpdateSystemActivityStepRequest extends UpdateActivityStepBase {
-    kind: StepType.ActivitySystem;
+    kind: StepType.SystemActivity;
     systemActionId?: string | null; // Guid
 }
 
