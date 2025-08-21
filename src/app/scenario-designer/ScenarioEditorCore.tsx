@@ -1,35 +1,35 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
-    ReactFlow,
-    Background,
-    Controls,
-    Panel,
-    MarkerType,
-    BackgroundVariant,
-    SelectionMode,
-    ConnectionLineType,
     addEdge,
     applyNodeChanges,
-    useEdgesState,
-    useReactFlow,
+    Background,
+    BackgroundVariant,
     type Connection,
+    ConnectionLineType,
+    Controls,
+    type IsValidConnection,
+    MarkerType,
     type OnNodesChange,
-    type IsValidConnection
+    Panel,
+    ReactFlow,
+    SelectionMode,
+    useEdgesState,
+    useReactFlow
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import styles from './ScenarioEditorPage.module.css';
 
-import { LeftPanel } from '@app/scenario-designer/LeftPanel/LeftPanel';
-import { RightPanel } from '@app/scenario-designer/RightPanel/RightPanel';
+import {LeftPanel} from '@app/scenario-designer/LeftPanel/LeftPanel';
+import {RightPanel} from '@app/scenario-designer/RightPanel/RightPanel';
 
-import { type FlowEdge, type FlowNode } from '@app/scenario-designer/types/FlowNode.ts';
+import {type FlowEdge, type FlowNode} from '@app/scenario-designer/types/FlowNode.ts';
 
-import { nodeTypes as nodeTypesRegistry } from './graph/nodeTypes';
-import { ALLOW_MAP, TARGET_ALLOW_MAP } from './graph/connectionRules';
-import { createIsValidConnection } from './graph/isValidConnection';
-import { useSelection } from './graph/useSelection';
-import { useConnectContext } from './graph/useConnectContext';
-import { isAnyBranchResizing } from '@app/scenario-designer/graph/branchResizeGuard.ts';
+import {nodeTypes as nodeTypesRegistry} from './graph/nodeTypes';
+import {ALLOW_MAP, TARGET_ALLOW_MAP} from './graph/connectionRules';
+import {createIsValidConnection} from './graph/isValidConnection';
+import {useSelection} from './graph/useSelection';
+import {useConnectContext} from './graph/useConnectContext';
+import {isAnyBranchResizing} from '@app/scenario-designer/graph/branchResizeGuard.ts';
 
 import {edgeTypes} from "@app/scenario-designer/graph/edges/edgeTypes.ts";
 import {absOf, pickDeepestBranchByTopLeft, rectOf} from "@app/scenario-designer/graph/dropUtils.ts";
@@ -39,10 +39,82 @@ export interface ScenarioEditorProps {
 
 }
 
+const initialNodes  : FlowNode[] = [
+    {
+        id: 'condition1',
+        data: {
+            object: {},
+            connectFromType : FlowType.conditionStepNode,     // тип узла-источника
+            x: 0,
+            y: 0
+        },
+        position: { x: -140, y: 0 },
+        type: FlowType.conditionStepNode,
+    },
+    {
+        id: 'branch1',
+        data: {
+            object: {
+                id: "branch1",
+                scenarioId: "null",
+                name: "Ветка тестовая 1",
+                description: "Описание ветки 1",
+                /** Если параллельная ветка — ждать ли её завершения */
+                waitForCompletion: false,
+                /** Id родительского параллельного шага, если есть */
+                parallelStepId: null,
+                /** Id родительского condition-шагa, если есть */
+                conditionStepId:  null,
+                /** Условие выполнения перехода */
+                conditionExpression: "value > 50",
+                /** Приоритет проверки условия */
+                conditionOrder: 0,
+            },
+            connectFromType : FlowType.conditionStepNode,     // тип узла-источника
+            x: 119,
+            y: -78
+        },
+        position: { x: 119, y: -78 },
+        type: FlowType.branchNode,
+    },
+
+    {
+        id: 'branch2',
+        data: {
+            object: {
+                id: "branch1",
+                scenarioId: "null",
+                name: "Ветка тестовая 2",
+                description: "Описание ветки 2",
+                /** Если параллельная ветка — ждать ли её завершения */
+                waitForCompletion: false,
+                /** Id родительского параллельного шага, если есть */
+                parallelStepId: null,
+                /** Id родительского condition-шагa, если есть */
+                conditionStepId:  null,
+                /** Условие выполнения перехода */
+                conditionExpression: "value <= -31",
+                /** Приоритет проверки условия */
+                conditionOrder: 0,
+            },
+            connectFromType : FlowType.conditionStepNode,     // тип узла-источника
+            x: 115,
+            y: 76
+        },
+        position: { x: 115, y: 76 },
+        type: FlowType.branchNode,
+    },
+];
+
+const initialEdges = [
+    { id: 'condition1-branch1', source: 'condition1', target: 'branch1', sourceHandle: 's1', targetHandle: 't1' },
+    { id: 'condition1-branch2', source: 'condition1', target: 'branch2', sourceHandle: 's3', targetHandle: 't1' }
+];
+
 export const ScenarioEditorCore: React.FC<ScenarioEditorProps> = () => {
     // --- состояние графа ---
-    const [nodes, setNodes] = useState<FlowNode[]>([]);
-    const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
+    const [nodes, setNodes] = useState<FlowNode[]>(initialNodes);
+    const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>(initialEdges);
 
     // доступ к актуальному стору RF
     const rf = useReactFlow<FlowNode, FlowEdge>();
@@ -236,6 +308,15 @@ export const ScenarioEditorCore: React.FC<ScenarioEditorProps> = () => {
                 edges={edges}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
+
+                onEdgeMouseEnter={(_, edge) =>
+                    setEdges(es => es.map(e => e.id === edge.id
+                        ? { ...e, data: { ...e.data, __hovered: true } }
+                        : e))}
+                onEdgeMouseLeave={(_, edge) =>
+                    setEdges(es => es.map(e => e.id === edge.id
+                        ? { ...e, data: { ...e.data, __hovered: false } }
+                        : e))}
 
                 // выбор/мультивыбор
                 onSelectionChange={onSelectionChange}

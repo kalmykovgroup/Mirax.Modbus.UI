@@ -3,7 +3,8 @@
 .container{
     position: relative;
     box-sizing: border-box;
-    border: 1px solid var(--color-parallel);
+    background-clip: content-box; /* фон остаётся у исходного размера */
+    border: 1px solid var(--color-condition);
     background: transparent;
     border-radius: 5px ;
     display: flex;
@@ -11,8 +12,12 @@
     justify-content: center;
     align-items: center;
     padding: 5px;
-    min-width: 80px;
+    min-width: 70px;
     min-height: 21px;
+
+}
+.container[aria-selected="true"] {
+    box-shadow: 0 0 7px var(--color-condition);
 }
 
 .source[aria-selected="true"]{
@@ -24,21 +29,22 @@
     box-shadow: var(--target-active-styles-box-shadow);
 }
 
+
+.text{
+    font-size: 17px;
+    color: rgb(104, 165, 255);
+}
+
+.textIf{
+    color: #e073ff;
+}
+
 .name{
     position: absolute;
     top: -13px;
     left: 5px;
     font-size: 10px;
-    color: var(--color-parallel);
-}
-
-
-.container[aria-selected="true"] {
-   box-shadow: 0 0 7px var(--color-parallel);
-}
-
-.sourceTop{
-    top: 3px;
+    color: var(--color-condition);
 }
 
 .sourceBottom{
@@ -46,3 +52,8 @@
     bottom: 3px;
     transform: translate(50%, 50%);
 }
+
+.sourceTop{
+    top: 3px;
+}
+

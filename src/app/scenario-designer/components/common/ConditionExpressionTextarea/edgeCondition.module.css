@@ -1,0 +1,102 @@
+.box{
+    background: rgba(22, 27, 34, 0.9);
+    border-radius: 5px;
+    padding: 2px 6px;
+    font-size: 11px;
+    line-height: 1;
+    color: #e6f3ff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.25);
+    user-select: none;
+    display: flex;
+    width: auto;
+    position: absolute;
+    top: 0;
+
+    white-space: nowrap; /* Без переносов */
+    overflow: hidden; /* Скрываем лишнее */
+    text-overflow: ellipsis; /* Добавляем многоточие */
+}
+
+.leftTargetPosition{
+    transform: translate(-100%, -50%);
+    margin-left: -10px;
+}
+
+.rightTargetPosition{
+    transform: translate(0%, -50%);
+    margin-left: 10px;
+}
+
+/* From Uiverse.io by mrhyddenn */
+.form__group {
+    position: relative;
+    padding: 20px 0 0;
+}
+
+.form__field {
+    font-family: inherit;
+    min-width: 100px;
+    min-height: 30px;
+    width: 100px;
+    height: 30px;
+    resize: both;      /* можно тянуть и по ширине, и по высоте */
+    overflow: hidden;    /* убираем скроллбары */
+
+    border: none;
+    border-bottom: 2px solid #9b9b9b;
+    outline: 0;
+    font-size: 14px;
+    color: #fff;
+    background: transparent;
+    transition: border-color 0.2s;
+
+    border-radius: 5px;
+    padding: 4px 6px;
+
+
+}
+
+.form__field::placeholder {
+    color: transparent;
+}
+
+.form__field:placeholder-shown ~ .form__label {
+    font-size: 15px;
+    cursor: text;
+    top: 20px;
+}
+
+.form__label {
+    position: absolute;
+    top: 0;
+    display: block;
+    transition: 0.2s;
+    font-size: 13px;
+    color: #9b9b9b;
+    pointer-events: none;
+}
+
+.form__field:focus {
+    padding-bottom: 6px;
+    font-weight: 700;
+    border-width: 3px;
+    border-image: linear-gradient(to right, #116399, #38caef);
+    border-image-slice: 1;
+}
+
+
+
+.form__field:focus ~ .form__label {
+    position: absolute;
+    top: 0;
+    display: block;
+    transition: 0.2s;
+    font-size: 15px;
+    color: #38caef;
+    font-weight: 700;
+}
+
+/* reset input */
+.form__field:required, .form__field:invalid {
+    box-shadow: none;
+}

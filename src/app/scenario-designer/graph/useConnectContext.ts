@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { OnConnectStartParams } from '@xyflow/react';
 import type {
-    ConnectFrom,
-    ConnectContext,
     FlowNode,
-    FlowType,
 } from '@app/scenario-designer/types/FlowNode.ts';
+import type {ConnectContext} from "@app/scenario-designer/types/ConnectContext.ts";
+import type {FlowType} from "@app/scenario-designer/types/FlowType.ts";
+import type {ConnectFrom} from "@app/scenario-designer/types/ConnectFrom.ts";
 
 /** Минимальный API, который нам нужен от React Flow instance */
 type RfLike = {

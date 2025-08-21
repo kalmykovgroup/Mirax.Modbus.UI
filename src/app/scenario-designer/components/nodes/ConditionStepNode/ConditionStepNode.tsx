@@ -17,7 +17,7 @@ export function ConditionStepNode({ data, selected}: NodeProps<FlowNode>) {
             </span>
 
             <span className={styles.name}>Условие</span>
-            <span className={styles.text}><span className={styles.textIf}>If</span>(value</span>
+            <span className={styles.text}><span className={styles.textIf}>If </span>value</span>
 
             <Handle
                 className={`${styles.target}`} aria-selected={connectFrom === 'source'}

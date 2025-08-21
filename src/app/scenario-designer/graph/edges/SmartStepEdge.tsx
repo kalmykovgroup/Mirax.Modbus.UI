@@ -6,9 +6,9 @@ import {
     useStore,
     useReactFlow,
 } from '@xyflow/react';
-import type { FlowNode } from '@app/scenario-designer/types/FlowNode.ts';
 import { resolveEdgeRender } from '@app/scenario-designer/graph/edges/edgeRelations';
 import styles from './SmartStepEdge.module.css';
+import type {FlowNode} from "@app/scenario-designer/types/FlowNode.ts";
 
 /** Безопасно получаем ноду по id (nodeInternals/nodeLookup + fallback) */
 function useNodeById(id?: string) {
@@ -26,29 +26,68 @@ export default function SmartStepEdge(props: EdgeProps) {
         id,
         source, target,
         sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition,
-        markerEnd, style, selected,
+        style, selected,
+        data
     } = props;
 
-    const [edgePath, labelX, labelY] = getSmoothStepPath({
+    const [edgePath] = getSmoothStepPath({
         sourceX, sourceY, sourcePosition,
         targetX, targetY, targetPosition,
         borderRadius: 8,
     });
 
-    const sourceNode = useNodeById(source);
-    const targetNode = useNodeById(target);
+
+    const sourceNode: FlowNode = useNodeById(source)
+        ?? (() => {
+            throw new Error(`Source node ${source} not found`);
+        })();
+
+    const targetNode: FlowNode = useNodeById(target) ?? (() => {
+        throw new Error(`Target node ${source} not found`);
+    })();
+
+    // hover-флаг, который ты ставишь в edge.data в onEdgeMouseEnter/Leave
+    const hovered = Boolean((data as any)?.__hovered);
+
+    // единый цвет для хвоста и головы
+    const color = selected ? '#ff3b30' : hovered ? '#2f9aff' : (style?.stroke as string ?? '#ffffff');
+
+    // свой маркер с уникальным id (чтобы цвет не кэшировался браузером)
+    const markerId = `smart-edge-arrow-${id}-${selected ? 's' : hovered ? 'h' : 'n'}`;
+
 
     // Получаем готовый React-элемент для этой пары (он пока возвращает null — пусто)
-    const relationEl = resolveEdgeRender(sourceNode, targetNode);
+    const relationEl = resolveEdgeRender(sourceNode, targetNode, targetPosition);
 
     return (
         <>
-            <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={style} />
+            <defs>
+                <marker
+                    id={markerId}
+                    viewBox="0 0 40 40"
+                    markerHeight={20}
+                    markerWidth={20}
+                    refX={8}
+                    refY={5}
+                    orient="auto-start-reverse"
+                >
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill={color}  />
+                </marker>
+
+            </defs>
+
+            <BaseEdge className={`${styles.baseEdge} ${hovered ? styles.hovered : ''}`}
+                      aria-selected={selected}
+                      id={id}
+                      path={edgePath}
+                      markerEnd={`url(#${markerId})`}
+                      style={style} />
             {relationEl && (
                 <EdgeLabelRenderer>
+
                     <div
                         className={`${styles.badge} ${selected ? styles.selected : ''}`}
-                        style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
+                        style={{ left: `${targetX}px`, top: `${targetY}px` }}
                     >
                         {relationEl}
                     </div>

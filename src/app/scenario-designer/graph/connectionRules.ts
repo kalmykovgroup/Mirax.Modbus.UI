@@ -7,26 +7,28 @@ type Rules = Partial<Record<FlowType, ReadonlySet<FlowType>>>;
 export const ALLOW_MAP: Rules = {
     // jump ->
     [FlowType.jumpStepNode]: new Set<FlowType>([
-        FlowType.delayStepNode,
-        FlowType.parallelStepNode,
-        FlowType.branchNode,
-        FlowType.conditionStepNode,
         FlowType.activitySystemNode,
         FlowType.activityModbusNode,
+        FlowType.parallelStepNode,
+        FlowType.delayStepNode,
+        FlowType.jumpStepNode,
+        FlowType.signalNode,
+        FlowType.conditionStepNode,
     ]),
 
     // condition ->
     [FlowType.conditionStepNode]: new Set<FlowType>([
-        FlowType.conditionStepNode,
         FlowType.branchNode,
-        FlowType.jumpStepNode,
-        FlowType.delayStepNode,
-        FlowType.parallelStepNode,
         FlowType.activitySystemNode,
         FlowType.activityModbusNode,
+        FlowType.parallelStepNode,
+        FlowType.delayStepNode,
+        FlowType.jumpStepNode,
+        FlowType.signalNode,
+        FlowType.conditionStepNode,
     ]),
 
-    // condition ->
+    // parallel ->
     [FlowType.parallelStepNode]: new Set<FlowType>([
         FlowType.branchNode,
     ]),
@@ -35,12 +37,45 @@ export const ALLOW_MAP: Rules = {
     [FlowType.activitySystemNode]: new Set<FlowType>([
         FlowType.activitySystemNode,
         FlowType.activityModbusNode,
+        FlowType.parallelStepNode,
+        FlowType.delayStepNode,
+        FlowType.jumpStepNode,
+        FlowType.signalNode,
+        FlowType.conditionStepNode,
+    ]),
+
+    // modbus ->
+    [FlowType.activityModbusNode]: new Set<FlowType>([
+        FlowType.activitySystemNode,
+        FlowType.activityModbusNode,
+        FlowType.parallelStepNode,
+        FlowType.delayStepNode,
+        FlowType.jumpStepNode,
+        FlowType.signalNode,
+        FlowType.conditionStepNode,
+    ]),
+
+    // delay ->
+    [FlowType.delayStepNode]: new Set<FlowType>([
+        FlowType.activitySystemNode,
+        FlowType.activityModbusNode,
+        FlowType.parallelStepNode,
+        FlowType.delayStepNode,
+        FlowType.jumpStepNode,
+        FlowType.signalNode,
+        FlowType.conditionStepNode,
     ]),
 
 
     // signal ->
     [FlowType.signalNode]: new Set<FlowType>([
+        FlowType.activitySystemNode,
+        FlowType.activityModbusNode,
+        FlowType.parallelStepNode,
+        FlowType.delayStepNode,
+        FlowType.jumpStepNode,
         FlowType.signalNode,
+        FlowType.conditionStepNode,
     ]),
 
     // при необходимости добавляй остальные источники

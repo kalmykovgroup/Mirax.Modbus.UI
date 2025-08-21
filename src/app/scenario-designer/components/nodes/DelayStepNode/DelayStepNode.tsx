@@ -10,6 +10,8 @@ export function DelayStepNode({ data, selected}: NodeProps<FlowNode>) {
 
     const validateTarget = data.connectFromType != FlowType.branchNode
 
+
+
     return (
         <div className={styles.container} aria-selected={selected}>
             <span className={styles.coordinates}>
@@ -17,10 +19,12 @@ export function DelayStepNode({ data, selected}: NodeProps<FlowNode>) {
                 <span>y:{formatWithMode(data.y, 2, true)}</span>
             </span>
 
-            <span className={styles.name}>Delay</span>
 
             <div className={styles.inputContainer}>
-                <input type="number"/><span>ms.</span>
+                <div className={`${styles.form__group} ${styles.field}`}>
+                    <input type="input" className={styles.form__field} placeholder="Время ожидания" />
+                    <label htmlFor="name" className={styles.form__label}>Время ожидания</label>
+                </div> <span>ms.</span>
             </div>
 
             <Handle
