@@ -3,7 +3,7 @@ import type { AwaitSignalStepType } from "@shared/contracts/Types/AwaitSignalSte
 import type { SendSignalStepType } from "@shared/contracts/Types/SendSignalStepType.ts";
 
 import type { ModbusDeviceAddressDto } from "@shared/contracts/Dtos/ModbusDtos/ModbusDeviceAddresses/ModbusDeviceAddressDto.ts";
-import type { BranchDto } from "@shared/contracts/Dtos/ScenarioDtos/Branches/BranchDto.ts";
+import type { BranchDto } from "@shared/contracts/Dtos/ScenarioDtos/Branch/BranchDto.ts";
 import type { StepRelationDto } from "@shared/contracts/Dtos/ScenarioDtos/StepRelations/StepRelationDto.ts";
 import type {SystemActionDto} from "@shared/contracts/Dtos/ScenarioDtos/SystemActions/SystemActionDto.ts";
 import type {
@@ -22,6 +22,8 @@ export interface StepBaseDto {
     defaultInput?: string | null;
     childRelations: StepRelationDto[];
     parentRelations: StepRelationDto[];
+    x: number;
+    y: number;
 
 }
 
@@ -67,8 +69,17 @@ export interface ConditionStepDto extends StepBaseDto {
 
 // базовая заготовка
 const genId = () => crypto.randomUUID();
-const base = (type: StepType, p: { branchId: string; name?: string; taskQueue?: string }): StepBaseDto => ({
-    id: genId(),
+const base = (type: StepType, p: {
+    id? : string;
+    branchId: string;
+    name?: string;
+    taskQueue?: string;
+    x?: number;
+    y?: number;
+    childRelations?: [];
+    parentRelations?: [];
+}): StepBaseDto => ({
+    id: p.id ?? genId(),
     type,
     branchId: p.branchId,
     name: p.name ?? '',
@@ -76,8 +87,10 @@ const base = (type: StepType, p: { branchId: string; name?: string; taskQueue?: 
     keyInput: null,
     keyOutput: null,
     defaultInput: null,
-    childRelations: [],
-    parentRelations: [],
+    childRelations: p.childRelations ?? [],
+    parentRelations: p.parentRelations ?? [],
+    x: p.x ?? 0,
+    y: p.x ?? 0,
 });
 
 // соответствие FlowType → StepType (подставь свои enum-значения!)
@@ -93,7 +106,15 @@ const STEP_OF: Record<Exclude<FlowType, FlowType.branchNode>, StepType> = {
 
 // ---- «статические» фабрики на каждом DTO ----
 export const ModbusActivityStepDto = {
-    create(p: { branchId: string; name?: string; taskQueue?: string } & Partial<ModbusActivityStepDto>): ModbusActivityStepDto {
+    create(p: {
+        branchId: string;
+        name?: string;
+        taskQueue?: string;
+        x?: number;
+        y?: number;
+        childRelations?: [];
+        parentRelations?: [];
+    } & Partial<ModbusActivityStepDto>): ModbusActivityStepDto {
         return {
             ...base(STEP_OF[FlowType.activityModbusNode], p),
             sessionId: p.sessionId ?? '',
@@ -107,7 +128,15 @@ export const ModbusActivityStepDto = {
 } as const;
 
 export const SystemActivityStepDto = {
-    create(p: { branchId: string; name?: string; taskQueue?: string } & Partial<SystemActivityStepDto>): SystemActivityStepDto {
+    create(p: {
+        branchId: string;
+        name?: string;
+        taskQueue?: string;
+        x?: number;
+        y?: number;
+        childRelations?: [];
+        parentRelations?: [];
+    } & Partial<SystemActivityStepDto>): SystemActivityStepDto {
         return {
             ...base(STEP_OF[FlowType.activitySystemNode], p),
             systemActionId: p.systemActionId ?? '',
@@ -117,7 +146,16 @@ export const SystemActivityStepDto = {
 } as const;
 
 export const DelayStepDto = {
-    create(p: { branchId: string; name?: string; taskQueue?: string; timeSpan?: string } & Partial<DelayStepDto>): DelayStepDto {
+    create(p: {
+        branchId: string;
+        name?: string;
+        taskQueue?: string;
+        timeSpan?: string;
+        x?: number;
+        y?: number;
+        childRelations?: [];
+        parentRelations?: [];
+    } & Partial<DelayStepDto>): DelayStepDto {
         return {
             ...base(STEP_OF[FlowType.delayStepNode], p),
             timeSpan: p.timeSpan ?? 'PT0S',
@@ -132,6 +170,10 @@ export const SignalStepDto = {
         sendSignalStepType: SendSignalStepType;
         signalKey?: string;
         sendSignalData?: string;
+        x?: number;
+        y?: number;
+        childRelations?: [];
+        parentRelations?: [];
     } & Partial<SignalStepDto>): SignalStepDto {
         return {
             ...base(STEP_OF[FlowType.signalNode], p),
@@ -144,7 +186,16 @@ export const SignalStepDto = {
 } as const;
 
 export const JumpStepDto = {
-    create(p: { branchId: string; name?: string; taskQueue?: string; jumpToStepId?: string } & Partial<JumpStepDto>): JumpStepDto {
+    create(p: {
+        branchId: string;
+        name?: string;
+        taskQueue?: string;
+        jumpToStepId?: string;
+        x?: number;
+        y?: number;
+        childRelations?: [];
+        parentRelations?: [];
+    } & Partial<JumpStepDto>): JumpStepDto {
         return {
             ...base(STEP_OF[FlowType.jumpStepNode], p),
             jumpToStepId: p.jumpToStepId ?? '',
@@ -153,7 +204,15 @@ export const JumpStepDto = {
 } as const;
 
 export const ParallelStepDto = {
-    create(p: { branchId: string; name?: string; taskQueue?: string } & Partial<ParallelStepDto>): ParallelStepDto {
+    create(p: {
+        branchId: string;
+        name?: string;
+        taskQueue?: string;
+        x?: number;
+        y?: number;
+        childRelations?: [];
+        parentRelations?: [];
+    } & Partial<ParallelStepDto>): ParallelStepDto {
         return {
             ...base(STEP_OF[FlowType.parallelStepNode], p),
             branches: p.branches ?? [],
@@ -162,7 +221,15 @@ export const ParallelStepDto = {
 } as const;
 
 export const ConditionStepDto = {
-    create(p: { branchId: string; name?: string; taskQueue?: string } & Partial<ConditionStepDto>): ConditionStepDto {
+    create(p: {
+        branchId: string;
+        name?: string;
+        taskQueue?: string;
+        x?: number;
+        y?: number;
+        childRelations?: [];
+        parentRelations?: [];
+    } & Partial<ConditionStepDto>): ConditionStepDto {
         return {
             ...base(STEP_OF[FlowType.conditionStepNode], p),
             branches: p.branches ?? [],

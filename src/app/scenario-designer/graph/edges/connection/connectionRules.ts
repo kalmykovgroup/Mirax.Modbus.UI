@@ -31,6 +31,13 @@ export const ALLOW_MAP: Rules = {
     // parallel ->
     [FlowType.parallelStepNode]: new Set<FlowType>([
         FlowType.branchNode,
+        FlowType.activitySystemNode,
+        FlowType.activityModbusNode,
+        FlowType.parallelStepNode,
+        FlowType.delayStepNode,
+        FlowType.jumpStepNode,
+        FlowType.signalNode,
+        FlowType.conditionStepNode,
     ]),
 
     // system ->
@@ -95,9 +102,4 @@ export const TARGET_ALLOW_MAP: Rules = (() => {
     return res as Rules;
 })();
 
-/** Утилиты (по желанию) */
-export const canConnect = (src?: FlowType, tgt?: FlowType) =>
-    !!(src && tgt && ALLOW_MAP[src]?.has(tgt));
 
-export const canAccept = (tgt?: FlowType, src?: FlowType) =>
-    !!(tgt && src && TARGET_ALLOW_MAP[tgt]?.has(src));

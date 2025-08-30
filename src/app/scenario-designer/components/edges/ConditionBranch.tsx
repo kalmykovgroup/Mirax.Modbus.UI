@@ -2,7 +2,7 @@ import React, {useState} from "react";
 import {FlowType} from "@app/scenario-designer/types/FlowType.ts";
 import type {NodeOf} from "@app/scenario-designer/graph/edges/edgeRelations.tsx";
 import {Position} from "@xyflow/react";
-import type {BranchDto} from "@shared/contracts/Dtos/ScenarioDtos/Branches/BranchDto.ts";
+import type {BranchDto} from "@shared/contracts/Dtos/ScenarioDtos/Branch/BranchDto.ts";
 import {
     ConditionExpressionTextarea
 } from "@app/scenario-designer/components/common/ConditionExpressionTextarea/ConditionExpressionTextarea.tsx";

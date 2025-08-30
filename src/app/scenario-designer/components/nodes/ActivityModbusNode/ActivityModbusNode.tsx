@@ -8,8 +8,11 @@ import {FlowType} from "@app/scenario-designer/types/FlowType.ts";
 
 export function ActivityModbusNode({ data, selected }: NodeProps<FlowNode>) {
 
-    const connectFrom = data?.connectFrom as 'source' | 'target' | null;
-    const validateTarget = data.connectFromType != FlowType.branchNode
+    console.log(data?.connectContext)
+
+    const handleType = data?.connectContext?.from.handleType;
+    const type : FlowType | undefined = data?.connectContext?.from.type;
+    const validateTarget = type != FlowType.branchNode
 
     return (
         <div className={styles.container} aria-selected={selected}>
@@ -20,7 +23,7 @@ export function ActivityModbusNode({ data, selected }: NodeProps<FlowNode>) {
             <span className={styles.name}>Modbus</span>
 
             <Handle
-                className={`${styles.target}`} aria-selected={connectFrom === 'source'}
+                className={`${styles.target}`} aria-selected={handleType === 'source'}
                 key="t1"
                 id="t1"
                 type="target"
@@ -29,7 +32,7 @@ export function ActivityModbusNode({ data, selected }: NodeProps<FlowNode>) {
 
 
             <Handle
-                className={`${styles.source}`} aria-selected={connectFrom === 'target' && validateTarget}
+                className={`${styles.source}`} aria-selected={handleType === 'target' && validateTarget}
                 key="s1"
                 id="s1"
                 type="source"

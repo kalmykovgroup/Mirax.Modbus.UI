@@ -7,7 +7,7 @@ import {formatWithMode} from "@app/lib/utils/format.ts";
 
 export function ConditionStepNode({ data, selected}: NodeProps<FlowNode>) {
 
-    const connectFrom = data?.connectFrom as 'source' | 'target' | null;
+    const handleType = data?.connectContext?.from.handleType;
 
     return (
         <div className={styles.container} aria-selected={selected}>
@@ -20,7 +20,7 @@ export function ConditionStepNode({ data, selected}: NodeProps<FlowNode>) {
             <span className={styles.text}><span className={styles.textIf}>If </span>value</span>
 
             <Handle
-                className={`${styles.target}`} aria-selected={connectFrom === 'source'}
+                className={`${styles.target}`} aria-selected={handleType === 'source'}
                 key="t1"
                 id="t1"
                 type="target"
@@ -29,7 +29,7 @@ export function ConditionStepNode({ data, selected}: NodeProps<FlowNode>) {
 
 
             <Handle
-                className={`${styles.source} ${styles.sourceTop}`} aria-selected={connectFrom === 'target'}
+                className={`${styles.source} ${styles.sourceTop}`} aria-selected={handleType === 'target'}
                 key="s1"
                 id="s1"
                 type="source"
@@ -37,7 +37,7 @@ export function ConditionStepNode({ data, selected}: NodeProps<FlowNode>) {
             />
 
             <Handle
-                className={`${styles.source}`} aria-selected={connectFrom === 'target'}
+                className={`${styles.source}`} aria-selected={handleType === 'target'}
                 key="s2"
                 id="s2"
                 type="source"
@@ -45,7 +45,7 @@ export function ConditionStepNode({ data, selected}: NodeProps<FlowNode>) {
             />
 
             <Handle
-                className={`${styles.source} ${styles.sourceBottom}`} aria-selected={connectFrom === 'target'}
+                className={`${styles.source} ${styles.sourceBottom}`} aria-selected={handleType === 'target'}
                 key="s3"
                 id="s3"
                 type="source"

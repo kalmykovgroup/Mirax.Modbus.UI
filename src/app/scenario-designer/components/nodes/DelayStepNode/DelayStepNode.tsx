@@ -6,9 +6,11 @@ import {FlowType} from "@app/scenario-designer/types/FlowType.ts";
 
 export function DelayStepNode({ data, selected}: NodeProps<FlowNode>) {
 
-    const connectFrom = data?.connectFrom as 'source' | 'target' | null;
+    const handleType = data?.connectContext?.from.handleType;
+    const type : FlowType | undefined = data?.connectContext?.from.type;
 
-    const validateTarget = data.connectFromType != FlowType.branchNode
+    const validateTarget = type != FlowType.branchNode
+
 
 
 
@@ -28,7 +30,7 @@ export function DelayStepNode({ data, selected}: NodeProps<FlowNode>) {
             </div>
 
             <Handle
-                className={`${styles.target}`} aria-selected={connectFrom === 'source'}
+                className={`${styles.target}`} aria-selected={handleType === 'source'}
                 key="t1"
                 id="t1"
                 type="target"
@@ -37,7 +39,7 @@ export function DelayStepNode({ data, selected}: NodeProps<FlowNode>) {
 
 
             <Handle
-                className={`${styles.source}`}  aria-selected={connectFrom === 'target' && validateTarget}
+                className={`${styles.source}`}  aria-selected={handleType === 'target' && validateTarget}
                 key="s1"
                 id="s1"
                 type="source"

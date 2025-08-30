@@ -5,7 +5,7 @@ import type {
 } from '@app/scenario-designer/types/FlowNode.ts';
 import type {ConnectContext} from "@app/scenario-designer/types/ConnectContext.ts";
 import type {FlowType} from "@app/scenario-designer/types/FlowType.ts";
-import type {ConnectFrom} from "@app/scenario-designer/types/ConnectFrom.ts";
+import type {StepNodeData} from "@app/scenario-designer/types/StepNodeData.ts";
 
 /** Минимальный API, который нам нужен от React Flow instance */
 type RfLike = {
@@ -24,7 +24,7 @@ type Params = {
  *  - isConnecting: boolean
  */
 export function useConnectContext({ rf, setNodes }: Params) {
-    const [connectCtx, setConnectCtx] = useState<ConnectContext | null>(null);
+    const [connectCtx, setConnectCtx] = useState<ConnectContext | undefined>(undefined);
 
     /** Тип ноды по id из актуального стора RF */
     const getNodeType = useCallback((id?: string | null): FlowType | undefined => {
@@ -41,7 +41,7 @@ export function useConnectContext({ rf, setNodes }: Params) {
         const fromType = getNodeType(params.nodeId);
 
         if (!params.handleType || !params.nodeId || !fromType) {
-            setConnectCtx(null);
+            setConnectCtx(undefined);
             return;
         }
 
@@ -56,19 +56,28 @@ export function useConnectContext({ rf, setNodes }: Params) {
     }, [getNodeType]);
 
     /** Сброс контекста — бросили «в никуда» или завершили соединение */
-    const onConnectEnd = useCallback(() => setConnectCtx(null), []);
+    const onConnectEnd = useCallback(() => setConnectCtx(undefined), []);
+
 
     /** Широковещание статуса в node.data (визуальные подсказки нодам) */
-    useEffect(() => {
-        const connectFrom: ConnectFrom = connectCtx?.from.handleType ?? null;
-        const connectFromType = connectCtx?.from.type;
-        const isConnecting = !!connectCtx;
 
+    useEffect(() => {
         setNodes((nds) =>
-            nds.map((n) => ({
-                ...n,
-                data: { ...n.data, connectFrom, connectFromType, isConnecting },
-            }))
+            nds.map((n) => {
+                // скопировали data
+                const data = { ...n.data } as StepNodeData<object>;
+
+                if (connectCtx === undefined) {
+                    // при сбросе контекста — удаляем свойство
+                    // (а не присваиваем undefined)
+                    delete (data as any).connectContext;
+                } else {
+                    // при старте/во время коннекта — пишем валидный объект
+                    (data as any).connectContext = connectCtx;
+                }
+
+                return { ...n, data };
+            })
         );
     }, [connectCtx, setNodes]);
 

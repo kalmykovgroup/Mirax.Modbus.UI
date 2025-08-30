@@ -9,10 +9,12 @@ import {FlowType} from "@app/scenario-designer/types/FlowType.ts";
 
 export function BranchNode({ id, data, selected }: NodeProps<FlowNode>) {
 
-    const connectFrom = data?.connectFrom as 'source' | 'target' | null;
+    const handleType = data?.connectContext?.from.handleType;
+    const type : FlowType | undefined = data?.connectContext?.from.type;
 
-    const isConnectValid = (data.connectFromType != FlowType.branchNode && data.connectFromType == FlowType.conditionStepNode) ||
-        (data.connectFromType != FlowType.branchNode &&  data.connectFromType == FlowType.parallelStepNode);
+    const isConnectValid =
+        (type != FlowType.branchNode && type == FlowType.conditionStepNode) ||
+        (type != FlowType.branchNode &&  type == FlowType.parallelStepNode);
 
     return (
         <div className={styles.container} aria-selected={selected}>
@@ -32,7 +34,7 @@ export function BranchNode({ id, data, selected }: NodeProps<FlowNode>) {
             </span>
             <span className={styles.name}>Ветка</span>
 
-            <Handle className={styles.target} aria-selected={connectFrom === 'source' && isConnectValid}
+            <Handle className={styles.target} aria-selected={handleType === 'source' && isConnectValid}
                 key="t1"
                 id="t1"
                 type="target"

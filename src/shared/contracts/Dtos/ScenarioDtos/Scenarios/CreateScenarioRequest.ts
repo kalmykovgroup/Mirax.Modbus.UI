@@ -1,4 +1,4 @@
-import type { BranchDto } from "@shared/contracts/Dtos/ScenarioDtos/Branches/BranchDto.ts";
+import type { BranchDto } from "@shared/contracts/Dtos/ScenarioDtos/Branch/BranchDto.ts";
 import type { ScenarioStatus } from "@shared/contracts/Types/ScenarioStatus.ts";
 
 export interface CreateScenarioRequest {

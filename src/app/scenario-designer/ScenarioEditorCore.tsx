@@ -25,95 +25,104 @@ import {RightPanel} from '@app/scenario-designer/RightPanel/RightPanel';
 import {type FlowEdge, type FlowNode} from '@app/scenario-designer/types/FlowNode.ts';
 
 import {nodeTypes as nodeTypesRegistry} from './graph/nodeTypes';
-import {ALLOW_MAP, TARGET_ALLOW_MAP} from './graph/connectionRules';
-import {createIsValidConnection} from './graph/isValidConnection';
 import {useSelection} from './graph/useSelection';
 import {useConnectContext} from './graph/useConnectContext';
 import {isAnyBranchResizing} from '@app/scenario-designer/graph/branchResizeGuard.ts';
 
 import {edgeTypes} from "@app/scenario-designer/graph/edges/edgeTypes.ts";
-import {absOf, pickDeepestBranchByTopLeft, rectOf} from "@app/scenario-designer/graph/dropUtils.ts";
+import {
+    absOf,
+    ensureParentBeforeChild,
+    pickDeepestBranchByTopLeft,
+    rectOf
+} from "@app/scenario-designer/graph/dropUtils.ts";
 import {FlowType} from "@app/scenario-designer/types/FlowType.ts";
+import {createIsValidConnection} from "@app/scenario-designer/graph/edges/connection/isValidConnection.ts";
+import {ALLOW_MAP, TARGET_ALLOW_MAP} from "@app/scenario-designer/graph/edges/connection/connectionRules.ts";
+import {ConditionStepDto} from "@shared/contracts/Dtos/ScenarioDtos/Steps/StepBaseDto.ts";
+import type {ScenarioDto} from "@shared/contracts/Dtos/ScenarioDtos/Scenarios/ScenarioDto.ts";
+import {StepType} from "@shared/contracts/Types/StepType.ts";
+import {BranchDto} from "@shared/contracts/Dtos/ScenarioDtos/Branch/BranchDto.ts";
 
 export interface ScenarioEditorProps {
 
 }
 
-const initialNodes  : FlowNode[] = [
+const initialScenario  : ScenarioDto =
     {
-        id: 'condition1',
-        data: {
-            object: {},
-            connectFromType : FlowType.conditionStepNode,     // тип узла-источника
+        id: 'main-scenario',
+        branch: BranchDto.create({
+            id: "main-branch",
+            scenarioId: "main-scenario",
+            name: "Main ветка 1",
+            conditionOrder: 0,
             x: 0,
-            y: 0
-        },
-        position: { x: -140, y: 0 },
-        type: FlowType.conditionStepNode,
-    },
-    {
-        id: 'branch1',
-        data: {
-            object: {
-                id: "branch1",
-                scenarioId: "null",
-                name: "Ветка тестовая 1",
-                description: "Описание ветки 1",
-                /** Если параллельная ветка — ждать ли её завершения */
-                waitForCompletion: false,
-                /** Id родительского параллельного шага, если есть */
-                parallelStepId: null,
-                /** Id родительского condition-шагa, если есть */
-                conditionStepId:  null,
-                /** Условие выполнения перехода */
-                conditionExpression: "value > 50",
-                /** Приоритет проверки условия */
-                conditionOrder: 0,
-            },
-            connectFromType : FlowType.conditionStepNode,     // тип узла-источника
-            x: 119,
-            y: -78
-        },
-        position: { x: 119, y: -78 },
-        type: FlowType.branchNode,
-    },
+            y: 0,
+            width: 400,
+            height: 200,
+            steps: [
+                ConditionStepDto.create({
+                    id: "condition1",
+                    type: StepType.Condition,
+                    branchId: "main-branch",
+                    name: "condition name",
+                    taskQueue: "default",
+                    keyInput: "key1",
+                    keyOutput: "key2",
+                    defaultInput: null,
+                    childRelations: [
+                    ],
+                    parentRelations: [
 
-    {
-        id: 'branch2',
-        data: {
-            object: {
-                id: "branch1",
-                scenarioId: "null",
-                name: "Ветка тестовая 2",
-                description: "Описание ветки 2",
-                /** Если параллельная ветка — ждать ли её завершения */
-                waitForCompletion: false,
-                /** Id родительского параллельного шага, если есть */
-                parallelStepId: null,
-                /** Id родительского condition-шагa, если есть */
-                conditionStepId:  null,
-                /** Условие выполнения перехода */
-                conditionExpression: "value <= -31",
-                /** Приоритет проверки условия */
-                conditionOrder: 0,
-            },
-            connectFromType : FlowType.conditionStepNode,     // тип узла-источника
-            x: 115,
-            y: 76
-        },
-        position: { x: 115, y: 76 },
-        type: FlowType.branchNode,
-    },
-];
+                    ],
+                    branches: [
+                        BranchDto.create({
+                            id: "Параллельная ветка 1",
+                            scenarioId: "main-scenario",
+                            name: "Параллельная ветка 1",
+                            /** Условие выполнения перехода */
+                            conditionExpression: "value > 50",
+                            /** Приоритет проверки условия */
+                            conditionOrder: 0,
+                            conditionStepId: "condition1",
+                            x: 170,
+                            y: 20,
+                            width: 200,
+                            height: 100,
+                        }),
+
+                        BranchDto.create({
+                            id: "Параллельная ветка 2",
+                            scenarioId: "main-scenario",
+                            name: "Параллельная ветка 1",
+                            conditionExpression: "value <= 30",
+                            conditionOrder: 1,
+                            conditionStepId: "condition1",
+                            x: 170,
+                            y: 120,
+                            width: 200,
+                            height: 100,
+                        })
+                    ],
+                    x: 100,
+                    y: 100,
+
+                })
+            ],
+        })
+
+
+    };
 
 const initialEdges = [
     { id: 'condition1-branch1', source: 'condition1', target: 'branch1', sourceHandle: 's1', targetHandle: 't1' },
     { id: 'condition1-branch2', source: 'condition1', target: 'branch2', sourceHandle: 's3', targetHandle: 't1' }
 ];
 
+
 export const ScenarioEditorCore: React.FC<ScenarioEditorProps> = () => {
     // --- состояние графа ---
-    const [nodes, setNodes] = useState<FlowNode[]>(initialNodes);
+    const [nodes, setNodes] = useState<FlowNode[]>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>(initialEdges);
 
     // доступ к актуальному стору RF
@@ -127,6 +136,26 @@ export const ScenarioEditorCore: React.FC<ScenarioEditorProps> = () => {
 
     // --- drag-соединение: старт/сброс/типонатор/широковещание ---
     const { onConnectStart, onConnectEnd, getNodeType } = useConnectContext({ rf, setNodes });
+
+
+    // внутри компонента, сразу после state
+    useEffect(() => {
+        // ждём, пока RF подмонтирует nodes (на следующий тик)
+        queueMicrotask(() => {
+            const all = rf.getNodes() as FlowNode[];
+            const bad = all.filter(n => n.type === FlowType.branchNode)
+                .filter(n => {
+                    const w = typeof n.width === 'number' ? n.width : typeof (n.style as any)?.width === 'number' ? (n.style as any).width : 0;
+                    const h = typeof n.height === 'number' ? n.height : typeof (n.style as any)?.height === 'number' ? (n.style as any).height : 0;
+                    return !(w > 0 && h > 0);
+                })
+                .map(n => n.id);
+
+            if (bad.length) {
+                throw new Error(`Invalid scenario: branches without size: ${bad.join(', ')}`);
+            }
+        });
+    }, [rf]);
 
     // успешное соединение — добавляем ребро и сбрасываем контекст
     const onConnect = useCallback((conn: Connection) => {
@@ -166,25 +195,30 @@ export const ScenarioEditorCore: React.FC<ScenarioEditorProps> = () => {
     const ctrlDragIdsRef = useRef<Set<string>>(new Set());
 
     const onNodeDragStart = useCallback((e: React.MouseEvent | React.TouchEvent, node: FlowNode) => {
-        // @@ts-expect-error ctrlKey есть у Mouse/Pointer событий
+
+        //Если мы начали перетаскивание с включенным ctrl, значит нужно дать возможность вынести из ветки ноду
         const ctrl = (e as any).ctrlKey === true;
+
+        //Мы сразу делаем node не в ветке
         if (ctrl && node.parentId) {
             ctrlDragIdsRef.current.add(node.id);
             setNodes(nds =>
-                nds.map(n => n.id === node.id ? { ...n, extent: undefined, expandParent: false } : n)
+                nds.map(n => n.id === node.id ?
+                    { ...n, extent: undefined, expandParent: false } : n)
             );
         }
     }, [setNodes]);
 
     // --- Подсветка ветки-цели при перетаскивании существующих нод ---
-    const hoverBranchIdRef = useRef<string | null>(null);
-    const setHoverBranch = useCallback((branchId: string | null) => {
+    const hoverBranchIdRef = useRef<string>(undefined);
+
+    const setHoverBranch = useCallback((branchId: string | undefined) => {
         if (hoverBranchIdRef.current === branchId) return;
         hoverBranchIdRef.current = branchId;
         setNodes((nds): FlowNode[] =>
             nds.map(n =>
                 n.type === FlowType.branchNode
-                    ? { ...n, data: { ...n.data, isDropTarget: branchId != null && n.id === branchId } }
+                    ? { ...n, data: { ...n.data, isDropTarget: branchId != undefined && n.id === branchId } }
                     : n
             )
         );
@@ -195,7 +229,7 @@ export const ScenarioEditorCore: React.FC<ScenarioEditorProps> = () => {
         const all = getAll();
         const abs = absOf(node, all);
         const target = pickDeepestBranchByTopLeft(all, abs, node.id);
-        setHoverBranch(target?.id ?? null);
+        setHoverBranch(target?.id);
     }, [getAll, absOf, pickDeepestBranchByTopLeft, setHoverBranch]);
 
     // --- Финализация дропа существующей ноды ---
@@ -209,7 +243,7 @@ export const ScenarioEditorCore: React.FC<ScenarioEditorProps> = () => {
             const target = pickDeepestBranchByTopLeft(all, absTL, current.id);
 
             // снять подсветку
-            setHoverBranch(null);
+            setHoverBranch(undefined);
 
             const wasCtrl = ctrlDragIdsRef.current.has(current.id);
             if (wasCtrl) ctrlDragIdsRef.current.delete(current.id);
@@ -229,16 +263,20 @@ export const ScenarioEditorCore: React.FC<ScenarioEditorProps> = () => {
                     // перепривязали к ветке (без авто-роста)
                     const br = rectOf(target, all);
                     const relX = absTL.x - br.x, relY = absTL.y - br.y;
-                    setNodes((nds): FlowNode[] =>
-                        nds.map(n =>
+                    setNodes((nds): FlowNode[] => {
+                        let next = nds.map(n =>
                             n.id === current.id
                                 ? { ...n, parentId: target.id, position: { x: relX, y: relY }, extent: 'parent' as const, expandParent: true }
                                 : n
-                        )
-                    );
+                        );
+                        next = ensureParentBeforeChild(next, target.id, current.id);
+                        return next;
+                    });
                 }
                 return;
             }
+
+
 
             // Обычный drag
             if (target && current.type !== FlowType.branchNode) {
@@ -276,6 +314,11 @@ export const ScenarioEditorCore: React.FC<ScenarioEditorProps> = () => {
                             ? { ...n, parentId: target.id, position: { x: relX, y: relY }, extent: 'parent' as const, expandParent: true }
                             : n
                     );
+
+
+                    // ВАЖНО: порядок parent → child
+                    next = ensureParentBeforeChild(next, target.id, current.id);
+
                     // 2) если размеры известны — гарантируем вместимость ветки
                     if (childW > 0 && childH > 0) {
                         const pad = 12;
@@ -374,7 +417,7 @@ export const ScenarioEditorCore: React.FC<ScenarioEditorProps> = () => {
                     </button>
                 </Panel>
 
-                <Controls className={styles.flowControls} position="top-left" />
+                <Controls className={`${styles.flowControls}`} position="top-left" />
                 <Background id="1" gap={7} lineWidth={0.1} color="#464646" variant={BackgroundVariant.Lines} />
                 <Background id="2" gap={28} lineWidth={0.1} color="#767676" variant={BackgroundVariant.Lines} />
 

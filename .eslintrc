@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "no-undef": "error",
+    "@typescript-eslint/no-unnecessary-condition": "error",
+    "@typescript-eslint/strict-boolean-expressions": "warn",
+    "@typescript-eslint/no-non-null-assertion": "off" // лучше off и вместо ! использовать invariant()
+  }
+}

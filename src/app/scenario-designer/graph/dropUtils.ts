@@ -14,27 +14,32 @@ export const absOf = (n: FlowNode, all: FlowNode[]) => {
     return { x, y };
 };
 
+const num = (v: unknown): number | undefined =>
+    typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+
+/** ВАЖНО: никаких CSS-классов и дефолтов. Только:
+ * 1) измеренное RF (node.width/height), 2) ЧИСЛОВОЙ inline style.
+ * Иначе — ошибка для веток.
+ */
 export const rectOf = (n: FlowNode, all: FlowNode[]) => {
     const { x, y } = absOf(n, all);
 
-    // 1) сначала измеренные размеры RF
-    let w = n.width ?? 0;
-    let h = n.height ?? 0;
+    let w = num(n.width) ?? num((n.style as any)?.width);
+    let h = num(n.height) ?? num((n.style as any)?.height);
 
-    // 2) если RF ещё не измерил — пробуем style.width/height (мы задаём их при создании ветки)
-    const styleW = typeof (n.style as any)?.width === 'number' ? (n.style as any).width as number : undefined;
-    const styleH = typeof (n.style as any)?.height === 'number' ? (n.style as any).height as number : undefined;
-    if (!w && styleW) w = styleW;
-    if (!h && styleH) h = styleH;
-
-    // 3) крайний случай: новая branch может быть ещё «пустая» — даём разумный дефолт
-    if ((!w || !h) && n.type === FlowType.branchNode) {
-        w = w || 300;
-        h = h || 100;
+    if ((w ?? 0) <= 0 || (h ?? 0) <= 0) {
+        if (n.type === FlowType.branchNode) {
+            throw new Error(`Branch '${n.id}' has no numeric width/height at hit-test time`);
+        }
+        // для не-веток возвращаем 0×0 — они не цели хит-теста
+        w = w ?? 0;
+        h = h ?? 0;
     }
 
-    return { x, y, w, h };
+    return { x, y, w: w!, h: h! };
 };
+
+
 
 const depthOf = (n: FlowNode, all: FlowNode[]) => {
     let d = 0, p = byId(all, n.parentId);
@@ -42,16 +47,21 @@ const depthOf = (n: FlowNode, all: FlowNode[]) => {
     return d;
 };
 
-// ——— цель: самая «глубокая» ветка под top-left точкой ———
+const ptInRect = (pt:{x:number;y:number}, r:{x:number;y:number;w:number;h:number}) =>
+    pt.x >= r.x && pt.y >= r.y && pt.x <= r.x + r.w && pt.y <= r.y + r.h;
+
+// ✔️ Если ветка ещё не измерена (w/h == 0) — НЕ считаем её цельной областью
 export const pickDeepestBranchByTopLeft = (
     all: FlowNode[],
     ptAbs: { x: number; y: number },
     ignoreId?: string
 ) => {
-    const hits = all.filter(n => n.type === FlowType.branchNode && n.id !== ignoreId)
+    const hits = all
+        .filter(n => n.type === FlowType.branchNode && n.id !== ignoreId)
         .filter(b => {
             const r = rectOf(b, all);
-            return ptAbs.x >= r.x && ptAbs.x <= r.x + r.w && ptAbs.y >= r.y && ptAbs.y <= r.y + r.h;
+            if (r.w === 0 || r.h === 0) return false; // ещё не измерено/не задан inline размер
+            return ptInRect(ptAbs, r);
         })
         .sort((a, b) => depthOf(b, all) - depthOf(a, all));
     return hits[0];
@@ -94,14 +104,7 @@ export const commitDropToBranch = (
                 : n
         );
 
-        // гарантируем, что parent стоит перед child
-        const parentIdx = next.findIndex(n => n.id === target.id);
-        const childIdx  = next.findIndex(n => n.id === nodeId);
-        if (parentIdx !== -1 && childIdx !== -1 && childIdx < parentIdx) {
-            const [child] = next.splice(childIdx, 1);
-            const newParentIdx = next.findIndex(n => n.id === target.id);
-            next.splice(newParentIdx + 1, 0, child);
-        }
+        next = ensureParentBeforeChild(next, target.id, nodeId);
 
         if (!growBranch) return next;
 
@@ -126,16 +129,25 @@ export const commitDropToBranch = (
     });
 };
 
-// ——— вынести на поле (Ctrl-drag): снять parentId и поставить абсолютную позицию ———
-export const detachToField = (
-    setNodes: (updater: (nds: FlowNode[]) => FlowNode[]) => void,
-    nodeId: string,
-    abs: { x: number; y: number }
-) =>
-    setNodes((nds): FlowNode[] =>
-        nds.map(n =>
-            n.id === nodeId
-                ? { ...n, parentId: undefined, position: { x: abs.x, y: abs.y }, extent: undefined, expandParent: undefined }
-                : n
-        )
-    );
+
+export function ensureParentBeforeChild(list: FlowNode[], parentId: string, childId: string): FlowNode[] {
+    const next = [...list];
+    const pIdx = next.findIndex(n => n.id === parentId);
+    const cIdx = next.findIndex(n => n.id === childId);
+    if (pIdx === -1 || cIdx === -1) return next;
+    // Родитель должен быть ПЕРЕД ребёнком
+    if (cIdx <= pIdx) {
+
+        const [child] = next.splice(cIdx, 1);
+
+        if (child == undefined) {
+            throw new Error(`No parent child with id ${childId}`);
+        }
+
+        const newParentIdx = next.findIndex(n => n.id === parentId);
+        next.splice(newParentIdx + 1, 0, child);
+    }
+    return next;
+}
+
+

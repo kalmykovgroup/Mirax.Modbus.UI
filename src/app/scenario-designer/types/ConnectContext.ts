@@ -6,7 +6,7 @@ export type ConnectContext = {
     from: {
         nodeId: string;
         type: FlowType;
-        handleType: Exclude<ConnectFrom, null>;
+        handleType: ConnectFrom;
         handleId?: string | null;
     };
 };

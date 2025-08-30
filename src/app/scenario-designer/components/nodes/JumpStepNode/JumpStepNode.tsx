@@ -7,9 +7,12 @@ import {FlowType} from "@app/scenario-designer/types/FlowType.ts";
 
 export function JumpStepNode({ data, selected}: NodeProps<FlowNode>) {
 
-    const connectFrom = data?.connectFrom as 'source' | 'target' | null;
+    const handleType = data?.connectContext?.from.handleType;
+    const type : FlowType | undefined = data?.connectContext?.from.type;
 
-    const validateTarget = data.connectFromType != FlowType.branchNode
+    const validateTarget = type != FlowType.branchNode
+
+
 
     return (
         <div className={styles.container} aria-selected={selected}>
@@ -22,7 +25,7 @@ export function JumpStepNode({ data, selected}: NodeProps<FlowNode>) {
             <span className={styles.name}>Переход</span>
 
             <Handle
-                className={`${styles.target} ${styles.connectTop}`} aria-selected={connectFrom === 'source'}
+                className={`${styles.target} ${styles.connectTop}`} aria-selected={handleType === 'source'}
                 key="t1"
                 id="t1"
                 type="target"
@@ -30,7 +33,7 @@ export function JumpStepNode({ data, selected}: NodeProps<FlowNode>) {
             />
 
             <Handle
-                className={`${styles.source} ${styles.connectRightBottom}`} aria-selected={connectFrom === 'target' && validateTarget}
+                className={`${styles.source} ${styles.connectRightBottom}`} aria-selected={handleType === 'target' && validateTarget}
                 key="s1"
                 id="s1"
                 type="source"
@@ -39,7 +42,7 @@ export function JumpStepNode({ data, selected}: NodeProps<FlowNode>) {
 
 
             <Handle
-                className={`${styles.source} ${styles.connectTop}`} aria-selected={connectFrom === 'target' && validateTarget}
+                className={`${styles.source} ${styles.connectTop}`} aria-selected={handleType === 'target' && validateTarget}
                 key="s2"
                 id="s2"
                 type="source"
@@ -47,7 +50,7 @@ export function JumpStepNode({ data, selected}: NodeProps<FlowNode>) {
             />
 
             <Handle
-                className={`${styles.target} ${styles.connectLeftBottom}`} aria-selected={connectFrom === 'source'}
+                className={`${styles.target} ${styles.connectLeftBottom}`} aria-selected={handleType === 'source'}
                 key="t2"
                 id="t2"
                 type="target"

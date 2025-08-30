@@ -16,6 +16,7 @@ import {
     ModbusActivityStepDto, ParallelStepDto, SignalStepDto,
     SystemActivityStepDto
 } from "@shared/contracts/Dtos/ScenarioDtos/Steps/StepBaseDto.ts";
+import {BranchDto} from "@shared/contracts/Dtos/ScenarioDtos/Branch/BranchDto.ts";
 
 
 export function createByFlowType(type: FlowType, p: any) {
@@ -27,6 +28,7 @@ export function createByFlowType(type: FlowType, p: any) {
         case FlowType.jumpStepNode:        return JumpStepDto.create(p);
         case FlowType.parallelStepNode:    return ParallelStepDto.create(p);
         case FlowType.conditionStepNode:   return ConditionStepDto.create(p);
+        case FlowType.branchNode:          return BranchDto.create(p);
         default:
             throw new Error(`FlowType ${type} не является шагом (или не поддержан)`);
     }
@@ -64,9 +66,7 @@ export const RightPanel = () => {
                                 ...n,
                                 position: pos,
                                 data: {
-                                    ...n.data,
-                                    x: pos.x,
-                                    y: pos.y,
+                                    ...n.data
                                 } as StepNodeData<object>,
                             }
                             : n
@@ -76,19 +76,14 @@ export const RightPanel = () => {
 
                 })
 
-                const data: StepNodeData<object> = {
-                    object: object,            // ← положишь сюда свой объект нужного типа
-                    connectFrom: null,     // не тянем соединение при спавне из панели
-                    isConnecting: false,
-                    x: pos.x,
-                    y: pos.y,
-                };
 
                 const newNode: FlowNode = {
                     id,
                     type,                  // FlowType
                     position: pos,         // top-left = курсор
-                    data,                  // StepNodeData<object>
+                    data: {
+                        object: object
+                    },                  // StepNodeData<object>
                     draggable: true,
                     selectable: true,
                     ...(type === FlowType.branchNode
@@ -119,7 +114,6 @@ export const RightPanel = () => {
         window.addEventListener('mousemove', move);
         window.addEventListener('mouseup', up);
     };
-
 
     return (
         <div className={styles.container}>

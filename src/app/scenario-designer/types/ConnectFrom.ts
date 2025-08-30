@@ -1,1 +1,1 @@
-export type ConnectFrom = 'source' | 'target' | null;
+export type ConnectFrom = 'source' | 'target';

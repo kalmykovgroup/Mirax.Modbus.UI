@@ -6,7 +6,7 @@ import {formatWithMode} from "@app/lib/utils/format.ts";
 
 export function SignalNode({ data, selected}: NodeProps<FlowNode>) {
 
-    const connectFrom = data?.connectFrom as 'source' | 'target' | null;
+    const handleType = data?.connectContext?.from.handleType;
 
     return (
         <div className={`${styles.container}`} aria-selected={selected} >
@@ -19,7 +19,7 @@ export function SignalNode({ data, selected}: NodeProps<FlowNode>) {
 
 
             <Handle
-                className={`${styles.target}`} aria-selected={connectFrom === 'source'}
+                className={`${styles.target}`} aria-selected={handleType === 'source'}
                 key="t1"
                 id="t1"
                 type="target"
@@ -27,7 +27,7 @@ export function SignalNode({ data, selected}: NodeProps<FlowNode>) {
             />
 
             <Handle
-                className={`${styles.source} ${styles.sourceTop}`} aria-selected={connectFrom === 'target'}
+                className={`${styles.source} ${styles.sourceTop}`} aria-selected={handleType === 'target'}
                 key="s1"
                 id="s1"
                 type="source"
