@@ -1,0 +1,14 @@
+.customFlow :global(.react-flow__panel) {
+    margin: 0;
+    padding: 0;
+}
+
+.flowControls{
+    color: red;
+    flex-direction: row; /* Делаем горизонтально */
+    gap: 4px;
+}
+
+.rmb-panning {
+    cursor: grabbing !important;
+}

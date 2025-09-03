@@ -3,15 +3,16 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { axiosBaseQuery } from './base/baseQuery';
 
 // Типы
-import type { ApiResponse } from '@/shared/contracts/Dtos/CommonDtos/ApiResponse';
-import type { UserDto } from '@/shared/contracts/Dtos/UserDtos/Users/UserDto';
-import type { GetAllUsersRequest } from '@/shared/contracts/Dtos/UserDtos/Users/GetAllUsersRequest';
-import type { GetUserByIdRequest } from '@/shared/contracts/Dtos/UserDtos/Users/GetUserByIdRequest';
-import type { GetUserByEmailRequest } from '@/shared/contracts/Dtos/UserDtos/Users/GetUserByEmailRequest';
-import type { CreateUserRequest } from '@/shared/contracts/Dtos/UserDtos/Users/CreateUserRequest';
-import type { UpdateUserRequest } from '@/shared/contracts/Dtos/UserDtos/Users/UpdateUserRequest';
-import type { UserExistsRequest } from '@/shared/contracts/Dtos/UserDtos/Users/UserExistsRequest';
+
 import {API} from "@shared/contracts/endpoints.ts";
+import type {CreateUserRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/CreateUserRequest.ts";
+import type {ApiResponse} from "@shared/contracts/Dtos/RemoteDtos/CommonDtos/ApiResponse.ts";
+import type {UserExistsRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/UserExistsRequest.ts";
+import type {UpdateUserRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/UpdateUserRequest.ts";
+import type {GetUserByEmailRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/GetUserByEmailRequest.ts";
+import type {UserDto} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/UserDto.ts";
+import type {GetUserByIdRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/GetUserByIdRequest.ts";
+import type {GetAllUsersRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/GetAllUsersRequest.ts";
 
 export const userApi = createApi({
     reducerPath: 'userApi',
@@ -19,7 +20,7 @@ export const userApi = createApi({
     tagTypes: ['User'],
 
     endpoints: (builder) => ({
-        getAllUsers: builder.query<ApiResponse<UserDto[]>, GetAllUsersRequest | void>({
+        getAllUsers: builder.query<UserDto[], GetAllUsersRequest | void>({
             query: (params) => ({
                 url: API.USER.GET_ALL,
                 method: 'get',
@@ -34,7 +35,7 @@ export const userApi = createApi({
             { id: string; request?: GetUserByIdRequest }
         >({
             query: ({ id, request }) => ({
-                url: API.USER.GET_BY_ID(id),
+                url: API.USER.BY_ID(id),
                 method: 'get',
                 params: { id, ...(request ?? {}) }
             }),
@@ -46,14 +47,14 @@ export const userApi = createApi({
             { email: string; request?: GetUserByEmailRequest }
         >({
             query: ({ email, request }) => ({
-                url: API.USER.GET_BY_EMAIL,
+                url: API.USER.BY_EMAIL,
                 method: 'get',
                 params: { email, ...(request ?? {}) },
             }),
             providesTags: ['User'],
         }),
 
-        userExists: builder.query<ApiResponse<boolean>, UserExistsRequest>({
+        userExists: builder.query<boolean, UserExistsRequest>({
             query: (params) => ({
                 url: API.USER.EXISTS,
                 method: 'get',
@@ -61,7 +62,7 @@ export const userApi = createApi({
             }),
         }),
 
-        createUser: builder.mutation<ApiResponse<boolean>, CreateUserRequest>({
+        createUser: builder.mutation<boolean, CreateUserRequest>({
             query: (body) => ({
                 url: API.USER.CREATE,
                 method: 'post',
@@ -85,7 +86,7 @@ export const userApi = createApi({
             invalidatesTags: (_res, _err, arg) => [{ type: 'User', id: arg.id }] as any,
         }),
 
-        deleteUser: builder.mutation<ApiResponse<boolean>, { id: string }>({
+        deleteUser: builder.mutation<boolean, { id: string }>({
             query: ({ id }) => ({
                 url: API.USER.DELETE(id),
                 method: 'delete',

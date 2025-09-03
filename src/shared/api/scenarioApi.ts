@@ -3,12 +3,25 @@ import { createApi } from '@reduxjs/toolkit/query/react'
 import { axiosBaseQuery } from './base/baseQuery'
 
 // Контракты (развёрнутые типы, без ApiResponse<T> — baseQuery уже разворачивает):
-import type { ScenarioDto } from '@/shared/contracts/Dtos/ScenarioDtos/Scenarios/ScenarioDto'
-import type { GetAllScenariosRequest } from '@/shared/contracts/Dtos/ScenarioDtos/Scenarios/GetAllScenariosRequest'
-import type { GetScenarioByIdRequest } from '@/shared/contracts/Dtos/ScenarioDtos/Scenarios/GetScenarioByIdRequest'
-import type { CreateScenarioRequest } from '@/shared/contracts/Dtos/ScenarioDtos/Scenarios/CreateScenarioRequest'
-import type { UpdateScenarioRequest } from '@/shared/contracts/Dtos/ScenarioDtos/Scenarios/UpdateScenarioRequest'
 import { API } from '@shared/contracts/endpoints.ts'
+import type {
+    GetScenarioByIdRequest
+} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/GetScenarioByIdRequest.ts";
+import type {ScenarioDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/ScenarioDto.ts";
+import type {
+    CreateScenarioRequest
+} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/CreateScenarioRequest.ts";
+import type {
+    GetAllScenariosRequest
+} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/GetAllScenariosRequest.ts";
+import type {
+    UpdateScenarioRequest
+} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/UpdateScenarioRequest.ts";
+import type {Guid} from "@app/lib/types/Guid.ts";
+import type {SaveScenarioBatchResult} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/SaveScenarioBatchResult.ts";
+import type {
+    ScenarioBatchOperationsRequest
+} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/ScenarioBatchOperationsRequest.ts";
 
 export const scenarioApi = createApi({
     reducerPath: 'scenarioApi',
@@ -20,7 +33,7 @@ export const scenarioApi = createApi({
         // GET /scenarios/all?{...}
         getAllScenarios: builder.query<ScenarioDto[], GetAllScenariosRequest | void>({
             query: (params) => ({
-                url: API.SCENARIO.GET_ALL,
+                url: API.SCENARIO.ALL,
                 method: 'get',
                 params
             }),
@@ -34,9 +47,9 @@ export const scenarioApi = createApi({
         }),
 
         // GET /scenarios/{id}?{...}
-        getScenarioById: builder.query<ScenarioDto, { id: string; query?: GetScenarioByIdRequest }>({
+        getScenarioById: builder.query<ScenarioDto, { id: Guid; query?: GetScenarioByIdRequest }>({
             query: ({ id, query }) => ({
-                url: API.SCENARIO.GET_BY_ID(id),
+                url: API.SCENARIO.BY_ID(id),
                 method: 'get',
                 params: query
             }),
@@ -127,7 +140,7 @@ export const scenarioApi = createApi({
         }),
 
         // DELETE /scenarios/{id} — удаляем из кэша только при успешном ответе
-        deleteScenario: builder.mutation<boolean, { id: string }>({
+        deleteScenario: builder.mutation<boolean, { id: Guid }>({
             query: ({ id }) => ({
                 url: API.SCENARIO.DELETE(id),
                 method: 'delete'
@@ -156,7 +169,19 @@ export const scenarioApi = createApi({
                     // ошибка — не трогаем кэш
                 }
             }
-        })
+        }),
+
+        // POST /scenarios/{id}/change
+        applyScenarioChanges: builder.mutation<
+            SaveScenarioBatchResult,
+            ScenarioBatchOperationsRequest
+        >({
+            query: ({ scenarioId, operations }) => ({
+                url: API.SCENARIO.CHANGE(scenarioId),
+                method: 'post',
+                data: { scenarioId, operations },
+            }),
+        }),
     })
 })
 
@@ -165,5 +190,6 @@ export const {
     useGetScenarioByIdQuery,
     useAddScenarioMutation,
     useUpdateScenarioMutation,
-    useDeleteScenarioMutation
+    useDeleteScenarioMutation,
+    useApplyScenarioChangesMutation
 } = scenarioApi

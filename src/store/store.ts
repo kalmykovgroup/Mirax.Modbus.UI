@@ -3,6 +3,9 @@ import { rootReducer } from "./rootReducer";
 import { persistStore } from "redux-persist";
 import {authApi} from "@shared/api/authApi.ts";
 import {scenarioApi} from "@shared/api/scenarioApi.ts";
+import {workflowApi} from "@shared/api/workflowApi.ts";
+import {branchApi} from "@shared/api/branchApi.ts";
+import {stepApi} from "@shared/api/stepApi.ts";
 
 export const store = configureStore({
     reducer: rootReducer,
@@ -10,10 +13,14 @@ export const store = configureStore({
         getDefaultMiddleware({
             serializableCheck: false,
             immutableCheck: false,
-        }).concat(
-            authApi.middleware,
-            scenarioApi.middleware
-        ),
+        })
+            .concat(
+                authApi.middleware,
+                scenarioApi.middleware,
+                workflowApi.middleware,
+                branchApi.middleware,
+                stepApi.middleware,
+            ),
 })
 
 

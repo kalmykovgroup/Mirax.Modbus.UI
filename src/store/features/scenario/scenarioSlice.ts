@@ -1,174 +1,269 @@
 import {
-    createSlice,
-    createEntityAdapter,
-    type EntityState,
+    createSelector,
+    createSlice, type EntityState,
     type PayloadAction,
-    createSelector
 } from '@reduxjs/toolkit';
-import { scenarioApi } from '@/shared/api/scenarioApi';
-import type { ScenarioDto } from '@/shared/contracts/Dtos/ScenarioDtos/Scenarios/ScenarioDto';
+import type { ScenarioDto } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/ScenarioDto.ts';
+import type { AppDispatch, RootState } from '@/store/types.ts';
+import { scenarioApi } from '@shared/api/scenarioApi.ts';
+import { extractErr } from '@app/lib/types/extractErr.ts';
+import type { Guid } from '@app/lib/types/Guid.ts';
+import {ScenarioLoadOptions} from "@shared/contracts/Types/Api.Shared/RepositoryOptions/ScenarioLoadOptions.ts";
+import type {ScenarioOperationDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/ScenarioOperationDto.ts";
+import type {SaveScenarioBatchResult} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/SaveScenarioBatchResult.ts";
 
-// ====== Entity adapter (нормализованное хранение) ======
-const scenariosAdapter = createEntityAdapter<ScenarioDto>({
-    sortComparer: (a, b) => {
-        // если есть поле updatedAt/createdAt — можно сортировать по нему
-        const an = (a as any)?.name ?? '';
-        const bn = (b as any)?.name ?? '';
-        return an.localeCompare(bn);
-    },
-});
-
-// ====== State ======
-export type ScenariosStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
-
-export interface ScenariosState extends EntityState<ScenarioDto, string> {
-    activeScenarioId: string | null;
-    status: ScenariosStatus;
-    error?: string;
-    lastFetchedAt?: number;
+// Enum загрузки
+// @ts-ignore
+export enum ScenarioLoadState {
+    None = 'none',
+    Loading = 'loading',
+    Full = 'full',
+    Error = 'error',
 }
 
-const initialState: ScenariosState = scenariosAdapter.getInitialState({
-    activeScenarioId: null,
-    status: 'idle',
-    error: undefined,
-    lastFetchedAt: undefined,
-});
+export interface ScenarioDetailsEntry {
+    scenario: ScenarioDto;
+    loadState: ScenarioLoadState;
+    lastFetchedAt?: number | null;
+    error?: string | null;
+}
 
-// ====== Slice ======
+export interface ScenarioState extends EntityState<ScenarioDetailsEntry, Guid> {
+    errorLoadList?: string | null;
+    activeScenarioId?: Guid | null;
+    lastFetchedAt: number | null;
+    pendingChanges: Record<Guid, ScenarioOperationDto[]>;
+}
+
+// Начальное состояние
+const initialState: ScenarioState = {
+    ids: [],
+    entities: {},
+    errorLoadList: null,
+    activeScenarioId: null,
+    lastFetchedAt: null,
+    pendingChanges: {},
+};
+
+// Обновить список (инициируем без подписки, с форс-рефетчем по флагу)
+export const refreshScenariosList =
+    (forceRefetch = true) =>
+        async (dispatch: AppDispatch) => {
+            try {
+                const list = await dispatch(
+                    scenarioApi.endpoints.getAllScenarios.initiate(undefined, {
+                        forceRefetch,
+                        subscribe: false,             // ← единоразовый вызов без подписки
+                    })
+                ).unwrap();
+                dispatch(scenariosSlice.actions.replaceScenarios(list ?? []));
+                return list ?? [];
+            } catch (e) {
+                const msg = extractErr(e);
+                dispatch(scenariosSlice.actions.setErrorLoadList(msg));
+                throw new Error(msg);
+            }
+        };
+
+// ──────────────────────────────────────────────────────────────
+// Детально по id (ВАЖНО: 1-й аргумент — объект { id, query? })
+export const refreshScenarioById =
+    (id: Guid, forceRefetch = false) =>
+        async (dispatch: AppDispatch, getState: () => RootState) => {
+            try {
+                // Если НЕ просили форс-рефетч и детали уже есть — выходим
+                if (!forceRefetch) {
+                    const entry = getState().scenario.entities[id];
+                    if (entry?.loadState === ScenarioLoadState.Full) {
+                        return entry.scenario; // ничего не грузим
+                    }
+                }
+
+                // Реально грузим только если дошли сюда
+                dispatch(scenariosSlice.actions.markScenarioLoading(id));
+
+                const arg = {
+                    id,
+                    query: { scenarioLoadOption: ScenarioLoadOptions.LoadRecursiveSteps },
+                } as const;
+
+                const dto = await dispatch(
+                    scenarioApi.endpoints.getScenarioById.initiate(arg, {
+                        forceRefetch: true,   // форсим сетевой вызов, раз уж решили грузить
+                        subscribe: false,
+                    })
+                ).unwrap();
+
+                if (dto) dispatch(scenariosSlice.actions.upsertScenario(dto));
+                return dto;
+            } catch (e) {
+                const msg = extractErr(e);
+                dispatch(scenariosSlice.actions.setErrorLoadList(msg));
+                dispatch(scenariosSlice.actions.setScenarioError({ id, error: msg }));
+                throw new Error(msg);
+            }
+        };
+
+
+
+// +++ отправка накопленных изменений текущего сценария +++
+// returns SaveScenarioBatchResult | null, пробрасывает ошибку наверх
+export const applyScenarioPendingChanges =
+    (id: Guid) =>
+        async (dispatch: AppDispatch, getState: () => RootState): Promise<SaveScenarioBatchResult | null> => {
+            const ops = getState().scenario.pendingChanges[id] ?? [];
+            if (!ops.length) return null;
+
+            try {
+                const res = await dispatch(
+                    scenarioApi.endpoints.applyScenarioChanges.initiate({ scenarioId: id, operations: ops })
+                ).unwrap();
+
+                // Успех: очищаем буфер и перечитываем детали
+                dispatch(scenariosSlice.actions.clearPendingChanges(id));
+                await dispatch(refreshScenarioById(id, true));
+                return res;
+            } catch (e) {
+                const msg = extractErr(e);
+                // Важно: буфер НЕ чистим — пользователь может повторить отправку
+                dispatch(scenariosSlice.actions.setScenarioError({ id, error: msg }));
+                // Пробрасываем выше, чтобы UI показал тост/ошибку
+                throw new Error(msg);
+            }
+        };
+
+
+
 const scenariosSlice = createSlice({
     name: 'scenarios',
     initialState,
     reducers: {
-        setActiveScenarioId(state, action: PayloadAction<string | null>) {
-            state.activeScenarioId = action.payload ?? null;
+        setActiveScenarioId(state, action: PayloadAction<Guid>) {
+            console.log(action.payload);
+            state.activeScenarioId = action.payload ;
+        },
+        setErrorLoadList(state, action: PayloadAction<string | null>) {
+            state.errorLoadList = action.payload ?? null;
         },
         clearScenarios(state) {
-            // например, при logout
-            scenariosAdapter.removeAll(state);
+            state.ids = [];
+            state.entities = {};
             state.activeScenarioId = null;
-            state.status = 'idle';
-            state.error = undefined;
-            state.lastFetchedAt = undefined;
-        },
-        upsertScenarioLocal(state, action: PayloadAction<ScenarioDto>) {
-            scenariosAdapter.upsertOne(state, action.payload);
+            state.lastFetchedAt = null;
+            state.errorLoadList = null;
         },
         removeScenarioLocal(state, action: PayloadAction<string>) {
-            scenariosAdapter.removeOne(state, action.payload);
             if (state.activeScenarioId === action.payload) {
                 state.activeScenarioId = null;
             }
         },
+
+        markScenarioLoading(state, action: PayloadAction<Guid>) {
+            const id = action.payload;
+            const entry = state.entities[id];
+            if (entry) {
+                state.entities[id] = {
+                    ...entry,
+                    loadState: ScenarioLoadState.Loading,
+                    error: null,
+                };
+            }
+        },
+        setScenarioError(state, action: PayloadAction<{ id: Guid; error: string }>) {
+            const { id, error } = action.payload;
+            const entry = state.entities[id];
+            if (entry) {
+                state.entities[id] = {
+                    ...entry,
+                    loadState: ScenarioLoadState.Error,
+                    error,
+                };
+            }
+        },
+
+        // Массовая замена списка
+        replaceScenarios(state, action: PayloadAction<ScenarioDto[]>) {
+            const now = Date.now();
+            const list = action.payload ?? [];
+            state.ids = list.map((s) => s.id as Guid);
+            state.entities = {};
+            for (const s of list) {
+                state.entities[s.id as Guid] = {
+                    scenario: s,
+                    loadState: ScenarioLoadState.None,
+                    lastFetchedAt: now,
+                    error: null,
+                };
+            }
+            state.lastFetchedAt = now;
+        },
+
+        // Апсерт одной детали
+        upsertScenario(state, action: PayloadAction<ScenarioDto>) {
+            const s = action.payload;
+            const key = s.id as Guid;
+            const now = Date.now();
+            if (!state.ids.includes(key)) state.ids.push(key);
+            state.entities[key] = {
+                scenario: s,
+                loadState: ScenarioLoadState.Full,
+                lastFetchedAt: now,
+                error: null,
+            };
+        },
+
+        // +++ добавить операцию в буфер по scenarioId +++
+        enqueuePendingChange(state, action: PayloadAction<{ scenarioId: Guid; op: ScenarioOperationDto }>) {
+            const { scenarioId, op } = action.payload;
+            if (!state.pendingChanges[scenarioId]) state.pendingChanges[scenarioId] = [];
+            state.pendingChanges[scenarioId].push(op);
+        },
+
+        // +++ очистить буфер изменений для scenarioId +++
+        clearPendingChanges(state, action: PayloadAction<Guid>) {
+            const id = action.payload;
+            state.pendingChanges[id] = [];
+        },
     },
-    extraReducers: (builder) => {
-        // ====== GET ALL ======
-        builder
-            .addMatcher(scenarioApi.endpoints.getAllScenarios.matchPending, (state) => {
-                state.status = 'loading';
-                state.error = undefined;
-            })
-            .addMatcher(scenarioApi.endpoints.getAllScenarios.matchFulfilled, (state, { payload }) => {
-                scenariosAdapter.setAll(state, payload ?? []);
-                state.status = 'succeeded';
-                state.lastFetchedAt = Date.now();
-            })
-            .addMatcher(scenarioApi.endpoints.getAllScenarios.matchRejected, (state, action) => {
-                state.status = 'failed';
-                state.error = (action.error?.message || 'Failed to load scenarios') as string;
-            });
-
-        // ====== GET BY ID ======
-        builder
-            .addMatcher(scenarioApi.endpoints.getScenarioById.matchPending, (state) => {
-                state.status = 'loading';
-                state.error = undefined;
-            })
-            .addMatcher(scenarioApi.endpoints.getScenarioById.matchFulfilled, (state, { payload }) => {
-                if (payload) {
-                    scenariosAdapter.upsertOne(state, payload);
-                }
-                state.status = 'succeeded';
-                state.lastFetchedAt = Date.now();
-            })
-            .addMatcher(scenarioApi.endpoints.getScenarioById.matchRejected, (state, action) => {
-                state.status = 'failed';
-                state.error = (action.error?.message || 'Failed to load scenario') as string;
-            });
-
-        // ====== CREATE ======
-        builder.addMatcher(scenarioApi.endpoints.addScenario.matchFulfilled, (state, { payload }) => {
-            if (payload) {
-                scenariosAdapter.addOne(state, payload);
-                state.activeScenarioId = payload.id; // логично сразу активировать
-            }
-            state.status = 'succeeded';
-        });
-
-        // ====== UPDATE ======
-        builder.addMatcher(
-            scenarioApi.endpoints.updateScenario.matchFulfilled,
-            (state, { payload }) => {
-                if (payload) {
-                    scenariosAdapter.upsertOne(state, payload);
-                }
-                state.status = 'succeeded';
-            }
-        );
-
-        // ====== DELETE ======
-        builder.addMatcher(
-            scenarioApi.endpoints.deleteScenario.matchFulfilled,
-            (state, { meta, payload }) => {
-                // payload = boolean; удалили => true
-                if (payload === true) {
-                    // meta.arg.originalArgs: { id: string }
-                    const deletedId = (meta as any)?.arg?.originalArgs?.id as string | undefined;
-                    if (deletedId) {
-                        scenariosAdapter.removeOne(state, deletedId);
-                        if (state.activeScenarioId === deletedId) {
-                            state.activeScenarioId = null;
-                        }
-                    }
-                }
-                state.status = 'succeeded';
-            }
-        );
-    },
+    extraReducers: () => {},
 });
 
+// ===== Selectors =====
+// базовые
+export const selectScenarioSlice = (s: RootState) => s.scenario;
+export const selectActiveScenarioId = (s: RootState) => s.scenario.activeScenarioId;
+export const selectScenarioIds = (s: RootState) => s.scenario.ids as Guid[];
+export const selectScenarioEntities = (s: RootState) => s.scenario.entities;
+
+// список записей в порядке ids (Стабильная ССЫЛКА!)
+export const selectScenariosEntries = createSelector(
+    [selectScenarioIds, selectScenarioEntities],
+    (ids, entities): ScenarioDetailsEntry[] => ids.map(id => entities[id]!).filter(Boolean)
+);
+
+// фабрика: одна запись по id (мемо на уровне аргументов)
+export const makeSelectScenarioEntryById = () =>
+    createSelector(
+        [selectScenarioEntities, (_: RootState, id: Guid | null) => id],
+        (entities, id) => (id ? entities[id] ?? null : null)
+    );
+
+// прочие простые поля
+export const selectScenariosLastFetchedAt = (s: RootState) => s.scenario.lastFetchedAt;
+export const selectScenariosListError = (s: RootState) => s.scenario.errorLoadList;
+
+// ===== Exports =====
 export const {
     setActiveScenarioId,
     clearScenarios,
-    upsertScenarioLocal,
     removeScenarioLocal,
+    setErrorLoadList,
+    replaceScenarios,
+    upsertScenario,
+    markScenarioLoading,
+    setScenarioError,
+    enqueuePendingChange,
+    clearPendingChanges,
 } = scenariosSlice.actions;
 
 export default scenariosSlice.reducer;
-
-// ====== Selectors ======
-/** Подставь свой тип корневого стора, если он у тебя есть */
-export interface RootState {
-    scenarios: ScenariosState;
-    // [scenarioApi.reducerPath]: ReturnType<typeof scenarioApi.reducer>; // обычно есть в сторе
-}
-
-const selectSelf = (state: RootState) => state.scenarios;
-
-const adapterSelectors = scenariosAdapter.getSelectors<RootState>(selectSelf);
-
-export const selectScenariosStatus = (state: RootState) => state.scenarios.status;
-export const selectScenariosError = (state: RootState) => state.scenarios.error;
-export const selectActiveScenarioId = (state: RootState) => state.scenarios.activeScenarioId;
-
-export const selectAllScenarios = adapterSelectors.selectAll;
-export const selectScenarioEntities = adapterSelectors.selectEntities;
-export const selectScenarioById = adapterSelectors.selectById;
-export const selectScenarioIds = adapterSelectors.selectIds;
-export const selectScenariosTotal = createSelector(selectScenarioIds, (ids) => ids.length);
-
-export const selectActiveScenario = createSelector(
-    selectScenarioEntities,
-    selectActiveScenarioId,
-    (entities, id) => (id ? entities[id] ?? null : null)
-);

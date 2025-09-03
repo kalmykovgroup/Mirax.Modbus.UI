@@ -1,8 +1,8 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { UserDto } from '@/shared/contracts/Dtos/UserDtos/Users/UserDto';
 import type { RootState } from "@/store/types";
 import storage from "redux-persist/lib/storage";
 import {persistReducer} from "redux-persist";
+import type {UserDto} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/UserDto.ts";
 
 
 /**

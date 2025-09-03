@@ -9,7 +9,7 @@ import {useNavigate} from "react-router-dom";
 import {ROUTES} from "@app/constants/routes.ts";
 import {useEffect} from "react";
 import {useLoginMutation} from "@shared/api/authApi.ts";
-import type {LoginResponse} from "@shared/contracts/Dtos/UserDtos/Users/Login/LoginResponse.ts";
+import type {LoginResponse} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/Login/LoginResponse.ts";
 import {mapServerErrorsToForm, mapServerPayloadErrorsToForm} from "@app/lib/forms/serverErrorMapper.ts";
 import Logo from "@ui/components/Logo/Logo.tsx";
 import {selectIsAuthenticated, setCredentials} from "@/store/features/user/authSlice.ts";
@@ -27,6 +27,7 @@ export const LoginPage = () => {
     const navigate = useNavigate();
 
     const [loginRequest] = useLoginMutation()
+
 
 
     const {

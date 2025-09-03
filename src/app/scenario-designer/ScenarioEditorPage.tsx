@@ -1,15 +1,14 @@
 import {
     ReactFlowProvider,
 } from '@xyflow/react';
-
-import {ScenarioEditorCore} from "@app/scenario-designer/ScenarioEditorCore.tsx";
+import {ScenarioMap} from "@app/scenario-designer/componentsReactFlow/map/ScenarioMap/ScenarioMap.tsx";
 
 
 export default function ScenarioEditorPage() {
 
     return (
         <ReactFlowProvider >
-            <ScenarioEditorCore />
+            <ScenarioMap />
         </ReactFlowProvider>
     );
 }

@@ -1,0 +1,41 @@
+import styles from "./SignalStepNode.module.css";
+import {type NodeProps,  Handle, Position} from "@xyflow/react";
+
+import type {FlowNode} from "@app/scenario-designer/core/contracts/models/FlowNode.ts";
+import {formatWithMode} from "@app/lib/utils/format.ts";
+
+export function SignalStepNode({ data, selected}: NodeProps<FlowNode>) {
+
+    const handleType = data?.connectContext?.from.handleType;
+
+    return (
+        <div className={`${styles.container}`} aria-selected={selected} >
+            <span className={styles.coordinates}>
+                <span>x:{formatWithMode(data.x, 2, true)}</span>
+                <span>y:{formatWithMode(data.y, 2, true)}</span>
+            </span>
+
+            <span className={styles.name}>Сигнал</span>
+
+
+            <Handle
+                className={`${styles.target}`} aria-selected={handleType === 'source'}
+                key="t1"
+                id="t1"
+                type="target"
+                position={Position.Left}
+            />
+
+            <Handle
+                className={`${styles.source} ${styles.sourceTop}`} aria-selected={handleType === 'target'}
+                key="s1"
+                id="s1"
+                type="source"
+                position={Position.Right}
+            />
+
+
+
+        </div>
+    );
+}

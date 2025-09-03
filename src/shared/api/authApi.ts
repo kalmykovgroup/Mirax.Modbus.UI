@@ -3,12 +3,16 @@ import { createApi } from '@reduxjs/toolkit/query/react'
 import { axiosBaseQuery } from './base/baseQuery'
 
 // Контракты (развёрнутые типы, без ApiResponse):
-import type { LoginRequest } from '@/shared/contracts/Dtos/UserDtos/Users/Login/LoginRequest'
-import type { LoginResponse } from '@/shared/contracts/Dtos/UserDtos/Users/Login/LoginResponse'
-import type { RegisterRequest } from '@/shared/contracts/Dtos/UserDtos/Users/Register/RegisterRequest'
-import type { ResetUserPasswordRequest } from '@/shared/contracts/Dtos/UserDtos/Users/ResetPassword/ResetUserPasswordRequest'
-import type { InitiatePasswordResetRequest } from '@/shared/contracts/Dtos/UserDtos/Users/InitiatePasswordResetRequest'
 import { API } from '@shared/contracts/endpoints.ts'
+import type {LoginResponse} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/Login/LoginResponse.ts";
+import type {LoginRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/Login/LoginRequest.ts";
+import type {RegisterRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/Register/RegisterRequest.ts";
+import type {
+    InitiatePasswordResetRequest
+} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/InitiatePasswordResetRequest.ts";
+import type {
+    ResetUserPasswordRequest
+} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/ResetPassword/ResetUserPasswordRequest.ts";
 
 export const authApi = createApi({
     reducerPath: 'authApi',
