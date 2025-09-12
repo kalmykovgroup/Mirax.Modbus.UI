@@ -42,7 +42,6 @@ import { omitNodeProps } from '@app/scenario-designer/core/utils/omitNodeProps.t
 
 // состояние + загрузка
 import { useDispatch, useSelector } from 'react-redux'
-import { refreshScenarioById, ScenarioLoadState, selectActiveScenarioId } from '@/store/features/scenario/scenarioSlice.ts'
 import type { AppDispatch, RootState } from '@/store/types.ts'
 import { mapScenarioToFlow } from '@app/scenario-designer/core/mapScenarioToFlow.ts'
 import {useSelection} from "@app/scenario-designer/core/hooks/useSelection.ts";
@@ -60,6 +59,7 @@ import {DbEntityType} from "@shared/contracts/Types/Api.Shared/Scenario/DbEntity
 import {DbActionType} from "@shared/contracts/Types/Api.Shared/Scenario/DbActionType.ts";
 import {FlowType} from "@app/scenario-designer/core/contracts/types/FlowType.ts";
 import {useRightMousePan} from "@app/scenario-designer/core/hooks/useRightMousePan.ts";
+import {refreshScenarioById, ScenarioLoadState, selectActiveScenarioId} from "@/store/features/scenarioSlice.ts";
 
 
 export interface ScenarioEditorProps {}

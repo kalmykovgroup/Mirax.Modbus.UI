@@ -23,7 +23,7 @@ import type {StepNodeData} from "@app/scenario-designer/core/contracts/models/St
 
 // NEW: сценарий, операции, типы
 import {useSelector} from "react-redux";
-import {selectActiveScenarioId} from "@/store/features/scenario/scenarioSlice.ts";
+import {selectActiveScenarioId} from "@/store/features/scenarioSlice.ts";
 import {ScenarioChangeCenter} from "@app/scenario-designer/core/ScenarioChangeCenter.ts";
 import type {Guid} from "@app/lib/types/Guid.ts";
 import type {ScenarioOperationDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/ScenarioOperationDto.ts";

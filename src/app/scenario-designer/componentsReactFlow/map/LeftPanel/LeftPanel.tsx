@@ -5,8 +5,8 @@ import styles from './LeftPanel.module.css';
 import {
     refreshScenarioById, selectActiveScenarioId, selectScenariosEntries, selectScenariosListError,
     setActiveScenarioId,
-} from '@/store/features/scenario/scenarioSlice';
-import { refreshScenariosList } from '@/store/features/scenario/scenarioSlice';
+} from '@/store/features/scenarioSlice';
+import { refreshScenariosList } from '@/store/features/scenarioSlice';
 import type { ScenarioDto } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/ScenarioDto';
 import {
     usePauseScenarioMutation,
@@ -15,7 +15,7 @@ import {
     useStopScenarioMutation,
 } from '@shared/api/workflowApi';
 import type { RunScenarioResponse } from '@shared/contracts/Dtos/LocalDtos/ScenarioEngine/RunScenarioResponse';
-import { addRunningScenario, removeRunningScenario } from '@/store/features/workflow/workflowSlice';
+import { addRunningScenario, removeRunningScenario } from '@/store/features/workflowSlice';
 import type { AppDispatch } from '@/store/types';
 import {
     SimpleMenu

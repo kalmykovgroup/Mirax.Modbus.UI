@@ -26,7 +26,7 @@ export const retryConfig: IAxiosRetryConfig = {
         const idempotent = method === 'GET' || method === 'HEAD' || method === 'OPTIONS' || method === 'PUT' || method === 'DELETE';
         if (!idempotent) return false;
 
-        // 2) Сетевые / timeout (response отсутствует)
+        // 2) Сетевые / timeout (Response отсутствует)
         if (!error?.response) return true;
 
         // 3) Статусы 5xx и 429

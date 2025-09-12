@@ -2,6 +2,22 @@ import type {Guid} from "@app/lib/types/Guid.ts";
 
 export const API = {
 
+    //CHARTS
+    CHARTS: {
+        DATABASES: '/metadata/databases',   // GET
+        ENTITIES: '/metadata/entities',   // GET
+        FIELDS:   '/metadata/fields',     // GET ?entity=MyEntity
+        SERIES:   '/charts/series',          // GET ?entity=&field=&timeField=&from=&to=&px&...filters
+        MULTI:    '/charts/multi',    // POST { entity, fields, timeField, from, to, px, filters }
+        RAW:    '/charts/raw',
+    },
+
+    TEMPLATES: {
+        All : '/templates/all',
+        CREATE : '/templates/create',
+        UPDATE : (id: Guid) => `/templates/${id}`,
+        DELETE : (id: Guid) => `/templates/${id}`,
+    },
     //Local we abi
     WORKFLOW: {
         BASE: "/api/workflow",

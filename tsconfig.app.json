@@ -28,7 +28,7 @@
       "@pages/*": ["pages/*"],
       "@app/*": ["app/*"],
       "@ui/*": ["ui/*"],
-      "@assets/*": ["assets/*"],
+      "@assets/*": ["assets/*"]
     },
 
     /* Linting */
@@ -42,9 +42,8 @@
     //Тестируем
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
-    "exactOptionalPropertyTypes": true
-
-
+    "exactOptionalPropertyTypes": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": ["src"]
 }

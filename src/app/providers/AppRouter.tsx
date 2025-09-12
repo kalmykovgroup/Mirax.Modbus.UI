@@ -10,6 +10,7 @@ import ErrorPage from "@ui/pages/ErrorPage/ErrorPage.tsx";
 import RouteLogger from "@app/providers/routing/RouteLogger.tsx";
 import PublicRoute from "@app/providers/routing/PublicRoute.tsx";
 import ProtectedRoute from "@app/providers/routing/ProtectedRoute.tsx";
+import ChartsPage from "@/charts/ui/ChartsPage/ChartsPage.tsx";
 
 
 
@@ -20,6 +21,10 @@ const AppRouter: React.FC = () => {
             <RouteLogger/>
             <Routes>
                 {/* Незащищённый маршрут логина */}
+                <Route path={ROUTES.CHARTS_SCREEN} element={
+                    <ChartsPage/>
+                }/>
+
                 <Route
                     path={ROUTES.LOGIN}
                     element={

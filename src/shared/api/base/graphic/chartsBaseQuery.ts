@@ -1,23 +1,14 @@
-// src/shared/api/base/baseQuery.ts
 import type { BaseQueryFn } from '@reduxjs/toolkit/query'
-import type { AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios'
-import { apiClient } from './apiClient'
+import type {AxiosError, AxiosRequestConfig, AxiosResponse, Method} from 'axios'
+import type {AxiosBaseQueryArgs} from "@shared/api/base/baseQuery.ts";
+import type {ApiError} from "@shared/api/base/halpers/ApiError.ts";
 import {fail} from "@shared/api/base/halpers/fail.ts";
 import {ok} from "@shared/api/base/halpers/ok.ts";
 import {isApiResponse} from "@shared/api/base/halpers/isApiResponse.ts";
-import type {ApiError} from "@shared/api/base/halpers/ApiError.ts";
+import {chartsClient} from "@shared/api/base/graphic/chartsClient.ts";
 
 
-export type AxiosBaseQueryArgs = {
-    url: string
-    method?: Method
-    data?: unknown
-    params?: unknown
-    headers?: AxiosRequestConfig['headers']
-}
-
-
-export const axiosBaseQuery =
+export const axiosChartsBaseQuery =
     ():
         BaseQueryFn<AxiosBaseQueryArgs, unknown, ApiError> =>
         async (args, api) => {
@@ -31,7 +22,7 @@ export const axiosBaseQuery =
                 if (params !== undefined) cfg.params = params
                 if (headers) cfg.headers = headers
 
-                const res: AxiosResponse<unknown> = await apiClient.request<unknown>(cfg)
+                const res: AxiosResponse<unknown> = await chartsClient.request<unknown>(cfg)
                 const payload = res.data
 
                 if (isApiResponse(payload)) {
@@ -50,3 +41,4 @@ export const axiosBaseQuery =
                 return fail({ status, data: errData })
             }
         }
+

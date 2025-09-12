@@ -1,0 +1,1 @@
+export type EntityMetaDto = { name: string }
