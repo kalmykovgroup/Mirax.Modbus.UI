@@ -22,7 +22,7 @@ export const chartReqTemplatesApi = createApi({
             query: ({ body }) => ({ url: `${API.TEMPLATES.UPDATE(body.id)}`, method: 'put', data: body }),
             invalidatesTags: ['Templates/update'],
         }),
-        deleteTemplate: b.mutation<{ ok: true }, { id: string }>({
+        deleteTemplate: b.mutation<boolean, { id: string }>({
             query: ({ id }) => ({ url: `${API.TEMPLATES.DELETE(id)}`, method: 'delete' }),
             invalidatesTags: ['Templates/delete'],
         }),

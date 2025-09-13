@@ -48,6 +48,7 @@ export const fetchChartReqTemplates = createAsyncThunk<
         dispatch(setLoading({ key: 'list', value: true }))
         const sub = dispatch(chartReqTemplatesApi.endpoints.getTemplates.initiate())
         try {
+            console.log("Запрос на получение всех шаблонов" );
             const data = await sub.unwrap()
             dispatch(setTemplates(data ?? []))
             dispatch(setListLoaded(true))
@@ -73,6 +74,7 @@ export const createChartReqTemplate = createAsyncThunk<
         dispatch(setLoading({ key: 'create', value: true }))
         const sub = dispatch(chartReqTemplatesApi.endpoints.createTemplate.initiate(body))
         try {
+            console.log("Запрос на создание шаблона  " + body.name);
             const created = await sub.unwrap()
             if (created) dispatch(upsertTemplate(created))
             dispatch(clearError('create'))
@@ -95,8 +97,12 @@ export const updateChartReqTemplate = createAsyncThunk<
     'chartsTemplates/update',
     async (args, { dispatch }) => {
         dispatch(setLoading({ key: 'update', value: true }))
-        const sub = dispatch(chartReqTemplatesApi.endpoints.updateTemplate.initiate(args))
+
+        const objectRequest : { body: ChartReqTemplateDto } = (args && (args as {body: ChartReqTemplateDto}))
+
+        const sub = dispatch(chartReqTemplatesApi.endpoints.updateTemplate.initiate(objectRequest))
         try {
+            console.log("Запрос на обновление шаблона " + objectRequest.body.name);
             const updated = await sub.unwrap()
             if (updated) dispatch(upsertTemplate(updated))
             dispatch(clearError('update'))
@@ -121,6 +127,7 @@ export const deleteChartReqTemplate = createAsyncThunk<
         dispatch(setLoading({ key: 'delete', value: true }))
         const sub = dispatch(chartReqTemplatesApi.endpoints.deleteTemplate.initiate({ id }))
         try {
+            console.log("Запрос на удаление шаблона  " + id);
             await sub.unwrap()
             dispatch(removeTemplate(id))
             dispatch(clearError('delete'))

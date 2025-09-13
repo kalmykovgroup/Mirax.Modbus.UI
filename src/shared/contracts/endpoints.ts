@@ -4,19 +4,24 @@ export const API = {
 
     //CHARTS
     CHARTS: {
-        DATABASES: '/metadata/databases',   // GET
-        ENTITIES: '/metadata/entities',   // GET
-        FIELDS:   '/metadata/fields',     // GET ?entity=MyEntity
         SERIES:   '/charts/series',          // GET ?entity=&field=&timeField=&from=&to=&px&...filters
         MULTI:    '/charts/multi',    // POST { entity, fields, timeField, from, to, px, filters }
         RAW:    '/charts/raw',
+    },
+    DATABASES: {
+        ENTITIES : 'metadata/database/entities',
+        FIELDS : 'metadata/database/fields',
+        All : 'metadata/databases/all',
+        CREATE : 'metadata/databases/create',
+        UPDATE : (id: Guid) => `metadata/databases/update/${id}`,
+        DELETE : (id: Guid) => `metadata/databases/delete/${id}`,
     },
 
     TEMPLATES: {
         All : '/templates/all',
         CREATE : '/templates/create',
-        UPDATE : (id: Guid) => `/templates/${id}`,
-        DELETE : (id: Guid) => `/templates/${id}`,
+        UPDATE : (id: Guid) => `/templates/update/${id}`,
+        DELETE : (id: Guid) => `/templates/delete/${id}`,
     },
     //Local we abi
     WORKFLOW: {

@@ -15,6 +15,7 @@ import chartsSlice from "@/charts/store/chartsSlice.ts";
 import chartsTemplatesSlice from "@/charts/store/chartsTemplatesSlice.ts";
 import {chartReqTemplatesApi} from "@/charts/shared/api/chartReqTemplatesApi.ts";
 import chartsMetaSlice from "@/charts/store/chartsMetaSlice.ts";
+import {metadataApi} from "@/charts/shared/api/metadataApi.ts";
 
 export const rootReducer = combineReducers({
     // RTK Query хранит кэш ИМЕННО под своим reducerPath
@@ -26,6 +27,7 @@ export const rootReducer = combineReducers({
     [stepRelationApi.reducerPath]: stepRelationApi.reducer,
     [chartsApi.reducerPath]: chartsApi.reducer,
     [chartReqTemplatesApi.reducerPath]: chartReqTemplatesApi.reducer,
+    [metadataApi.reducerPath]: metadataApi.reducer,
 
     charts: chartsSlice,
     chartsMeta: chartsMetaSlice,

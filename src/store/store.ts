@@ -8,6 +8,7 @@ import {branchApi} from "@shared/api/branchApi.ts";
 import {stepApi} from "@shared/api/stepApi.ts";
 import {chartsApi} from "@/charts/shared/api/chartsApi.ts";
 import {chartReqTemplatesApi} from "@/charts/shared/api/chartReqTemplatesApi.ts";
+import {metadataApi} from "@/charts/shared/api/metadataApi.ts";
 
 export const store = configureStore({
     reducer: rootReducer,
@@ -24,6 +25,7 @@ export const store = configureStore({
                 stepApi.middleware,
                 chartsApi.middleware,
                 chartReqTemplatesApi.middleware,
+                metadataApi.middleware,
             ),
 })
 

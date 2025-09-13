@@ -1,3 +1,6 @@
+import type {FilterClause} from "@/charts/shared/contracts/chart/Dtos/FilterClause.ts";
+import type {SqlFilter} from "@/charts/shared/contracts/chart/Dtos/SqlFilter.ts";
+
 export type GetMultiSeriesRequest = {
     entity: string
     fields: string[]
@@ -5,5 +8,8 @@ export type GetMultiSeriesRequest = {
     from: string
     to: string
     px: number
-    filters?: Record<string, unknown> | undefined
+
+    where?: FilterClause[] | undefined;
+    sql?: SqlFilter | undefined;
+    sqlValues?: Record<string, unknown> | undefined;
 }

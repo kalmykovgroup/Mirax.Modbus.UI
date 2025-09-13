@@ -10,10 +10,12 @@ import {
     selectDatabases,
     selectEntities,
     selectFields,
-    selectLoading, selectErrors, selectEditEntity, clearBoundTemplate,
+    selectLoading, selectErrors, selectEditEntity, clearBoundTemplate, setEditEntityName, setEditEntityDesc,
 } from '@/charts/store/chartsMetaSlice.ts'
 import type {ChartReqTemplateDto} from "@/charts/shared/contracts/chartTemplate/Dtos/ChartReqTemplateDto.ts";
 import {createChartReqTemplate, updateChartReqTemplate} from "@/charts/store/chartsTemplatesSlice.ts";
+import type {DatabaseDto} from "@/charts/shared/contracts/metadata/Dtos/DatabaseDto.ts";
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 
 
@@ -71,7 +73,7 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
             id : editEntity.id,
             name: editEntity.name,
             description: editEntity.description,
-            database: editEntity.database,
+            databaseId: editEntity.databaseId,
             entity: editEntity.entity,
             timeField: timeField,
             fields: editEntity.fields,
@@ -117,17 +119,6 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
         return out
     }
 
-    const parseFiltersToEntries = (obj: unknown): FilterEntry[] => {
-        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return []
-        const res: FilterEntry[] = []
-        for (const [rawKey, v] of Object.entries(obj as Record<string, any>)) {
-            const m = rawKey.match(/^(.*?)(?:__(.+))?$/)
-            const field = m?.[1] ?? rawKey
-            const op = (m?.[2] as Op) ?? 'eq'
-            res.push({ id: `${field}__${op}__${Math.random().toString(36).slice(2,8)}`, field, op, value: v })
-        }
-        return res
-    }
 
     // entries -> JSON (автогенерация строки; не трогает entries)
     useEffect(() => {
@@ -137,8 +128,6 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
         setFiltersError(null)
     }, [entries])
 
-    const [nameInput, setNameInput] = useState<string>(editEntity.name ?? '')
-    const [descInput, setDescInput] = useState<string>(editEntity.description ?? '')
 
     // parsed filters to send
     const parsedFilters: Record<string, unknown> | undefined = useMemo(() => {
@@ -154,7 +143,6 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
         if (!editEntity.database) missing.push('База данных')
         if (!editEntity.entity)   missing.push('Таблица (entity)')
         if (!timeField)           missing.push('Поле времени (timeField)')
-        if (!editEntity.fields?.length) missing.push('Список полей')
         if (!editEntity.name?.length) missing.push('Имя')
 
         if (filtersError) { alert('Исправьте JSON фильтров'); return false; }
@@ -164,8 +152,7 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
     }
 
     const updateChartReqTemplateHandler = () => {
-        if (!editEntity.id) { alert('Не выбран шаблон для обновления'); return false; }
-
+        if (!editEntity.id) { alert('Не выбран шаблон для обновления'); return; }
         // Обновление существующего шаблона
         if(!validate()) return;
 
@@ -173,7 +160,7 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
             id: editEntity.id!,
             name: editEntity.name!,
             description: editEntity.description,
-            database: editEntity.database!,
+            databaseId: editEntity.databaseId!,
             entity: editEntity.entity!,
             timeField: timeField!,
             fields: editEntity.fields ?? [],
@@ -184,14 +171,14 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
     }
 
     const createChartReqTemplateHandler = () => {
-        // Создание нового шаблона
+         // Создание нового шаблона
         if(!validate()) return;
 
         const dto: ChartReqTemplateDto = {
             // id не задаём — сервер создаст
             name: editEntity.name,
             description: editEntity.description,
-            database: editEntity.database!,
+            databaseId: editEntity.databaseId!,
             entity: editEntity.entity!,
             timeField: timeField!,
             fields: editEntity.fields ?? [],
@@ -200,6 +187,17 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
 
         dispatch(createChartReqTemplate(dto))
     }
+
+    const byId = useMemo(() => new Map(databases.map(d => [d.id, d])), [databases]);
+
+    const handleDbChange = (databaseId: Guid) => {
+        const db: DatabaseDto | undefined = byId.get(databaseId);
+
+        if(db == undefined) throw Error("databaseId is undefined");
+
+        dispatch(setActiveDb(db));
+        if (db) dispatch(fetchEntities());
+    };
 
 
     return (
@@ -211,11 +209,19 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
                 <label style={{ fontSize: 12, opacity: .85 }}>База данных</label>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <select
-                        value={editEntity.database ?? ''}
-                        onChange={e => { const db = e.target.value || undefined; dispatch(setActiveDb(db)); dispatch(fetchEntities({ db })) }}
+                        value={editEntity?.databaseId ?? ''}           // select ждёт string, не undefined
+                        onChange={(e) => handleDbChange(e.currentTarget.value)}
                         disabled={loading.databases}
                     >
-                        {(databases.length ? databases : ['']).map(db => <option key={db} value={db}>{db || (loading.databases ? 'загрузка…' : '—')}</option>)}
+                        <option value="" disabled>
+                            {loading.databases ? 'Загрузка…' : 'Выберите базу'}
+                        </option>
+
+                        {databases.map(db => (
+                            <option key={db.id} value={db.id}>
+                                {db.name}
+                            </option>
+                        ))}
                     </select>
                     <button onClick={() => dispatch(fetchDatabases({ force: true }))} disabled={loading.databases}>Обновить</button>
                 </div>
@@ -226,6 +232,7 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
             <section style={{ display: 'grid', gap: 6 }}>
                 <label style={{ fontSize: 12, opacity: .85 }}>Таблица (entity)</label>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+
                     <select
                         value={editEntity.entity ?? ''}
                         onChange={e => { const entity = e.target.value || undefined; dispatch(setActiveEntity(entity)); if (entity) dispatch(fetchEntityFields({ entity })) }}
@@ -300,8 +307,8 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
                             <input
                                 type="text"
                                 placeholder=""
-                                value={nameInput}
-                                onChange={e => setNameInput(e.target.value)}
+                                value={editEntity.name ?? ""}
+                                onChange={e => dispatch(setEditEntityName(e.target.value))}
                             />
                         </label>
 
@@ -310,8 +317,8 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
                             <textarea
                                 rows={3}
                                 placeholder="Кратко опишите назначение шаблона"
-                                value={descInput}
-                                onChange={e => setDescInput(e.target.value)}
+                                value={editEntity.description ?? ""}
+                                onChange={e => dispatch(setEditEntityDesc(e.target.value))}
                             />
                         </label>
                     </div>

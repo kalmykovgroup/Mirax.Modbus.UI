@@ -1,0 +1,13 @@
+.styles{
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.header{
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

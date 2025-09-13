@@ -2,8 +2,6 @@
 import { createApi } from '@reduxjs/toolkit/query/react'
 import { API } from '@shared/contracts/endpoints.ts'
 import { axiosChartsBaseQuery } from '@shared/api/base/graphic/chartsBaseQuery.ts'
-import type {EntityMetaDto} from "@/charts/shared/contracts/chart/Dtos/EntityMetaDto.ts";
-import type {FieldMetaDto} from "@/charts/shared/contracts/chart/Dtos/FieldMetaDto.ts";
 import type {SeriesResponse} from "@/charts/shared/contracts/chart/Dtos/Responses/SeriesResponse.ts";
 import type {GetSeriesRequest} from "@/charts/shared/contracts/chart/Dtos/Requests/GetSeriesRequest.ts";
 import type {MultiSeriesResponse} from "@/charts/shared/contracts/chart/Dtos/Responses/MultiSeriesResponse.ts";
@@ -32,28 +30,6 @@ export const chartsApi = createApi({
     tagTypes: ['Databases', 'Entities', 'EntityFields', 'Series', 'MultiSeries', 'Raw'],
     endpoints: (builder) => ({
 
-        getDatabases: builder.query<string[], void>({
-            query: () => ({ url: API.CHARTS.DATABASES, method: 'get' }),
-            providesTags: ['Databases'],
-            keepUnusedDataFor: 300,
-        }),
-
-        // Метаданные
-        getEntities: builder.query<EntityMetaDto[], void>({
-            query: () => ({ url: API.CHARTS.ENTITIES, method: 'get' }),
-            providesTags: ['Entities'],
-            keepUnusedDataFor: 300,
-        }),
-
-        getEntityFields: builder.query<FieldMetaDto[], { entity: string }>({
-            query: ({ entity }) => ({
-                url: API.CHARTS.FIELDS,
-                method: 'get',
-                params: { entity },
-            }),
-            providesTags: (_res, _err, arg) => [{ type: 'EntityFields', id: arg.entity }],
-            keepUnusedDataFor: 600,
-        }),
 
         // Данные
         getSeries: builder.query<SeriesResponse, GetSeriesRequest>({
@@ -90,9 +66,6 @@ export const chartsApi = createApi({
 })
 
 export const {
-    useGetDatabasesQuery,
-    useGetEntitiesQuery,
-    useGetEntityFieldsQuery,
     useGetSeriesQuery,
     useLazyGetSeriesQuery,
     useGetMultiSeriesQuery,
