@@ -1,0 +1,7 @@
+.container{
+    display: flex;
+    gap: 5px;
+    border-bottom: 1px solid rgba(36, 122, 190, 0.34);
+    border-bottom-style: dashed;
+    align-items: center;
+}

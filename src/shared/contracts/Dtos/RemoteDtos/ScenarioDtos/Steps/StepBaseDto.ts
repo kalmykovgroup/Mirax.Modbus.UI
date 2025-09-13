@@ -19,7 +19,7 @@ import type {
     ModbusDeviceAddressDto
 } from "@shared/contracts/Dtos/RemoteDtos/ModbusDtos/ModbusDeviceAddresses/ModbusDeviceAddressDto.ts";
 import type {Guid} from "@app/lib/types/Guid.ts";
-import {FlowType} from "@app/scenario-designer/core/contracts/types/FlowType.ts";
+import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
 
 // ---------------- Базовый тип ----------------
 

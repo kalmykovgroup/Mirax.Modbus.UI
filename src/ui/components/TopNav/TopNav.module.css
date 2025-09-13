@@ -1,0 +1,52 @@
+.bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #282a35; /* тёмно-синий */
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+    backdrop-filter: saturate(120%) blur(4px);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px 1px 16px;
+}
+
+.nav {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    text-decoration: none;
+    font-weight: 500;
+    line-height: 1;
+    color: #b0d1ea;                /* светлый текст на синем фоне */
+    background: transparent;
+    transition: background 0.15s ease, transform 0.02s ease;
+}
+
+.link:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #247abe;
+}
+
+.link:active {
+    transform: translateY(1px);
+}
+
+.link:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.6);
+    outline-offset: 2px;
+}
+
+/* Активный пункт меню — зелёный */
+.active {
+    background: #247abe;          /* зелёный фон */
+    color: white;                /* тёмно-зелёный текст для контраста */
+}

@@ -1,0 +1,32 @@
+/* Темы отдельно */
+:global([data-theme="dark"]) .btnSend {
+    --color-bg: rgba(255, 255, 255, 0.87);
+    --color-text: #242424;
+}
+:global([data-theme="light"]) .btnSend {
+    --color-bg: #242424;
+    --color-text: rgba(255, 255, 255, 0.87);
+}
+
+
+.btnSend{
+    width: 100px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg);
+    border-radius: 3px;
+    border: 1px solid var(--color-bg);
+    font-size: 15px;
+}
+
+.btnSend span{
+    color: var(--color-text);
+}
+
+.btnSend:hover{ 
+    cursor: pointer;
+    color: #5b9bd5;
+}
+

@@ -3,14 +3,14 @@
 import React from "react";
 import MainLayout from "@ui/layouts/MainLayout/MainLayout.tsx";
 import {ROUTES} from "@app/constants/routes.ts";
-import LoginPage from "@ui/pages/Login/LoginPage.tsx";
+import LoginPage from "@/features/login/ui/Login/LoginPage.tsx";
 import {HomePage} from "@ui/pages/HomePage/HomePage.tsx";
 import PageNotFound from "@ui/pages/PageNotFound/PageNotFound.tsx";
 import ErrorPage from "@ui/pages/ErrorPage/ErrorPage.tsx";
 import RouteLogger from "@app/providers/routing/RouteLogger.tsx";
 import PublicRoute from "@app/providers/routing/PublicRoute.tsx";
 import ProtectedRoute from "@app/providers/routing/ProtectedRoute.tsx";
-import ChartsPage from "@/charts/ui/ChartsPage/ChartsPage.tsx";
+import ChartsPage from "@charts/ui/ChartsPage/ChartsPage.tsx";
 
 
 
@@ -21,9 +21,7 @@ const AppRouter: React.FC = () => {
             <RouteLogger/>
             <Routes>
                 {/* Незащищённый маршрут логина */}
-                <Route path={ROUTES.CHARTS_SCREEN} element={
-                    <ChartsPage/>
-                }/>
+
 
                 <Route
                     path={ROUTES.LOGIN}
@@ -46,12 +44,24 @@ const AppRouter: React.FC = () => {
                      * Проверяет авторизацию и, если пользователь не авторизован, перенаправляет на страницу логина.
                      * Используется для оборачивания защищённых маршрутов внутри AppRouter.
                      */
-                    <ProtectedRoute>
+
                         <MainLayout />
-                    </ProtectedRoute>
+
                 }>
 
-                    <Route index element={<HomePage />} />
+                    <Route path={ROUTES.CHARTS} element={
+                        <ChartsPage/>
+                    }/>
+
+                    <Route
+                        index
+                        element={
+                            <ProtectedRoute>
+                                <HomePage />
+                            </ProtectedRoute>
+                        }
+                    />
+
                     <Route path={ROUTES.ERROR_SCREEN} element={<ErrorPage/>} />
 
                 </Route>

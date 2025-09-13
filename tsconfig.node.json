@@ -17,13 +17,15 @@
     "baseUrl": "src",
     "paths": {
       "@shared/*": ["shared/*"],
-      "@features/*": ["features/*"],
       "@entities/*": ["entities/*"],
       "@widgets/*": ["widgets/*"],
       "@pages/*": ["pages/*"],
       "@app/*": ["app/*"],
       "@ui/*": ["ui/*"],
-      "@assets/*": ["assets/*"]
+      "@assets/*": ["assets/*"],
+      "@charts/*": ["features/charts/*"],
+      "@login/*": ["features/login/*"],
+      "@scenario/*": ["features/scenarioEditor/*"]
     },
 
     /* Node types */

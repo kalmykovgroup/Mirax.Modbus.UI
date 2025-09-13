@@ -4,6 +4,6 @@ export const ROUTES = {
     LOGIN: '/login',
     PROFILE: '/profile',
     ERROR_SCREEN: '/error',
-    CHARTS_SCREEN: '/charts',
+    CHARTS: '/charts',
     NOT_FOUND: '*',
 } as const

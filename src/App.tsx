@@ -1,12 +1,11 @@
 import {Component} from 'react'
 import ErrorPage from "@ui/pages/ErrorPage/ErrorPage.tsx";
-import {NavigateProvider} from "@app/providers/NavigateProvider.ts";
+import {NavigateProvider} from "@app/providers/NavigateProvider.tsx";
 import AppRouter from "@app/providers/AppRouter.tsx";
 import ErrorBoundary from "@app/lib/hooks/ErrorBoundary.tsx";
 import {UserActivityTracker} from "@app/lib/hooks/UserActivityTracker.tsx";
 import {DeviceProvider} from "@app/lib/hooks/device/DeviceProvider.tsx";
 import {ThemeProvider} from "@app/providers/theme/ThemeProvider.tsx";
-import RootLayout from "@ui/layouts/RootLayout/RootLayout.tsx";
 
 /**
  * Главный компонент приложения.
@@ -29,9 +28,7 @@ class App extends Component {
                     <NavigateProvider />
                     <UserActivityTracker />
                     <DeviceProvider>
-                        <RootLayout>
                             <AppRouter/>
-                        </RootLayout>
                     </DeviceProvider>
                 </ErrorBoundary>
             </ThemeProvider>

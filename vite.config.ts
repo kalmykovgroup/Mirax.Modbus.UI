@@ -19,13 +19,15 @@ export default defineConfig({
         alias: {
             "@": path.resolve(__dirname, "src"),
             '@shared': path.resolve(__dirname, './src/shared'),
-            '@features': path.resolve(__dirname, './src/features'),
             '@entities': path.resolve(__dirname, './src/entities'),
             '@widgets': path.resolve(__dirname, './src/widgets'),
             '@pages': path.resolve(__dirname, './src/pages'),
             '@app': path.resolve(__dirname, './src/app'),
             '@ui': path.resolve(__dirname, './src/ui'),
             '@assets': path.resolve(__dirname, './src/ui/assets'),
+            '@charts': path.resolve(__dirname, './src/features/charts'),
+            '@login': path.resolve(__dirname, './src/features/login'),
+            '@scenario': path.resolve(__dirname, './src/features/scenarioEditor'),
         },
     },
 });

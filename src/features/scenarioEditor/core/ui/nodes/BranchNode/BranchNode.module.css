@@ -1,0 +1,68 @@
+@import '@scenario/ui/styles/commonToNode.css';
+
+.container{
+    position: relative;
+    box-sizing: border-box;
+    background-clip: content-box; /* фон остаётся у исходного размера */
+    border: 1px solid var(--color-branch);
+    background: transparent;
+    border-radius: 5px ;
+    padding: 5px;
+    width: 100%;
+    height: 100%;
+    min-width: 70px;
+    min-height: 21px;
+
+    z-index: 0;
+}
+
+/* сплошной фон ветки — НЕ перехватывает клики */
+.bg {
+    position: absolute;
+    inset: 0;
+    background: var(--branch-bg, rgba(255,255,255,0.05));
+    border: 1px solid var(--branch-border, rgba(255,255,255,0.2));
+    border-radius: 8px;
+    pointer-events: none; /* ключ! */
+}
+
+/* любые чисто инфо-надписи — тоже не перехватывают */
+.coordinates,
+.name {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    color: #9aa0a6;
+    font-size: 11px;
+    pointer-events: none;
+}
+
+.target {
+    /* хэндл должен быть кликабельным */
+    pointer-events: auto;
+}
+
+.container[aria-selected="true"] {
+    box-shadow: 0 0 7px var(--color-branch);
+}
+
+
+.target[aria-selected="true"]{
+    background: var(--target-active-styles-bkg);
+    box-shadow: var(--target-active-styles-box-shadow);
+}
+
+
+.container[aria-selected="true"] {
+    box-shadow: 0 0 7px var(--color-branch);
+}
+
+.name{
+    position: absolute;
+    top: -13px;
+    left: 5px;
+    font-size: 10px;
+    color: var(--color-branch);
+}
+
+

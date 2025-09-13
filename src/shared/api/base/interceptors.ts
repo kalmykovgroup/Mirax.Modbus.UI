@@ -1,7 +1,7 @@
 import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { AxiosHeaders } from 'axios';
 import toast from 'react-hot-toast';
-import {resetAuthState} from "@/store/features/user/authSlice.ts";
+import {resetAuthState} from "@login/store/authSlice.ts";
 
 // Локальная переменная для хранения store
 let appStore: any = null;

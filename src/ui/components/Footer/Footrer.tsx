@@ -3,7 +3,7 @@ import React from "react";
 import Logo from "@/ui/components/Logo/Logo.tsx";
 
 interface FooterProps {
-    className?: string;
+    className?: string | undefined;
 }
 
 const Footer: React.FC<FooterProps> = ({ className }) => {

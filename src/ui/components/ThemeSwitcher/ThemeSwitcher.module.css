@@ -1,17 +1,84 @@
-.select{
-    width: 100px;
-    height: 40px;
-    font-size: 17px;
-    border-radius: 5px;
+.switch {
+    /* Геометрия */
+    --w: 64px;
+    --h: 32px;
+    --thumb: var(--h);
 
-    border: 1px solid #5b9bd5;
-    padding: 5px 30px 5px 10px; /* Резервируем место под стрелку */
-    -webkit-appearance: none; /* Стиль для Safari */
-    -moz-appearance: none;    /* Стиль для Firefox */
-    appearance: none;         /* Стиль для прочих браузеров */
+    /* Цвета */
+    --bg-off: #f18c16;   /* фон при light */
+    --bg-on:  #247abe;   /* фон при dark */
+    --ring:   rgba(0, 0, 0, 0.25);
+
+    position: relative;
+    box-sizing: border-box;
+    inline-size: var(--w);
+    block-size: var(--h);
+    border-radius: var(--h);       /* идеальная «пилюля» */
+    overflow: hidden;              /* чтобы бегунок ровно вписывался в скругления */
+    padding: 0;                    /* НЕТ внутренних отступов */
+    border: 0;                     /* убрали бордер, чтобы ничего не смещало */
+    background: var(--bg-off);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.08);
+    transition: background .18s ease;
+    contain: layout paint;
 }
 
-.select:focus{
-    border-color: #5b9bd5;
+.switch[data-checked="true"] {
+    background: var(--bg-on);
 }
 
+.switch:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+}
+
+/* Иконки «день/ночь» по краям (не влияют на геометрию) */
+.icons {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    pointer-events: none;
+}
+
+.icon {
+    align-self: center;
+    justify-self: center;
+    inline-size: 18px;
+    block-size: 18px;
+    opacity: .75;
+    transition: opacity .18s ease, transform .18s ease;
+}
+
+.sun { grid-column: 1; }
+.moon { grid-column: 2; }
+
+.switch[data-checked="false"] .sun { opacity: 1;  transform: scale(1.05); }
+.switch[data-checked="false"] .moon { opacity: .45; transform: scale(.9); }
+
+.switch[data-checked="true"]  .moon { opacity: 1;  transform: scale(1.05); }
+.switch[data-checked="true"]  .sun  { opacity: .45; transform: scale(.9); }
+
+/* Бегунок — диаметр равен высоте трека, центр по вертикали, без зазоров */
+.thumb {
+    position: absolute;
+    top: 50%;
+    left: 0;                           /* вплотную к левому краю */
+    inline-size: var(--thumb);         /* = высоте трека */
+    block-size: var(--thumb);
+    border-radius: 50%;                /* идеальный круг */
+    background: rgba(255, 255, 255, 0.44);
+    box-shadow: 0 2px 6px rgba(0,0,0,.25);
+    transform: translate(0, -50%);     /* точный центр по вертикали */
+    transition: transform .18s ease;
+}
+
+/* В тёмной теме — строго вплотную к правому краю */
+.switch[data-checked="true"] .thumb {
+    transform: translate(calc(var(--w) - var(--h)), -50%); /* (ширина - высота) */
+}

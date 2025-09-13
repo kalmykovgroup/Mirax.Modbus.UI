@@ -1,7 +1,7 @@
 import type {StepBaseDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 import {type Guid, newGuid} from "@app/lib/types/Guid.ts";
-import type {FlowNode} from "@app/scenario-designer/core/contracts/models/FlowNode.ts";
-import {FlowType} from "@app/scenario-designer/core/contracts/types/FlowType.ts";
+import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
+import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
 
 export interface BranchDto {
     id: Guid;

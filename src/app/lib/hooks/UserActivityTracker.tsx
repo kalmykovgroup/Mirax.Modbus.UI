@@ -2,8 +2,8 @@
 import { debounce } from "lodash";
 import {useAppDispatch} from "@/store/hooks.ts";
 import {useSelector} from "react-redux";
-import {selectLastActive, updateLastActive} from "@/store/features/user/userSlice.ts";
-import {resetAuthState, selectIsAuthenticated} from "@/store/features/user/authSlice.ts";
+import {selectLastActive, updateLastActive} from "@/features/user/store/userSlice.ts";
+import {resetAuthState, selectIsAuthenticated} from "@login/store/authSlice.ts";
 
 
 const IDLE_TIMEOUT_MINUTES = 10;

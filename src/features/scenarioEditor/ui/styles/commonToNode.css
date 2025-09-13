@@ -1,0 +1,29 @@
+:root {
+    --color-jump: #ff0000;
+    --color-condition: #00ff48;
+    --color-delay: #ffffff;
+    --color-parallel: #8E24AA;
+
+    --color-activity-modbus: #1976D2;
+    --color-activity-system: #00f7ff;
+    --color-branch: #F57C00;
+
+    --color-signal: #FBC02D;
+
+    --source-active-styles-bkg: Green;
+    --source-active-styles-box-shadow: 0 0 10px 2px #40ff00;
+
+    --target-active-styles-bkg: Green;
+    --target-active-styles-box-shadow: 0 0 10px 2px #40ff00;
+}
+
+.coordinates{
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+    position: absolute;
+    top: -3px;
+    left: 0;
+    font-size: 8px;
+    color: #515151;
+}

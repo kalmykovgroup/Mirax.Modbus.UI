@@ -1,0 +1,59 @@
+@import '@scenario/ui/styles/commonToNode.css';
+
+.container{
+    position: relative;
+    box-sizing: border-box;
+    background-clip: content-box; /* фон остаётся у исходного размера */
+    border: 1px solid var(--color-condition);
+    background: transparent;
+    border-radius: 5px ;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    min-width: 70px;
+    min-height: 21px;
+
+}
+.container[aria-selected="true"] {
+    box-shadow: 0 0 7px var(--color-condition);
+}
+
+.source[aria-selected="true"]{
+    background: var(--source-active-styles-bkg);
+    box-shadow: var(--source-active-styles-box-shadow);
+}
+.target[aria-selected="true"]{
+    background: var(--target-active-styles-bkg);
+    box-shadow: var(--target-active-styles-box-shadow);
+}
+
+
+.text{
+    font-size: 17px;
+    color: rgb(104, 165, 255);
+}
+
+.textIf{
+    color: #e073ff;
+}
+
+.name{
+    position: absolute;
+    top: -13px;
+    left: 5px;
+    font-size: 10px;
+    color: var(--color-condition);
+}
+
+.sourceBottom{
+    top: auto;
+    bottom: 3px;
+    transform: translate(50%, 50%);
+}
+
+.sourceTop{
+    top: 3px;
+}
+

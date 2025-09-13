@@ -2,9 +2,9 @@
 import { useNavigate } from 'react-router-dom'
 import styles from './LogoutButton.module.css'
 import {useAppDispatch} from "@/store/hooks.ts";
-import {useLogoutMutation} from "@shared/api/authApi.ts";
+import {useLogoutMutation} from "@login/shared/api/authApi.ts";
 import {ROUTES} from "@app/constants/routes.ts";
-import {resetAuthState} from "@/store/features/user/authSlice.ts";
+import {resetAuthState} from "@login/store/authSlice.ts";
 
 const LogoutButton = () => {
     const dispatch = useAppDispatch()
@@ -23,13 +23,11 @@ const LogoutButton = () => {
     }
 
     return (
-        <div className={styles.container}>
-            <button
+            <button className={styles.btnSend}
                 onClick={handleLogout}
             >
                 Выйти
             </button>
-        </div>
     )
 }
 

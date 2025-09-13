@@ -1,0 +1,33 @@
+import React, {useState} from "react";
+import type {NodeOf} from "@scenario/graph/edges/edgeRelations.tsx";
+import {Position} from "@xyflow/react";
+import type {BranchDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Branch/BranchDto.ts";
+import {
+    ConditionExpressionTextarea
+} from "@scenario/core/ui/edges/ConditionExpressionTextarea/ConditionExpressionTextarea.tsx";
+import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
+
+export const ConditionBranch: React.FC<{
+    branch: NodeOf<FlowType.branchNode>;
+    condition: NodeOf<FlowType.conditionStepNode>;
+    targetPosition: Position;
+}> = ({branch, targetPosition }) => {
+    // тут доступны ВСЕ поля обоих объектов
+
+    const branchObj = branch.data.object as BranchDto | undefined;
+
+    const [conditionExpression, setConditionExpression] = useState<string>(branchObj?.conditionExpression ?? ""); // Declare a state variable...
+
+    const onChange = (conditionExpression: string) => {
+        setConditionExpression(conditionExpression);
+    }
+
+    return <>
+
+       <ConditionExpressionTextarea
+           conditionExpression={conditionExpression}
+           onChange={onChange}
+           targetPosition={targetPosition}
+       />
+    </>;
+};

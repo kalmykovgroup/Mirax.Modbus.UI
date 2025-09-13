@@ -2,7 +2,7 @@
 import { useSelector } from 'react-redux'
 import type {JSX} from "react";
 import {ROUTES} from "@app/constants/routes.ts";
-import {selectIsAuthenticated} from "@/store/features/user/authSlice.ts";
+import {selectIsAuthenticated} from "@login/store/authSlice.ts";
 
 interface Props {
     children: JSX.Element
