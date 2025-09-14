@@ -3,6 +3,12 @@ import styles from "./DelayStepNode.module.css";
 import {formatWithMode} from "@app/lib/utils/format.ts";
 import  {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
 import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
+import type {DelayStepDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Steps/StepBaseDto.ts";
+import DelayTimeInput from "@scenario/core/ui/nodes/DelayStepNode/DelayTimeInput/DelayTimeInput.tsx";
+
+const onChangeDto = (dto: DelayStepDto) =>{
+    console.log(dto);
+}
 
 export function DelayStepNode({ data, selected}: NodeProps<FlowNode>) {
 
@@ -11,8 +17,7 @@ export function DelayStepNode({ data, selected}: NodeProps<FlowNode>) {
 
     const validateTarget = type != FlowType.branchNode
 
-
-
+    const dto = data.object as DelayStepDto;
 
     return (
         <div className={styles.container} aria-selected={selected}>
@@ -24,9 +29,13 @@ export function DelayStepNode({ data, selected}: NodeProps<FlowNode>) {
 
             <div className={styles.inputContainer}>
                 <div className={`${styles.form__group} ${styles.field}`}>
-                    <input type="input" className={styles.form__field} placeholder="Время ожидания" />
-                    <label htmlFor="name" className={styles.form__label}>Время ожидания</label>
-                </div> <span>ms.</span>
+                    <DelayTimeInput
+                        value={dto.timeSpan} // здесь у вас миллисекунды строкой, например "60000"
+                        onChange={(nextMs) => onChangeDto({ ...dto, timeSpan: nextMs })}
+                        minMs={0}
+                        maxMs={Number.MAX_SAFE_INTEGER}
+                    />
+                </div>
             </div>
 
             <Handle

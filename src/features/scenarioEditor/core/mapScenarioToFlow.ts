@@ -30,6 +30,9 @@ const handleFromOrder = (order: unknown): string | undefined => {
     return n >= 1 && n <= 3 ? `s${n}` : undefined;
 };
 
+const DEFAULT_BRANCH_W = 320;
+const DEFAULT_BRANCH_H = 100;
+
 export function mapScenarioToFlow(s: ScenarioDto): { nodes: FlowNode[]; edges: FlowEdge[] } {
     const nodes: FlowNode[] = [];
     const edges: FlowEdge[] = [];
@@ -41,8 +44,12 @@ export function mapScenarioToFlow(s: ScenarioDto): { nodes: FlowNode[]; edges: F
         // строго из БД
         const bx = Number((br as any).x ?? 0);
         const by = Number((br as any).y ?? 0);
-        const bw = Number((br as any).width ?? 0);
-        const bh = Number((br as any).height ?? 0);
+
+
+        const wDb = Number((br as any).width);
+        const hDb = Number((br as any).height);
+        const bw = Number.isFinite(wDb) && wDb > 0 ? wDb : DEFAULT_BRANCH_W;
+        const bh = Number.isFinite(hDb) && hDb > 0 ? hDb : DEFAULT_BRANCH_H;
 
         const branchNode: FlowNode = {
             id: br.id,

@@ -12,12 +12,10 @@ import {
     selectFields,
     selectLoading, selectErrors, selectEditEntity, clearBoundTemplate, setEditEntityName, setEditEntityDesc,
 } from '@charts/store/chartsMetaSlice.ts'
-import type {ChartReqTemplateDto} from "@charts/shared/contracts/chartTemplate/Dtos/ChartReqTemplateDto.ts";
-import {createChartReqTemplate, updateChartReqTemplate} from "@charts/store/chartsTemplatesSlice.ts";
-import type {DatabaseDto} from "@charts/shared/contracts/metadata/Dtos/DatabaseDto.ts";
-import type {Guid} from "@app/lib/types/Guid.ts";
-
-
+import type { ChartReqTemplateDto } from '@charts/shared/contracts/chartTemplate/Dtos/ChartReqTemplateDto.ts'
+import { createChartReqTemplate, updateChartReqTemplate } from '@charts/store/chartsTemplatesSlice.ts'
+import type { DatabaseDto } from '@charts/shared/contracts/metadata/Dtos/DatabaseDto.ts'
+import type { Guid } from '@app/lib/types/Guid.ts'
 
 type Op =
     | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte'
@@ -38,7 +36,6 @@ type DataSourcePanelProps = {
 }
 
 export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => {
-
     const dispatch = useDispatch<AppDispatch>()
 
     // store
@@ -48,8 +45,6 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
     const fields = useSelector(selectFields)
     const loading = useSelector(selectLoading)
     const errors = useSelector(selectErrors)
-
-
 
     // memo lists
     const timeFields = useMemo(
@@ -70,7 +65,7 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
 
     const handleApply = () => {
         onApply({
-            id : editEntity.id,
+            id: editEntity.id,
             name: editEntity.name,
             description: editEntity.description,
             databaseId: editEntity.databaseId,
@@ -81,16 +76,32 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
         } as ChartReqTemplateDto)
     }
 
-    // defaults
+    // defaults для timeField
     useEffect(() => {
         if (!timeField && timeFields.length) setTimeFieldLocal(timeFields[0])
         if (timeField && !timeFields.includes(timeField)) setTimeFieldLocal(timeFields[0])
     }, [timeFields, timeField])
 
-    // initial loads
-    useEffect(() => { dispatch(fetchDatabases()) }, [dispatch])
-    useEffect(() => { if (editEntity.database || databases.length) dispatch(fetchEntities()) }, [dispatch, editEntity.database, databases.length])
-    useEffect(() => { if (editEntity.entity) dispatch(fetchEntityFields()) }, [dispatch, editEntity.entity])
+    // initial loads — базы один раз
+    useEffect(() => {
+        dispatch(fetchDatabases())
+    }, [dispatch])
+
+    // при смене активной базы — загрузить/подставить entities
+    const activeDbId = editEntity.databaseId
+    useEffect(() => {
+        if (activeDbId) {
+            dispatch(fetchEntities()) // кэш подставится внутри слайса, если есть
+        }
+    }, [dispatch, activeDbId])
+
+    // при смене сущности — загрузить/подставить поля
+    const activeEntity = editEntity.entity
+    useEffect(() => {
+        if (activeEntity) {
+            dispatch(fetchEntityFields({ entity: activeEntity }))
+        }
+    }, [dispatch, activeEntity])
 
     // ---------- helpers to sync filters ----------
     const isTime = (name: string) => !!fields.find(f => f.name === name && (f as any).isTime)
@@ -119,7 +130,6 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
         return out
     }
 
-
     // entries -> JSON (автогенерация строки; не трогает entries)
     useEffect(() => {
         const obj = buildFiltersObject(entries)
@@ -128,7 +138,6 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
         setFiltersError(null)
     }, [entries])
 
-
     // parsed filters to send
     const parsedFilters: Record<string, unknown> | undefined = useMemo(() => {
         if (filtersError) return undefined
@@ -136,25 +145,22 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
         catch { return undefined }
     }, [filtersText, filtersError])
 
-
     const validate = () => {
-
         const missing: string[] = []
         if (!editEntity.database) missing.push('База данных')
-        if (!editEntity.entity)   missing.push('Таблица (entity)')
-        if (!timeField)           missing.push('Поле времени (timeField)')
+        if (!editEntity.entity) missing.push('Таблица (entity)')
+        if (!timeField) missing.push('Поле времени (timeField)')
         if (!editEntity.name?.length) missing.push('Имя')
 
-        if (filtersError) { alert('Исправьте JSON фильтров'); return false; }
-        if (missing.length) { alert(`Заполните: ${missing.join(', ')}`); return false; }
+        if (filtersError) { alert('Исправьте JSON фильтров'); return false }
+        if (missing.length) { alert(`Заполните: ${missing.join(', ')}`); return false }
 
-        return true;
+        return true
     }
 
     const updateChartReqTemplateHandler = () => {
-        if (!editEntity.id) { alert('Не выбран шаблон для обновления'); return; }
-        // Обновление существующего шаблона
-        if(!validate()) return;
+        if (!editEntity.id) { alert('Не выбран шаблон для обновления'); return }
+        if (!validate()) return
 
         const dto: ChartReqTemplateDto = {
             id: editEntity.id!,
@@ -171,8 +177,7 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
     }
 
     const createChartReqTemplateHandler = () => {
-         // Создание нового шаблона
-        if(!validate()) return;
+        if (!validate()) return
 
         const dto: ChartReqTemplateDto = {
             // id не задаём — сервер создаст
@@ -188,17 +193,13 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
         dispatch(createChartReqTemplate(dto))
     }
 
-    const byId = useMemo(() => new Map(databases.map(d => [d.id, d])), [databases]);
+    const byId = useMemo(() => new Map<Guid, DatabaseDto>(databases.map(d => [d.id, d])), [databases])
 
     const handleDbChange = (databaseId: Guid) => {
-        const db: DatabaseDto | undefined = byId.get(databaseId);
-
-        if(db == undefined) throw Error("databaseId is undefined");
-
-        dispatch(setActiveDb(db));
-        if (db) dispatch(fetchEntities());
-    };
-
+        const db = byId.get(databaseId)
+        if (!db) return
+        dispatch(setActiveDb(db))      // очистит entities/fields в slice
+    }
 
     return (
         <div style={{ display: 'grid', gap: 12, padding: 12, border: '1px solid #333', borderRadius: 8 }}>
@@ -210,7 +211,7 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <select
                         value={editEntity?.databaseId ?? ''}           // select ждёт string, не undefined
-                        onChange={(e) => handleDbChange(e.currentTarget.value)}
+                        onChange={(e) => handleDbChange(e.currentTarget.value as unknown as Guid)}
                         disabled={loading.databases}
                     >
                         <option value="" disabled>
@@ -223,7 +224,7 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
                             </option>
                         ))}
                     </select>
-                    <button onClick={() => dispatch(fetchDatabases({ force: true }))} disabled={loading.databases}>Обновить</button>
+                    <button onClick={() => dispatch(fetchDatabases())} disabled={loading.databases}>Обновить</button>
                 </div>
                 {errors.databases && <small style={{ color: 'tomato' }}>{errors.databases}</small>}
             </section>
@@ -232,15 +233,20 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
             <section style={{ display: 'grid', gap: 6 }}>
                 <label style={{ fontSize: 12, opacity: .85 }}>Таблица (entity)</label>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-
                     <select
                         value={editEntity.entity ?? ''}
-                        onChange={e => { const entity = e.target.value || undefined; dispatch(setActiveEntity(entity)); if (entity) dispatch(fetchEntityFields({ entity })) }}
+                        onChange={e => {
+                            const entity = e.target.value || undefined
+                            dispatch(setActiveEntity(entity))
+                            // поля подтянутся через useEffect по activeEntity
+                        }}
                         disabled={loading.entities || entities.length === 0}
                     >
-                        {(entities.length ? entities : ['']).map(n => <option key={n} value={n}>{n || (loading.entities ? 'загрузка…' : '—')}</option>)}
+                        {(entities.length ? entities : ['']).map(n =>
+                            <option key={n} value={n}>{n || (loading.entities ? 'загрузка…' : '—')}</option>
+                        )}
                     </select>
-                    <button onClick={() => dispatch(fetchEntities({ force: true }))} disabled={loading.entities || !databases.length}>Обновить</button>
+                    <button onClick={() => dispatch(fetchEntities())} disabled={loading.entities || !databases.length}>Обновить</button>
                 </div>
                 {errors.entities && <small style={{ color: 'tomato' }}>{errors.entities}</small>}
             </section>
@@ -256,7 +262,10 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
                     >
                         {(timeFields.length ? timeFields : ['']).map(n => <option key={n} value={n}>{n || (loading.fields ? 'загрузка…' : '—')}</option>)}
                     </select>
-                    <button onClick={() => editEntity.entity && dispatch(fetchEntityFields({ entity: editEntity.entity, force: true }))} disabled={loading.fields || !editEntity.entity}>
+                    <button
+                        onClick={() => editEntity.entity && dispatch(fetchEntityFields({ entity: editEntity.entity }))}
+                        disabled={loading.fields || !editEntity.entity}
+                    >
                         Обновить поля
                     </button>
                 </div>
@@ -301,31 +310,29 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
                 isNumeric={isNumeric}
             />
 
-                    <div >
-                        <label style={{ display: 'grid', gap: 6 }}>
-                            <span style={{ fontSize: 12, opacity: .8 }}>Название*</span>
-                            <input
-                                type="text"
-                                placeholder=""
-                                value={editEntity.name ?? ""}
-                                onChange={e => dispatch(setEditEntityName(e.target.value))}
-                            />
-                        </label>
+            <div >
+                <label style={{ display: 'grid', gap: 6 }}>
+                    <span style={{ fontSize: 12, opacity: .8 }}>Название*</span>
+                    <input
+                        type="text"
+                        placeholder=""
+                        value={editEntity.name ?? ""}
+                        onChange={e => dispatch(setEditEntityName(e.target.value))}
+                    />
+                </label>
 
-                        <label style={{ display: 'grid', gap: 6 }}>
-                            <span style={{ fontSize: 12, opacity: .8 }}>Описание</span>
-                            <textarea
-                                rows={3}
-                                placeholder="Кратко опишите назначение шаблона"
-                                value={editEntity.description ?? ""}
-                                onChange={e => dispatch(setEditEntityDesc(e.target.value))}
-                            />
-                        </label>
-                    </div>
+                <label style={{ display: 'grid', gap: 6 }}>
+                    <span style={{ fontSize: 12, opacity: .8 }}>Описание</span>
+                    <textarea
+                        rows={3}
+                        placeholder="Кратко опишите назначение шаблона"
+                        value={editEntity.description ?? ""}
+                        onChange={e => dispatch(setEditEntityDesc(e.target.value))}
+                    />
+                </label>
+            </div>
 
-
-
-            <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                 <div>
                     {editEntity.id ? (
                         <>
@@ -340,9 +347,6 @@ export const DataSourcePanel: React.FC<DataSourcePanelProps> = ({ onApply }) => 
                     <button onClick={handleApply}>Применить</button>
                 </div>
             </div>
-
-
-
         </div>
     )
 }
@@ -357,7 +361,7 @@ function FiltersBuilder({
                         }: {
     fields: any[]
     entries: FilterEntry[]
-    setEntries: (x: FilterEntry[]) => void
+    setEntries: React.Dispatch<React.SetStateAction<FilterEntry[]>>
     filtersText: string
     setFiltersText: (v: string) => void
     filtersError: string | null
@@ -377,8 +381,8 @@ function FiltersBuilder({
         v ? new Date(new Date(v).getTime() - new Date(v).getTimezoneOffset() * 60000).toISOString() : ''
 
     const opsForField = (name: string): Op[] => {
-        if (isTime(name) || isNumeric(name)) return ['eq','ne','gt','gte','lt','lte','between','in','nin','isnull','notnull']
-        return ['eq','ne','like','ilike','in','nin','isnull','notnull']
+        if (isTime(name) || isNumeric(name)) return ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'between', 'in', 'nin', 'isnull', 'notnull']
+        return ['eq', 'ne', 'like', 'ilike', 'in', 'nin', 'isnull', 'notnull']
     }
 
     const buildFiltersObject = (list: FilterEntry[]): Record<string, unknown> => {
@@ -411,7 +415,7 @@ function FiltersBuilder({
             const m = rawKey.match(/^(.*?)(?:__(.+))?$/)
             const field = m?.[1] ?? rawKey
             const op = (m?.[2] as Op) ?? 'eq'
-            res.push({ id: `${field}__${op}__${Math.random().toString(36).slice(2,8)}`, field, op, value: v })
+            res.push({ id: `${field}__${op}__${Math.random().toString(36).slice(2, 8)}`, field, op, value: v })
         }
         return res
     }
@@ -421,19 +425,19 @@ function FiltersBuilder({
         const obj = buildFiltersObject(entries)
         setFiltersText(JSON.stringify(obj))
         setFiltersError(null)
-    }, [entries])
+    }, [entries, setFiltersText, setFiltersError])
 
     // ЖИВАЯ валидация JSON и синхронизация JSON -> entries
     const onJsonChange = (v: string) => {
         setFiltersText(v)
         if (!v.trim()) {
             setFiltersError(null)
-            setEntries([])
+            setEntries([]) // полная замена — ок
             return
         }
         try {
             const obj = JSON.parse(v)
-            setEntries(parseFiltersToEntries(obj))
+            setEntries(parseFiltersToEntries(obj)) // полная замена — ок
             setFiltersError(null)
         } catch (e: any) {
             setFiltersError(e?.message || 'Invalid JSON')
@@ -457,7 +461,7 @@ function FiltersBuilder({
 
     const onAdd = () => {
         if (!newField) return
-        const id = `${newField}__${newOp}__${Math.random().toString(36).slice(2,8)}`
+        const id = `${newField}__${newOp}__${Math.random().toString(36).slice(2, 8)}`
         let value: any = undefined
         switch (newOp) {
             case 'between': {
@@ -483,7 +487,8 @@ function FiltersBuilder({
                 value = v
             }
         }
-        setEntries((prev: any) => [...prev, { id, field: newField, op: newOp, value }])
+        // функциональный апдейтер — теперь типобезопасно
+        setEntries(prev => [...prev, { id, field: newField, op: newOp, value }])
         setNewValue1(''); setNewValue2(''); setArrayEditor('')
     }
 
@@ -509,8 +514,13 @@ function FiltersBuilder({
                     </>
                 ) : newOp === 'in' || newOp === 'nin' ? (
                     <>
-            <textarea value={arrayEditor} onChange={e => setArrayEditor(e.target.value)}
-                      placeholder="значения через запятую / пробел / перенос" rows={1} style={{ resize: 'vertical' }} />
+            <textarea
+                value={arrayEditor}
+                onChange={e => setArrayEditor(e.target.value)}
+                placeholder="значения через запятую / пробел / перенос"
+                rows={1}
+                style={{ resize: 'vertical' }}
+            />
                         <div />
                     </>
                 ) : newOp === 'isnull' || newOp === 'notnull' ? (
@@ -554,11 +564,7 @@ function FiltersBuilder({
                 />
                 {filtersError && <small style={{ color: 'tomato' }}>{filtersError}</small>}
             </div>
-
-
         </section>
-
-
     )
 }
 
