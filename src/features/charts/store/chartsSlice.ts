@@ -5,50 +5,19 @@ import {chartsApi} from "@charts/shared/api/chartsApi.ts";
 import type {SeriesBinDto} from "@charts/shared/contracts/chart/Dtos/SeriesBinDto.ts";
 import type {RawPointDto} from "@charts/shared/contracts/chart/Dtos/RawPointDto.ts";
 import type {MultiSeriesItemDto} from "@charts/shared/contracts/chart/Dtos/MultiSeriesItemDto.ts";
-import type {FilterClause} from "@charts/shared/contracts/chart/Dtos/FilterClause.ts";
-import type {SqlFilter} from "@charts/shared/contracts/chart/Dtos/SqlFilter.ts";
+import type {GetSeriesRequest} from "@charts/shared/contracts/chart/Dtos/Requests/GetSeriesRequest.ts";
+import type {GetMultiSeriesRequest} from "@charts/shared/contracts/chart/Dtos/Requests/GetMultiSeriesRequest.ts";
+import type {GetRawRequest} from "@charts/shared/contracts/chart/Dtos/Requests/GetRawRequest.ts";
 
 // ----------------------------------------------------------------------------
 // Типы и минимальные утилиты
 // ----------------------------------------------------------------------------
 export type TimeRange = { from: string; to: string } // ISO UTC
 
-const clampPx = (px: number | undefined, fallback = 1200) =>
+/*const clampPx = (px: number | undefined, fallback = 1200) =>
     Math.max(300, Math.min(4000, Math.floor(px ?? fallback)))
 
-export type FetchSeriesArgs = {
-    entity: string;
-    field: string;
-    timeField?: string;
-    range: TimeRange;
-    px: number;
-    where?: FilterClause[];
-    sql?: SqlFilter;
-    sqlValues?: Record<string, unknown>;
-};
-
-export type FetchMultiSeriesArgs = {
-    entity: string;
-    fields: string[];
-    timeField?: string;
-    range: TimeRange;
-    px: number;
-    where?: FilterClause[];
-    sql?: SqlFilter;
-    sqlValues?: Record<string, unknown>;
-};
-
-export type FetchRawArgs = {
-    entity: string;
-    field: string;
-    timeField: string;
-    range: TimeRange;
-    maxPoints?: number;
-    where?: FilterClause[];
-    sql?: SqlFilter;
-    sqlValues?: Record<string, unknown>;
-};
-
+ */
 // ----------------------------------------------------------------------------
 // Состояние (минимум, но готово для расширения кэшем позже)
 // ----------------------------------------------------------------------------
@@ -90,26 +59,17 @@ const initialState: ChartState = {
 // 1) /charts/series — одно поле (binned)
 export const fetchSeriesSimple = createAsyncThunk<
     void,
-    FetchSeriesArgs
+    GetSeriesRequest
 >(
     'charts/fetchSeriesSimple',
-    async (args: FetchSeriesArgs, { dispatch }) => {
-        const { entity, field, timeField, range, px, where, sql, sqlValues } = args
+    async (request: GetSeriesRequest, { dispatch }) => {
+
+        const { field } = request
 
         dispatch(setFieldLoading({ field, loading: true }))
 
         const sub = dispatch(
-            chartsApi.endpoints.getSeries.initiate({
-                entity: entity,
-                field: field,
-                timeField: timeField,
-                from: range.from,
-                to: range.to,
-                px: clampPx(px),
-                where: where,
-                sql: sql,
-                sqlValues: sqlValues,
-            })
+            chartsApi.endpoints.getSeries.initiate(request)
         )
 
         try {
@@ -134,27 +94,17 @@ export const fetchSeriesSimple = createAsyncThunk<
 // 2) /charts/multi — несколько полей (binned)
 export const fetchMultiSeriesSimple = createAsyncThunk<
     void,
-    FetchMultiSeriesArgs
+    GetMultiSeriesRequest
 >(
     'charts/fetchMultiSeriesSimple',
-    async (args: FetchMultiSeriesArgs, { dispatch }) => {
-        const { entity, fields, timeField, range, px, where, sql, sqlValues } = args
+    async (request: GetMultiSeriesRequest, { dispatch }) => {
+        const { fields } = request
         const uniqueFields = Array.from(new Set(fields))
 
         for (const f of uniqueFields) dispatch(setFieldLoading({ field: f, loading: true }))
 
         const sub = dispatch(
-            chartsApi.endpoints.getMultiSeries.initiate({
-                entity,
-                fields: uniqueFields,
-                timeField,
-                from: range.from,
-                to: range.to,
-                px: clampPx(px),
-                where: where,
-                sql: sql,
-                sqlValues: sqlValues,
-            })
+            chartsApi.endpoints.getMultiSeries.initiate(request)
         )
 
         try {
@@ -184,25 +134,15 @@ export const fetchMultiSeriesSimple = createAsyncThunk<
 )
 
 // 3) /charts/raw — сырые точки одного поля
-export const fetchRawSimple = createAsyncThunk<void, FetchRawArgs>(
+export const fetchRawSimple = createAsyncThunk<void, GetRawRequest>(
     'charts/fetchRawSimple',
-    async (args, { dispatch }) => {
-        const { entity, field, timeField, range, maxPoints, where, sql, sqlValues } = args
+    async (request, { dispatch }) => {
+        const { field } = request
 
         dispatch(setFieldLoading({ field, loading: true }))
 
         const sub = dispatch(
-            chartsApi.endpoints.getRaw.initiate({
-                entity: entity,
-                field: field,
-                timeField: timeField,
-                from: range.from,
-                to: range.to,
-                maxPoints: maxPoints,
-                where: where,
-                sql: sql,
-                sqlValues: sqlValues,
-            })
+            chartsApi.endpoints.getRaw.initiate(request)
         )
 
         try {

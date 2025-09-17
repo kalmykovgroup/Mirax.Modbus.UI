@@ -1,15 +1,12 @@
-import type {FilterClause} from "@charts/shared/contracts/chart/Dtos/FilterClause.ts";
-import type {SqlFilter} from "@charts/shared/contracts/chart/Dtos/SqlFilter.ts";
+
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 export type GetRawRequest = {
-    entity: string; // например, DeviceEntity
-    field: string; // например, BatteryVoltage
-    timeField: string; // например, CreateDate
+    templateId: Guid
+
     from: string;
     to: string;
     maxPoints?: number | undefined; // ограничитель на всякий случай, чтобы не сломать сервер
 
-    where?: FilterClause[] | undefined;
-    sql?: SqlFilter | undefined;
-    sqlValues?: Record<string, unknown> | undefined;
+    values?: Record<string, unknown> | undefined;
 }

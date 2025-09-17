@@ -1,1 +1,0 @@
-export type FieldMetaDto = { name: string; type: string; isNumeric: boolean; isTime: boolean }

@@ -5,8 +5,8 @@ import { API } from '@app/providers/endpoints'
 import type { DatabaseDto } from '@charts/shared/contracts/metadata/Dtos/DatabaseDto'
 import type { UpdateDatabaseRequest } from '@charts/shared/contracts/metadata/Dtos/Requests/UpdateDatabaseRequest'
 import type { CreateDatabaseRequest } from '@charts/shared/contracts/metadata/Dtos/Requests/CreateDatabaseRequest'
-import type { EntityMetaDto } from '@charts/shared/contracts/metadata/Dtos/EntityMetaDto'
-import type { FieldMetaDto } from '@charts/shared/contracts/metadata/Dtos/FieldMetaDto'
+import type { EntityDto } from '@charts/shared/contracts/metadata/Dtos/EntityDto.ts'
+import type { FieldDto } from '@charts/shared/contracts/metadata/Dtos/FieldDto.ts'
 import type {Guid} from "@app/lib/types/Guid.ts";
 
 export const metadataApi = createApi({
@@ -32,39 +32,33 @@ export const metadataApi = createApi({
             invalidatesTags: ['Metadata/databases/create'],
         }),
 
-        updateDatabase: b.mutation<DatabaseDto, { body: UpdateDatabaseRequest }>({
-            query: ({ body }) => ({ url: `${API.DATABASES.UPDATE(body.id)}`, method: 'put', data: body }),
+        updateDatabase: b.mutation<DatabaseDto, UpdateDatabaseRequest>({
+            query: ( body ) => ({ url: `${API.DATABASES.UPDATE(body.id)}`, method: 'put', data: body }),
             invalidatesTags: ['Metadata/databases/update'],
         }),
 
-        deleteDatabase: b.mutation<boolean, { id: string }>({
-            query: ({ id }) => ({ url: `${API.DATABASES.DELETE(id)}`, method: 'delete' }),
-            invalidatesTags: ['Metadata/databases/delete'],
+        deleteDatabase: b.mutation<boolean, { id: Guid }>({
+            query: ({id}) => ({ url: `${API.DATABASES.DELETE(id)}`, method: 'delete' }),
+            invalidatesTags: [{ type: 'Metadata/databases/delete' }],
         }),
 
-        // ⬇️ добавили dbId в аргументы
-        getEntities: b.query<EntityMetaDto[], { dbId: Guid }>({
+        getEntities: b.mutation<EntityDto[], void>({
             query: () => ({
                 url: API.DATABASES.ENTITIES,
                 method: 'get',
                 // dbId не нужен серверу (он уходит в заголовке X-Db),
                 // но присутствует в аргументах для уникального ключа кэша
             }),
-            providesTags: (_res, _err, { dbId }) => [{ type: 'Metadata/databases/entities', id: dbId }],
-            keepUnusedDataFor: 300,
+            invalidatesTags: [{ type: 'Metadata/databases/entities' }]
         }),
 
-        // ⬇️ и здесь — dbId + entity
-        getEntityFields: b.query<FieldMetaDto[], { entity: string; dbId: Guid }>({
+        getEntityFields: b.mutation<FieldDto[], { entity: string; }>({
             query: ({ entity }) => ({
                 url: API.DATABASES.FIELDS,
                 method: 'get',
                 params: { entity },
             }),
-            providesTags: (_res, _err, { dbId, entity }) => [
-                { type: 'Metadata/databases/fields', id: `${dbId}::${entity}` }
-            ],
-            keepUnusedDataFor: 600,
+            invalidatesTags: [{ type: 'Metadata/databases/fields' }],
         }),
     }),
 })
@@ -74,6 +68,6 @@ export const {
     useCreateDatabaseMutation,
     useUpdateDatabaseMutation,
     useDeleteDatabaseMutation,
-    useGetEntitiesQuery,
-    useGetEntityFieldsQuery,
+    useGetEntitiesMutation,
+    useGetEntityFieldsMutation,
 } = metadataApi

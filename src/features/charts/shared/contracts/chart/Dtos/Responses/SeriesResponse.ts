@@ -1,4 +1,4 @@
-import type {SeriesBinDto} from "@shared/contracts/Dtos/Charts/SeriesBinDto.ts";
+import type {SeriesBinDto} from "@charts/shared/contracts/chart/Dtos/SeriesBinDto.ts";
 
 export type SeriesResponse = {
     entity: string

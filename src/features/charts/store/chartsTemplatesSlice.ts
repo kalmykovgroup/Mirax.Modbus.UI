@@ -3,6 +3,12 @@ import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/tool
 import type { RootState } from '@/store/types'
 import { chartReqTemplatesApi } from '@charts/shared/api/chartReqTemplatesApi'
 import type { ChartReqTemplateDto } from '@charts/shared/contracts/chartTemplate/Dtos/ChartReqTemplateDto'
+import type {
+    UpdateChartReqTemplateRequest
+} from "@charts/shared/contracts/chartTemplate/Dtos/Request/UpdateChartReqTemplateRequest.ts";
+import type {
+    CreateChartReqTemplateRequest
+} from "@charts/shared/contracts/chartTemplate/Dtos/Request/CreateChartReqTemplateRequest.ts";
 
 // ==== общий helper для единообразного закрытия ====
 function safeUnsubscribe(sub: any) {
@@ -65,13 +71,13 @@ export const fetchChartReqTemplates = createAsyncThunk<
 // 2) создать (везде один и тот же шаблон finally с safeUnsubscribe)
 export const createChartReqTemplate = createAsyncThunk<
     void,
-    ChartReqTemplateDto,
+    CreateChartReqTemplateRequest,
     { state: RootState }
 >(
     'chartsTemplates/create',
-    async (body, { dispatch }) => {
+    async (request, { dispatch }) => {
         dispatch(setLoading({ key: 'create', value: true }))
-        const sub = dispatch(chartReqTemplatesApi.endpoints.createTemplate.initiate(body))
+        const sub = dispatch(chartReqTemplatesApi.endpoints.createTemplate.initiate(request))
         try {
             const created = await sub.unwrap()
             if (created) dispatch(upsertTemplate(created))
@@ -89,16 +95,14 @@ export const createChartReqTemplate = createAsyncThunk<
 // 3) обновить
 export const updateChartReqTemplate = createAsyncThunk<
     void,
-    { body: ChartReqTemplateDto },
+    UpdateChartReqTemplateRequest ,
     { state: RootState }
 >(
     'chartsTemplates/update',
-    async (args, { dispatch }) => {
+    async (request: UpdateChartReqTemplateRequest, { dispatch }) => {
         dispatch(setLoading({ key: 'update', value: true }))
 
-        const objectRequest : { body: ChartReqTemplateDto } = (args && (args as {body: ChartReqTemplateDto}))
-
-        const sub = dispatch(chartReqTemplatesApi.endpoints.updateTemplate.initiate(objectRequest))
+        const sub = dispatch(chartReqTemplatesApi.endpoints.updateTemplate.initiate(request))
         try {
             const updated = await sub.unwrap()
             if (updated) dispatch(upsertTemplate(updated))
@@ -122,7 +126,7 @@ export const deleteChartReqTemplate = createAsyncThunk<
     'chartsTemplates/delete',
     async ({ id }, { dispatch }) => {
         dispatch(setLoading({ key: 'delete', value: true }))
-        const sub = dispatch(chartReqTemplatesApi.endpoints.deleteTemplate.initiate({ id }))
+        const sub = dispatch(chartReqTemplatesApi.endpoints.deleteTemplate.initiate(id))
         try {
             await sub.unwrap()
             dispatch(removeTemplate(id))

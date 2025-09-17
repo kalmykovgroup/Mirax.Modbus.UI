@@ -10,7 +10,7 @@ import ErrorPage from "@ui/pages/ErrorPage/ErrorPage.tsx";
 import RouteLogger from "@app/providers/routing/RouteLogger.tsx";
 import PublicRoute from "@app/providers/routing/PublicRoute.tsx";
 import ProtectedRoute from "@app/providers/routing/ProtectedRoute.tsx";
-import ChartsPage from "@charts/ui/ChartsPage/ChartsPage.tsx";
+import ChartsPage from "@charts/ui/ChartsPage.tsx";
 
 
 

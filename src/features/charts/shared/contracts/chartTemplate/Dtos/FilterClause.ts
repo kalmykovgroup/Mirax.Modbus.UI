@@ -1,4 +1,4 @@
-import type {FilterOp} from "@charts/shared/contracts/chart/Dtos/FilterOp.ts";
+import type {FilterOp} from "@charts/shared/contracts/chart/Types/FilterOp.ts";
 
 export interface FilterClause {
     /** Имя колонки (логическое имя поля из метаданных) */

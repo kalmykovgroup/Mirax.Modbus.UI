@@ -1,21 +1,12 @@
-import type {FilterClause} from "@charts/shared/contracts/chart/Dtos/FilterClause.ts";
-import type {SqlFilter} from "@charts/shared/contracts/chart/Dtos/SqlFilter.ts";
+
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 export type GetSeriesRequest = {
-    entity: string
-    field: string
-    timeField?: string | undefined
+    templateId: Guid
+
     from: string // ISO
     to: string   // ISO
     px: number
 
-    // Новый типизированный способ
-    where?: FilterClause[] | undefined;
-
-    // Пользовательский SQL-фрагмент с {{key}}
-    sql?: SqlFilter | undefined;
-
-    // Значения для {{key}}, приходящие на исполнении.
-    // Перекрывают SqlFilter.params[].value.
-    sqlValues?: Record<string, unknown> | undefined;
+    values?: Record<string, unknown> | undefined;
 }

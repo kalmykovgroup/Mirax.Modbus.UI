@@ -1,15 +1,11 @@
-import type {FilterClause} from "@charts/shared/contracts/chart/Dtos/FilterClause.ts";
-import type {SqlFilter} from "@charts/shared/contracts/chart/Dtos/SqlFilter.ts";
+
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 export type GetMultiSeriesRequest = {
-    entity: string
-    fields: string[]
-    timeField?: string | undefined
+    templateId: Guid
     from: string
     to: string
     px: number
 
-    where?: FilterClause[] | undefined;
-    sql?: SqlFilter | undefined;
-    sqlValues?: Record<string, unknown> | undefined;
+    values?: Record<string, unknown> | undefined;
 }

@@ -1,0 +1,78 @@
+
+.loadingText {
+    font-size: 12px;
+    opacity: .6;
+}
+
+.emptyText {
+    font-size: 12px;
+    opacity: .7;
+}
+
+.list {
+    display: grid;
+    gap: 6px;
+}
+
+/* Карточка шаблона */
+.card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid #333;
+    border-radius: 8px;
+    background: #1a1a1a;
+}
+
+.cardTitle {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.cardDescr {
+    font-size: 12px;
+    opacity: .7;
+}
+
+.cardActions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Кнопки-иконки в карточке */
+.btnExec {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid #333;
+    background: transparent;
+    color: #e6e6e6;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform .05s ease, background .15s ease, border-color .15s ease;
+}
+.btnExec:hover {
+    background: #202020;
+    border-color: #404040;
+}
+.btnExec:active {
+    transform: translateY(1px);
+}
+.btnExec svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.btnExecDelete{
+    position: absolute;
+    right: 2px;
+    top: 2px;
+}
+.btnExecRun{
+    width: 40px;
+}

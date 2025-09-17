@@ -1,101 +1,84 @@
-// src/components/ChartTemplatesPanel.tsx
-import { useEffect } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch } from '@/store/types'
-import styles from './ChartTemplatesPanel.module.css'
-
 import {
     fetchChartReqTemplates,
     deleteChartReqTemplate,
     selectChartReqTemplates,
-    selectChartReqTemplatesLoading,
 } from '@charts/store/chartsTemplatesSlice'
 
 import type { ChartReqTemplateDto } from '@charts/shared/contracts/chartTemplate/Dtos/ChartReqTemplateDto'
+import TemplatesList from './TemplatesList/TemplatesList.tsx'
+import ExecuteTemplateModal from './ExecuteTemplateModal/ExecuteTemplateModal.tsx'
+import { resolveTemplate, extractAllKeysFromTemplate } from './templateResolve'
 
-
-
-export default function ChartTemplatesPanel({onPick}: { onPick?: (cfg: ChartReqTemplateDto) => void }) {
+export default function ChartTemplatesPanel({
+                                                onPick,
+                                                onExecuteDone, // (optional) callback: (resolvedTpl: ChartReqTemplateDto) => void
+                                            }: {
+    onPick?: (cfg: ChartReqTemplateDto) => void
+    onExecuteDone?: (resolvedTpl: ChartReqTemplateDto) => void
+}) {
     const dispatch = useDispatch<AppDispatch>()
-
     const items = useSelector(selectChartReqTemplates)
-    const loading = useSelector(selectChartReqTemplatesLoading)
 
     useEffect(() => {
         dispatch(fetchChartReqTemplates({ force: false }))
     }, [dispatch])
 
-    const onPickLocal = (t: ChartReqTemplateDto) => {
-        onPick?.(t)
-    }
+    // ---- Exec modal state ----
+    const [execTpl, setExecTpl] = useState<ChartReqTemplateDto | null>(null)
+    const hasParams = useMemo(() => {
+        if (!execTpl) return false
+        return extractAllKeysFromTemplate(execTpl).length > 0
+    }, [execTpl])
 
-    const onDelete = (id: string) => {
+    const handleDelete = (id: string, name?: string) => {
+        if (!window.confirm(`Удалить шаблон${name ? ` «${name}»` : ''}? Это действие необратимо.`)) return
         dispatch(deleteChartReqTemplate({ id }))
     }
 
+    const handleExecute = (tpl: ChartReqTemplateDto) => {
+        // Если ключей нет — сразу вернуть «разрешённый» шаблон (без изменений)
+        const keys = extractAllKeysFromTemplate(tpl)
+        if (keys.length === 0) {
+            onExecuteDone?.(tpl)
+        } else {
+            setExecTpl(tpl)
+        }
+    }
+
+    const handleSubmitExec = (values: Record<string, unknown>) => {
+        if (!execTpl) return
+        const resolved = resolveTemplate(execTpl, values)
+        onExecuteDone?.(resolved)
+
+        // по умолчанию — просто для отладки
+        if (!onExecuteDone) {
+            console.group(`✅ Resolved template: ${(resolved as any).name ?? (resolved as any).id}`)
+            console.log(resolved)
+            console.groupEnd()
+        }
+
+        setExecTpl(null)
+    }
+
     return (
-        <div className={styles.container}>
+        <>
+            <TemplatesList
+                items={items}
+                onPick={onPick}
+                onDelete={handleDelete}
+                onExecute={handleExecute}
+            />
 
-            <div className={styles.header}>
-                <div style={{ fontWeight: 600 }}>Шаблоны</div>
-                {loading.list && <span style={{ fontSize: 12, opacity: .6 }}>загрузка…</span>}
-            </div>
-
-            {items.length === 0 && !loading.list && (
-                <div style={{ fontSize: 12, opacity: .7 }}>Шаблонов пока нет</div>
+            {execTpl && hasParams && (
+                <ExecuteTemplateModal
+                    template={execTpl}
+                    onCancel={() => setExecTpl(null)}
+                    onSubmit={handleSubmitExec}
+                />
             )}
-
-            <div style={{ display: 'grid', gap: 6 }}>
-                {items.map((t : ChartReqTemplateDto) => {
-                    const id = (t as any).id as string
-                    const name = (t as any).name as string
-                    const description = (t as any).description as string | undefined
-
-                    return (
-                        <div key={id} style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 8,
-                            alignItems: 'center',
-                            padding: '8px',
-                            border: '1px solid #333',
-                            borderRadius: 8,
-                            background: '#1a1a1a'
-                        }}>
-                            <div>
-                                <div style={{ fontWeight: 600, fontSize: 13 }}>{name}</div>
-                                {description && <div style={{ fontSize: 12, opacity: .7 }}>{description}</div>}
-                            </div>
-
-                            <div style={{
-                                display: 'flex',
-                                gap: 8,
-                                alignItems: 'center',
-                                padding: '8px',
-                                border: '1px solid #333',
-                                borderRadius: 8,
-                                background: '#1a1a1a'
-                            }}>
-                                <button
-                                    onClick={() => onPickLocal(t)}
-                                    title="Выбрать"
-                                    style={{ padding: '6px 10px' }}
-                                >
-                                    Выбрать
-                                </button>
-                                <button
-                                    onClick={() => onDelete(id)}
-                                    title="Удалить"
-                                    disabled={loading.delete}
-                                    style={{ padding: '6px 10px' }}
-                                >
-                                    {loading.delete ? 'Удаление…' : 'Удалить'}
-                                </button>
-                            </div>
-                        </div>
-                    )
-                })}
-            </div>
-        </div>
+        </>
     )
 }

@@ -1,15 +1,15 @@
-// src/charts/store/chartsMetaSlice.ts
+
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { RootState } from '@/store/types'
-import type {
-    ChartReqTemplateDto,
-    EditChartReqTemplate
-} from "@charts/shared/contracts/chartTemplate/Dtos/ChartReqTemplateDto.ts";
 import type {DatabaseDto} from "@charts/shared/contracts/metadata/Dtos/DatabaseDto.ts";
 import {metadataApi} from "@charts/shared/api/metadataApi.ts";
-import type {EntityMetaDto} from "@charts/shared/contracts/metadata/Dtos/EntityMetaDto.ts";
-import type {FieldMetaDto} from "@charts/shared/contracts/metadata/Dtos/FieldMetaDto.ts";
+import type {EntityDto} from "@charts/shared/contracts/metadata/Dtos/EntityDto.ts";
+import type {FieldDto} from "@charts/shared/contracts/metadata/Dtos/FieldDto.ts";
 import type {Guid} from "@app/lib/types/Guid.ts";
+import type {ChartReqTemplateDto} from "@charts/shared/contracts/chartTemplate/Dtos/ChartReqTemplateDto.ts";
+import type {FilterClause} from "@charts/shared/contracts/chartTemplate/Dtos/FilterClause.ts";
+import type {SqlFilter} from "@charts/shared/contracts/chartTemplate/Dtos/SqlFilter.ts";
+import type {SqlParam} from "@charts/shared/contracts/chartTemplate/Dtos/SqlParam.ts";
 
 // ---- Типы ----
 type LoadKey = 'databases' | 'entities' | 'fields'
@@ -17,17 +17,29 @@ type LoadFlags  = Record<LoadKey, boolean>
 type ErrorFlags = Record<LoadKey, string | undefined>
 
 
+
+export type EditChartReqTemplate = {
+    id?: Guid | undefined
+    name: string | undefined
+    description?: string | undefined
+
+    // настройки графиков
+    databaseId? : Guid | undefined
+    database?: DatabaseDto | undefined
+    entity?: EntityDto | undefined
+    timeField?: FieldDto | undefined
+    selectedFields : FieldDto[]
+
+    where?:  FilterClause[] | undefined,
+    params?: SqlParam[] | undefined,
+    sql?:    SqlFilter | undefined,
+}
+
+
 export type ChartsMetaState = {
     editEntity: EditChartReqTemplate
     // БД
     databases: DatabaseDto[]
-  //  activeDb?: string | undefined
-
-    // Таблицы
-    entities: string[]
-
-    // Поля выбранной таблицы
-    fields: FieldMetaDto[]
 
     // Загрузка/ошибки
     loading: LoadFlags
@@ -35,41 +47,37 @@ export type ChartsMetaState = {
 
     // КЭШИ, чтобы не дёргать сервер лишний раз
     databasesLoaded: boolean
-    entitiesByDb: Record<Guid, string[]>                 // dbId -> entityNames[]
-    fieldsByKey: Record<string, FieldMetaDto[]>        //(ключ = `${dbId}::${entity}`):
+    templatesById: Record<Guid, ChartReqTemplateDto>                 // dbId -> entityNames[]
+    databasesById: Record<Guid, DatabaseDto>                 // dbId -> entityNames[]
 
 }
 
 const initialState: ChartsMetaState = {
     editEntity: {
-    id: undefined,
+        id: undefined,
         name: undefined,
         description: undefined,
         databaseId: undefined,
         database: undefined,
         entity: undefined,
         timeField: undefined,
-        fields: [],          // ← пустой массив, чтобы .includes не падал
-        filters: {},         // ← пустой объект для UI/серверной синхры
-} as EditChartReqTemplate,
+        selectedFields: [],
+
+        where:  undefined,
+        params: undefined,
+        sql:    undefined,
+    },
 
     databases: [],
-    entities: [],
-    fields: [],
-
     loading: { databases: false, entities: false, fields: false },
     errors:  { databases: undefined, entities: undefined, fields: undefined },
 
     databasesLoaded: false,
-    entitiesByDb: {},
-    fieldsByKey: {},
+    templatesById: {} as Record<Guid, ChartReqTemplateDto>,
+    databasesById: {} as Record<Guid, DatabaseDto>,
 }
 
 
-// helper
-// ===== helper: ключ кэша полей =====
-const fk = (dbId: Guid | undefined, entity: string | undefined) =>
-    dbId && entity ? `${dbId}::${entity}` : '';
 
 /* ======================== БАЗЫ ДАННЫХ ======================== */
 export const fetchDatabases = createAsyncThunk<
@@ -91,6 +99,17 @@ export const fetchDatabases = createAsyncThunk<
 
             // только свои данные: список + флаг
             dispatch(setDatabases(databases));
+
+            if(databases.length > 0 && !st.editEntity.databaseId) {
+                const db = databases.at(0)!
+                dispatch(setActiveDb(db))
+                if(db.entities.length > 0){
+                    const entity = db.entities.at(0)!
+                    dispatch(setActiveEntity(entity))
+                }
+
+            }
+
             dispatch(setDatabasesLoaded(true));
 
             dispatch(clearError('databases'));
@@ -119,38 +138,22 @@ export const fetchEntities = createAsyncThunk<
         const st = getState().chartsMeta;
         const db = st.editEntity.database;
 
-        // только свои данные: если БД нет — очищаем entities
-        if (!db) {
-            dispatch(setEntities([]));
-            return;
-        }
 
-        // кэш по БД
-        const cached = st.entitiesByDb[db.id];
-        if (cached) {
-            console.log("получили из кеша таблицы для базы",db?.name,  db.id)
-            dispatch(setEntities(cached));
-            // НИКАКИХ setActiveEntity / fetchEntityFields здесь
-            return;
-        }
+        if (!db) throw new Error('Database does not exist');
+
 
         dispatch(setLoading({ key: 'entities', value: true }));
-        const sub = dispatch(metadataApi.endpoints.getEntities.initiate({dbId: db.id}));
+        const sub = dispatch(metadataApi.endpoints.getEntities.initiate());
         try {
-            const data = (await sub.unwrap()) as EntityMetaDto[];
-            const names = (data ?? [])
-                .map(x => (x as any).name as string)
-                .filter(Boolean);
-
+            const data = (await sub.unwrap()) as EntityDto[];
             // только свои данные: entities + кэш
-            dispatch(setEntities(names));
-            dispatch(cacheEntitiesForDb({ databaseId: db.id, entities: names }));
+            dispatch(setEntities({dbId: db.id, entities: data}));
 
             dispatch(clearError('entities'));
         } catch (e: any) {
             console.log(e);
             // при ошибке — оставляем entities пустыми (fields уже были очищены при setActiveDb)
-            dispatch(setEntities([]));
+            dispatch(setEntities({dbId: db.id, entities: undefined}));
             const msg =
                 e?.data?.errorMessage ??
                 (typeof e?.data === 'string' ? e.data : undefined) ??
@@ -159,7 +162,6 @@ export const fetchEntities = createAsyncThunk<
             dispatch(setError({ key: 'entities', error: msg }));
         } finally {
             dispatch(setLoading({ key: 'entities', value: false }));
-            sub.unsubscribe();
         }
     }
 );
@@ -167,56 +169,47 @@ export const fetchEntities = createAsyncThunk<
 /* ======================== ПОЛЯ СУЩНОСТИ ======================== */
 export const fetchEntityFields = createAsyncThunk<
     void,
-    { entity?: string } | void,
+    { entity?: EntityDto } | void,
     { state: RootState }
 >(
     'chartsMeta/fetchEntityFields',
     async (args, { getState, dispatch }) => {
         const st = getState().chartsMeta;
-        const dbId = st.editEntity.databaseId;
+        const db: DatabaseDto | undefined = st.editEntity.database;
+        const entityName: string | undefined = st.editEntity.entity?.name;
 
-        if(dbId == undefined) throw Error("databaseId is undefined");
+        if(db == undefined) throw Error("databaseId is undefined");
+        if(entityName == undefined) throw Error("entity name is undefined");
 
         const entity = (args && (args as any).entity) || st.editEntity.entity;
 
         // только свои данные: если entity нет — очищаем fields
         if (!entity) {
-            dispatch(setFields([]));
-            return;
-        }
-
-        // кэш полей с учётом БД
-        const key = fk(dbId, entity);
-        const cached = key ? st.fieldsByKey[key] : undefined;
-        if (cached) {
-            dispatch(setFields(cached));
-            // подрежем выбранные поля до существующих — это про fields/selection
-            const existing = new Set(cached.map(f => f.name));
-            dispatch(setFilterFields(st.editEntity.fields.filter(n => existing.has(n))));
-            // НИКАКИХ setActiveEntity здесь
+            dispatch(setFields({dbId: db.id, entity: entity, fields: undefined}));
             return;
         }
 
         dispatch(setLoading({ key: 'fields', value: true }));
+
         const sub = dispatch(
-            metadataApi.endpoints.getEntityFields.initiate({ entity: entity, dbId: dbId })
+            metadataApi.endpoints.getEntityFields.initiate({ entity: entity })
         );
         try {
-            const data = (await sub.unwrap()) as FieldMetaDto[];
+            const data = (await sub.unwrap()) as FieldDto[];
             const list = data ?? [];
 
             // только свои данные: fields + кэш
-            dispatch(setFields(list));
-            dispatch(cacheFieldsForEntity({ dbId, entity, fields: list }));
+             dispatch(setFields({dbId: db.id, entity: entity, fields: list}));
+            //dispatch(cacheFieldsForEntity({ dbId, entity, fields: list }));
 
             // синхронизируем выбранные имена с наличием в списке полей
             const existing = new Set(list.map(f => f.name));
-            dispatch(setFilterFields(st.editEntity.fields.filter(n => existing.has(n))));
+            dispatch(setFilterFields(st.editEntity.selectedFields.filter(n => existing.has(n.name))));
 
             dispatch(clearError('fields'));
         } catch (e: any) {
             // при ошибке — fields пустые
-            dispatch(setFields([]));
+            dispatch(setFields({dbId: db.id, entity: entity, fields: undefined}));
             const msg =
                 e?.data?.errorMessage ??
                 (typeof e?.data === 'string' ? e.data : undefined) ??
@@ -225,11 +218,9 @@ export const fetchEntityFields = createAsyncThunk<
             dispatch(setError({ key: 'fields', error: msg }));
         } finally {
             dispatch(setLoading({ key: 'fields', value: false }));
-            sub.unsubscribe();
         }
     }
 );
-
 
 
 
@@ -242,37 +233,33 @@ const chartsMetaSlice = createSlice({
         setActiveDb(state, action: PayloadAction<DatabaseDto>) {
             const db = action.payload
             state.editEntity.databaseId = db.id
-            state.editEntity.database   = db
+            state.editEntity.database = db
 
-            // важный сброс зависимостей — UI не держит старые значения
-            state.entities = []
-            state.editEntity.entity = undefined
-            state.fields = []
-            state.editEntity.fields = []
+            state.editEntity.entity = state.editEntity.database.entities[0]
+            state.editEntity.selectedFields = [] as FieldDto[]
         },
 
-        cacheEntitiesForDb(state, action: PayloadAction<{ databaseId: Guid; entities: string[] }>) {
-            const { databaseId, entities } = action.payload
-            if (!databaseId) return
-            state.entitiesByDb[databaseId] = entities ?? []
+        setFields(state, action: PayloadAction<{dbId: Guid, entity: string, fields: FieldDto[] | undefined}>) {
+
+            const dbId : Guid = action.payload.dbId;
+            const db: DatabaseDto | undefined = state.databasesById[dbId];
+
+            if(!db) throw Error("database is undefined");
+
+            const entity: EntityDto | undefined = db.entities.find(e => e.name == action.payload.entity);
+
+            if(!entity) throw Error("entity is undefined");
+
+
+            entity.fields = action.payload.fields ?? []
         },
 
-        setFields(state, action: PayloadAction<FieldMetaDto[]>) {
-            state.fields = action.payload ?? []
-        },
+        setApplyTemplate(state, action: PayloadAction<EditChartReqTemplate>) {
 
-        cacheFieldsForEntity(
-            state,
-            action: PayloadAction<{ dbId: Guid | undefined; entity: string; fields: FieldMetaDto[] }>
-        ) {
-            const { dbId, entity, fields } = action.payload
-            const key = fk(dbId, entity)
-            if (!key) return
-            state.fieldsByKey[key] = fields ?? []
-        },
+            if(action.payload.database == undefined) throw Error("database is undefined");
 
-        setApplyTemplate(state, action: PayloadAction<ChartReqTemplateDto>) {
-             state.editEntity = action.payload
+              action.payload.entity = action.payload.database.entities.find(e => e.name == action.payload.entity?.name);;
+              state.editEntity = action.payload;
         },
 
         // --- БД ---
@@ -284,17 +271,27 @@ const chartsMetaSlice = createSlice({
         },
         setDatabases(state, action: PayloadAction<DatabaseDto[]>) {
             state.databases = action.payload ?? []
+            state.databases.forEach((db: DatabaseDto) => {
+                state.databasesById[db.id] = db;
+            });
+
         },
         setDatabasesLoaded(state, action: PayloadAction<boolean>) {
             state.databasesLoaded = action.payload
         },
 
         // --- Таблицы ---
-        setEntities(state, action: PayloadAction<string[]>) {
-            state.entities = action.payload ?? []
-            // если activeEntity отсутствует — не назначаем автоматически здесь
+        setEntities(state, action: PayloadAction<{dbId: Guid, entities: EntityDto[] | undefined}>) {
+
+            const dbId : Guid = action.payload.dbId;
+            const db: DatabaseDto | undefined = state.databasesById[dbId];
+
+            if(db == undefined) throw Error("database is undefined");
+
+            db.entities =  action.payload.entities ?? [];
+
         },
-        setActiveEntity(state, action: PayloadAction<string | undefined>) {
+        setActiveEntity(state, action: PayloadAction<EntityDto | undefined>) {
             state.editEntity.entity = action.payload
         },
         clearBoundTemplate(state) {
@@ -303,14 +300,14 @@ const chartsMetaSlice = createSlice({
 
 
         // --- Выбор полей пользователем ---
-        setFilterFields(state, action: PayloadAction<string[]>) {
-            state.editEntity.fields = Array.from(new Set(action.payload ?? []))
+        setFilterFields(state, action: PayloadAction<FieldDto[]>) {
+            state.editEntity.selectedFields = action.payload
         },
-        toggleFilterField(state, action: PayloadAction<string>) {
-            const name = action.payload
-            const set = new Set(state.editEntity.fields)
-            set.has(name) ? set.delete(name) : set.add(name)
-            state.editEntity.fields = Array.from(set)
+        toggleFilterField(state, action: PayloadAction<FieldDto>) {
+            const field = action.payload
+            const set = new Set(state.editEntity.selectedFields)
+            set.has(field) ? set.delete(field) : set.add(field)
+            state.editEntity.selectedFields = Array.from(set)
         },
 
         // --- Loading/Error (безопасно) ---
@@ -330,14 +327,8 @@ const chartsMetaSlice = createSlice({
 
         // --- Сбросы зависимостей ---
         resetEntitiesAndFields(state) {
-            state.entities = []
             state.editEntity.entity = undefined
-            state.fields = []
-            state.editEntity.fields = []
-        },
-        resetFieldsOnly(state) {
-            state.fields = []
-            state.editEntity.fields = []
+            state.editEntity.selectedFields = []
         },
         clearAll() {
             return { ...initialState }
@@ -349,9 +340,9 @@ export const {
     // БД
     setDatabases, setActiveDb, setDatabasesLoaded,
     // Таблицы
-    setEntities, setActiveEntity, cacheEntitiesForDb,
+    setEntities, setActiveEntity,
     // Поля
-    setFields, cacheFieldsForEntity,
+    setFields,
     // Выбор полей
     setFilterFields, toggleFilterField,
     // Loading/Error
@@ -359,7 +350,7 @@ export const {
     // Сбросы
     clearBoundTemplate,
     resetEntitiesAndFields,
-    resetFieldsOnly,
+
     clearAll,
     setEditEntityName,
     setEditEntityDesc,
@@ -372,9 +363,9 @@ export default chartsMetaSlice.reducer
 export const selectEditEntity     = (s: RootState) => s.chartsMeta.editEntity
 export const selectDatabases     = (s: RootState) => s.chartsMeta.databases
 
-export const selectEntities      = (s: RootState) => s.chartsMeta.entities
+export const selectEntities      = (s: RootState) => s.chartsMeta.editEntity.database?.entities
 
-export const selectFields        = (s: RootState) => s.chartsMeta.fields
+export const selectFields        = (s: RootState) => s.chartsMeta.editEntity?.entity?.fields
 
 export const selectLoading       = (s: RootState) => s.chartsMeta.loading
 export const selectErrors        = (s: RootState) => s.chartsMeta.errors
