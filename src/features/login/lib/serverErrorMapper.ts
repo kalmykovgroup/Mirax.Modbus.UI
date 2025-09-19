@@ -90,7 +90,7 @@ export function mapServerPayloadErrorsToForm<TFieldValues extends FieldValues>(
     const p = (payload ?? {}) as { errors?: ServerFieldError[]; errorMessage?: string }
     const { commonMessage } = mapServerErrorsToForm<TFieldValues>({
         errors: p.errors,
-        setError,
+        setChartTemplatesError: setError,
         knownFields,
         fieldMap,
         defaultMessage: p.errorMessage ?? defaultMessage

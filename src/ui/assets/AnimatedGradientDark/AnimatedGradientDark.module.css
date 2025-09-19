@@ -1,0 +1,32 @@
+.bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;               /* под всем контентом */
+    pointer-events: none;
+    opacity: var(--ag-opacity, 0.9);
+
+    /* большой плавный градиент в тёмных тонах */
+    background: linear-gradient(
+            -45deg,
+            var(--ag-c1, #0F172A),  /* тёмно-синий (bg-slate-900) */
+            var(--ag-c2, #1E293B),  /* сланцевый тёмный */
+            var(--ag-c3, #312E81),  /* глубокий фиолетовый */
+            var(--ag-c4, #0B3B4F)   /* тёмная бирюза */
+    );
+    background-size: 400% 400%;
+    filter: saturate(var(--ag-saturate, 1.1));
+    animation: agd-shift var(--ag-speed, 20s) ease-in-out infinite;
+    will-change: background-position, filter, opacity;
+}
+
+/* ключевые кадры с мягкой сменой направлений */
+@keyframes agd-shift {
+    0%   { background-position: 0% 50%;    }
+    50%  { background-position: 100% 50%;  }
+    100% { background-position: 0% 50%;    }
+}
+
+/* уважение «уменьшить движения» */
+@media (prefers-reduced-motion: reduce) {
+    .bg { animation: none; }
+}
