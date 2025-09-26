@@ -20,11 +20,11 @@ import {
     setCurrentBucketMs,
     upsertTiles,
     type BucketsMs,
-    type CoverageInterval, type TimeRange,
+    type CoverageInterval, type TimeRange, setIsDataLoaded,
 } from './chartsSlice';
 
 import {selectChartBucketingConfig} from '@charts/store/chartsSettingsSlice';
-import {selectIsSyncEnabled, selectSyncFields} from "@charts/store/selectors.ts";
+import {selectIsDataLoaded, selectIsSyncEnabled, selectSyncFields} from "@charts/store/selectors.ts";
 
 
 const buildLowerOrEqualBucketsMs = (
@@ -107,6 +107,7 @@ export const fetchMultiSeriesInit = createAsyncThunk<
 
     // Инициализируем view и уровни для каждого выбранного поля
     for (const f of request.template.selectedFields) {
+        dispatch(setIsDataLoaded(true))
         dispatch(
             ensureView({
                 field: f.name,

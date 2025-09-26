@@ -38,10 +38,9 @@ export const LevelRow: React.FC<{
                     loadingIntervals={level.loadingCoverage}
                     domainFrom={domain.from}
                     domainTo={domain.to}
-                    height={level.isCurrent ? 12 : 10}
                     coverageColor={level.isCurrent ? '#3b82f6' : '#10b981'}
                     loadingColor="#fbbf24"
-                    backgroundColor={hasErrors ? '#fee2e2' : '#e5e7eb'}
+                    backgroundColor={hasErrors ? '#fee2e2' : 'rgba(229,231,235,0.55)'}
                 />
             </div>
         </div>

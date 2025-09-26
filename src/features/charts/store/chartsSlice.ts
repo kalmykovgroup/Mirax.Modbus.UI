@@ -33,6 +33,7 @@ export type ChartsState = {
     syncFields: ReadonlyArray<FieldDto>;
     template?: ResolvedCharReqTemplate | undefined;
     view: Record<FieldName, FieldView>;
+    isDataLoaded: boolean;
 };
 
 // Начальное состояние
@@ -41,6 +42,7 @@ const initialState: ChartsState = {
     syncFields: [],
     template: undefined,
     view: {},
+    isDataLoaded: false,
 };
 
 // Вспомогательные функции
@@ -258,6 +260,10 @@ const chartsSlice = createSlice({
         },
         clearSyncFields(state) {
             state.syncFields = [];
+        },
+        setIsDataLoaded(state, action: PayloadAction<boolean>) {
+            //Защита от повторного первого вызова.
+            state.isDataLoaded = action.payload;
         }
     },
 });
@@ -280,6 +286,7 @@ export const {
     toggleSync,
     addSyncField,
     removeSyncField,
-    clearSyncFields
+    clearSyncFields,
+    setIsDataLoaded
 } = chartsSlice.actions;
 

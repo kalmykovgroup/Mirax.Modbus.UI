@@ -1,21 +1,30 @@
+// charts/ui/CharContainer/ChartCollection/FieldChart/FieldChart.tsx
+
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { createChartOption } from './OptionECharts';
-import {ensureView, updateCurrentRange, setCurrentBucketMs} from '@charts/store/chartsSlice';
-import s from "./FieldChart.module.css"
+import {
+    ensureView,
+    updateCurrentRange,
+    setCurrentBucketMs,
+    type TimeRange
+} from '@charts/store/chartsSlice';
+import s from "./FieldChart.module.css";
 import {
     selectFieldViewSafe,
     selectFieldDataSafe,
     selectFieldStatsSafe,
 } from '@charts/store/selectors';
 import { selectChartBucketingConfig, selectTimeSettings } from '@charts/store/chartsSettingsSlice';
+import { fetchMultiSeriesRaw } from '@charts/store/thunks';
 import type { ResolvedCharReqTemplate } from "@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate.ts";
 import type { ChartStats } from "@charts/ui/CharContainer/types/ChartStats.ts";
 import type { ChartEvent } from "@charts/ui/CharContainer/types/ChartEvent.ts";
 import ViewFieldChart from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ViewFieldChart.tsx";
-import { formatBucketSize, pickBucketMsFor } from './utils';
-import {debounce} from "lodash";
-import type {FieldDto} from "@charts/shared/contracts/metadata/Dtos/FieldDto.ts";
+import {type BucketCalculationParams, calculateOptimalBucket, formatBucketSize} from './utils';
+import { debounce } from "lodash";
+import type { FieldDto } from "@charts/shared/contracts/metadata/Dtos/FieldDto.ts";
+import type { GetMultiSeriesRequest } from "@charts/shared/contracts/chart/Dtos/Requests/GetMultiSeriesRequest.ts";
 
 interface Props {
     field: FieldDto;
@@ -25,6 +34,9 @@ interface Props {
     containerHeight?: number | undefined;
 }
 
+/**
+ * Контейнерный компонент для управления данными и логикой графика поля
+ */
 const FieldChart: React.FC<Props> = ({
                                          field,
                                          template,
@@ -33,42 +45,26 @@ const FieldChart: React.FC<Props> = ({
                                          containerHeight = 400
                                      }) => {
     const dispatch = useAppDispatch();
+
+    // Refs для отслеживания состояний
     const isInitializedRef = useRef(false);
-    const prevBucketRef = useRef<number | null>(null);
     const prevLoadingRef = useRef<boolean>(false);
     const chartInstanceRef = useRef<any>(null);
+    const loadingRequestRef = useRef<AbortController | null>(null);
+    const isAdjustingRangeRef = useRef(false); // Флаг для предотвращения циклов
+    const lastRequestParamsRef = useRef<string>(''); // Для отслеживания изменений параметров
+    const maxBucketMsRef = useRef<number | null>(null); // Максимальный bucket от сервера
 
-    // Для предотвращения дребезга при переключении уровней
-    const lastSwitchRef = useRef<{ time: number; bucket: number } | null>(null);
-    const zoomStateRef = useRef<{ start: number; end: number }>({ start: 0, end: 100 });
-
-    // Получаем конфигурацию bucketing
-    const ChartBucketingConfig = useAppSelector(selectChartBucketingConfig);
-
-    // Получаем настройки временной зоны
+    // Получаем конфигурации
+    const bucketingConfig = useAppSelector(selectChartBucketingConfig);
     const timeSettings = useAppSelector(selectTimeSettings);
 
-    // Используем безопасные селекторы
+    // Получаем состояние поля
     const { view, isInitialized } = useAppSelector(selectFieldViewSafe(field.name));
-    const { data, isEmpty } = useAppSelector(selectFieldDataSafe(field.name));
-
-
-    useEffect(() => {
-        if (view?.currentBucketsMs) {
-            console.log(`[FieldChart ${field.name}] Data info:`, {
-                currentBucketMs: view.currentBucketsMs,
-                dataLength: data.length,
-                availableLevels: Object.keys(view.seriesLevel || {}),
-                currentLevelTiles: view.seriesLevel[view.currentBucketsMs]?.length || 0,
-                tilesStatus: view.seriesLevel[view.currentBucketsMs]?.map(t => t.status) || []
-            });
-        }
-    }, [field.name, view?.currentBucketsMs, data.length]);
-
-
+    const { data, isEmpty, hasReadyTiles } = useAppSelector(selectFieldDataSafe(field.name));
     const fieldStats = useAppSelector(selectFieldStatsSafe(field.name));
 
-    // ФИКСИРОВАННЫЙ домен из template - никогда не меняется
+    // Фиксированный домен из template
     const domain = useMemo(() => ({
         from: template.from,
         to: template.to
@@ -77,67 +73,149 @@ const FieldChart: React.FC<Props> = ({
     // Инициализация view при первом рендере
     useEffect(() => {
         if (!isInitializedRef.current && template) {
-            // Используем ФИКСИРОВАННЫЙ диапазон из template
-            const from = template.from;
-            const to = template.to;
+            // Используем новую функцию calculateOptimalBucket
+            const result = calculateOptimalBucket({
+                containerWidthPx: containerWidth,
+                from: template.from,
+                to: template.to,
+                config: bucketingConfig,
+                maxBucketMs: undefined,
+                availableBuckets: undefined
+            } as BucketCalculationParams);
 
-            // Вычисляем оптимальный bucket для начального диапазона
-            const initialBucket = pickBucketMsFor(
-                containerWidth,
-                from,
-                to,
-                ChartBucketingConfig
-            );
+            const initialBucket = result.selectedBucket;
 
-            // Инициализируем view для поля
-            // currentRange изначально равен полному диапазону
+            console.log('Initial bucket calculation:', {
+                targetPoints: result.targetPoints,
+                estimatedPoints: result.estimatedPoints,
+                selectedBucket: formatBucketSize(initialBucket),
+                reason: result.reason
+            });
+
+            // Сохраняем начальный bucket как максимальный
+            maxBucketMsRef.current = initialBucket;
+
             dispatch(ensureView({
                 field: field.name,
                 px: containerWidth,
-                currentRange: { from, to },
+                currentRange: { from: template.from, to: template.to },
                 currentBucketsMs: initialBucket
             }));
 
             isInitializedRef.current = true;
         }
-    }, [dispatch, field, template, containerWidth, ChartBucketingConfig]);
+    }, [dispatch, field.name, template, containerWidth, bucketingConfig]);
 
-    // Отслеживаем изменение уровня bucket
+    // Загрузка данных при изменении параметров
     useEffect(() => {
-        if (view?.currentBucketsMs && prevBucketRef.current !== null) {
-            if (view.currentBucketsMs !== prevBucketRef.current) {
-
-
-                onEvent({
-                    type: 'levelSwitch',
-                    field: field,
-                    timestamp: Date.now(),
-                    payload: {
-                        fromBucket: prevBucketRef.current,
-                        toBucket: view.currentBucketsMs,
-                        fromBucketFormatted: formatBucketSize(prevBucketRef.current),
-                        toBucketFormatted: formatBucketSize(view.currentBucketsMs),
-                        reason: 'auto'
-                    }
-                });
-
-                // Обновляем историю переключений
-                lastSwitchRef.current = {
-                    time: Date.now(),
-                    bucket: view.currentBucketsMs
-                };
-            }
+        // Базовые проверки
+        if (!view || !template || fieldStats.loading || isAdjustingRangeRef.current) {
+            return;
         }
 
-        prevBucketRef.current = view?.currentBucketsMs ?? null;
-    }, [view?.currentBucketsMs, field, onEvent]);
+        // Проверяем, нужна ли загрузка данных
+        const needsData = !hasReadyTiles || (isEmpty && !fieldStats.error);
 
-    // Отслеживаем загрузку данных
+        if (!needsData || !view.currentRange || !view.currentBucketsMs) {
+            return;
+        }
+
+        // Создаём уникальный ключ для текущих параметров запроса
+        const requestKey = `${view.currentRange.from.toISOString()}_${view.currentRange.to.toISOString()}_${view.currentBucketsMs}_${containerWidth}`;
+
+        // Если параметры не изменились, не делаем запрос
+        if (requestKey === lastRequestParamsRef.current) {
+            return;
+        }
+
+        // Защита от слишком большого количества точек
+        const rangeMs = view.currentRange.to.getTime() - view.currentRange.from.getTime();
+        const estimatedPoints = rangeMs / view.currentBucketsMs;
+        const MAX_POINTS = 5000; // Синхронизируем с utils.ts
+
+        if (estimatedPoints > MAX_POINTS) {
+            console.warn(`⚠️ Too many points requested: ${Math.floor(estimatedPoints)}. Adjusting range...`);
+
+            // Устанавливаем флаг, чтобы предотвратить повторный вызов
+            isAdjustingRangeRef.current = true;
+
+            // Корректируем диапазон
+            const maxRangeMs = view.currentBucketsMs * MAX_POINTS;
+            const centerMs = (view.currentRange.from.getTime() + view.currentRange.to.getTime()) / 2;
+            const adjustedFrom = new Date(Math.max(domain.from.getTime(), centerMs - maxRangeMs / 2));
+            const adjustedTo = new Date(Math.min(domain.to.getTime(), centerMs + maxRangeMs / 2));
+
+            // Обновляем диапазон
+            dispatch(updateCurrentRange({
+                field: field.name,
+                range: { from: adjustedFrom, to: adjustedTo }
+            }));
+
+            // Сбрасываем флаг после задержки
+            setTimeout(() => {
+                isAdjustingRangeRef.current = false;
+            }, 100);
+
+            return;
+        }
+
+        // Сохраняем параметры текущего запроса
+        lastRequestParamsRef.current = requestKey;
+
+        // Отменяем предыдущий запрос
+        if (loadingRequestRef.current) {
+            loadingRequestRef.current.abort();
+            loadingRequestRef.current = null;
+        }
+
+        // Создаём новый контроллер для отмены
+        const abortController = new AbortController();
+        loadingRequestRef.current = abortController;
+
+        // Формируем запрос
+        const request: GetMultiSeriesRequest = {
+            template: template,
+            from: view.currentRange.from,
+            to: view.currentRange.to,
+            px: containerWidth
+        };
+
+        // Запускаем загрузку с задержкой
+        const timeoutId = setTimeout(() => {
+            if (!abortController.signal.aborted && !isAdjustingRangeRef.current) {
+                dispatch(fetchMultiSeriesRaw({
+                    request,
+                    field
+                }));
+            }
+        }, 200);
+
+        // Cleanup
+        return () => {
+            clearTimeout(timeoutId);
+            if (loadingRequestRef.current === abortController) {
+                abortController.abort();
+                loadingRequestRef.current = null;
+            }
+        };
+    }, [
+        view,
+        template,
+        hasReadyTiles,
+        isEmpty,
+        fieldStats.loading,
+        fieldStats.error,
+        field.name,
+        containerWidth,
+        domain,
+        dispatch
+    ]);
+
+
+    // Отслеживание начала загрузки
     useEffect(() => {
         const isLoading = fieldStats.loading;
-
         if (isLoading && !prevLoadingRef.current) {
-
             onEvent({
                 type: 'dataRequest',
                 field: field,
@@ -153,26 +231,20 @@ const FieldChart: React.FC<Props> = ({
             });
         }
         prevLoadingRef.current = isLoading;
-    }, [fieldStats.loading, field, onEvent, view?.currentBucketsMs, view?.currentRange]);
+    }, [fieldStats.loading, field, onEvent, view]);
 
-    // Текущий видимый диапазон из view.currentRange
+    // Текущий видимый диапазон
     const visibleRange = useMemo(() => {
-        if (view?.currentRange) {
-            // currentRange может выходить за пределы domain при панорамировании
-            // но мы все равно используем его для правильной работы zoom
-            return view.currentRange;
-        }
-        // По умолчанию показываем весь domain
-        return domain;
+        return view?.currentRange ?? domain;
     }, [view?.currentRange, domain]);
 
-    // Опции для графика
+    // Создание опций для графика с контролируемым zoom
     const chartOption = useMemo(() => {
         return createChartOption({
             data: data,
             fieldName: field.name,
-            domain, // ФИКСИРОВАННЫЙ полный диапазон (для настройки осей)
-            visibleRange, // Текущий видимый диапазон
+            domain,
+            visibleRange: { from: visibleRange.from, to: visibleRange.to },
             bucketMs: view?.currentBucketsMs ?? 3600000,
             theme: 'light',
             showMinimap: true,
@@ -183,7 +255,7 @@ const FieldChart: React.FC<Props> = ({
         });
     }, [
         data,
-        field,
+        field.name,
         domain,
         visibleRange,
         view?.currentBucketsMs,
@@ -191,7 +263,7 @@ const FieldChart: React.FC<Props> = ({
         timeSettings.useTimeZone
     ]);
 
-    // Статистика для UI
+    // Вычисление статистики для отображения
     const displayStats = useMemo((): ChartStats => {
         const visibleData = data.filter(bin => {
             const time = bin.t.getTime();
@@ -216,18 +288,11 @@ const FieldChart: React.FC<Props> = ({
             gaps: fieldStats.gaps,
             quality
         };
-    }, [
-        fieldStats,
-        data,
-        containerWidth,
-        visibleRange,
-        view?.currentBucketsMs
-    ]);
+    }, [fieldStats, data, containerWidth, visibleRange, view?.currentBucketsMs]);
 
     // Обработчик готовности графика
     const handleChartReady = useCallback((chart: any) => {
         chartInstanceRef.current = chart;
-
         onEvent({
             type: 'ready',
             field: field,
@@ -236,110 +301,164 @@ const FieldChart: React.FC<Props> = ({
         });
     }, [field, onEvent]);
 
-    // УЛУЧШЕННЫЙ обработчик зума с привязкой к слайдеру
+    // Получаем доступные уровни из state
+    const availableBuckets = useMemo(() => {
+        if (!view?.seriesLevel) return [];
+        return Object.keys(view.seriesLevel)
+            .map(Number)
+            .filter(n => !isNaN(n) && n > 0)
+            .sort((a, b) => a - b);
+    }, [view?.seriesLevel]);
+
+    // Функция выбора оптимального bucket из доступных
+    // FieldChart.tsx, строки 298-341
+
+    const selectOptimalBucket = useCallback((from: Date, to: Date): number => {
+        if (availableBuckets.length === 0) {
+            // Используем новую функцию calculateOptimalBucket вместо устаревшей pickBucketMsFor
+            const result = calculateOptimalBucket({
+                containerWidthPx: containerWidth,
+                from,
+                to,
+                config: bucketingConfig,
+                maxBucketMs: maxBucketMsRef.current || undefined,
+                availableBuckets: undefined
+            } as BucketCalculationParams);
+
+            console.log('Optimal bucket calculation (no levels):', {
+                range: formatBucketSize(to.getTime() - from.getTime()),
+                targetPoints: result.targetPoints,
+                estimatedPoints: result.estimatedPoints,
+                selected: formatBucketSize(result.selectedBucket),
+                reason: result.reason
+            });
+
+            return result.selectedBucket;
+        }
+
+        const rangeMs = to.getTime() - from.getTime();
+        const targetPointsPerPx = bucketingConfig.targetPointsPerPx || 0.1;
+        const minTargetPoints = bucketingConfig.minTargetPoints || 20;
+        const targetPoints = Math.max(
+            minTargetPoints,
+            Math.floor(containerWidth * targetPointsPerPx)
+        );
+
+        // Выбираем bucket из доступных
+        let selectedBucket = availableBuckets[availableBuckets.length - 1]!;
+
+        for (const bucketMs of availableBuckets) {
+            const pointsCount = Math.floor(rangeMs / bucketMs);
+            if (pointsCount <= targetPoints * 1.5) {
+                selectedBucket = bucketMs;
+                break;
+            }
+        }
+
+        console.log('Select optimal bucket:', {
+            range: formatBucketSize(rangeMs),
+            targetPoints,
+            availableBuckets: availableBuckets.map(b => formatBucketSize(b)),
+            selected: formatBucketSize(selectedBucket)
+        });
+
+        return selectedBucket;
+    }, [availableBuckets, containerWidth, bucketingConfig]);
+
+    // Обработчик зума - упрощённая версия на основе процентов
     const handleZoom = useCallback((params: any) => {
+        // Предотвращаем обработку во время корректировки
+        if (isAdjustingRangeRef.current) {
+            console.warn("Предотвращаем обработку во время корректировки")
+            return;
+        }
 
-        let zoomStart = 0;
-        let zoomEnd = 100;
-        let newFrom: number;
-        let newTo: number;
+        // НОВАЯ ЗАЩИТА: Проверяем готовность графика
+        if (!chartInstanceRef.current || !chartInstanceRef.current.getOption) {
+            console.warn('График не готов для операции zoom');
+            return;
+        }
 
-        // Извлекаем процентное положение слайдера
+        // Проверяем наличие dataZoom в опциях
+        const currentOption = chartInstanceRef.current.getOption();
+        if (!currentOption || !currentOption.dataZoom || currentOption.dataZoom.length === 0) {
+            console.warn('DataZoom не инициализирован');
+            return;
+        }
+
+        let zoomStart: number | null = null;
+        let zoomEnd: number | null = null;
+
+        // Извлекаем проценты из события
         if (params.batch && Array.isArray(params.batch)) {
-            const zoomData = params.batch[0];
-            if (zoomData) {
-                // Приоритет - процентам, если они есть
-                if (zoomData.start !== undefined && zoomData.end !== undefined) {
-                    zoomStart = zoomData.start;
-                    zoomEnd = zoomData.end;
-                } else if (zoomData.startValue !== undefined && zoomData.endValue !== undefined) {
-                    // Если есть абсолютные значения, конвертируем в проценты
-                    const domainStart = domain.from.getTime();
-                    const domainEnd = domain.to.getTime();
-                    const domainSpan = domainEnd - domainStart;
-                    zoomStart = ((zoomData.startValue - domainStart) / domainSpan) * 100;
-                    zoomEnd = ((zoomData.endValue - domainStart) / domainSpan) * 100;
+            // Обработка батча событий (от inside zoom и slider)
+            for (const item of params.batch) {
+                if (item.start !== undefined && item.end !== undefined) {
+                    zoomStart = item.start;
+                    zoomEnd = item.end;
+                    break;
                 }
             }
         } else if (params.start !== undefined && params.end !== undefined) {
+            // Прямые значения start/end (от slider)
             zoomStart = params.start;
             zoomEnd = params.end;
-        } else if (params.startValue !== undefined && params.endValue !== undefined) {
-            // Конвертируем абсолютные значения в проценты
-            const domainStart = domain.from.getTime();
-            const domainEnd = domain.to.getTime();
-            const domainSpan = domainEnd - domainStart;
-            zoomStart = ((params.startValue - domainStart) / domainSpan) * 100;
-            zoomEnd = ((params.endValue - domainStart) / domainSpan) * 100;
         }
 
-        // Сохраняем текущее состояние зума
-        zoomStateRef.current = { start: zoomStart, end: zoomEnd };
+        // Если не получили проценты, выходим
+        if (zoomStart === null || zoomEnd === null) {
+            console.warn('No zoom percentages in event', params);
+            return;
+        }
 
-        // Вычисляем абсолютные временные значения
+        // Вычисляем видимый диапазон на основе процентов от домена
         const domainStart = domain.from.getTime();
         const domainEnd = domain.to.getTime();
         const domainSpan = domainEnd - domainStart;
 
-        newFrom = domainStart + (domainSpan * zoomStart / 100);
-        newTo = domainStart + (domainSpan * zoomEnd / 100);
+        const newFrom = domainStart + (domainSpan * zoomStart / 100);
+        const newTo = domainStart + (domainSpan * zoomEnd / 100);
 
-        // Вычисляем видимый процент от общего диапазона
-        const visiblePercent = zoomEnd - zoomStart;
-
-
-        const optimalBucket = pickBucketMsFor(
-            containerWidth,
-            new Date(newFrom),
-            new Date(newTo),
-            ChartBucketingConfig
-        );
-
-        const currentBucketMs = view?.currentBucketsMs ?? 3600000;
-
-        // Проверяем необходимость смены уровня с гистерезисом
-        let shouldSwitchLevel = false;
-
-        if (optimalBucket !== currentBucketMs) {
-            const now = Date.now();
-
-            // Проверяем, прошло ли достаточно времени с последнего переключения
-            if (lastSwitchRef.current) {
-                const timeSinceLastSwitch = now - lastSwitchRef.current.time;
-
-                // Минимум 300ms между переключениями для предотвращения дребезга
-                if (timeSinceLastSwitch > 300) {
-                    shouldSwitchLevel = true;
-                } else {
-                    console.log(`[FieldChart ${field.name}] Skipping switch due to debounce`, {
-                        timeSinceLastSwitch,
-                        lastBucket: lastSwitchRef.current.bucket,
-                        optimalBucket
-                    });
-                }
-            } else {
-                // Первое переключение
-                shouldSwitchLevel = true;
-            }
+        // Защита от некорректных значений
+        if (newTo <= newFrom) {
+            console.warn('Защита от некорректных значений newTo <= newFrom', newTo, newFrom);
+            return;
         }
 
-        // Переключаем уровень если необходимо
-        if (shouldSwitchLevel) {
-            dispatch(setCurrentBucketMs({
-                field: field.name,
-                bucketMs: optimalBucket
-            }));
-        }
-
-        // Обновляем currentRange
-        const newRange = {
+        // Создаём новый диапазон
+        const newRange: TimeRange = {
             from: new Date(newFrom),
             to: new Date(newTo)
         };
 
-        dispatch(updateCurrentRange({ field: field.name, range: newRange }));
 
-        // Отправляем событие
+            // Выбираем оптимальный bucket из доступных уровней
+            const optimalBucket = selectOptimalBucket(newRange.from, newRange.to);
+            console.log("optimalBucket", optimalBucket);
+
+
+
+
+        const currentBucketMs = view?.currentBucketsMs ?? 60000;
+
+        // Обновляем bucket если изменился
+        if (optimalBucket !== currentBucketMs) {
+            console.log("update ptimalBucket", optimalBucket);
+            dispatch(setCurrentBucketMs({
+                field: field.name,
+                bucketMs: optimalBucket
+            }));
+        }else{
+            console.log("Не обновили", view?.currentBucketsMs, currentBucketMs)
+        }
+
+        // Обновляем диапазон
+        dispatch(updateCurrentRange({
+            field: field.name,
+            range: newRange
+        }));
+
+        // Отправляем событие zoom
         onEvent({
             type: 'zoom',
             field: field,
@@ -349,64 +468,58 @@ const FieldChart: React.FC<Props> = ({
                 to: newTo,
                 zoomStart,
                 zoomEnd,
-                visiblePercent,
-                needsLevelSwitch: shouldSwitchLevel,
-                suggestedBucket: shouldSwitchLevel ? optimalBucket : undefined,
-                currentBucket: currentBucketMs
+                visiblePercent: zoomEnd - zoomStart
             }
         });
-
-    }, [field, onEvent, view?.currentBucketsMs, containerWidth, ChartBucketingConfig, domain, dispatch]);
-
-    // Уменьшенный debounce для более отзывчивой работы
+    }, [field, onEvent, view?.currentBucketsMs, domain, dispatch, selectOptimalBucket]);
+    // Debounced версия
     const debouncedHandleZoom = useMemo(
-        () => debounce(handleZoom, 30), // Уменьшено с 100ms до 30ms
+        () => debounce(handleZoom, 150),
         [handleZoom]
     );
 
-    // Обработчик окончания зума (когда пользователь отпускает слайдер)
-    const handleZoomEnd = useCallback(() => {
-
-        // Можно выполнить финальную корректировку уровня здесь
-        const { start, end } = zoomStateRef.current;
-        const domainStart = domain.from.getTime();
-        const domainEnd = domain.to.getTime();
-        const domainSpan = domainEnd - domainStart;
-
-        const finalFrom = domainStart + (domainSpan * start / 100);
-        const finalTo = domainStart + (domainSpan * end / 100);
-
-        // Финальная проверка оптимального bucket
-        const finalOptimalBucket = pickBucketMsFor(
-            containerWidth,
-            new Date(finalFrom),
-            new Date(finalTo),
-            ChartBucketingConfig
-        );
-
-        const currentBucketMs = view?.currentBucketsMs ?? 3600000;
-
-        if (finalOptimalBucket !== currentBucketMs) {
-
-
-            dispatch(setCurrentBucketMs({
-                field: field.name,
-                bucketMs: finalOptimalBucket
-            }));
-        }
-    }, [field, domain, containerWidth, ChartBucketingConfig, view?.currentBucketsMs, dispatch]);
-
     // Обработчик изменения размера
     const handleResize = useCallback((width: number, height: number) => {
+        if (view?.currentRange && !isAdjustingRangeRef.current) {
+            // Используем новую функцию calculateOptimalBucket
+            const result = calculateOptimalBucket({
+                containerWidthPx: width,
+                from: view.currentRange.from,
+                to: view.currentRange.to,
+                config: bucketingConfig,
+                maxBucketMs: maxBucketMsRef.current || undefined,
+                availableBuckets: availableBuckets.length > 0 ? availableBuckets : undefined
+            });
+
+            const optimalBucket = result.selectedBucket;
+
+            if (optimalBucket !== view.currentBucketsMs) {
+                const ratio = optimalBucket / view.currentBucketsMs;
+                if (ratio > 2 || ratio < 0.5) {
+                    console.log('Resize bucket switch:', {
+                        from: formatBucketSize(view.currentBucketsMs),
+                        to: formatBucketSize(optimalBucket),
+                        ratio: ratio.toFixed(2),
+                        reason: result.reason
+                    });
+
+                    dispatch(setCurrentBucketMs({
+                        field: field.name,
+                        bucketMs: optimalBucket
+                    }));
+                }
+            }
+        }
+
         onEvent({
             type: 'resize',
             field: field,
             timestamp: Date.now(),
             payload: { width, height }
         });
-    }, [field, onEvent]);
+    }, [field, onEvent, view, bucketingConfig, dispatch, availableBuckets]);
 
-    // Обработчик brush
+    // Остальные обработчики
     const handleBrush = useCallback((params: any) => {
         onEvent({
             type: 'brush',
@@ -416,7 +529,6 @@ const FieldChart: React.FC<Props> = ({
         });
     }, [field, onEvent]);
 
-    // Обработчик клика
     const handleClick = useCallback((params: any) => {
         onEvent({
             type: 'click',
@@ -426,7 +538,7 @@ const FieldChart: React.FC<Props> = ({
         });
     }, [field, onEvent]);
 
-    // Отслеживаем ошибки
+    // Отслеживание ошибок
     useEffect(() => {
         if (fieldStats.error) {
             onEvent({
@@ -438,30 +550,15 @@ const FieldChart: React.FC<Props> = ({
         }
     }, [fieldStats.error, field, onEvent]);
 
-    // Определяем состояние загрузки и ошибки
+    // Определение состояний для отображения
     const isLoading = fieldStats.loading;
-
-    // Логика определения сообщения об ошибке
-    const getErrorMessage = (): string | undefined => {
-        // Показываем ошибку только если есть явная ошибка от сервера
-        if (fieldStats.error) {
-            return fieldStats.error;
-        }
-        return undefined;
-    };
-
-    // Добавляем информационное сообщение вместо ошибки
-    const getInfoMessage = (): string | undefined => {
-        if (!isLoading && isEmpty && isInitialized) {
-            return 'Нет данных для текущего уровня детализации';
-        }
-        return undefined;
-    };
-
-    const errorMessage = getErrorMessage();
-    const infoMessage = getInfoMessage();
+    const errorMessage = fieldStats.error;
+    const infoMessage = !isLoading && isEmpty && isInitialized
+        ? 'Нет данных для текущего уровня детализации'
+        : undefined;
     const showLoading = isLoading || (!isInitialized && !errorMessage);
 
+    // Пре-рендер для неинициализированного состояния
     if (!isInitialized && !showLoading) {
         return (
             <div className={s.initial}>
@@ -470,25 +567,28 @@ const FieldChart: React.FC<Props> = ({
         );
     }
 
-    // ВАЖНО: Всегда рендерим ViewFieldChart, даже если нет данных
-    // Это позволяет пользователю использовать zoom для возврата
     return (
-        <ViewFieldChart
-            domain={domain}
-            height={containerHeight}
-            fieldName={field.name}
-            chartOption={chartOption}
-            stats={displayStats}
-            loading={showLoading}
-            error={errorMessage}
-            info={infoMessage}
-            onChartReady={handleChartReady}
-            onZoom={debouncedHandleZoom}
-            onZoomEnd={handleZoomEnd}
-            onResize={handleResize}
-            onBrush={handleBrush}
-            onClick={handleClick}
-        />
+        <div>
+            currentBucketMs:{view?.currentBucketsMs} <br/>
+            visibleRange from:{visibleRange.from.toISOString()} <br/>
+            visibleRange to:{visibleRange.to.toISOString()}
+
+            <ViewFieldChart
+                domain={domain}
+                height={containerHeight}
+                fieldName={field.name}
+                chartOption={chartOption}
+                stats={displayStats}
+                loading={showLoading}
+                error={errorMessage}
+                info={infoMessage}
+                onChartReady={handleChartReady}
+                onZoom={debouncedHandleZoom}
+                onResize={handleResize}
+                onBrush={handleBrush}
+                onClick={handleClick}
+            />
+        </div>
     );
 };
 

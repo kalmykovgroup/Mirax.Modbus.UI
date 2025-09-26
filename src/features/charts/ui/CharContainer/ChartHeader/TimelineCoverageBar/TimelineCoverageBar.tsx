@@ -9,9 +9,6 @@ export type TimelineCoverageBarProps = {
     domainFrom: number;
     domainTo: number;
 
-    // Визуальные настройки
-    height?: number | undefined;
-    width?: string | number | undefined;
 
     // Цвета для разных состояний
     backgroundColor?: string | undefined;
@@ -23,7 +20,6 @@ export type TimelineCoverageBarProps = {
 
     // Стиль и поведение
     showTooltip?: boolean | undefined;
-    borderRadius?: number | undefined;
     animate?: boolean | undefined;
     showPercent?: boolean | undefined;            // показывать процент справа
     className?: string | undefined;               // дополнительные классы
@@ -33,14 +29,11 @@ export const TimelineCoverageBar: React.FC<TimelineCoverageBarProps> = ({
                                                                             coverage,
                                                                             domainFrom,
                                                                             domainTo,
-                                                                            height = 8,
-                                                                            width = '100%',
                                                                             backgroundColor = '#e5e7eb',
                                                                             coverageColor = '#3b82f6',
                                                                             loadingColor = '#9ca3af',
                                                                             loadingIntervals = [],
                                                                             showTooltip = true,
-                                                                            borderRadius = 4,
                                                                             animate = true,
                                                                             showPercent = true,
                                                                             className,
@@ -129,13 +122,6 @@ export const TimelineCoverageBar: React.FC<TimelineCoverageBarProps> = ({
         className
     );
 
-    // Inline стили для контейнера (динамические значения)
-    const containerStyle: React.CSSProperties = {
-        width,
-        height,
-        backgroundColor,
-        borderRadius,
-    };
 
     // Функция для получения стилей сегмента
     const getSegmentStyle = (segment: any): React.CSSProperties => ({
@@ -146,8 +132,10 @@ export const TimelineCoverageBar: React.FC<TimelineCoverageBarProps> = ({
     return (
         <div className={styles.wrapper}>
             <div
-                className={containerClassName}
-                style={containerStyle}
+                className={classNames(containerClassName, styles.progress)}
+                style={{
+                    backgroundColor,
+                }}
                 title={showTooltip ? `Покрытие: ${coveragePercent}%` : undefined}
             >
                 {/* Загружаемые сегменты */}

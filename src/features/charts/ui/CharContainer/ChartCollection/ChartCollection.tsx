@@ -12,6 +12,8 @@ import {formatDateWithTimezone} from "@charts/ui/TimeZonePicker/timezoneUtils.ts
 import FieldChart from "@charts/ui/CharContainer/ChartCollection/FieldChart/FieldChart.tsx";
 import {setCurrentBucketMs, updateCurrentRange} from "@charts/store/chartsSlice.ts";
 import { loadMissingData } from "@charts/ui/CharContainer/ChartCollection/loadMissingData.ts";
+import {selectIsDataLoaded} from "@charts/store/selectors.ts";
+
 
 interface ChartCollectionProps {
     template: ResolvedCharReqTemplate;
@@ -34,7 +36,7 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
     // Изначально НЕ устанавливаем ширину, ждём реальное измерение
     const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
     const [containerHeight, setContainerHeight] = useState(500);
-    const [isDataLoaded, setIsDataLoaded] = useState(false);
+
     const [isContainerReady, setIsContainerReady] = useState(false);
 
     // Добавляем состояние для отслеживания загрузки по полям
@@ -42,6 +44,7 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
 
     // Получаем настройки временной зоны из Redux store
     const timeSettings = useAppSelector(selectTimeSettings);
+    const isDataLoaded = useAppSelector(selectIsDataLoaded);
 
     useEffect(() => {
         // Сбрасываем ключ последнего запроса для перезагрузки данных
@@ -103,17 +106,19 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
 
         lastRequestRef.current = requestKey;
 
-        // Передаем ЛОКАЛЬНЫЕ даты в запрос
-        // Thunk сам преобразует их в UTC если нужно
-        const request: GetMultiSeriesRequest = {
-            template: template,
-            from: template.from,  // Локальная дата
-            to: template.to,      // Локальная дата
-            px: containerWidth
-        };
+        if(!isDataLoaded){
+            // Передаем ЛОКАЛЬНЫЕ даты в запрос
+            // Thunk сам преобразует их в UTC если нужно
+            const request: GetMultiSeriesRequest = {
+                template: template,
+                from: template.from,  // Локальная дата
+                to: template.to,      // Локальная дата
+                px: containerWidth
+            };
 
-        setIsDataLoaded(false);
-        dispatch(fetchMultiSeriesInit(request));
+            dispatch(fetchMultiSeriesInit(request));
+        }
+
 
     }, [dispatch, template, containerWidth, timeSettings, isContainerReady]);
 
@@ -159,13 +164,6 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
                 }
                 break;
 
-            case 'levelSwitch':
-                console.log(`Это событие информационное, данные уже загружены через zoom Level switch on ${event.field.name}:`, {
-                    fromBucket: event.payload.fromBucket,
-                    toBucket: event.payload.toBucket,
-                    reason: event.payload.reason
-                });
-                break;
 
             case 'dataRequest':
                 console.log(`Это событие информационное о начале загрузки ${event.field.name}`);

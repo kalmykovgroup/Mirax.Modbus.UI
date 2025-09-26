@@ -1,7 +1,13 @@
 .wrapper {
+    width: 100%;
     display: flex;
-    align-items: center;
     gap: 8px;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.progress{
+    width: 100%;
 }
 
 .container {
@@ -78,23 +84,3 @@
     height: 12px;
 }
 
-/* Скругления */
-.radiusNone {
-    border-radius: 0;
-}
-
-.radiusSmall {
-    border-radius: 2px;
-}
-
-.radiusMedium {
-    border-radius: 4px;
-}
-
-.radiusLarge {
-    border-radius: 8px;
-}
-
-.radiusFull {
-    border-radius: 9999px;
-}

@@ -42,16 +42,9 @@
     flex-direction: column;
 }
 
-
 .chartContainerWrapper:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
-
-
-
-
-
-
 
 .titleSection {
     display: flex;
@@ -135,7 +128,6 @@
     border-color: #d1d5db;
 }
 
-
 .infoOverlay{
     position: absolute;
     top: 50%;
@@ -150,7 +142,141 @@
     pointer-events: none;
     z-index: 10;
 }
-.loadingOverlay,
+
+/* УЛУЧШЕННАЯ ЗАГРУЗКА БЕЗ БЛОКИРОВКИ СКРОЛЛА */
+.loadingState {
+    position: relative;
+}
+
+.loadingState::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.7) 50%,
+    rgba(255, 255, 255, 0) 100%);
+    pointer-events: none; /* Критически важно! */
+    z-index: 5;
+}
+
+/* Минималистичный индикатор загрузки в углу */
+.loadingIndicator {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    pointer-events: none; /* Не блокирует события */
+    z-index: 20;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Анимированные точки загрузки */
+.loadingDots {
+    display: flex;
+    gap: 4px;
+}
+
+.loadingDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3b82f6;
+    animation: pulse 1.4s infinite ease-in-out both;
+}
+
+.loadingDot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.loadingDot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes pulse {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+}
+
+.loadingText {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Скелетон для контента графика */
+.skeleton {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.skeletonChart {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+            90deg,
+            #f3f4f6 25%,
+            #e5e7eb 37%,
+            #f3f4f6 50%
+    );
+    background-size: 400% 100%;
+    animation: shimmer 2s infinite ease-in-out;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: -100% 50%;
+    }
+}
+
+/* Прогресс-бар внизу (опциональный) */
+.progressBar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #e5e7eb;
+    pointer-events: none;
+    z-index: 25;
+}
+
+.progressBarFill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    transition: width 0.3s ease;
+    box-shadow: 0 0 4px rgba(59, 130, 246, 0.5);
+}
+
+/* Стили для ошибок */
 .errorOverlay {
     position: absolute;
     top: 0;
@@ -166,19 +292,6 @@
     z-index: 10;
 }
 
-.spinner {
-    width: 36px;
-    height: 36px;
-    border: 3px solid #e5e7eb;
-    border-top-color: #3b82f6;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
 .errorIcon {
     font-size: 36px;
 }
@@ -188,18 +301,40 @@
     font-size: 14px;
 }
 
-.loadingBar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #3b82f6, transparent);
-    animation: loading 1.5s infinite;
+.retryBtn {
+    padding: 8px 16px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
 }
 
-@keyframes loading {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
+.retryBtn:hover {
+    background: #2563eb;
 }
 
+/* Затухание графика при загрузке */
+.chartContent {
+    transition: opacity 0.3s ease;
+}
+
+.chartContent.loading {
+    opacity: 0.3;
+    filter: blur(1px);
+}
+
+/* Адаптивный индикатор для мобильных */
+@media (max-width: 640px) {
+    .loadingIndicator {
+        top: 8px;
+        right: 8px;
+        padding: 4px 8px;
+    }
+
+    .loadingText {
+        display: none;
+    }
+}

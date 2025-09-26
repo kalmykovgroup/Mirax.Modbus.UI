@@ -21,6 +21,11 @@ export const selectResolvedTemplate = createSelector(
     (charts) => charts.template
 );
 
+export const selectIsDataLoaded = createSelector(
+    [selectChartsState],
+    (charts) => charts.isDataLoaded
+);
+
 export const selectFieldView = (fieldName: string) =>
     createSelector(
         [selectChartsState],

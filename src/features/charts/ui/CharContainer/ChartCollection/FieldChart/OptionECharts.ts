@@ -1,12 +1,11 @@
 // charts/ui/CharContainer/ChartCollection/FieldChart/OptionECharts.ts
 
-import type { EChartsOption, LineSeriesOption } from 'echarts';
-import { formatTimeByBucket } from './utils';
-import type { SeriesBinDto } from "@charts/shared/contracts/chart/Dtos/SeriesBinDto.ts";
+import type {EChartsOption, LineSeriesOption} from 'echarts';
+import {formatTimeByBucket} from './utils';
+import type {SeriesBinDto} from "@charts/shared/contracts/chart/Dtos/SeriesBinDto.ts";
 import {
     createTooltipFormatter
 } from "@charts/ui/CharContainer/ChartCollection/FieldChart/ChartTooltip/tooltipBuilder.ts";
-
 
 interface ChartOptionParams {
     data: SeriesBinDto[];
@@ -33,7 +32,7 @@ function findDataGaps(
 ): Array<{ from: number; to: number }> {
     const gaps: Array<{ from: number; to: number }> = [];
 
-    if(data.length < 1) return gaps;
+    if(data.length < 2) return gaps;
 
     for (let i = 1; i < data.length; i++) {
         const prevTime = new Date(data[i - 1]!.t).getTime();
@@ -51,12 +50,18 @@ function findDataGaps(
     return gaps;
 }
 
-// Подготовка данных для всех трех линий
-function prepareAllSeriesData(data: SeriesBinDto[]): {
+// Подготовка данных для всех трёх линий
+function prepareAllSeriesData(
+    data: SeriesBinDto[],
+    useTimeZone: boolean,
+    timeZone?: string
+): {
     avgData: Array<[number, number | null]>;
     minData: Array<[number, number | null]>;
     maxData: Array<[number, number | null]>;
 } {
+    // ВАЖНО: НЕ конвертируем временные метки, используем их как есть
+    // ECharts работает с миллисекундами Unix timestamp, которые не зависят от временной зоны
     const avgData: Array<[number, number | null]> = data.map(bin =>
         [bin.t.getTime(), bin.avg] as [number, number | null]
     );
@@ -88,6 +93,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
         useTimeZone = false
     } = params;
 
+
     // Темы с улучшенной видимостью
     const themes = {
         light: {
@@ -116,7 +122,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
 
     const currentTheme = themes[theme];
     const gaps = showDataGaps ? findDataGaps(data, bucketMs) : [];
-    const { avgData, minData, maxData } = prepareAllSeriesData(data);
+    const { avgData, minData, maxData } = prepareAllSeriesData(data, useTimeZone, timeZone);
 
     const series: LineSeriesOption[] = [];
 
@@ -165,7 +171,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
     series.push({
         name: `${fieldName} (min)`,
         type: 'line',
-        data: minData,
+        data: minData || [],
         symbol: 'circle',
         symbolSize: 4,
         sampling: 'lttb',
@@ -192,16 +198,21 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             }
         },
         connectNulls: false,
+        smooth: false,
         large: true,
         largeThreshold: 2000,
-        z: 3
+        z: 3,
+        animation: true,
+        animationDuration: 300,
+        showSymbol: true,
+        showAllSymbol: data.length < 100
     });
 
-    // Линия максимума
+// Линия максимума
     series.push({
         name: `${fieldName} (max)`,
         type: 'line',
-        data: maxData,
+        data: maxData || [],
         symbol: 'circle',
         symbolSize: 4,
         sampling: 'lttb',
@@ -228,16 +239,21 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             }
         },
         connectNulls: false,
+        smooth: false,
         large: true,
         largeThreshold: 2000,
-        z: 3
+        z: 3,
+        animation: true,
+        animationDuration: 300,
+        showSymbol: true,
+        showAllSymbol: data.length < 100
     });
 
-    // Основная линия среднего значения
+// Основная линия среднего значения
     series.push({
         name: `${fieldName} (avg)`,
         type: 'line',
-        data: avgData,
+        data: avgData || [],
         symbol: 'circle',
         symbolSize: 6,
         sampling: 'lttb',
@@ -272,6 +288,10 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
         progressive: 5000,
         progressiveThreshold: 10000,
         z: 5,
+        animation: true,
+        animationDuration: 300,
+        showSymbol: true,
+        showAllSymbol: data.length < 100,
 
         markArea: {
             silent: true,
@@ -310,7 +330,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
         }
     });
 
-    // Вычисляем позицию слайдера относительно домена
+    // Вычисляем начальную позицию слайдера
     let sliderStart = 0;
     let sliderEnd = 100;
 
@@ -331,7 +351,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
         sliderEnd = Math.max(0, Math.min(100, sliderEnd));
     }
 
-    const option: EChartsOption = {
+    return {
         backgroundColor: currentTheme.background,
         animation: true,
         animationDuration: 300,
@@ -347,9 +367,12 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
 
         tooltip: {
             trigger: 'axis',
+            confine: true,
+            transitionDuration: 0,
             axisPointer: {
                 type: 'cross',
                 animation: true,
+                snap: true,
                 label: {
                     backgroundColor: '#6a7985',
                     borderColor: '#6a7985',
@@ -368,14 +391,42 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             textStyle: {
                 color: '#333'
             },
-            formatter: createTooltipFormatter({
-                fieldName,
-                data,
-                bucketMs,
-                theme,
-                timeZone,
-                useTimeZone
-            })
+            formatter: (params: any) => {
+                try {
+                    // Дополнительная проверка валидности params
+                    if (!params || !Array.isArray(params) || params.length === 0) {
+                        return '';
+                    }
+
+                    // Проверяем что у каждого элемента есть необходимые данные
+                    const validParams = params.filter((item: any) =>
+                        item &&
+                        item.data !== undefined &&
+                        item.seriesName !== undefined
+                    );
+
+                    if (validParams.length === 0) {
+                        return '';
+                    }
+
+                    const formatter = createTooltipFormatter({
+                        fieldName,
+                        data,
+                        bucketMs,
+                        timeZone,
+                        useTimeZone
+                    });
+
+                    return formatter(validParams);
+                } catch (error) {
+                    console.warn('Tooltip formatter error:', error);
+                    if (params && params[0]) {
+                        const date = new Date(params[0].axisValue);
+                        return `${fieldName}<br/>${date.toLocaleString()}`;
+                    }
+                    return '';
+                }
+            }
         },
 
         toolbox: {
@@ -412,18 +463,22 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             axisLabel: {
                 color: currentTheme.text,
                 formatter: (value: number) => {
-                    const date = new Date(value);
-                    if (useTimeZone && timeZone) {
-                        return date.toLocaleString('ru-RU', {
-                            timeZone: timeZone,
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        });
+                    try {
+                        const date = new Date(value);
+                        if (useTimeZone && timeZone) {
+                            return date.toLocaleString('ru-RU', {
+                                timeZone: timeZone,
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                        }
+                        return formatTimeByBucket(date, bucketMs);
+                    } catch {
+                        return '';
                     }
-                    return formatTimeByBucket(date, bucketMs);
                 }
             },
             splitLine: {
@@ -435,9 +490,27 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
                 }
             },
             axisPointer: {
+                show: true,
+                snap: true,
                 label: {
                     formatter: (params: { value: number }) => {
-                        return formatTimeByBucket(new Date(params.value), bucketMs);
+                        try {
+                            const date = new Date(params.value);
+                            if (useTimeZone && timeZone) {
+                                return date.toLocaleString('ru-RU', {
+                                    timeZone: timeZone,
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit'
+                                });
+                            }
+                            return formatTimeByBucket(date, bucketMs);
+                        } catch (error) {
+                            return '';
+                        }
                     }
                 }
             }
@@ -461,21 +534,25 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             axisLabel: {
                 color: currentTheme.text,
                 formatter: (value: number) => {
-                    if (value === 0) return '0';
-                    const absValue = Math.abs(value);
-                    if (absValue >= 1000000000) {
-                        return (value / 1000000000).toFixed(1) + 'B';
+                    try {
+                        if (value === 0) return '0';
+                        const absValue = Math.abs(value);
+                        if (absValue >= 1000000000) {
+                            return (value / 1000000000).toFixed(1) + 'B';
+                        }
+                        if (absValue >= 1000000) {
+                            return (value / 1000000).toFixed(1) + 'M';
+                        }
+                        if (absValue >= 1000) {
+                            return (value / 1000).toFixed(1) + 'K';
+                        }
+                        if (absValue < 0.01) {
+                            return value.toExponential(2);
+                        }
+                        return value.toFixed(2);
+                    } catch {
+                        return String(value);
                     }
-                    if (absValue >= 1000000) {
-                        return (value / 1000000).toFixed(1) + 'M';
-                    }
-                    if (absValue >= 1000) {
-                        return (value / 1000).toFixed(1) + 'K';
-                    }
-                    if (absValue < 0.01) {
-                        return value.toExponential(2);
-                    }
-                    return value.toFixed(2);
                 }
             },
             splitLine: {
@@ -486,9 +563,14 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
                 }
             },
             axisPointer: {
+                show: true,
                 label: {
                     formatter: (params: { value: number }) => {
-                        return Number(params.value).toFixed(2);
+                        try {
+                            return Number(params.value).toFixed(2);
+                        } catch {
+                            return '';
+                        }
                     }
                 }
             }
@@ -500,18 +582,15 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
                 xAxisIndex: 0,
                 start: sliderStart,
                 end: sliderEnd,
-                filterMode: 'filter',
+                filterMode: 'filter', // ВЕРНУЛИ обратно 'filter'
                 zoomOnMouseWheel: true,
                 moveOnMouseMove: true,
-                moveOnMouseWheel: true
-            },
-            {
-                type: 'inside',
-                yAxisIndex: 0,
-                filterMode: 'filter',
-                zoomOnMouseWheel: 'shift',
-                moveOnMouseMove: false,
-                moveOnMouseWheel: false
+                moveOnMouseWheel: false,
+                preventDefaultMouseMove: false,
+                zoomLock: false,
+                throttle: 100,
+                minValueSpan: 1000, // Минимальный диапазон в миллисекундах
+                maxValueSpan: domain.to.getTime() - domain.from.getTime() // Максимальный диапазон
             },
             ...(showMinimap ? [{
                 type: 'slider' as const,
@@ -554,9 +633,9 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
                         shadowColor: currentTheme.avgLine
                     }
                 },
-                // Важно: разрешаем панорамирование за пределы домена
-                minValueSpan: 1000, // Минимальный диапазон в миллисекундах
-                realtime: true
+                filterMode: 'filter', // ВЕРНУЛИ обратно 'filter'
+                realtime: true,
+                throttle: 100
             }] : [])
         ],
 
@@ -572,6 +651,4 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
 
         series: series
     };
-
-    return option;
 }
