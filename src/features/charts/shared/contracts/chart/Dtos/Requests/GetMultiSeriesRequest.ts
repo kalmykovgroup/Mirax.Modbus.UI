@@ -5,5 +5,6 @@ export type GetMultiSeriesRequest = {
     template: ResolvedCharReqTemplate;
     from?: Date | undefined;
     to?: Date | undefined;
-    px: number
+    px: number;
+    bucketMs?: number | undefined;
 }

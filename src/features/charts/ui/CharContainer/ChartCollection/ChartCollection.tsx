@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { fetchMultiSeriesSimple } from '@charts/store/thunks';
+import {fetchMultiSeriesInit } from '@charts/store/thunks';
 import { selectTimeSettings } from '@charts/store/chartsSettingsSlice';
 import type { ResolvedCharReqTemplate } from '@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate';
 import type { GetMultiSeriesRequest } from '@charts/shared/contracts/chart/Dtos/Requests/GetMultiSeriesRequest';
@@ -11,6 +11,7 @@ import type {ChartEvent} from "@charts/ui/CharContainer/types/ChartEvent.ts";
 import {formatDateWithTimezone} from "@charts/ui/TimeZonePicker/timezoneUtils.ts";
 import FieldChart from "@charts/ui/CharContainer/ChartCollection/FieldChart/FieldChart.tsx";
 import {setCurrentBucketMs, updateCurrentRange} from "@charts/store/chartsSlice.ts";
+import { loadMissingData } from "@charts/ui/CharContainer/ChartCollection/loadMissingData.ts";
 
 interface ChartCollectionProps {
     template: ResolvedCharReqTemplate;
@@ -79,12 +80,10 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
     useEffect(() => {
         // Проверяем, что контейнер готов и ширина определена
         if (!isContainerReady || containerWidth === undefined) {
-            console.log('[ChartCollection] Ожидаем измерение контейнера...');
             return;
         }
 
         if (!template?.from || !template?.to) {
-            console.log('[ChartCollection] Шаблон не готов');
             return;
         }
 
@@ -99,11 +98,9 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
 
         // Пропускаем дубликаты
         if (lastRequestRef.current === requestKey) {
-            console.log('[ChartCollection] Пропускаем дубликат запроса');
             return;
         }
 
-        console.log('[ChartCollection] Выполняем запрос с шириной:', containerWidth);
         lastRequestRef.current = requestKey;
 
         // Передаем ЛОКАЛЬНЫЕ даты в запрос
@@ -116,91 +113,79 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
         };
 
         setIsDataLoaded(false);
-        dispatch(fetchMultiSeriesSimple(request));
+        dispatch(fetchMultiSeriesInit(request));
 
     }, [dispatch, template, containerWidth, timeSettings, isContainerReady]);
 
-    // Обработчик событий от графиков
-    const handleChartEvent = useCallback((event: ChartEvent) => {
-        console.log(`[ChartCollection] Event received:`, event);
+
+// Обновленный обработчик событий:
+
+    const handleChartEvent = useCallback(async (event: ChartEvent) => {
         eventLogRef.current.push(event);
 
         switch (event.type) {
             case 'ready':
-                console.log(`График ${event.field} готов!`);
                 break;
 
             case 'zoom':
-                console.log(`Zoom on ${event.field}:`, {
-                    range: event.payload,
-                    needsLevelSwitch: event.payload?.needsLevelSwitch
-                });
 
-                dispatch(updateCurrentRange(
-                    { field: event.field,
-                        range: {from: new Date(event.payload.from), to: new Date(event.payload.to)}
-                    }));
+                const newFrom = new Date(event.payload.from);
+                const newTo = new Date(event.payload.to);
 
-                if (event.payload?.needsLevelSwitch && event.payload?.suggestedBucket) {
+                // Обновляем текущий диапазон
+                dispatch(updateCurrentRange({
+                    field: event.field.name,
+                    range: { from: newFrom, to: newTo }
+                }));
 
+                // Если нужна смена уровня - меняем
+                if (event.payload.needsLevelSwitch && event.payload.suggestedBucket) {
                     dispatch(setCurrentBucketMs({
-                        field: event.field,
+                        field: event.field.name,
                         bucketMs: event.payload.suggestedBucket
                     }));
+                }
 
-                    // Здесь можно диспатчить action для смены bucket
-                    console.log(`Suggesting bucket switch to: ${event.payload.suggestedBucket}ms`);
+                // ЕДИНСТВЕННЫЙ вызов loadMissingData
+                // Он сам определит какой bucket использовать из view
+                const loaded = await dispatch(loadMissingData({
+                    field: event.field,
+                    containerWidth : containerWidth!,
+                    targetBucketMs: event.payload.suggestedBucket // может быть undefined
+                })).unwrap();
+
+                if (loaded) {
+                    console.log(`[ChartCollection] Загружены данные для ${event.field.name}`);
                 }
                 break;
 
             case 'levelSwitch':
-                console.log(`Level switch on ${event.field}:`, {
-                    from: `${event.payload?.fromBucketFormatted} (${event.payload?.fromBucket}ms)`,
-                    to: `${event.payload?.toBucketFormatted} (${event.payload?.toBucket}ms)`,
-                    reason: event.payload?.reason
+                console.log(`Это событие информационное, данные уже загружены через zoom Level switch on ${event.field.name}:`, {
+                    fromBucket: event.payload.fromBucket,
+                    toBucket: event.payload.toBucket,
+                    reason: event.payload.reason
                 });
-
-                // Устанавливаем состояние загрузки для этого поля при смене уровня
-                setFieldsLoadingState(prev => ({
-                    ...prev,
-                    [event.field]: true
-                }));
-
-                // TODO: Здесь должен быть запрос данных для нового уровня
-                // После успешной загрузки нужно сбросить флаг загрузки
-                setTimeout(() => {
-                    setFieldsLoadingState(prev => ({
-                        ...prev,
-                        [event.field]: false
-                    }));
-                }, 2000); // Временная заглушка
                 break;
 
             case 'dataRequest':
-                console.log(`Data request from ${event.field}:`, {
-                    bucket: event.payload?.bucketMs,
-                    range: event.payload?.range
-                });
-
-                // Обновляем состояние загрузки при запросе данных
+                console.log(`Это событие информационное о начале загрузки ${event.field.name}`);
                 if (event.payload?.reason === 'loading') {
                     setFieldsLoadingState(prev => ({
                         ...prev,
-                        [event.field]: true
+                        [event.field.name]: true
                     }));
                 }
                 break;
 
             case 'error':
-                console.error(`Ошибка в ${event.field}:`, event.payload);
-                // Сбрасываем состояние загрузки при ошибке
+                console.error(`Ошибка в ${event.field.name}:`, event.payload);
                 setFieldsLoadingState(prev => ({
                     ...prev,
-                    [event.field]: false
+                    [event.field.name]: false
                 }));
                 break;
         }
-    }, [dispatch]);
+    }, [dispatch, containerWidth]);
 
     // Вычисляем общее состояние загрузки
     const isAnyFieldLoading = Object.values(fieldsLoadingState).some(loading => loading);
@@ -291,7 +276,7 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
                 {template.selectedFields.map((field) => (
                     <FieldChart
                         key={field.name}
-                        fieldName={field.name}
+                        field={field}
                         template={template}
                         onEvent={handleChartEvent}
                         containerWidth={containerWidth}

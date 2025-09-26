@@ -3,9 +3,18 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type {BucketsMs, ChartsState, FieldView, SeriesTile, TimeRange} from './chartsSlice';
 import type { SeriesBinDto } from '@charts/shared/contracts/chart/Dtos/SeriesBinDto';
+import type {RootState} from "@/store/store.ts";
+import type {FieldDto} from "@charts/shared/contracts/metadata/Dtos/FieldDto.ts";
 
 // Базовые селекторы
 export const selectChartsState = (state: { charts: ChartsState }) => state.charts;
+// Селекторы
+export const selectIsSyncEnabled = (state: RootState) =>
+    state.charts.syncEnabled;
+
+export const selectSyncFields = (state: RootState): ReadonlyArray<FieldDto> =>
+    state.charts.syncFields;
+
 
 export const selectResolvedTemplate = createSelector(
     [selectChartsState],

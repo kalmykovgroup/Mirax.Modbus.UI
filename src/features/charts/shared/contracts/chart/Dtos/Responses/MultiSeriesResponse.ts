@@ -5,7 +5,7 @@ import type {EntityDto} from "@charts/shared/contracts/metadata/Dtos/EntityDto.t
 export type MultiSeriesResponse = {
     entity: EntityDto
     timeField: FieldDto
-    bucketSeconds: number
+    bucketMilliseconds: number
     series: MultiSeriesItemDto[]
 }
 

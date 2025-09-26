@@ -4,15 +4,15 @@ import type { RootState } from '@/store/store'
 
 export type ChartBucketingConfig = {
     /** Сколько "целей" (ведер/поинтов) на пиксель хотим видеть */
-    TargetPointsPerPx: number
+    targetPointsPerPx: number
     /** Минимум целевых ведер (защита от слишком малых объемов) */
-    MinTargetPoints: number
+    minTargetPoints: number
     /** Размножать 1w на 2w..Nw */
-    EnableWeeklyMultiples: boolean
+    enableWeeklyMultiples: boolean
     /** Максимальный множитель недель (если EnableWeeklyMultiples=true) */
-    MaxWeeksMultiple: number
+    maxWeeksMultiple: number
     /** Красивые длительности в секундах: 1,2,5,10,15,20,30,60,... */
-    NiceSeconds: number[]
+    niceMilliseconds: number[]
 }
 
 export type TimeSettings = {
@@ -29,93 +29,64 @@ export type ChartsSettingsState = {
 
 const initialState: ChartsSettingsState = {
     bucketing: {
-        TargetPointsPerPx: 0.25,
-        MinTargetPoints: 20,
-        EnableWeeklyMultiples: false,
-        MaxWeeksMultiple: 52,
-        NiceSeconds: [
-            1, 2, 5, 10, 15, 20, 30,
-            60, 120, 300, 600, 900, 1800,
-            3600, 7200, 10800, 21600, 43200,
-            86400, 172800, 604800,
-            2592000, 7776000, 15552000, 31536000, 63072000, 157680000
-        ],
+        targetPointsPerPx: 0.1,
+        minTargetPoints: 20,
+        enableWeeklyMultiples: false,
+        maxWeeksMultiple: 52,
+        niceMilliseconds: [  // <-- Изменено с niceSeconds на niceMilliseconds
+            1000,        // 1 секунда
+            2000,        // 2 секунды
+            5000,        // 5 секунд
+            10000,       // 10 секунд
+            15000,       // 15 секунд
+            20000,       // 20 секунд
+            30000,       // 30 секунд
+            60000,       // 1 минута
+            120000,      // 2 минуты
+            300000,      // 5 минут
+            600000,      // 10 минут
+            900000,      // 15 минут
+            1800000,     // 30 минут
+            3600000,     // 1 час
+            7200000,     // 2 часа
+            10800000,    // 3 часа
+            21600000,    // 6 часов
+            43200000,    // 12 часов
+            86400000,    // 1 день
+            172800000,   // 2 дня
+            604800000,   // 7 дней (1 неделя)
+            2592000000,  // 30 дней (~1 месяц)
+            7776000000,  // 90 дней (~3 месяца)
+            15552000000, // 180 дней (~6 месяцев)
+            31536000000, // 365 дней (1 год)
+            63072000000, // 2 года
+            157680000000 // 5 лет
+        ] as const,
     },
     timeSettings: {
         useTimeZone: true,  // Включено по умолчанию
         timeZone: 'UTC'     // UTC по умолчанию
     }
-}
+};
 
+ 
 const chartsSettingsSlice = createSlice({
     name: 'chartsSettings',
     initialState,
     reducers: {
-        setBucketingConfig(state, action: PayloadAction<Partial<ChartBucketingConfig>>) {
-            state.bucketing = { ...state.bucketing, ...action.payload }
-        },
-        setNiceSeconds(state, action: PayloadAction<number[]>) {
-            state.bucketing.NiceSeconds = action.payload ?? []
-        },
-        setEnableWeeklyMultiples(state, action: PayloadAction<{ enabled: boolean; maxWeeks?: number | undefined }>) {
-            state.bucketing.EnableWeeklyMultiples = !!action.payload.enabled
-            if (typeof action.payload.maxWeeks === 'number') {
-                state.bucketing.MaxWeeksMultiple = Math.max(1, Math.floor(action.payload.maxWeeks))
-            }
-        },
         // Новые экшены для временной зоны
         setTimeSettings(state, action: PayloadAction<TimeSettings>) {
             state.timeSettings = action.payload
-        },
-        setUseTimeZone(state, action: PayloadAction<boolean>) {
-            state.timeSettings.useTimeZone = action.payload
-        },
-        setTimeZone(state, action: PayloadAction<string>) {
-            state.timeSettings.timeZone = action.payload
-        },
-        resetTimeSettingsToDefaults(state) {
-            state.timeSettings = initialState.timeSettings
-        },
-        resetBucketingToDefaults() {
-            return initialState
         },
     },
 })
 
 export const {
-    setBucketingConfig,
-    setNiceSeconds,
-    setEnableWeeklyMultiples,
     setTimeSettings,
-    setUseTimeZone,
-    setTimeZone,
-    resetTimeSettingsToDefaults,
-    resetBucketingToDefaults,
 } = chartsSettingsSlice.actions
 
 export const chartsSettingsReducer = chartsSettingsSlice.reducer
 
 // ---------- селекторы ----------
-export const selectBucketingConfig = (s: RootState) => s.chartsSettings.bucketing
+export const selectChartBucketingConfig = (s: RootState) => s.chartsSettings.bucketing
 export const selectTimeSettings = (s: RootState) => s.chartsSettings.timeSettings
-export const selectTimeZone = (s: RootState) => s.chartsSettings.timeSettings.timeZone
-export const selectUseTimeZone = (s: RootState) => s.chartsSettings.timeSettings.useTimeZone
-
-/** NiceSeconds → миллисекунды; с учётом EnableWeeklyMultiples */
-export const selectNiceBucketsMs = (s: RootState): number[] => {
-    const cfg = s.chartsSettings.bucketing
-    const base = (cfg.NiceSeconds ?? []).map(s => Math.max(1, Math.floor(s)) * 1000)
-
-    if (cfg.EnableWeeklyMultiples) {
-        const weekSec = 7 * 24 * 3600
-        const add: number[] = []
-        for (let k = 1; k <= Math.max(1, cfg.MaxWeeksMultiple); k++) {
-            add.push(weekSec * k * 1000)
-        }
-        // дедуп + сортировка
-        const set = new Set([...base, ...add])
-        return [...set].sort((a, b) => a - b)
-    }
-
-    return [...base].sort((a, b) => a - b)
-}

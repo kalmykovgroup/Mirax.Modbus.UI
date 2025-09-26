@@ -3,6 +3,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { ResolvedCharReqTemplate } from '@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate';
 import type { SeriesBinDto } from '@charts/shared/contracts/chart/Dtos/SeriesBinDto';
+import type {FieldDto} from "@charts/shared/contracts/metadata/Dtos/FieldDto.ts";
 
 // Типы
 export type FieldName = string;
@@ -28,12 +29,16 @@ export interface FieldView {
 }
 
 export type ChartsState = {
+    syncEnabled: boolean;
+    syncFields: ReadonlyArray<FieldDto>;
     template?: ResolvedCharReqTemplate | undefined;
     view: Record<FieldName, FieldView>;
 };
 
 // Начальное состояние
 const initialState: ChartsState = {
+    syncEnabled: false,
+    syncFields: [],
     template: undefined,
     view: {},
 };
@@ -238,6 +243,21 @@ const chartsSlice = createSlice({
             const view = state.view[action.payload.field];
             if(view == undefined) throw Error("view was not undefined");
             view.currentRange = action.payload.range;
+        },
+        toggleSync(state) {
+            state.syncEnabled = !state.syncEnabled;
+        },
+        addSyncField(state, action: PayloadAction<FieldDto>) {
+            const exists = state.syncFields.some(f => f.name === action.payload.name);
+            if (!exists) {
+                state.syncFields = [...state.syncFields, action.payload];
+            }
+        },
+        removeSyncField(state, action: PayloadAction<string>) { // по id
+            state.syncFields = state.syncFields.filter(f => f.name !== action.payload);
+        },
+        clearSyncFields(state) {
+            state.syncFields = [];
         }
     },
 });
@@ -256,6 +276,10 @@ export const {
     clearLevel,
     clearField,
     clearAll,
-    updateCurrentRange
+    updateCurrentRange,
+    toggleSync,
+    addSyncField,
+    removeSyncField,
+    clearSyncFields
 } = chartsSlice.actions;
 

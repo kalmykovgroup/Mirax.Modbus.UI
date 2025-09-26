@@ -1,7 +1,8 @@
 
 
 import type { SeriesBinDto } from "@charts/shared/contracts/chart/Dtos/SeriesBinDto.ts";
-import type {BucketingConfig} from "@charts/store/bucketing.ts";
+import type {ChartBucketingConfig} from "@charts/store/chartsSettingsSlice.ts";
+
 
 // Форматирование времени
 export function formatTimeByBucket(date: Date, bucketMs: number): string {
@@ -42,28 +43,40 @@ export function formatBucketSize(bucketMs: number): string {
 }
 
 // Выбор оптимального bucket
+
+// Интерфейс конфигурации
+
+// Выбор оптимального bucket в миллисекундах
 export function pickBucketMsFor(
     px: number,
     from: Date,
     to: Date,
-    cfg: BucketingConfig
+    cfg: ChartBucketingConfig
 ): number {
-    const spanSec = Math.max(1, Math.round((to.getTime() - from.getTime()) / 1000));
-    const target = Math.max(cfg.MinTargetPoints, Math.round(px * cfg.TargetPointsPerPx));
-    const roughSec = Math.max(1, Math.floor(spanSec / Math.max(1, target)));
+    // Теперь работаем сразу в миллисекундах
+    const spanMs = Math.max(1, to.getTime() - from.getTime());
+    const target = Math.max(cfg.minTargetPoints, Math.round(px * cfg.targetPointsPerPx));
+    const roughMs = Math.max(1, Math.floor(spanMs / Math.max(1, target)));
 
-    const nice = [...cfg.NiceSeconds].sort((a, b) => a - b);
-    const n = nice.find(s => s >= roughSec);
-    if (n) return n * 1000;
+    // niceMilliseconds уже в миллисекундах, не нужно умножать
+    const nice = [...cfg.niceMilliseconds].sort((a, b) => a - b);
+    const n = nice.find(ms => ms >= roughMs);
+    if (n) return n;  // <-- Уже в миллисекундах, не умножаем
 
-    if (cfg.EnableWeeklyMultiples) {
-        const week = 7 * 24 * 3600;
-        const mult = Math.min(cfg.MaxWeeksMultiple, Math.max(1, Math.ceil(roughSec / week)));
-        return mult * week * 1000;
+    // Если roughMs больше максимального nice и включены недельные множители
+    if (cfg.enableWeeklyMultiples) {
+        const weekMs = 7 * 24 * 3600 * 1000;  // <-- Неделя в миллисекундах
+        const mult = Math.min(
+            cfg.maxWeeksMultiple,  // <-- Исправлено: maxWeeksMultiple вместо enableWeeklyMultiples
+            Math.max(1, Math.ceil(roughMs / weekMs))
+        );
+        return mult * weekMs;  // <-- Уже в миллисекундах
     }
 
-    return (nice.at(-1) ?? 604800) * 1000;
+    // Возвращаем последний элемент или неделю по умолчанию (в миллисекундах)
+    return nice.at(-1) ?? 604800000;  // <-- 604800000 это неделя в миллисекундах
 }
+
 
 // Проверка необходимости переключения уровня
 export function shouldSwitchBucket(
@@ -71,11 +84,11 @@ export function shouldSwitchBucket(
     px: number,
     from: Date,
     to: Date,
-    cfg: BucketingConfig,
+    cfg: ChartBucketingConfig,
     lower = 0.7,
     upper = 1.3
 ): boolean {
-    const target = Math.max(cfg.MinTargetPoints, Math.round(px * cfg.TargetPointsPerPx));
+    const target = Math.max(cfg.minTargetPoints, Math.round(px * cfg.targetPointsPerPx));
     const span = to.getTime() - from.getTime();
     const curBins = Math.ceil(span / Math.max(1, currentBucketMs));
     return curBins < lower * target || curBins > upper * target;
@@ -269,10 +282,10 @@ export function groupDataByTimeInterval(
 export function convertToEChartsData(
     data: SeriesBinDto[],
     valueType: 'avg' | 'min' | 'max' | 'count' = 'avg'
-): Array<[number, number | null]> {
+): Array<[number, number | undefined]> {
     return data.map(bin => {
         const time = new Date(bin.t).getTime();
-        let value: number | null = null;
+        let value: number | undefined = undefined;
 
         switch (valueType) {
             case 'avg':

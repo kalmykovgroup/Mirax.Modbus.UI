@@ -8,16 +8,17 @@ import {
     selectFieldDataSafe,
     selectFieldStatsSafe,
 } from '@charts/store/selectors';
-import { selectBucketingConfig, selectTimeSettings } from '@charts/store/chartsSettingsSlice';
+import { selectChartBucketingConfig, selectTimeSettings } from '@charts/store/chartsSettingsSlice';
 import type { ResolvedCharReqTemplate } from "@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate.ts";
 import type { ChartStats } from "@charts/ui/CharContainer/types/ChartStats.ts";
 import type { ChartEvent } from "@charts/ui/CharContainer/types/ChartEvent.ts";
 import ViewFieldChart from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ViewFieldChart.tsx";
 import { formatBucketSize, pickBucketMsFor } from './utils';
 import {debounce} from "lodash";
+import type {FieldDto} from "@charts/shared/contracts/metadata/Dtos/FieldDto.ts";
 
 interface Props {
-    fieldName: string;
+    field: FieldDto;
     template: ResolvedCharReqTemplate;
     onEvent: (event: ChartEvent) => void;
     containerWidth?: number | undefined;
@@ -25,7 +26,7 @@ interface Props {
 }
 
 const FieldChart: React.FC<Props> = ({
-                                         fieldName,
+                                         field,
                                          template,
                                          onEvent,
                                          containerWidth = 1200,
@@ -42,15 +43,30 @@ const FieldChart: React.FC<Props> = ({
     const zoomStateRef = useRef<{ start: number; end: number }>({ start: 0, end: 100 });
 
     // Получаем конфигурацию bucketing
-    const bucketingConfig = useAppSelector(selectBucketingConfig);
+    const ChartBucketingConfig = useAppSelector(selectChartBucketingConfig);
 
     // Получаем настройки временной зоны
     const timeSettings = useAppSelector(selectTimeSettings);
 
     // Используем безопасные селекторы
-    const { view, isInitialized } = useAppSelector(selectFieldViewSafe(fieldName));
-    const { data, isEmpty } = useAppSelector(selectFieldDataSafe(fieldName));
-    const fieldStats = useAppSelector(selectFieldStatsSafe(fieldName));
+    const { view, isInitialized } = useAppSelector(selectFieldViewSafe(field.name));
+    const { data, isEmpty } = useAppSelector(selectFieldDataSafe(field.name));
+
+
+    useEffect(() => {
+        if (view?.currentBucketsMs) {
+            console.log(`[FieldChart ${field.name}] Data info:`, {
+                currentBucketMs: view.currentBucketsMs,
+                dataLength: data.length,
+                availableLevels: Object.keys(view.seriesLevel || {}),
+                currentLevelTiles: view.seriesLevel[view.currentBucketsMs]?.length || 0,
+                tilesStatus: view.seriesLevel[view.currentBucketsMs]?.map(t => t.status) || []
+            });
+        }
+    }, [field.name, view?.currentBucketsMs, data.length]);
+
+
+    const fieldStats = useAppSelector(selectFieldStatsSafe(field.name));
 
     // ФИКСИРОВАННЫЙ домен из template - никогда не меняется
     const domain = useMemo(() => ({
@@ -70,42 +86,31 @@ const FieldChart: React.FC<Props> = ({
                 containerWidth,
                 from,
                 to,
-                bucketingConfig
+                ChartBucketingConfig
             );
 
             // Инициализируем view для поля
             // currentRange изначально равен полному диапазону
             dispatch(ensureView({
-                field: fieldName,
+                field: field.name,
                 px: containerWidth,
                 currentRange: { from, to },
                 currentBucketsMs: initialBucket
             }));
 
             isInitializedRef.current = true;
-
-            console.log(`[FieldChart ${fieldName}] Initialized with FIXED domain:`, {
-                domain: { from: from.toISOString(), to: to.toISOString() },
-                bucket: initialBucket,
-                bucketFormatted: formatBucketSize(initialBucket)
-            });
         }
-    }, [dispatch, fieldName, template, containerWidth, bucketingConfig]);
+    }, [dispatch, field, template, containerWidth, ChartBucketingConfig]);
 
     // Отслеживаем изменение уровня bucket
     useEffect(() => {
         if (view?.currentBucketsMs && prevBucketRef.current !== null) {
             if (view.currentBucketsMs !== prevBucketRef.current) {
-                console.log(`[FieldChart ${fieldName}] Level switch detected:`, {
-                    from: prevBucketRef.current,
-                    to: view.currentBucketsMs,
-                    fromFormatted: formatBucketSize(prevBucketRef.current),
-                    toFormatted: formatBucketSize(view.currentBucketsMs)
-                });
+
 
                 onEvent({
                     type: 'levelSwitch',
-                    field: fieldName,
+                    field: field,
                     timestamp: Date.now(),
                     payload: {
                         fromBucket: prevBucketRef.current,
@@ -125,18 +130,17 @@ const FieldChart: React.FC<Props> = ({
         }
 
         prevBucketRef.current = view?.currentBucketsMs ?? null;
-    }, [view?.currentBucketsMs, fieldName, onEvent]);
+    }, [view?.currentBucketsMs, field, onEvent]);
 
     // Отслеживаем загрузку данных
     useEffect(() => {
         const isLoading = fieldStats.loading;
 
         if (isLoading && !prevLoadingRef.current) {
-            console.log(`[FieldChart ${fieldName}] Data request started`);
 
             onEvent({
                 type: 'dataRequest',
-                field: fieldName,
+                field: field,
                 timestamp: Date.now(),
                 payload: {
                     bucketMs: view?.currentBucketsMs ?? 0,
@@ -147,12 +151,9 @@ const FieldChart: React.FC<Props> = ({
                     reason: 'loading'
                 }
             });
-        } else if (!isLoading && prevLoadingRef.current) {
-            console.log(`[FieldChart ${fieldName}] Data request completed`);
         }
-
         prevLoadingRef.current = isLoading;
-    }, [fieldStats.loading, fieldName, onEvent, view?.currentBucketsMs, view?.currentRange]);
+    }, [fieldStats.loading, field, onEvent, view?.currentBucketsMs, view?.currentRange]);
 
     // Текущий видимый диапазон из view.currentRange
     const visibleRange = useMemo(() => {
@@ -169,7 +170,7 @@ const FieldChart: React.FC<Props> = ({
     const chartOption = useMemo(() => {
         return createChartOption({
             data: data,
-            fieldName,
+            fieldName: field.name,
             domain, // ФИКСИРОВАННЫЙ полный диапазон (для настройки осей)
             visibleRange, // Текущий видимый диапазон
             bucketMs: view?.currentBucketsMs ?? 3600000,
@@ -182,7 +183,7 @@ const FieldChart: React.FC<Props> = ({
         });
     }, [
         data,
-        fieldName,
+        field,
         domain,
         visibleRange,
         view?.currentBucketsMs,
@@ -226,19 +227,17 @@ const FieldChart: React.FC<Props> = ({
     // Обработчик готовности графика
     const handleChartReady = useCallback((chart: any) => {
         chartInstanceRef.current = chart;
-        console.log(`[FieldChart ${fieldName}] Chart ready`);
 
         onEvent({
             type: 'ready',
-            field: fieldName,
+            field: field,
             timestamp: Date.now(),
             payload: { instance: chart }
         });
-    }, [fieldName, onEvent]);
+    }, [field, onEvent]);
 
     // УЛУЧШЕННЫЙ обработчик зума с привязкой к слайдеру
     const handleZoom = useCallback((params: any) => {
-        console.log(`[FieldChart ${fieldName}] Zoom event:`, params);
 
         let zoomStart = 0;
         let zoomEnd = 100;
@@ -287,21 +286,13 @@ const FieldChart: React.FC<Props> = ({
 
         // Вычисляем видимый процент от общего диапазона
         const visiblePercent = zoomEnd - zoomStart;
-        const visibleSpan = newTo - newFrom;
 
-        console.log(`[FieldChart ${fieldName}] Zoom state:`, {
-            zoomStart: zoomStart.toFixed(2) + '%',
-            zoomEnd: zoomEnd.toFixed(2) + '%',
-            visiblePercent: visiblePercent.toFixed(2) + '%',
-            visibleSpan: (visibleSpan / 1000 / 60).toFixed(2) + ' minutes'
-        });
 
-        // НОВАЯ ЛОГИКА: Определяем оптимальный bucket на основе видимого диапазона
         const optimalBucket = pickBucketMsFor(
             containerWidth,
             new Date(newFrom),
             new Date(newTo),
-            bucketingConfig
+            ChartBucketingConfig
         );
 
         const currentBucketMs = view?.currentBucketsMs ?? 3600000;
@@ -320,7 +311,7 @@ const FieldChart: React.FC<Props> = ({
                 if (timeSinceLastSwitch > 300) {
                     shouldSwitchLevel = true;
                 } else {
-                    console.log(`[FieldChart ${fieldName}] Skipping switch due to debounce`, {
+                    console.log(`[FieldChart ${field.name}] Skipping switch due to debounce`, {
                         timeSinceLastSwitch,
                         lastBucket: lastSwitchRef.current.bucket,
                         optimalBucket
@@ -334,14 +325,8 @@ const FieldChart: React.FC<Props> = ({
 
         // Переключаем уровень если необходимо
         if (shouldSwitchLevel) {
-            console.log(`[FieldChart ${fieldName}] Switching level:`, {
-                from: formatBucketSize(currentBucketMs),
-                to: formatBucketSize(optimalBucket),
-                visiblePercent: visiblePercent.toFixed(2) + '%'
-            });
-
-            dispatch(setCurrentBucketMs({
-                field: fieldName,
+           dispatch(setCurrentBucketMs({
+                field: field.name,
                 bucketMs: optimalBucket
             }));
         }
@@ -352,12 +337,12 @@ const FieldChart: React.FC<Props> = ({
             to: new Date(newTo)
         };
 
-        dispatch(updateCurrentRange({ field: fieldName, range: newRange }));
+        dispatch(updateCurrentRange({ field: field.name, range: newRange }));
 
         // Отправляем событие
         onEvent({
             type: 'zoom',
-            field: fieldName,
+            field: field,
             timestamp: Date.now(),
             payload: {
                 from: newFrom,
@@ -371,7 +356,7 @@ const FieldChart: React.FC<Props> = ({
             }
         });
 
-    }, [fieldName, onEvent, view?.currentBucketsMs, containerWidth, bucketingConfig, domain, dispatch]);
+    }, [field, onEvent, view?.currentBucketsMs, containerWidth, ChartBucketingConfig, domain, dispatch]);
 
     // Уменьшенный debounce для более отзывчивой работы
     const debouncedHandleZoom = useMemo(
@@ -381,7 +366,6 @@ const FieldChart: React.FC<Props> = ({
 
     // Обработчик окончания зума (когда пользователь отпускает слайдер)
     const handleZoomEnd = useCallback(() => {
-        console.log(`[FieldChart ${fieldName}] Zoom ended at:`, zoomStateRef.current);
 
         // Можно выполнить финальную корректировку уровня здесь
         const { start, end } = zoomStateRef.current;
@@ -397,65 +381,62 @@ const FieldChart: React.FC<Props> = ({
             containerWidth,
             new Date(finalFrom),
             new Date(finalTo),
-            bucketingConfig
+            ChartBucketingConfig
         );
 
         const currentBucketMs = view?.currentBucketsMs ?? 3600000;
 
         if (finalOptimalBucket !== currentBucketMs) {
-            console.log(`[FieldChart ${fieldName}] Final bucket adjustment:`, {
-                from: formatBucketSize(currentBucketMs),
-                to: formatBucketSize(finalOptimalBucket)
-            });
+
 
             dispatch(setCurrentBucketMs({
-                field: fieldName,
+                field: field.name,
                 bucketMs: finalOptimalBucket
             }));
         }
-    }, [fieldName, domain, containerWidth, bucketingConfig, view?.currentBucketsMs, dispatch]);
+    }, [field, domain, containerWidth, ChartBucketingConfig, view?.currentBucketsMs, dispatch]);
 
     // Обработчик изменения размера
     const handleResize = useCallback((width: number, height: number) => {
         onEvent({
             type: 'resize',
-            field: fieldName,
+            field: field,
             timestamp: Date.now(),
             payload: { width, height }
         });
-    }, [fieldName, onEvent]);
+    }, [field, onEvent]);
 
     // Обработчик brush
     const handleBrush = useCallback((params: any) => {
         onEvent({
             type: 'brush',
-            field: fieldName,
+            field: field,
             timestamp: Date.now(),
             payload: params
         });
-    }, [fieldName, onEvent]);
+    }, [field, onEvent]);
 
     // Обработчик клика
     const handleClick = useCallback((params: any) => {
         onEvent({
             type: 'click',
-            field: fieldName,
+            field: field,
             timestamp: Date.now(),
             payload: params
         });
-    }, [fieldName, onEvent]);
+    }, [field, onEvent]);
 
     // Отслеживаем ошибки
     useEffect(() => {
         if (fieldStats.error) {
             onEvent({
                 type: 'error',
-                field: fieldName,
+                field: field,
                 timestamp: Date.now(),
                 payload: { message: fieldStats.error }
             });
         }
-    }, [fieldStats.error, fieldName, onEvent]);
+    }, [fieldStats.error, field, onEvent]);
 
     // Определяем состояние загрузки и ошибки
     const isLoading = fieldStats.loading;
@@ -484,7 +465,7 @@ const FieldChart: React.FC<Props> = ({
     if (!isInitialized && !showLoading) {
         return (
             <div className={s.initial}>
-                <div>Инициализация графика для поля "{fieldName}"...</div>
+                <div>Инициализация графика для поля "{field.name}"...</div>
             </div>
         );
     }
@@ -495,7 +476,7 @@ const FieldChart: React.FC<Props> = ({
         <ViewFieldChart
             domain={domain}
             height={containerHeight}
-            fieldName={fieldName}
+            fieldName={field.name}
             chartOption={chartOption}
             stats={displayStats}
             loading={showLoading}
