@@ -1,13 +1,22 @@
-
-.loadingText {
-    font-size: 12px;
-    opacity: .6;
+.container{
+    color: white;
 }
 
-.emptyText {
+
+.container[data-theme="dark"] .emptyText{
+    --empty-text: #ffffff;
+}
+.container[data-theme="light"] .emptyText{
+    --empty-text: black;
+}
+
+.emptyText{
+    color: var(--empty-text);
     font-size: 12px;
     opacity: .7;
 }
+
+
 
 .list {
     display: grid;
@@ -26,6 +35,18 @@
     background: #1a1a1a;
 }
 
+.card[data-active="true"] {
+   box-shadow: 0 0 5px #00f7ff;
+}
+
+.card[data-theme="light"] {
+   color: white;
+}
+
+.card[data-theme="dark"] {
+    color: #ffc580;
+}
+
 .cardTitle {
     font-weight: 600;
     font-size: 13px;
@@ -36,18 +57,13 @@
     opacity: .7;
 }
 
-.cardActions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
+
 
 /* Кнопки-иконки в карточке */
 .btnExec {
     display: inline-grid;
     place-items: center;
-    width: 34px;
-    height: 34px;
+
     border: 1px solid #333;
     background: transparent;
     color: #e6e6e6;
@@ -68,11 +84,61 @@
     display: block;
 }
 
-.btnExecDelete{
-    position: absolute;
-    right: 2px;
-    top: 2px;
-}
+
 .btnExecRun{
-    width: 40px;
+    height: 34px;
 }
+
+.card_center {
+    position: relative;
+    /* clearfix, чтобы родитель «оборачивал» float-блок справа */
+}
+.card_center::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+/* Блок с кнопками справа. Текст автоматически будет «обтекать» его слева */
+.actions {
+    float: right;
+    margin-left: 12px;         /* отступ между кнопками и текстом */
+    display: inline-flex;      /* можно несколько кнопок положить */
+    gap: 8px;
+    align-items: center;
+    flex-direction: column;
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
+}
+
+/* Примерные стили кнопок — оставь свои */
+.btnDelete{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+}
+
+.btnExecEdit{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+}
+
+
+/* Текст */
+.cardTitle {
+    font-weight: 600;
+    margin: 0 0 2px 0;
+    line-height: 1.3;
+}
+.cardDescr {
+    font-size: 12px;
+    opacity: .8;
+    line-height: 1.45;
+}
+

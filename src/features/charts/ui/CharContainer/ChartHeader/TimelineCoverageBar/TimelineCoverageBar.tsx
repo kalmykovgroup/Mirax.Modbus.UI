@@ -1,29 +1,32 @@
-// TimelineCoverageBar.tsx
 import React, { useMemo } from 'react';
-import type { CoverageInterval } from '@charts/store/chartsSlice';
+import type { CoverageInterval } from '@charts/store/chartsSlice.ts';
+import styles from './TimelineCoverageBar.module.css';
+import classNames from 'classnames';
 
 export type TimelineCoverageBarProps = {
     // Основные данные
-    coverage: CoverageInterval[];      // массив покрытых интервалов
-    domainFrom: number;                // начало временной шкалы в ms
-    domainTo: number;                  // конец временной шкалы в ms
+    coverage: CoverageInterval[];
+    domainFrom: number;
+    domainTo: number;
 
     // Визуальные настройки
-    height?: number;                   // высота полосы
-    width?: string | number;           // ширина (100% или px)
+    height?: number | undefined;
+    width?: string | number | undefined;
 
     // Цвета для разных состояний
-    backgroundColor?: string;          // фон незагруженных участков
-    coverageColor?: string;           // цвет загруженных участков
-    loadingColor?: string;            // цвет загружаемых участков (опционально)
+    backgroundColor?: string | undefined;
+    coverageColor?: string | undefined;
+    loadingColor?: string | undefined;
 
     // Дополнительные участки в процессе загрузки
-    loadingIntervals?: CoverageInterval[];
+    loadingIntervals?: CoverageInterval[] | undefined;
 
     // Стиль и поведение
-    showTooltip?: boolean;            // показывать подсказку при наведении
-    borderRadius?: number;            // скругление углов
-    animate?: boolean;                // анимация появления
+    showTooltip?: boolean | undefined;
+    borderRadius?: number | undefined;
+    animate?: boolean | undefined;
+    showPercent?: boolean | undefined;            // показывать процент справа
+    className?: string | undefined;               // дополнительные классы
 };
 
 export const TimelineCoverageBar: React.FC<TimelineCoverageBarProps> = ({
@@ -39,21 +42,20 @@ export const TimelineCoverageBar: React.FC<TimelineCoverageBarProps> = ({
                                                                             showTooltip = true,
                                                                             borderRadius = 4,
                                                                             animate = true,
+                                                                            showPercent = true,
+                                                                            className,
                                                                         }) => {
     // Вычисляем сегменты для отрисовки
     const segments = useMemo(() => {
         const span = domainTo - domainFrom;
         if (span <= 0) return { covered: [], loading: [] };
 
-        // Функция для преобразования ms в проценты
         const toPercent = (ms: number) => {
             return ((ms - domainFrom) / span) * 100;
         };
 
-        // Обрабатываем покрытые интервалы
         const covered = coverage
             .map(interval => {
-                // Обрезаем интервалы по границам домена
                 const start = Math.max(interval.fromMs, domainFrom);
                 const end = Math.min(interval.toMs, domainTo);
 
@@ -68,7 +70,6 @@ export const TimelineCoverageBar: React.FC<TimelineCoverageBarProps> = ({
             })
             .filter(Boolean);
 
-        // Обрабатываем загружаемые интервалы
         const loading = loadingIntervals
             .map(interval => {
                 const start = Math.max(interval.fromMs, domainFrom);
@@ -117,45 +118,50 @@ export const TimelineCoverageBar: React.FC<TimelineCoverageBarProps> = ({
         return Math.round((totalCovered / span) * 100);
     }, [coverage, domainFrom, domainTo]);
 
-    const containerStyle: React.CSSProperties = {
-        position: 'relative',
-        width,
-        height,
-        backgroundColor,
-        borderRadius,
-        overflow: 'hidden',
-        transition: animate ? 'all 0.3s ease' : undefined,
-    };
-
-    const segmentStyle = (segment: any, color: string, isLoading = false): React.CSSProperties => ({
-        position: 'absolute',
-        left: `${segment.left}%`,
-        width: `${segment.width}%`,
-        height: '100%',
-        backgroundColor: color,
-        opacity: isLoading ? 0.5 : 1,
-        transition: animate ? 'all 0.3s ease' : undefined,
-        ...(isLoading && {
-            animation: 'pulse 2s infinite',
-        }),
-    });
-
     const tooltip = (segment: any) => {
         if (!showTooltip) return undefined;
         return `${formatTime(segment.startMs)} - ${formatTime(segment.endMs)}`;
     };
 
+    // Выбираем класс для контейнера
+    const containerClassName = classNames(
+        animate ? styles.container : styles.containerNoAnimation,
+        className
+    );
+
+    // Inline стили для контейнера (динамические значения)
+    const containerStyle: React.CSSProperties = {
+        width,
+        height,
+        backgroundColor,
+        borderRadius,
+    };
+
+    // Функция для получения стилей сегмента
+    const getSegmentStyle = (segment: any): React.CSSProperties => ({
+        left: `${segment.left}%`,
+        width: `${segment.width}%`,
+    });
+
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className={styles.wrapper}>
             <div
+                className={containerClassName}
                 style={containerStyle}
                 title={showTooltip ? `Покрытие: ${coveragePercent}%` : undefined}
             >
-                {/* Загружаемые сегменты (под покрытыми) */}
+                {/* Загружаемые сегменты */}
                 {segments.loading.map((segment, idx) => (
                     <div
                         key={`loading-${idx}`}
-                        style={segmentStyle(segment, loadingColor, true)}
+                        className={classNames(
+                            animate ? styles.segment : styles.segmentNoAnimation,
+                            styles.segmentLoading
+                        )}
+                        style={{
+                            ...getSegmentStyle(segment),
+                            backgroundColor: loadingColor,
+                        }}
                         title={tooltip(segment)}
                     />
                 ))}
@@ -164,32 +170,25 @@ export const TimelineCoverageBar: React.FC<TimelineCoverageBarProps> = ({
                 {segments.covered.map((segment, idx) => (
                     <div
                         key={`covered-${idx}`}
-                        style={segmentStyle(segment, coverageColor)}
+                        className={classNames(
+                            animate ? styles.segment : styles.segmentNoAnimation,
+                            styles.segmentCovered
+                        )}
+                        style={{
+                            ...getSegmentStyle(segment),
+                            backgroundColor: coverageColor,
+                        }}
                         title={tooltip(segment)}
                     />
                 ))}
             </div>
 
             {/* Процент покрытия справа */}
-            <div
-                style={{
-                    minWidth: 45,
-                    fontSize: 12,
-                    fontWeight: 500,
-                    color: '#6b7280',
-                    fontVariantNumeric: 'tabular-nums'
-                }}
-            >
-                {coveragePercent}%
-            </div>
-
-            {/* CSS для анимации пульсации */}
-            <style>{`
-                @keyframes pulse {
-                    0%, 100% { opacity: 0.5; }
-                    50% { opacity: 0.8; }
-                }
-            `}</style>
+            {showPercent && (
+                <div className={styles.coveragePercent}>
+                    {coveragePercent}%
+                </div>
+            )}
         </div>
     );
 };

@@ -7,6 +7,7 @@ export const API = {
         SERIES:   '/charts/series',          // GET ?entity=&field=&timeField=&from=&to=&px&...filters
         MULTI:    '/charts/multi',    // POST { entity, fields, timeField, from, to, px, filters }
         RAW:    '/charts/raw',
+        MULTI_RAW:  '/charts/multi-raw',
     },
     DATABASES: {
         ENTITIES : 'metadata/database/entities',

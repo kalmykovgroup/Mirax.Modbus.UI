@@ -11,9 +11,13 @@ import {apiClient} from "@shared/api/base/apiClient.ts";
 import {setStoreForInterceptors, setupInterceptors} from "@shared/api/base/interceptors.ts";
 
 
+
 // Передаём store в interceptors и настраиваем
 setStoreForInterceptors(store);
 setupInterceptors(apiClient);
+
+
+// Функциональный компонент для инициализации Persist (сброс transient полей после rehydrate)
 
 createRoot(document.getElementById('root')!).render(
     /**
@@ -27,7 +31,7 @@ createRoot(document.getElementById('root')!).render(
      * persistGate.loading = null — значит, не отображаем спиннер/заглушку во время восстановления.
      */
     <Provider store={store}>
-        <PersistGate loading={<SplashScreen />}  persistor={persistor}>
+        <PersistGate loading={<SplashScreen label={"Загрузка приложения..."} threePointOffset={true}/>}  persistor={persistor}>
             <BrowserRouter>
                 <App />
             </BrowserRouter>

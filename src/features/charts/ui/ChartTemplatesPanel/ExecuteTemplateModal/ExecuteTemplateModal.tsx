@@ -7,6 +7,9 @@ import {
     getParamMeta,
     isMissingRequired,
 } from '../templateResolve'
+import FromToFields from '@charts/ui/DataSourcePanel/FromToFields/FromToFields'
+import type {TimeRangeBounds} from "@charts/store/chartsSlice.ts";
+
 
 export default function ExecuteTemplateModal({
                                                  template,
@@ -15,31 +18,56 @@ export default function ExecuteTemplateModal({
                                              }: {
     template: ChartReqTemplateDto
     onCancel: () => void
-    onSubmit: (values: Record<string, unknown>) => void
+    onSubmit: (result: {
+        values: Record<string, unknown>,
+        from: Date | undefined,
+        to: Date | undefined,
+    }) => void
 }) {
+    // --- ключи/параметры шаблона
     const keys = useMemo(() => extractAllKeysFromTemplate(template), [template])
-    const params = useMemo<SqlParam[]>(() => ((template as any)?.params ?? []) as SqlParam[], [template])
+    const params = useMemo<SqlParam[]>(
+        () => ((template as any)?.params ?? []) as SqlParam[],
+        [template]
+    )
 
+    // --- локальные значения для {{keys}}
     const [values, setValues] = useState<Record<string, string>>({})
 
     useEffect(() => {
         const initial: Record<string, string> = {}
         keys.forEach(k => {
             const meta = getParamMeta(params, k)
-            const def = meta?.value
+            const def = meta?.value ?? meta?.defaultValue
             initial[k] = def !== undefined && def !== null ? String(def) : ''
         })
         setValues(initial)
     }, [keys, params])
 
+    // --- ЛОКАЛЬНЫЙ ДИАПАЗОН from/to (НЕ мутируем template)
+    const [range, setRange] = useState<TimeRangeBounds>({
+        from: template.from,
+        to: template.to,
+    })
+
+    // при смене шаблона — переинициализируем диапазон
+    useEffect(() => {
+        setRange({
+            from: template.from,
+            to: template.to,
+        })
+    }, [template])
+
     const hasMissing = isMissingRequired(keys, params, values)
 
     const submit = () => {
         if (hasMissing) return
-        // Передаём «сырые» строки — родитель выполнит типизацию и резолвинг
+        // Передаём «сырые» строки для params,
+        // + дополнительно возвращаем диапазон в служебных полях.
         const obj: Record<string, unknown> = {}
         for (const k of keys) obj[k] = values[k]
-        onSubmit(obj)
+
+        onSubmit({values: obj, from: range?.from, to: range?.to})
     }
 
     // закрытие по ESC + блокировка скролла
@@ -50,6 +78,8 @@ export default function ExecuteTemplateModal({
         document.body.style.overflow = 'hidden'
         return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
     }, [onCancel])
+
+
 
     return (
         <div className={styles.backdrop} onClick={onCancel} role="dialog" aria-modal="true">
@@ -62,6 +92,11 @@ export default function ExecuteTemplateModal({
                 </div>
 
                 <div className={styles.modalBody}>
+                    <FromToFields
+                        range={range}
+                        onChange={(date) => setRange(prev => ({ ...prev, ...date }))}
+                    />
+
                     {keys.map(k => {
                         const meta = getParamMeta(params, k)
                         const required = !!meta?.required
@@ -87,7 +122,14 @@ export default function ExecuteTemplateModal({
 
                 <div className={styles.modalFooter}>
                     <button className={styles.btnSecondary} onClick={onCancel}>Отмена</button>
-                    <button className={styles.btnPrimary} disabled={hasMissing} onClick={submit} title={hasMissing ? 'Заполните обязательные поля' : 'OK'}>OK</button>
+                    <button
+                        className={styles.btnPrimary}
+                        disabled={hasMissing}
+                        onClick={submit}
+                        title={hasMissing ? 'Заполните обязательные поля' : 'OK'}
+                    >
+                        OK
+                    </button>
                 </div>
             </div>
         </div>

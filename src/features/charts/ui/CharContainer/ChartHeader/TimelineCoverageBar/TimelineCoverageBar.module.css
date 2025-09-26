@@ -1,0 +1,100 @@
+.wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.container {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.containerNoAnimation {
+    position: relative;
+    overflow: hidden;
+}
+
+.segment {
+    position: absolute;
+    height: 100%;
+    transition: all 0.3s ease;
+}
+
+.segmentNoAnimation {
+    position: absolute;
+    height: 100%;
+}
+
+.segmentLoading {
+    opacity: 0.5;
+    animation: pulse 2s infinite;
+}
+
+.segmentCovered {
+    opacity: 1;
+}
+
+.coveragePercent {
+    min-width: 45px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* Дополнительные модификаторы для разных тем */
+.containerDark {
+    background-color: #1f2937;
+}
+
+.containerLight {
+    background-color: #e5e7eb;
+}
+
+.containerError {
+    background-color: #fee2e2;
+}
+
+/* Размеры */
+.heightSmall {
+    height: 6px;
+}
+
+.heightMedium {
+    height: 8px;
+}
+
+.heightLarge {
+    height: 12px;
+}
+
+/* Скругления */
+.radiusNone {
+    border-radius: 0;
+}
+
+.radiusSmall {
+    border-radius: 2px;
+}
+
+.radiusMedium {
+    border-radius: 4px;
+}
+
+.radiusLarge {
+    border-radius: 8px;
+}
+
+.radiusFull {
+    border-radius: 9999px;
+}

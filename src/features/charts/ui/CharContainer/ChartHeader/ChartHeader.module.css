@@ -1,0 +1,153 @@
+/* ChartHeader.module.css */
+
+.container {
+    display: grid;
+    gap: 1px;
+    padding: 16px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.loadingIndicator {
+    margin-left: 8px;
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 400;
+}
+
+.stats {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.statItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.statLabel {
+    font-size: 11px;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.statValue {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    font-variant-numeric: tabular-nums;
+}
+
+.error {
+    padding: 12px;
+    background-color: #fee2e2;
+    border-radius: 6px;
+    color: #991b1b;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.errorIcon {
+    flex-shrink: 0;
+}
+
+.levelsList {
+    display: grid;
+}
+
+.emptyState {
+    padding: 24px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+/* Кнопки для тестов */
+.testControls {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    background-color: #f3f4f6;
+    border-radius: 8px;
+    flex-wrap: wrap;
+}
+
+.testButton {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    background-color: white;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.testButton:hover {
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.testButton:active {
+    transform: translateY(1px);
+}
+
+.testButtonPrimary {
+    composes: testButton;
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.testButtonPrimary:hover {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+
+/* Анимации */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.levelEnter {
+    animation: fadeIn 0.3s ease;
+}

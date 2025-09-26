@@ -42,7 +42,7 @@ import { omitNodeProps } from '@scenario/core/utils/omitNodeProps.ts'
 
 // состояние + загрузка
 import { useDispatch, useSelector } from 'react-redux'
-import type { AppDispatch, RootState } from '@/store/types.ts'
+import type { AppDispatch, RootState } from "@/store/store";
 import { mapScenarioToFlow } from '@scenario/core/mapScenarioToFlow.ts'
 import {useSelection} from "@scenario/core/hooks/useSelection.ts";
 import {useConnectContext} from "@scenario/core/hooks/useConnectContext.ts";

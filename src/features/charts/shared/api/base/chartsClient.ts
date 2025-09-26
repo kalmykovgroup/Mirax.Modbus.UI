@@ -15,7 +15,6 @@ export const chartsClient = axios.create({
         'Content-Type': 'application/json',
         Accept: 'application/json',
         'X-Client-Type': 'web',
-        'X-Db': 'mirax'
     },
 })
 

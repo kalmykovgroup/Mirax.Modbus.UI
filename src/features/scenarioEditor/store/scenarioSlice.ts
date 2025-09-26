@@ -1,16 +1,15 @@
-import {
-    createSelector,
-    createSlice, type EntityState,
-    type PayloadAction,
-} from '@reduxjs/toolkit';
-import type { ScenarioDto } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/ScenarioDto.ts';
-import type { AppDispatch, RootState } from '@/store/types.ts';
-import { scenarioApi } from '@/features/scenarioEditor/shared/api/scenarioApi.ts';
-import { extractErr } from '@app/lib/types/extractErr.ts';
-import type { Guid } from '@app/lib/types/Guid.ts';
+import {createSelector, createSlice, type EntityState, type PayloadAction,} from '@reduxjs/toolkit';
+import type {ScenarioDto} from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/ScenarioDto.ts';
+
+import {scenarioApi} from '@/features/scenarioEditor/shared/api/scenarioApi.ts';
+import {extractErr} from '@app/lib/types/extractErr.ts';
+import type {Guid} from '@app/lib/types/Guid.ts';
 import {ScenarioLoadOptions} from "@shared/contracts/Types/Api.Shared/RepositoryOptions/ScenarioLoadOptions.ts";
 import type {ScenarioOperationDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/ScenarioOperationDto.ts";
 import type {SaveScenarioBatchResult} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/SaveScenarioBatchResult.ts";
+import {persistReducer} from "redux-persist";
+import sessionStorage from "redux-persist/lib/storage/session";
+import type {AppDispatch, RootState} from "@/store/store";
 
 // Enum загрузки
 // @ts-ignore
@@ -50,6 +49,7 @@ export const refreshScenariosList =
     (forceRefetch = true) =>
         async (dispatch: AppDispatch) => {
             try {
+
                 const list = await dispatch(
                     scenarioApi.endpoints.getAllScenarios.initiate(undefined, {
                         forceRefetch,
@@ -266,4 +266,13 @@ export const {
     clearPendingChanges,
 } = scenariosSlice.actions;
 
-export default scenariosSlice.reducer;
+
+// В конец файла
+const scenarioPersistConfig = {
+    key: 'scenario',
+    storage: sessionStorage, // Временно: до закрытия браузера
+    whitelist: [], // Все или ['data'] для ключевых
+};
+
+export const scenarioReducer = persistReducer(scenarioPersistConfig, scenariosSlice.reducer); // ← Замените default
+

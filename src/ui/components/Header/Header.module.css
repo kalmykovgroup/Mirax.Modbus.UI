@@ -8,7 +8,20 @@
     align-items: center;
     border-bottom: 1px solid #247abe;
     gap: 16px;
+
+    background-color: var(--color-bg);
+    color: var(--color-text);
 }
+
+.container[data-theme="dark"] {
+    --color-bg: #242424;
+    --color-text: rgba(255,255,255,.87);
+}
+.container[data-theme="light"] {
+    --color-bg: rgba(255,255,255,.87);
+    --color-text: #242424;
+}
+
 
 .headerToolBar{
     display: flex;
@@ -16,14 +29,18 @@
     justify-content: flex-end;
 }
 
-:global([data-theme="dark"]) .username {
-    --color-text: #ffffff;
+
+
+
+.container[data-theme="dark"] .username{
+    --color-username: #ffffff;
 }
-:global([data-theme="light"]) .username {
-    --color-bg: #black;
+.container[data-theme="light"] .username{
+    --color-username: #black
 }
 
 .username{
+    color: var(--color-username);
     position: absolute;
     right: 20px;
     top: 3px;

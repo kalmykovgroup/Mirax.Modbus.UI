@@ -1,0 +1,12 @@
+.collapse {
+    will-change: height, opacity, transform;
+    transform-origin: top;        /* схлопываемся вверх */
+}
+
+.inner {
+    /* чуть воздуха внутри, если нужно стилизовать содержимое */
+}
+
+/* доп. штрихи для восприятия */
+.open  { }
+.closed{ }

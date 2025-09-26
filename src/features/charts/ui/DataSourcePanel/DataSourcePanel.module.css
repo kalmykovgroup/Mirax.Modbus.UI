@@ -1,0 +1,7 @@
+.styles{
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #333;
+    border-radius: 8px;
+}

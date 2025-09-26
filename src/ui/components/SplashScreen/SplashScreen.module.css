@@ -1,0 +1,38 @@
+.wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: transparent;
+    color: inherit;
+}
+
+/* вариация: полноэкранный слой */
+.full {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: var(--splash-bg, transparent);
+}
+
+/* иконка + кручение */
+.icon {
+    inline-size: 2rem;
+    block-size: 2rem;
+}
+.spin {
+    animation: ss-spin 1s linear infinite;
+}
+
+@keyframes ss-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* уважение reduce motion */
+@media (prefers-reduced-motion: reduce) {
+    .spin { animation: none; }
+}
+
+.label{
+    font-size: 14px;
+}

@@ -1,11 +1,9 @@
 
-import type {Guid} from "@app/lib/types/Guid.ts";
+import type {ResolvedCharReqTemplate} from "@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate.ts";
 
 export type GetMultiSeriesRequest = {
-    templateId: Guid
-    from: string
-    to: string
+    template: ResolvedCharReqTemplate;
+    from?: Date | undefined;
+    to?: Date | undefined;
     px: number
-
-    values?: Record<string, unknown> | undefined;
 }

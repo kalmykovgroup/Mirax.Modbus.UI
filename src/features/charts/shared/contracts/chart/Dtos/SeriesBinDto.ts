@@ -1,6 +1,6 @@
 export type SeriesBinDto = {
-    t: string;
-    min: number | null;
-    max: number | null;
-    avg: number | null;
+    t: Date;
+    min: number | undefined;
+    max: number | undefined;
+    avg: number | undefined;
     count: number }

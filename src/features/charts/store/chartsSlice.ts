@@ -1,265 +1,261 @@
-// src/store/slices/chartsSlice.ts
-import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type { RootState } from '@/store/types'
-import {chartsApi} from "@charts/shared/api/chartsApi.ts";
-import type {SeriesBinDto} from "@charts/shared/contracts/chart/Dtos/SeriesBinDto.ts";
-import type {RawPointDto} from "@charts/shared/contracts/chart/Dtos/RawPointDto.ts";
-import type {MultiSeriesItemDto} from "@charts/shared/contracts/chart/Dtos/MultiSeriesItemDto.ts";
-import type {GetSeriesRequest} from "@charts/shared/contracts/chart/Dtos/Requests/GetSeriesRequest.ts";
-import type {GetMultiSeriesRequest} from "@charts/shared/contracts/chart/Dtos/Requests/GetMultiSeriesRequest.ts";
-import type {GetRawRequest} from "@charts/shared/contracts/chart/Dtos/Requests/GetRawRequest.ts";
+// src/store/chartsSlice.ts
 
-// ----------------------------------------------------------------------------
-// Типы и минимальные утилиты
-// ----------------------------------------------------------------------------
-export type TimeRange = { from: string; to: string } // ISO UTC
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { ResolvedCharReqTemplate } from '@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate';
+import type { SeriesBinDto } from '@charts/shared/contracts/chart/Dtos/SeriesBinDto';
 
-/*const clampPx = (px: number | undefined, fallback = 1200) =>
-    Math.max(300, Math.min(4000, Math.floor(px ?? fallback)))
+// Типы
+export type FieldName = string;
+export type BucketsMs = number;
+export type TimeRange = { from: Date; to: Date };
+export type TimeRangeBounds  = { from: Date | undefined; to: Date | undefined };
+export type CoverageInterval = { fromMs: number; toMs: number };
 
- */
-// ----------------------------------------------------------------------------
-// Состояние (минимум, но готово для расширения кэшем позже)
-// ----------------------------------------------------------------------------
-
-
-// 1) Тип состояния (добавь view)
-export type ChartState = {
-
-    // последние полученные бины по каждому полю
-    bins: Record<string, SeriesBinDto[]>
-
-    // последние полученные RAW-точки по каждому полю
-    raw: Record<string, RawPointDto[]>
-
-    // последний ответ multi; параллельно series раскладываем в bins[field]
-    multiLast: { fields: string[]; bucketSeconds: number; series: MultiSeriesItemDto[] } | null
-
-    view: Record<string, {
-        px: number;
-        range: TimeRange;
-        visible: boolean;
-        loading: boolean;
-        error?: string | undefined
-    }>
+export interface SeriesTile {
+    coverageInterval: CoverageInterval;
+    bins: SeriesBinDto[];
+    status: 'ready' | 'loading' | 'error';
+    error?: string | undefined;
 }
 
-const initialState: ChartState = {
-    bins: {},
-    raw: {},
-    multiLast: null,
-    view: {},   // ← добавили
+export interface FieldView {
+    px: number;
+    currentRange: TimeRange;
+    loading: boolean;
+    error?: string | undefined;
+    currentBucketsMs: BucketsMs;
+    seriesLevel: Record<BucketsMs, SeriesTile[]>;
 }
 
+export type ChartsState = {
+    template?: ResolvedCharReqTemplate | undefined;
+    view: Record<FieldName, FieldView>;
+};
 
-// ----------------------------------------------------------------------------
-// Thunks (минимальные, без extraReducers — всё делаем внутри thunk)
-// ----------------------------------------------------------------------------
+// Начальное состояние
+const initialState: ChartsState = {
+    template: undefined,
+    view: {},
+};
 
-// 1) /charts/series — одно поле (binned)
-export const fetchSeriesSimple = createAsyncThunk<
-    void,
-    GetSeriesRequest
->(
-    'charts/fetchSeriesSimple',
-    async (request: GetSeriesRequest, { dispatch }) => {
+// Вспомогательные функции
+function mergeTiles(tiles: SeriesTile[]): SeriesTile[] {
+    if (!tiles.length) return [];
 
-        const { field } = request
+    const sorted = [...tiles].sort(
+        (a, b) => a.coverageInterval.fromMs - b.coverageInterval.fromMs
+    );
 
-        dispatch(setFieldLoading({ field, loading: true }))
+    const result: SeriesTile[] = [];
+    let current = { ...sorted[0] };
 
-        const sub = dispatch(
-            chartsApi.endpoints.getSeries.initiate(request)
-        )
+    for (let i = 1; i < sorted.length; i++) {
+        const next = sorted[i];
+        const canMerge =
+            current.coverageInterval.toMs >= next.coverageInterval.fromMs &&
+            current.status === next.status;
 
-        try {
-            const data: any = await sub.unwrap()
-            const bins: SeriesBinDto[] = data?.bins ?? []
-            dispatch(setFieldBins({ field, bins }))
-            dispatch(setFieldError({ field, error: undefined }))
-        } catch (e: any) {
-            const msg =
-                e?.data?.errorMessage ??
-                (typeof e?.data === 'string' ? e.data : undefined) ??
-                e?.message ??
-                'Request failed'
-            dispatch(setFieldError({ field, error: msg }))
-        } finally {
-            dispatch(setFieldLoading({ field, loading: false }))
-            sub.unsubscribe()
+        if (canMerge) {
+            current.coverageInterval.toMs = Math.max(
+                current.coverageInterval.toMs,
+                next.coverageInterval.toMs
+            );
+            // Объединяем bins и сортируем
+            const allBins = [...current.bins, ...next.bins];
+            const uniqueBins = new Map<number, SeriesBinDto>();
+
+            allBins.forEach(bin => {
+                const time = new Date(bin.t).getTime();
+                uniqueBins.set(time, bin);
+            });
+
+            current.bins = Array.from(uniqueBins.values())
+                .sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime());
+        } else {
+            result.push(current);
+            current = { ...next };
         }
     }
-)
+    result.push(current);
 
-// 2) /charts/multi — несколько полей (binned)
-export const fetchMultiSeriesSimple = createAsyncThunk<
-    void,
-    GetMultiSeriesRequest
->(
-    'charts/fetchMultiSeriesSimple',
-    async (request: GetMultiSeriesRequest, { dispatch }) => {
-        const { fields } = request
-        const uniqueFields = Array.from(new Set(fields))
+    return result;
+}
 
-        for (const f of uniqueFields) dispatch(setFieldLoading({ field: f, loading: true }))
-
-        const sub = dispatch(
-            chartsApi.endpoints.getMultiSeries.initiate(request)
-        )
-
-        try {
-            const data: any = await sub.unwrap()
-            const bucketSeconds: number = data?.bucketSeconds ?? 0
-            const series: MultiSeriesItemDto[] = data?.series ?? []
-
-            dispatch(setMultiResult({ fields: uniqueFields, bucketSeconds, series }))
-
-            // Перезаписываем per-field бины, чтобы UI мог просто читать selectBins(field)
-            for (const item of series) {
-                dispatch(setFieldBins({ field: item.field, bins: item.bins ?? [] }))
-                dispatch(setFieldError({ field: item.field, error: undefined }))
-            }
-        } catch (e: any) {
-            const msg =
-                e?.data?.errorMessage ??
-                (typeof e?.data === 'string' ? e.data : undefined) ??
-                e?.message ??
-                'Request failed'
-            for (const f of uniqueFields) dispatch(setFieldError({ field: f, error: msg }))
-        } finally {
-            for (const f of uniqueFields) dispatch(setFieldLoading({ field: f, loading: false }))
-            sub.unsubscribe()
-        }
-    }
-)
-
-// 3) /charts/raw — сырые точки одного поля
-export const fetchRawSimple = createAsyncThunk<void, GetRawRequest>(
-    'charts/fetchRawSimple',
-    async (request, { dispatch }) => {
-        const { field } = request
-
-        dispatch(setFieldLoading({ field, loading: true }))
-
-        const sub = dispatch(
-            chartsApi.endpoints.getRaw.initiate(request)
-        )
-
-        try {
-            const data: any = await sub.unwrap()
-            const points: RawPointDto[] = data?.points ?? []
-            dispatch(setFieldRaw({ field, points }))
-            dispatch(setFieldError({ field, error: undefined }))
-        } catch (e: any) {
-            const msg =
-                e?.data?.errorMessage ??
-                (typeof e?.data === 'string' ? e.data : undefined) ??
-                e?.message ??
-                'Request failed'
-            dispatch(setFieldError({ field, error: msg }))
-        } finally {
-            dispatch(setFieldLoading({ field, loading: false }))
-            sub.unsubscribe()
-        }
-    }
-)
-
-// ----------------------------------------------------------------------------
-// Slice (только обычные reducers; extraReducers не используем)
-// ----------------------------------------------------------------------------
+// Slice
 const chartsSlice = createSlice({
     name: 'charts',
     initialState,
     reducers: {
-        ensureFieldView(state, action: PayloadAction<{ field: string; px: number; range: TimeRange; visible?: boolean }>) {
-            const { field, px, range, visible = true } = action.payload
-            state.view[field] ??= { px, range, visible, loading: false }
-            // обновляем px/range если изменились
-            state.view[field].px = px
-            state.view[field].range = range
-            state.view[field].visible = visible
-        },
-        setFieldPx(state, action: PayloadAction<{ field: string; px: number }>) {
-            if (state.view[action.payload.field])
-            {
-                state.view[action.payload.field]!.px = action.payload.px
-            }
-        },
-        setFieldRange(state, action: PayloadAction<{ field: string; range: TimeRange }>) {
-            if (state.view[action.payload.field]) {
-                state.view[action.payload.field]!.range = action.payload.range
-            }
-        },
-        toggleField(state, action: PayloadAction<string>) {
-            const v = state.view[action.payload]
-            if (v) v.visible = !v.visible
+        setResolvedCharReqTemplate(
+            state,
+            action: PayloadAction<ResolvedCharReqTemplate | undefined>
+        ) {
+            state.template = action.payload;
         },
 
-        setFieldBins(state, action: PayloadAction<{ field: string; bins: SeriesBinDto[] }>) {
-            const { field, bins } = action.payload
-            state.bins[field] = bins
-        },
-        setFieldRaw(state, action: PayloadAction<{ field: string; points: RawPointDto[] }>) {
-            const { field, points } = action.payload
-            state.raw[field] = points
-        },
-        setMultiResult(
+        ensureView(
             state,
-            action: PayloadAction<{ fields: string[]; bucketSeconds: number; series: MultiSeriesItemDto[] }>
+            action: PayloadAction<{
+                field: FieldName;
+                px: number;
+                currentRange: TimeRange;
+                currentBucketsMs: BucketsMs;
+            }>
         ) {
-            state.multiLast = {
-                fields: action.payload.fields,
-                bucketSeconds: action.payload.bucketSeconds,
-                series: action.payload.series,
+            const { field, px, currentRange, currentBucketsMs } = action.payload;
+
+            if (!state.view[field]) {
+                state.view[field] = {
+                    px,
+                    loading: false,
+                    error: undefined,
+                    currentRange: currentRange,
+                    currentBucketsMs,
+                    seriesLevel: {},
+                };
+            } else {
+                const view = state.view[field];
+                view.px = px;
+                if (currentRange) {
+                    view.currentRange = currentRange;
+                }
+                view.currentBucketsMs = currentBucketsMs;
             }
         },
-        setFieldLoading(state, action: PayloadAction<{ field: string; loading: boolean }>) {
-            const { field, loading } = action.payload
-            state.view[field] ??= { px: 1200, range: { from: '', to: '' }, visible: true, loading: false }
-            state.view[field].loading = loading
-            if (loading) state.view[field].error = undefined
+
+        ensureLevels(
+            state,
+            action: PayloadAction<{
+                field: FieldName;
+                bucketList: BucketsMs[]
+            }>
+        ) {
+            const { field, bucketList } = action.payload;
+            const view = state.view[field];
+            if (!view) return;
+
+            for (const bucket of bucketList) {
+                if (!view.seriesLevel[bucket]) {
+                    view.seriesLevel[bucket] = [];
+                }
+            }
         },
-        setFieldError(state, action: PayloadAction<{ field: string; error?: string | undefined }>) {
-            const { field, error } = action.payload
-            state.view[field] ??= { px: 1200, range: { from: '', to: '' }, visible: true, loading: false }
-            state.view[field].error = error
+
+        setCurrentBucketMs(
+            state,
+            action: PayloadAction<{
+                field: FieldName;
+                bucketMs: BucketsMs
+            }>
+        ) {
+            const view = state.view[action.payload.field];
+            if (view) {
+                view.currentBucketsMs = action.payload.bucketMs;
+            }
         },
-        clearField(state, action: PayloadAction<string>) {
-            const f = action.payload
-            delete state.bins[f]
-            delete state.raw[f]
-            delete state.view[f]
+
+        setFieldLoading(
+            state,
+            action: PayloadAction<{
+                field: FieldName;
+                loading: boolean
+            }>
+        ) {
+            const view = state.view[action.payload.field];
+            if (view) {
+                view.loading = action.payload.loading;
+                if (action.payload.loading) {
+                    view.error = undefined;
+                }
+            }
         },
+
+        setFieldError(
+            state,
+            action: PayloadAction<{
+                field: FieldName;
+                error?: string | undefined
+            }>
+        ) {
+            const view = state.view[action.payload.field];
+            if (view) {
+                view.error = action.payload.error;
+                view.loading = false;
+            }
+        },
+
+        upsertTiles(
+            state,
+            action: PayloadAction<{
+                field: FieldName;
+                bucketMs: BucketsMs;
+                tiles: SeriesTile[]
+            }>
+        ) {
+            const { field, bucketMs, tiles } = action.payload;
+            const view = state.view[field];
+            if (!view) return;
+
+            // Инициализируем уровень если его нет
+            if (!view.seriesLevel[bucketMs]) {
+                view.seriesLevel[bucketMs] = [];
+            }
+
+            // Добавляем новые тайлы
+            const existingTiles = view.seriesLevel[bucketMs];
+            const readyTiles = tiles.map(t => ({
+                ...t,
+                status: 'ready' as const
+            }));
+
+            // Простое добавление и слияние
+            view.seriesLevel[bucketMs] = mergeTiles([...existingTiles, ...readyTiles]);
+        },
+
+        clearLevel(
+            state,
+            action: PayloadAction<{
+                field: FieldName;
+                bucketMs: BucketsMs
+            }>
+        ) {
+            const view = state.view[action.payload.field];
+            if (view) {
+                delete view.seriesLevel[action.payload.bucketMs];
+            }
+        },
+
+        clearField(state, action: PayloadAction<FieldName>) {
+            delete state.view[action.payload];
+        },
+
         clearAll(state) {
-            state.bins = {}
-            state.raw = {}
-            state.view = {}
-            state.multiLast = null
+            state.template = undefined;
+            state.view = {};
         },
+        updateCurrentRange(state, action: PayloadAction<{field: FieldName, range: TimeRange}>){
+
+            const view = state.view[action.payload.field];
+            if(view == undefined) throw Error("view was not undefined");
+            view.currentRange = action.payload.range;
+        }
     },
-})
+});
+
+// Экспорты
+export const chartsReducer = chartsSlice.reducer;
 
 export const {
-    ensureFieldView,
-    setFieldPx,
-    setFieldRange,
-    toggleField,
-    setFieldBins,
-    setFieldRaw,
-    setMultiResult,
+    setResolvedCharReqTemplate,
+    ensureView,
+    ensureLevels,
+    setCurrentBucketMs,
     setFieldLoading,
     setFieldError,
+    upsertTiles,
+    clearLevel,
     clearField,
     clearAll,
-} = chartsSlice.actions
+    updateCurrentRange
+} = chartsSlice.actions;
 
-export default chartsSlice.reducer
-
-// ----------------------------------------------------------------------------
-// Простейшие селекторы
-// ----------------------------------------------------------------------------
-export const selectBins = (field: string) => (s: RootState) => s.charts.bins[field] ?? []
-export const selectRawPoints = (field: string) => (s: RootState) => s.charts.raw[field] ?? []
-export const selectFieldUi = (field: string) => (s: RootState) => s.charts.view[field] ?? { loading: false }
-export const selectMultiLast = (s: RootState) => s.charts.multiLast
-export const selectFieldView = (field: string) => (s: RootState) => s.charts.view[field]

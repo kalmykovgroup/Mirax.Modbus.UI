@@ -1,0 +1,227 @@
+/* FromToFields.module.css */
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.timezoneContainer{
+    display: flex;
+    justify-content: right;
+    align-items: center
+}
+
+/* Информация о временной зоне */
+.timezoneInfo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    float: right;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 2px 16px;
+    box-shadow: 0 4px 6px rgba(102, 126, 234, 0.1);
+    animation: fadeIn 0.3s ease-in;
+}
+
+.timezoneHeader {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+}
+
+.timezoneIcon {
+    color: rgba(255, 255, 255, 0.9);
+    animation: rotate 60s linear infinite;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.timezoneLabel {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.timezoneValue {
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.timezoneOffset {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffd700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Строки с полями */
+.row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.row_a {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Badge с временной зоной */
+.tzBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+    animation: fadeIn 0.3s ease-in;
+}
+
+/* Поля ввода */
+.input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.input:hover {
+    border-color: #9ca3af;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.input:disabled {
+    background-color: #f3f4f6;
+    cursor: not-allowed;
+}
+
+/* Кнопки-помощники */
+.helpers {
+    display: flex;
+    gap: 4px;
+}
+
+.helperBtn {
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #4b5563;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.helperBtn:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #667eea;
+    color: #667eea;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.helperBtn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.helperBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Сообщение об ошибке */
+.error {
+    padding: 8px 12px;
+    background-color: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    color: #c00;
+    font-size: 13px;
+    font-weight: 500;
+    animation: shake 0.3s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Отладочная информация */
+.debug {
+    margin-top: 8px;
+    padding: 12px;
+    background: #f8f9fa;
+    border: 1px dashed #dee2e6;
+    border-radius: 6px;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 11px;
+    color: #495057;
+}
+
+.debug small {
+    line-height: 1.6;
+}
+
+/* Адаптивность */
+@media (max-width: 640px) {
+    .row_a {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .helpers {
+        justify-content: space-between;
+    }
+
+    .timezoneHeader {
+        flex-wrap: wrap;
+    }
+}

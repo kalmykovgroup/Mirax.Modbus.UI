@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 
 import type { FieldDto } from '@charts/shared/contracts/metadata/Dtos/FieldDto';
@@ -28,10 +27,7 @@ function isPlaceholder(raw: string): boolean {
 }
 
 function coerceDefaultFromString(raw: string, t?: SqlParamType): unknown {
-    // empty -> undefined
     if (raw.trim() === '') return undefined;
-
-    // placeholders are always strings (server resolves)
     if (isPlaceholder(raw)) return raw;
 
     switch (t) {
@@ -48,28 +44,21 @@ function coerceDefaultFromString(raw: string, t?: SqlParamType): unknown {
             const s = raw.trim().toLowerCase();
             if (['true', '1', 'yes', 'y', 'on'].includes(s)) return true;
             if (['false', '0', 'no', 'n', 'off'].includes(s)) return false;
-            return raw; // leave as-is if not recognizable
+            return raw;
         }
         case SqlParamType.Date:
-            // expect YYYY-MM-DD
-            return raw;
         case SqlParamType.Timestamp:
         case SqlParamType.Timestamptz:
-            // expect ISO-like / datetime-local input (YYYY-MM-DDTHH:mm[:ss])
-            return raw;
-        case SqlParamType.Uuid:
-        case SqlParamType.Text:
-        default:
             return raw;
     }
+    return raw;
 }
 
-function toInputValue(def: unknown, _t?: SqlParamType): string {
+function toInputValue(def: unknown): string {
     if (def === undefined || def === null) return '';
     if (typeof def === 'string') return def;
     if (typeof def === 'number') return String(def);
     if (typeof def === 'boolean') return def ? 'true' : 'false';
-    // any other type -> JSON
     try { return JSON.stringify(def); } catch { return String(def); }
 }
 
@@ -82,14 +71,16 @@ export function ParamsEditor({ availableFields, params, usedKeys, onChange }: Pr
 
     const setRow = React.useCallback((idx: number, mut: (row: UiSqlParam) => UiSqlParam) => {
         const list = [...(params ?? [])];
-        list[idx] = mut(list[idx]);
+
+        const item = list[idx];
+        if(item == undefined) throw Error("Параметр не найден")
+        list[idx] = mut(item);
         onChange(list);
     }, [params, onChange]);
 
     const setKey = (idx: number, key: string) => {
         const nextKey = (key ?? '').trim();
         const list = params ?? [];
-        // запрет дублей
         const duplicate = list.some((row, j) => j !== idx && String(row.key ?? '').trim() === nextKey && nextKey.length > 0);
         if (duplicate) return;
         setRow(idx, r => ({ ...r, key: nextKey }));
@@ -104,8 +95,8 @@ export function ParamsEditor({ availableFields, params, usedKeys, onChange }: Pr
 
     const setDefaultRaw = (idx: number, raw: string) => {
         const row = params[idx];
-        const effectiveType: SqlParamType | undefined = row.type
-            ?? (typeof row.field === 'object' && row.field ? (row.field as FieldDto).sqlParamType as any : undefined);
+        const effectiveType: SqlParamType | undefined = row?.type
+            ?? (typeof row?.field === 'object' && row?.field ? (row.field as FieldDto).sqlParamType as any : undefined);
         const next = coerceDefaultFromString(raw, effectiveType);
         setRow(idx, r => ({ ...r, defaultValue: next }));
     };
@@ -123,11 +114,9 @@ export function ParamsEditor({ availableFields, params, usedKeys, onChange }: Pr
         onChange(list);
     };
 
-    // Duplicate key detection for UX
     const keys = (params ?? []).map(p => String(p.key || '').trim()).filter(Boolean);
     const hasDup = new Set(keys).size !== keys.length;
 
-    // enum -> список значений для <option>
     const TYPE_OPTIONS = Object.values(SqlParamType) as SqlParamType[];
 
     return (
@@ -156,11 +145,12 @@ export function ParamsEditor({ availableFields, params, usedKeys, onChange }: Pr
                             placeholder="description"
                             value={p.description ?? ''}
                             onChange={e => setDescription(i, e.target.value)}
+                            disabled={isAuto}
                         />
                         <select
                             value={fieldName}
                             onChange={e => setFieldName(i, e.target.value)}
-                            disabled={isAuto} // автопараметр привязан к полю из where
+                            disabled={isAuto}
                         >
                             <option value="">— поле —</option>
                             {availableFields.map(f => (
@@ -170,6 +160,7 @@ export function ParamsEditor({ availableFields, params, usedKeys, onChange }: Pr
                         <select
                             value={p.type ?? ''}
                             onChange={e => setType(i, (e.target.value || undefined) as SqlParamType | undefined)}
+                            disabled={isAuto}
                         >
                             <option value="">auto</option>
                             {TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
@@ -179,11 +170,11 @@ export function ParamsEditor({ availableFields, params, usedKeys, onChange }: Pr
                                 type="checkbox"
                                 checked={!!p.required}
                                 onChange={e => setRequired(i, e.target.checked)}
+                                disabled={isAuto}
                             />
                             required
                         </label>
 
-                        {/* Default value editor depends on effective type */}
                         <div>
                             {effectiveType === SqlParamType.Bool ? (
                                 <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -191,6 +182,7 @@ export function ParamsEditor({ availableFields, params, usedKeys, onChange }: Pr
                                         type="checkbox"
                                         checked={!!p.defaultValue}
                                         onChange={e => setDefaultBool(i, e.target.checked)}
+                                        disabled={isAuto}
                                     />
                                     default
                                 </label>
@@ -198,36 +190,41 @@ export function ParamsEditor({ availableFields, params, usedKeys, onChange }: Pr
                                 <input
                                     type="number"
                                     placeholder="default (int) или {{key}}"
-                                    value={toInputValue(p.defaultValue, effectiveType)}
+                                    value={toInputValue(p.defaultValue)}
                                     onChange={e => setDefaultRaw(i, e.target.value)}
+                                    disabled={isAuto}
                                 />
                             ) : effectiveType === SqlParamType.Double ? (
                                 <input
                                     type="number"
                                     step="any"
                                     placeholder="default (number) или {{key}}"
-                                    value={toInputValue(p.defaultValue, effectiveType)}
+                                    value={toInputValue(p.defaultValue)}
                                     onChange={e => setDefaultRaw(i, e.target.value)}
+                                    disabled={isAuto}
                                 />
                             ) : effectiveType === SqlParamType.Date ? (
                                 <input
                                     type="date"
                                     placeholder="YYYY-MM-DD или {{key}}"
-                                    value={toInputValue(p.defaultValue, effectiveType)}
+                                    value={toInputValue(p.defaultValue)}
                                     onChange={e => setDefaultRaw(i, e.target.value)}
+                                    disabled={isAuto}
                                 />
                             ) : effectiveType === SqlParamType.Timestamp || effectiveType === SqlParamType.Timestamptz ? (
                                 <input
                                     type="datetime-local"
                                     placeholder="YYYY-MM-DDTHH:mm или {{key}}"
-                                    value={toInputValue(p.defaultValue, effectiveType)}
+                                    value={toInputValue(p.defaultValue)}
                                     onChange={e => setDefaultRaw(i, e.target.value)}
+                                    disabled={isAuto}
                                 />
                             ) : (
                                 <input
                                     placeholder="default value или {{key}}"
-                                    value={toInputValue(p.defaultValue, effectiveType)}
+                                    value={toInputValue(p.defaultValue)}
                                     onChange={e => setDefaultRaw(i, e.target.value)}
+                                    disabled={isAuto}
                                 />
                             )}
                         </div>

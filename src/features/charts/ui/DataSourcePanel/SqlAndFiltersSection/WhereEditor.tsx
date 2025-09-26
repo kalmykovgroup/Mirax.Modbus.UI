@@ -1,7 +1,7 @@
-
 import type { FieldDto } from '@charts/shared/contracts/metadata/Dtos/FieldDto';
 import type { FilterClause } from '@charts/shared/contracts/chartTemplate/Dtos/FilterClause.ts';
 import { FilterOp } from '@charts/shared/contracts/chart/Types/FilterOp';
+import {notify} from "@app/lib/notify.ts";
 
 type Props = {
     availableFields: FieldDto[];
@@ -33,11 +33,7 @@ function toNumberMaybe(s: string): number | string {
     return Number.isFinite(n) ? n : s;
 }
 
-function asFieldName(f: FieldDto | string | undefined): string {
-    if (!f) return '';
-    if (typeof (f as any) === 'string') return f as string;
-    return (f as FieldDto).name ?? '';
-}
+
 
 function parseArrayInput(raw: string, isNumeric?: boolean): (string|number)[] {
     const items = (raw || '').split(',').map(x => x.trim()).filter(Boolean);
@@ -50,7 +46,7 @@ function isPlaceholder(raw: string): boolean {
 }
 function extractPlaceholderKey(raw: string): string {
     const m = raw.match(/^{{\s*([\w:.\-]+)\s*}}$/);
-    return m ? m[1] : '';
+    return m ? m[1] ?? '' : '';
 }
 function makePlaceholder(key: string): string {
     return `{{${key}}}`;
@@ -58,11 +54,14 @@ function makePlaceholder(key: string): string {
 
 export function WhereEditor({ availableFields, where, onChangeImmediate, onCommit }: Props) {
     const add = () => {
-        const first = availableFields?.[0]?.name ?? '';
-        const fld: FieldDto = { name: first } as any;
+        if(availableFields.length == 0){
+            notify.show('Нет полей для выбора');
+            return;
+        }
+        const fld: FieldDto = availableFields[0]!;
         const next = [...(where ?? []), { field: fld, op: FilterOp.Eq, value: '' } as FilterClause];
         onChangeImmediate(next);
-        onCommit(next); // adding a row is a commit point
+        onCommit(next); // добавление — это commit-поинт
     };
 
     const patch = (idx: number, p: Partial<FilterClause>, commit = false) => {
@@ -76,38 +75,51 @@ export function WhereEditor({ availableFields, where, onChangeImmediate, onCommi
         const list = [...(where ?? [])];
         list.splice(idx, 1);
         onChangeImmediate(list);
-        onCommit(list); // removal is a commit point
+        onCommit(list); // удаление — commit-поинт
     };
+
+    const onChangeField = (i: number, fieldName: string) => {
+
+        const field : FieldDto | undefined = availableFields.find(f =>f.name == fieldName);
+
+        if(field == undefined) throw Error(`Unknown field: ${fieldName}`);
+
+        patch(i, { field: field }, true)
+    }
 
     return (
         <div style={{ display: 'grid', gap: 8 }}>
             <div style={{ fontWeight: 600 }}>Фильтры (WHERE)</div>
 
             {(where ?? []).map((c, i) => {
-                const field = availableFields.find(f => f.name === asFieldName((c as any).field));
+                const field = availableFields.find(f => f.name === c.field.name);
                 const isNumeric = field?.isNumeric;
                 const opDef = OP_DEFS.find(o => o.value === (c as any).op) ?? OP_DEFS[0];
-                const kind = opDef.kind;
+                const kind = opDef?.kind;
 
                 return (
                     <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 140px 1fr auto', gap: 8, alignItems: 'center' }}>
                         <select
-                            value={asFieldName((c as any).field)}
-                            onChange={e => patch(i, { field: { name: e.target.value } as FieldDto }, true /* commit */)}
+                            value={c.field.name}
+                            onChange={e => onChangeField(i, e.target.value)}
                         >
                             {availableFields.map(f => <option key={f.name} value={f.name}>{f.name}</option>)}
                         </select>
 
                         <select
-                            value={(c as any).op as FilterOp}
+                            value={c.op as FilterOp}
                             onChange={e => {
                                 const nextOp = e.target.value as unknown as FilterOp;
-                                let nextVal: unknown = (c as any).value;
-                                const nextKind = (OP_DEFS.find(o => o.value === nextOp) ?? OP_DEFS[0]).kind;
+                                let nextVal: unknown = c.value;
+
+                                const item = OP_DEFS.find(o => o.value === nextOp) ?? OP_DEFS[0]
+                                if(item == undefined) throw Error()
+                                const nextKind = item.kind;
+
                                 if (nextKind === 'none') nextVal = undefined;
                                 if (nextKind === 'single' && Array.isArray(nextVal)) nextVal = '';
                                 if (nextKind === 'array' && !Array.isArray(nextVal)) nextVal = [];
-                                if (nextKind === 'between') nextVal = Array.isArray(nextVal) && nextVal.length === 2 ? nextVal : ['', ''];
+                                if (nextKind === 'between') nextVal = Array.isArray(nextVal) && nextVal!.length === 2 ? nextVal : ['', ''];
                                 patch(i, { op: nextOp as any, value: nextVal } as any, true /* commit */);
                             }}
                         >
@@ -148,11 +160,9 @@ export function WhereEditor({ availableFields, where, onChangeImmediate, onCommi
                                                 value={keyOnly}
                                                 onChange={e => {
                                                     const k = e.target.value.trim();
-                                                    patch(i, { value: makePlaceholder(k) } as any, false /* immediate */);
-                                                }}
-                                                onBlur={e => {
-                                                    const k = e.target.value.trim();
-                                                    patch(i, { value: makePlaceholder(k) } as any, true /* commit */);
+                                                    // важный момент: при вводе ключа сразу делаем commit,
+                                                    // чтобы параметр синхронизировался мгновенно
+                                                    patch(i, { value: makePlaceholder(k) } as any, true /* commit on typing */);
                                                 }}
                                             />
                                         ) : (
@@ -180,7 +190,9 @@ export function WhereEditor({ availableFields, where, onChangeImmediate, onCommi
                                     onChange={e => {
                                         const raw = e.target.value;
                                         const val = raw.includes('{{') ? raw : parseArrayInput(raw, !!isNumeric);
-                                        onChangeImmediate(Object.assign([...where], { [i]: { ...(where[i] as any), value: val } } as any));
+                                        const list = [...where];
+                                        (list[i] as any).value = val;
+                                        onChangeImmediate(list);
                                     }}
                                     onBlur={e => {
                                         const raw = e.target.value;
@@ -199,7 +211,9 @@ export function WhereEditor({ availableFields, where, onChangeImmediate, onCommi
                                             const a = Array.isArray((c as any).value) ? [...((c as any).value as any[])] : ['', ''];
                                             const raw = e.target.value;
                                             a[0] = raw.includes('{{') ? raw : (isNumeric ? toNumberMaybe(raw) : raw);
-                                            onChangeImmediate(Object.assign([...where], { [i]: { ...(where[i] as any), value: a } } as any));
+                                            const list = [...where];
+                                            (list[i] as any).value = a;
+                                            onChangeImmediate(list);
                                         }}
                                         onBlur={e => {
                                             const a = Array.isArray((c as any).value) ? [...((c as any).value as any[])] : ['', ''];
@@ -214,7 +228,9 @@ export function WhereEditor({ availableFields, where, onChangeImmediate, onCommi
                                             const a = Array.isArray((c as any).value) ? [...((c as any).value as any[])] : ['', ''];
                                             const raw = e.target.value;
                                             a[1] = raw.includes('{{') ? raw : (isNumeric ? toNumberMaybe(raw) : raw);
-                                            onChangeImmediate(Object.assign([...where], { [i]: { ...(where[i] as any), value: a } } as any));
+                                            const list = [...where];
+                                            (list[i] as any).value = a;
+                                            onChangeImmediate(list);
                                         }}
                                         onBlur={e => {
                                             const a = Array.isArray((c as any).value) ? [...((c as any).value as any[])] : ['', ''];

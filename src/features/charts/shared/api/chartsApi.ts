@@ -2,12 +2,13 @@
 import { createApi } from '@reduxjs/toolkit/query/react'
 import { API } from '@app/providers/endpoints.ts'
 import { axiosChartsBaseQuery } from '@charts/shared/api/base/chartsBaseQuery.ts'
-import type {SeriesResponse} from "@charts/shared/contracts/chart/Dtos/Responses/SeriesResponse.ts";
-import type {GetSeriesRequest} from "@charts/shared/contracts/chart/Dtos/Requests/GetSeriesRequest.ts";
 import type {MultiSeriesResponse} from "@charts/shared/contracts/chart/Dtos/Responses/MultiSeriesResponse.ts";
 import type {GetMultiSeriesRequest} from "@charts/shared/contracts/chart/Dtos/Requests/GetMultiSeriesRequest.ts";
 import type {RawSeriesResponse} from "@charts/shared/contracts/chart/Dtos/Responses/RawSeriesResponse.ts";
 import type {GetRawRequest} from "@charts/shared/contracts/chart/Dtos/Requests/GetRawRequest.ts";
+import type {MultiRawResponse} from "@charts/shared/contracts/chart/Dtos/Responses/MultiRawResponse.ts";
+import type {GetMultiRawRequest} from "@charts/shared/contracts/chart/Dtos/Requests/GetMultiRawRequest.ts";
+import {type RequestWithDb} from "@charts/shared/api/base/types.ts";
 
 // ---- DTOs ----
 
@@ -27,38 +28,40 @@ function stableBody<T extends Record<string, any>>(o: T): string {
 export const chartsApi = createApi({
     reducerPath: 'chartsApi',
     baseQuery: axiosChartsBaseQuery(),
-    tagTypes: ['Databases', 'Entities', 'EntityFields', 'Series', 'MultiSeries', 'Raw'],
+    tagTypes: ['MultiSeries', 'Raw', 'MultiRaw'],
     endpoints: (builder) => ({
 
-
-        // Данные
-        getSeries: builder.query<SeriesResponse, GetSeriesRequest>({
-            query: (body) => ({
-                url: API.CHARTS.SERIES,   // POST /charts/series
+        // ⬇⬇ ключевое — аргумент теперь RequestWithDb<...>
+        getMultiSeries: builder.query<MultiSeriesResponse, RequestWithDb<GetMultiSeriesRequest>>({
+            query: ({ body, dbId }) => ({
+                url: API.CHARTS.MULTI,
                 method: 'post',
                 data: body,
+                headers: { "X-Db": String(dbId) }, // ← пер-запросный X-Db
             }),
-            providesTags: (_res, _err, body) => [{ type: 'Series', id: stableBody(body) }],
+            providesTags: (_res, _err, { body }) => [{ type: 'MultiSeries', id: stableBody(body as any) }],
             keepUnusedDataFor: 60,
         }),
 
-        getMultiSeries: builder.query<MultiSeriesResponse, GetMultiSeriesRequest>({
-            query: (body) => ({
-                url: API.CHARTS.MULTI,    // POST /charts/multi
+        getRaw: builder.query<RawSeriesResponse, RequestWithDb<GetRawRequest>>({
+            query: ({ body, dbId }) => ({
+                url: API.CHARTS.RAW,
                 method: 'post',
                 data: body,
+                headers: dbId ? { "X-Db": String(dbId) } : undefined,
             }),
-            providesTags: (_res, _err, body) => [{ type: 'MultiSeries', id: stableBody(body) }],
+            providesTags: (_res, _err, { body }) => [{ type: 'Raw', id: stableBody(body as any) }],
             keepUnusedDataFor: 60,
         }),
 
-        getRaw: builder.query<RawSeriesResponse, GetRawRequest>({
-            query: (body) => ({
-                url: API.CHARTS.RAW,      // POST /charts/raw
+        getMultiRaw: builder.query<MultiRawResponse, RequestWithDb<GetMultiRawRequest>>({
+            query: ({ body, dbId }) => ({
+                url: API.CHARTS.MULTI_RAW,
                 method: 'post',
                 data: body,
+                headers: dbId ? { "X-Db": String(dbId) } : undefined,
             }),
-            providesTags: (_res, _err, body) => [{ type: 'Raw', id: stableBody(body) }],
+            providesTags: (_res, _err, { body }) => [{ type: 'MultiRaw', id: stableBody(body as any) }],
             keepUnusedDataFor: 60,
         }),
 
@@ -66,8 +69,6 @@ export const chartsApi = createApi({
 })
 
 export const {
-    useGetSeriesQuery,
-    useLazyGetSeriesQuery,
     useGetMultiSeriesQuery,
     useLazyGetMultiSeriesQuery,
     useGetRawQuery,

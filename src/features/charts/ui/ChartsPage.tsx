@@ -1,38 +1,50 @@
 // src/pages/ChartsBreaksPage.tsx
 
-import type {ChartReqTemplateDto} from "@charts/shared/contracts/chartTemplate/Dtos/ChartReqTemplateDto.ts";
+
 import {DataSourcePanel} from "@charts/ui/DataSourcePanel/DataSourcePanel.tsx";
-import React from "react";
-import {applyTemplateNoThunk} from "@charts/store/chartsMeta.commands.ts";
 import ChartTemplatesPanel from "@charts/ui/ChartTemplatesPanel/ChartTemplatesPanel.tsx";
-
-
-
-
+import {useAppDispatch, useAppSelector} from "@/store/hooks.ts";
+import {  setResolvedCharReqTemplate} from "@charts/store/chartsSlice.ts";
+import type {ResolvedCharReqTemplate} from "@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate.ts";
+import CollapsibleSection from "@charts/ui/Collapse/CollapsibleSection.tsx";
+import styles from "./ChartsPage.module.css"
+import {ChartContainer} from "@charts/ui/CharContainer/ChartContainer.tsx";
+import {useCallback} from "react";
+import {selectTimeSettings, setTimeSettings, type TimeSettings} from "@charts/store/chartsSettingsSlice.ts";
+import TimeZonePicker from "@charts/ui/TimeZonePicker/TimeZonePicker.tsx";
 export default function ChartsPage() {
+    const dispatch = useAppDispatch();
+    // Получаем настройки временной зоны из Redux store
+    const timeSettings = useAppSelector(selectTimeSettings);
 
-    const [busy, setBusy] = React.useState(false);
-    const handlePick = async (tpl: ChartReqTemplateDto) => {
-        if (busy) return;
-        setBusy(true);
-        try {
-            // Если сигнатуры совпадают — передаём tpl как есть.
-            // Если у тебя EditChartReqTemplate отличается — см. функцию toEdit ниже.
-            await applyTemplateNoThunk(tpl);
-            // здесь tpl.database будет дозагружена внутри инициатора
-        } catch (e: any) {
-            console.error(e);
-            alert(e?.message ?? 'Не удалось применить шаблон');
-        } finally {
-            setBusy(false);
-        }
-    };
+    // Обработчик изменения настроек временной зоны
+    const handleTimeSettingsChange = useCallback((newSettings: TimeSettings) => {
+        dispatch(setTimeSettings(newSettings));
+    }, [dispatch]);
+
+    const onExecuteDone = (completed: ResolvedCharReqTemplate) =>{
+         dispatch(setResolvedCharReqTemplate(completed))
+    }
+
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 12 }}>
-            <ChartTemplatesPanel  onPick={handlePick}  />
+        <div className={styles.container}>
 
-           {<DataSourcePanel />}
+            <TimeZonePicker
+                value={timeSettings}
+                onChange={handleTimeSettingsChange}
+                className={styles.timezonePicker}
+                label="Использовать временную зону"
+            />
+
+            <ChartTemplatesPanel className={styles.chartTemplatesPanel} onExecuteDone={onExecuteDone}  />
+
+            <CollapsibleSection className={styles.settingsBlock}>
+            <DataSourcePanel className={styles.dataSourcePanel}/>
+            </CollapsibleSection>
+
+           {<ChartContainer className={styles.chartPanel}/>}
+
         </div>
     )
 }

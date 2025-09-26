@@ -6,6 +6,8 @@ import {fail} from "@shared/api/base/halpers/fail.ts";
 import {ok} from "@shared/api/base/halpers/ok.ts";
 import {isApiResponse} from "@shared/api/base/halpers/isApiResponse.ts";
 import type {ApiError} from "@shared/api/base/halpers/ApiError.ts";
+import {decPending, incPending} from "@/store/uiSlice.ts";
+import {extractErrorMessage, notify} from "@app/lib/notify.ts";
 
 
 export type AxiosBaseQueryArgs = {
@@ -13,7 +15,9 @@ export type AxiosBaseQueryArgs = {
     method?: Method
     data?: unknown
     params?: unknown
-    headers?: AxiosRequestConfig['headers']
+    headers?: AxiosRequestConfig['headers'],
+    /** Блокировать ли UI для этого запроса (по умолчанию true) */
+    lockUi?: boolean
 }
 
 
@@ -22,15 +26,29 @@ export const axiosBaseQuery =
         BaseQueryFn<AxiosBaseQueryArgs, unknown, ApiError> =>
         async (args, api) => {
             const method: Method = (args.method ?? 'get') as Method
-            const { url, data, params, headers } = args
-
+            const { url, data, params, headers, lockUi = false } = args
+            if (lockUi) api.dispatch(incPending())
             try {
-                // Собираем конфиг без undefined-свойств (во избежание TS2379 с exactOptionalPropertyTypes)
-                const cfg: AxiosRequestConfig<unknown> = { url, method, withCredentials: true, signal: api.signal }
-                if (data !== undefined) cfg.data = data
-                if (params !== undefined) cfg.params = params
-                if (headers) cfg.headers = headers
+                // 1) Всегда иметь объект заголовков (не мутируем args.headers)
+                const reqHeaders: AxiosRequestConfig['headers'] = { ...(headers as any) };
 
+                // 2) Проставляем Content-Type только если есть body и его не указали вручную
+                if (data !== undefined && !(reqHeaders && (reqHeaders as any)['Content-Type'])) {
+                    (reqHeaders as any)['Content-Type'] = 'application/json';
+                }
+
+                // 3) Собираем конфиг без undefined-полей
+                const cfg: AxiosRequestConfig<unknown> = {
+                    url,
+                    method,
+                    withCredentials: true,
+                    signal: api.signal,
+                    ...(data   !== undefined ? { data }   : {}),
+                    ...(params !== undefined ? { params } : {}),
+                    ...(reqHeaders && Object.keys(reqHeaders).length ? { headers: reqHeaders } : {}),
+                };
+
+                // 4) Запрос
                 const res: AxiosResponse<unknown> = await apiClient.request<unknown>(cfg)
                 const payload = res.data
 
@@ -44,9 +62,14 @@ export const axiosBaseQuery =
                 // Необёрнутый ответ — вернём как есть
                 return ok(payload)
             } catch (e) {
-                const err = e as AxiosError<unknown>
+                const err = e as AxiosError<unknown>;
+                const payload = err.response?.data ?? err.message;
+                notify.error(extractErrorMessage(payload));
+
                 const status = err.response?.status
                 const errData: unknown = err.response?.data ?? err.message
                 return fail({ status, data: errData })
+            } finally {
+                if (lockUi) api.dispatch(decPending())
             }
         }

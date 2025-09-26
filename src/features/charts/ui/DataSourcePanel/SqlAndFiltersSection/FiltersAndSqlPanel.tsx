@@ -1,27 +1,28 @@
-
 import * as React from 'react';
 
 import type { FieldDto } from '@charts/shared/contracts/metadata/Dtos/FieldDto';
 import type { FilterClause } from '@charts/shared/contracts/chartTemplate/Dtos/FilterClause.ts';
 import type { SqlFilter } from '@charts/shared/contracts/chartTemplate/Dtos/SqlFilter.ts';
 import type { SqlParam } from '@charts/shared/contracts/chartTemplate/Dtos/SqlParam.ts';
+
 import { WhereEditor } from './WhereEditor';
 import { ParamsEditor } from './ParamsEditor';
 import { SqlEditor } from './SqlEditor';
+
+import { useSelector } from 'react-redux';
+
 import {SqlParamType} from "@charts/ui/DataSourcePanel/types.ts";
+import {
+    selectFields,
+    selectTemplate,
+    setActiveTemplateParams,
+    setActiveTemplateSql,
+    setActiveTemplateWhere
+} from "@charts/store/chartsTemplatesSlice.ts";
+import {useAppDispatch} from "@/store/hooks.ts";
 
 // UI-only mark for auto-created params (not sent to server)
 type UiSqlParam = SqlParam & { __auto?: boolean };
-
-type Props = {
-    availableFields: FieldDto[];
-    value: {
-        where: FilterClause[];
-        params: SqlParam[];
-        sql: SqlFilter | null;
-    };
-    onChange: (next: Props['value']) => void;
-};
 
 const KeyRx = /{{\s*([\w:.\-]+)\s*}}/g;
 const KeyStrictRx = /^{{\s*([\w:.\-]+)\s*}}$/;
@@ -43,11 +44,7 @@ function extractKeysFromValue(v: unknown): string[] {
         }
     };
     if (typeof v === 'string') add(v);
-    else if (Array.isArray(v)) {
-        v.forEach(x => {
-            if (typeof x === 'string') add(x);
-        });
-    }
+    else if (Array.isArray(v)) v.forEach(x => { if (typeof x === 'string') add(x); });
     return keys;
 }
 
@@ -58,7 +55,7 @@ function extractStrictKey(v: unknown): string | null {
     return m ? (m[1] || '').trim() : null;
 }
 
-function extractUsedKeys(where: FilterClause[], sql: SqlFilter | null): string[] {
+function extractUsedKeys(where: FilterClause[] | undefined, sql: SqlFilter | undefined): string[] {
     const keys: string[] = [];
     where?.forEach(c => {
         extractKeysFromValue((c as any).value).forEach(k => { if (!keys.includes(k)) keys.push(k); });
@@ -69,15 +66,12 @@ function extractUsedKeys(where: FilterClause[], sql: SqlFilter | null): string[]
     return keys;
 }
 
-/**
- * Тип параметра для поля: сначала серверный enum (field.sqlParamType),
- * затем fallback по исходному типу (на случай старого контракта).
- */
+/** Тип параметра для поля — сперва server-side enum (field.sqlParamType), потом fallback для обратной совместимости */
 function guessTypeFromField(f?: FieldDto): SqlParamType | undefined {
     if (!f) return undefined;
     if ((f as any).sqlParamType) return (f as any).sqlParamType as SqlParamType;
 
-    // Fallback (редко нужен)
+    // Fallback (старые контракты)
     if ((f as any).isTime) {
         const t = ((f as any).type || '').toLowerCase();
         if (t.includes('tz')) return SqlParamType.Timestamptz;
@@ -96,104 +90,89 @@ function guessTypeFromField(f?: FieldDto): SqlParamType | undefined {
     return SqlParamType.Text;
 }
 
-export function FiltersAndSqlPanel({ availableFields, value, onChange }: Props) {
-    const [where, setWhere] = React.useState<FilterClause[]>(value.where ?? []);
-    const [sql, setSql] = React.useState<SqlFilter | null>(value.sql ?? null);
-    const [paramsUi, setParamsUi] = React.useState<UiSqlParam[]>(
-        (value.params ?? []).map(p => ({ ...p, __auto: false }))
+export function FiltersAndSqlPanel() {
+    const dispatch = useAppDispatch();
+
+    const template = useSelector(selectTemplate);
+    const fields = useSelector(selectFields) ?? [];
+
+    // требуемая сигнатура стейта — допускаем undefined
+    const [where, setWhere] = React.useState<FilterClause[] | undefined>(template.where);
+    const [sql, setSql] = React.useState<SqlFilter | undefined>(template.sql);
+    const [paramsUi, setParamsUi] = React.useState<UiSqlParam[] | undefined>(
+        (template.params ?? []).map(p => ({ ...p, __auto: false }))
     );
 
-    // для отслеживания переименований ключей в where (по индексам)
-    const prevWhereRef = React.useRef<FilterClause[]>(value.where ?? []);
+    // реф для отслеживания переименований ключей (по индексам WHERE)
+    const prevWhereRef = React.useRef<FilterClause[] | undefined>(template.where);
 
-    // ---------- helpers ----------
-    // 1) Only update local state from props (NO onChange here)
-    const hydrateFromProps = React.useCallback((w: FilterClause[], s: SqlFilter | null, p: SqlParam[]) => {
-        setWhere(w);
-        setSql(s);
-        setParamsUi((p ?? []).map(pp => ({ ...pp, __auto: false })));
-        prevWhereRef.current = w;
-    }, []);
+    // если шаблон обновили извне — синхронизируем локальный стейт
+    React.useEffect(() => {
+        setWhere(template.where);
+        setSql(template.sql);
+        setParamsUi((template.params ?? []).map(p => ({ ...p, __auto: false })));
+        prevWhereRef.current = template.where;
+    }, [template.where, template.sql, template.params]);
 
-
-    // 3) Commit with reconcile (create/remove/rename auto params only here)
-    const reconcileCommit = React.useCallback((w: FilterClause[], s: SqlFilter | null, p: UiSqlParam[]) => {
+    // Reconcile: создание/удаление/переименование автопараметров по факту изменений WHERE/SQL
+    const reconcileCommit = React.useCallback((w: FilterClause[] | undefined, s: SqlFilter | undefined, p: UiSqlParam[] | undefined) => {
         const used = extractUsedKeys(w, s);
         const usedSet = new Set(used.map(k => k.trim()));
 
-        // --- 3.1. применяем переименования (по индексам строк)
+        // 1) Отследить переименования плейсхолдеров в WHERE (по индексам строк)
         const renames: Array<{ oldKey: string, newKey: string }> = [];
         const oldW = prevWhereRef.current ?? [];
-        const len = Math.min(oldW.length, w.length);
+        const newW = w ?? [];
+        const len = Math.min(oldW.length, newW.length);
         for (let i = 0; i < len; i++) {
             const oldKey = extractStrictKey((oldW[i] as any)?.value);
-            const newKey = extractStrictKey((w[i] as any)?.value);
-            if (oldKey && newKey && oldKey !== newKey) {
-                renames.push({ oldKey, newKey });
-            }
+            const newKey = extractStrictKey((newW[i] as any)?.value);
+            if (oldKey && newKey && oldKey !== newKey) renames.push({ oldKey, newKey });
         }
 
-        let next: UiSqlParam[] = [...(p || [])];
+        let next: UiSqlParam[] = [...(p ?? [])];
 
-        // применяем переименования к параметрам, без создания дублей
+        // 1.1 Применить переименования к параметрам без создания дублей
         for (const { oldKey, newKey } of renames) {
             const idxOld = next.findIndex(x => String(x.key || '').trim() === oldKey);
             if (idxOld === -1) continue;
             const idxNew = next.findIndex(x => String(x.key || '').trim() === newKey);
             if (idxNew !== -1) {
-                const a: UiSqlParam | undefined = next[idxOld];
-                const b: UiSqlParam | undefined  = next[idxNew];
-
-                if(a === undefined) throw Error(`UiSqlParam is not defined 'a' 'next[idxOld]' idxOld = '${idxOld}'`);
-                if(b === undefined) throw Error("UiSqlParam is not defined 'b' 'next[idxOld]' idxOld = '${idxOld}'");
-
-                if (a.__auto && !b.__auto) {
-                    // был авто, новый — пользовательский: удаляем авто-старый
+                const a = next[idxOld];
+                const b = next[idxNew];
+                if (a?.__auto && !b?.__auto) {
                     next.splice(idxOld, 1);
-                } else if (!a.__auto && b.__auto) {
-                    // старый пользовательский, новый авто — убираем авто, переименуем старый
+                } else if (!a?.__auto && b?.__auto) {
                     next.splice(idxNew, 1);
                     next[idxOld] = { ...a, key: newKey };
-                } else if (a.__auto && b.__auto) {
-                    // оба авто — оставим первый, переименуем его, второй удалим
+                } else if (a?.__auto && b?.__auto) {
                     if (idxNew > idxOld) {
                         next[idxOld] = { ...a, key: newKey };
                         next.splice(idxNew, 1);
                     } else {
-                        // безопасный fallback
                         next[idxOld] = { ...a, key: newKey };
                     }
                 } else {
-                    // оба пользовательские — оставим тот, который уже с newKey, удалим старый
                     next.splice(idxOld, 1);
                 }
             } else {
-                // нет конфликта — просто переименуем
                 next[idxOld] = { ...next[idxOld], key: newKey };
             }
         }
 
-        // --- 3.2. убираем дубли, чистим устаревшие авто
+        // 2) Убрать дубли и «устаревшие» автопараметры (неиспользуемые ключи)
         const seen = new Set<string>();
         const uniq: UiSqlParam[] = [];
         for (const p0 of next) {
             const key = String(p0.key || '').trim();
             if (!key) continue;
-            if (p0.__auto && !usedSet.has(key)) {
-                // авто-параметр больше не используется — пропускаем
-                continue;
-            }
+            if (p0.__auto && !usedSet.has(key)) continue; // авто-параметр больше не нужен
+
             if (seen.has(key)) {
-                // если дубликат — отдаём приоритет не-авто
                 const keepIdx = uniq.findIndex(x => String(x.key || '').trim() === key);
                 if (keepIdx >= 0) {
-                    const keep: UiSqlParam | undefined  = uniq[keepIdx];
-
-                    if(keep === undefined) throw Error("UiSqlParam is not defined 'b' 'next[idxOld]' idxOld = '${idxOld}'");
-
-                    if (keep.__auto && !p0.__auto) {
-                        uniq.splice(keepIdx, 1, p0); // заменяем не-авто
-                    }
+                    const keep = uniq[keepIdx];
+                    if (keep?.__auto && !p0.__auto) uniq.splice(keepIdx, 1, p0); // приоритет «ручного»
                 }
                 continue;
             }
@@ -202,17 +181,17 @@ export function FiltersAndSqlPanel({ availableFields, value, onChange }: Props) 
         }
         next = uniq;
 
-        // --- 3.3. добавляем недостающие авто-параметры
+        // 3) Добавить недостающие автопараметры для всех используемых ключей
         const present = new Set(next.map(x => String(x.key || '').trim()).filter(Boolean));
         for (const key of usedSet) {
             if (!present.has(key)) {
                 let fieldForKey: FieldDto | undefined;
-                for (const c of (w || [])) {
+                for (const c of (w ?? [])) {
                     const vals = extractKeysFromValue((c as any).value);
                     if (vals.includes(key)) {
                         const fname = asFieldName((c as any).field);
-                        fieldForKey = availableFields.find(f => f.name === fname)
-                            || (typeof (c as any).field === 'object' ? (c as any).field as FieldDto : undefined);
+                        fieldForKey = (fields.find(f => f.name === fname)
+                            || (typeof (c as any).field === 'object' ? (c as any).field as FieldDto : undefined));
                         break;
                     }
                 }
@@ -229,49 +208,46 @@ export function FiltersAndSqlPanel({ availableFields, value, onChange }: Props) 
             }
         }
 
-        // обновляем prevWhere и пробрасываем наверх
+        // Финал: обновляем локально и диспатчим в стор
         prevWhereRef.current = w;
         setWhere(w);
         setSql(s);
         setParamsUi(next);
-        const cleanParams: SqlParam[] = next.map(({ __auto, ...rest }) => rest);
-        onChange({ where: w, params: cleanParams, sql: s });
-    }, [availableFields, onChange]);
 
-    // ---------- sync local state when parent props change ----------
-    React.useEffect(() => {
-        hydrateFromProps(value.where ?? [], value.sql ?? null, value.params ?? []);
-    }, [value.where, value.sql, value.params, hydrateFromProps]);
+        const cleanParams: SqlParam[] = next.map(({ __auto, ...rest }) => rest);
+        dispatch(setActiveTemplateWhere(w));
+        dispatch(setActiveTemplateSql(s));
+        dispatch(setActiveTemplateParams(cleanParams));
+    }, [fields, dispatch]);
 
     const usedKeys = React.useMemo(() => extractUsedKeys(where, sql), [where, sql]);
 
     return (
         <div style={{ display: 'grid', gap: 16 }}>
             <WhereEditor
-                availableFields={availableFields}
-                where={where}
-                onChangeImmediate={(next) => { setWhere(next); setSql(sql); /* только локально */ }}
-                onCommit={(next) => reconcileCommit(next, sql, paramsUi)}      // commit — автопараметры/переименования
+                availableFields={fields}
+                where={where ?? []}
+                onChangeImmediate={(next) => { setWhere(next); }}
+                onCommit={(next) => reconcileCommit(next, sql, paramsUi)}
             />
 
             <ParamsEditor
-                availableFields={availableFields}
-                params={paramsUi}
+                availableFields={fields}
+                params={paramsUi ?? []}
                 usedKeys={usedKeys}
                 onChange={(next) => {
                     setParamsUi(next);
                     const cleanParams: SqlParam[] = next.map(({ __auto, ...rest }) => rest);
-                    onChange({ where, params: cleanParams, sql });
+                    dispatch(setActiveTemplateParams(cleanParams));
                 }}
             />
 
             <SqlEditor
                 sql={sql}
-                onChangeImmediate={(next) => { setSql(next); /* локально */ }}
+                onChangeImmediate={(next) => { setSql(next); }}
                 onCommit={(next) => reconcileCommit(where, next, paramsUi)}
             />
         </div>
     );
 }
 
-export default FiltersAndSqlPanel;

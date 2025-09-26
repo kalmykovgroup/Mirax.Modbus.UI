@@ -15,6 +15,7 @@ export const OP_LABELS: Record<Op, string> = {
 */
 
 // Строгий список типов для SqlParam.Type (совпадает со строками, которые ждёт backend)
+// @ts-ignore
 export enum SqlParamType {
     Text = 'text',
     String = 'string',          // синоним Text

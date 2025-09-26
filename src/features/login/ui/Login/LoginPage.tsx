@@ -10,7 +10,7 @@ import {ROUTES} from "@app/constants/routes.ts";
 import {useEffect} from "react";
 import {useLoginMutation} from "@login/shared/api/authApi.ts";
 import type {LoginResponse} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/Login/LoginResponse.ts";
-import {mapServerErrorsToForm, mapServerPayloadErrorsToForm} from "@app/lib/forms/serverErrorMapper.ts";
+import {mapServerErrorsToForm, mapServerPayloadErrorsToForm} from "@login/lib/serverErrorMapper.ts";
 import Logo from "@ui/components/Logo/Logo.tsx";
 import {selectIsAuthenticated, setCredentials} from "@login/store/authSlice.ts";
 
@@ -23,7 +23,7 @@ type LoginFormData = z.infer<typeof loginSchema>
 
 export const LoginPage = () => {
 
-    const dispatch = useAppDispatch()
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
     const [loginRequest] = useLoginMutation()
@@ -64,7 +64,7 @@ export const LoginPage = () => {
             }else{
                 mapServerErrorsToForm<LoginFormData>({
                     errors: response.errors,
-                    setError,
+                    setChartTemplatesError: setError,
                     knownFields: ['email', 'password'],
                     fieldMap: FIELD_MAP,
                     defaultMessage: 'Неверные учётные данные'

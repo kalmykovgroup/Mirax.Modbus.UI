@@ -7,10 +7,12 @@ export const LoginButton = () => {
 
 
     return (
-        <div className={`${styles.btnSend}`}>
+
+        <button className={styles.btnSend} >
             <NavLink  to={ROUTES.LOGIN}>
                 <span>Войти</span>
             </NavLink>
-        </div>
+        </button>
+
     )
 }

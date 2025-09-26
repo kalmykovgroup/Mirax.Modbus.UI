@@ -37,7 +37,7 @@ export default function ThemeSwitcher({ className }: { className?: string }) {
 
     const toggle = () => setTheme(isDark ? "light" : "dark");
 
-    return (
+    return (<>
         <button
             type="button"
             role="switch"
@@ -52,6 +52,7 @@ export default function ThemeSwitcher({ className }: { className?: string }) {
         <MoonIcon className={`${styles.icon} ${styles.moon}`} />
       </span>
             <span className={styles.thumb} aria-hidden="true" />
-        </button>
+      </button>
+        </>
     );
 }

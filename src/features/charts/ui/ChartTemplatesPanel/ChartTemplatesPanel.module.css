@@ -1,15 +1,33 @@
 .container{
-    width: 200px;
+    width: 230px;
+    padding: 5px;
     display: flex;
     flex-direction: column;
     gap: 5px;
+
+    /* ключевое: не растягиваться, а занимать min-height */
+    align-self: flex-start;    /* по поперечной оси (высота, если row-родитель) */
+    flex: 0 0 auto;            /* не grow, не shrink, высота по контенту */
+    height: auto;              /* на всякий случай */
+
+    color: var(--color-text);
 }
 
 .header{
     height: 50px;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    padding-left: 10px;
+}
+
+
+
+.container[data-theme="dark"] {
+    --color-text: rgba(255,255,255,.87);
+    border-left: 1px dashed rgba(255, 224, 190, 0.55);
+}
+.container[data-theme="light"] {
+    --color-text: #242424;
+    border-left: 1px dashed #454545;
 }
 
 

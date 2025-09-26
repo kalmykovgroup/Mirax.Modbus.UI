@@ -1,37 +1,44 @@
-import type {EntityDto} from "@charts/shared/contracts/metadata/Dtos/EntityDto.ts";
 
-export function EntitySection({
-  entities,
-                                  activeEntityName,
-  loading,
-  error,
-  onChange,
-  onRefresh,
-  disabled,
-}: {
-  entities: EntityDto[]
-  activeEntityName?: string | undefined
-  loading?: boolean | undefined
-  error?: string | undefined
-  onChange: (entity?: EntityDto) => void
-  onRefresh: () => void
-  disabled?: boolean
-}) {
+import { useSelector} from "react-redux";
+import {
+    fetchEntities,
+    selectErrors,
+    selectChartsMetaLoading,
+} from "@charts/store/chartsMetaSlice.ts";
+import {selectActiveEntity, selectEntities, setActiveTemplateEntity} from "@charts/store/chartsTemplatesSlice.ts";
+import {useAppDispatch} from "@/store/hooks.ts";
+
+export function EntitySection( ) {
+    const dispatch = useAppDispatch();
+
+    const entities = useSelector(selectEntities) ?? []
+
+    const loading = useSelector(selectChartsMetaLoading).entities
+    const error = useSelector(selectErrors).entities
+    const activeEntity = useSelector(selectActiveEntity)
+
+    const onChange = (name : string) => {
+
+        dispatch(setActiveTemplateEntity(entities.find(entity => entity.name == name)))
+    }
+
+
+
   return (
     <section style={{ display: 'grid', gap: 6 }}>
       <label style={{ fontSize: 12, opacity: .85 }}>Таблица (entity)</label>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <select
-          value={activeEntityName}
-          onChange={e => onChange(entities.find(entity => entity.name == e.target.value))}
-          disabled={loading || disabled || entities.length === 0}
+          value={activeEntity?.name}
+          onChange={e => onChange(e.target.value)}
+          disabled={loading || entities.length === 0}
         >
           {(entities).map(n => (
             <option key={n.name} value={n.name}>{n.name}</option>
           ))}
             {entities.length === 0 && <option>{(loading ? 'загрузка…' : '—')}</option>}
         </select>
-        <button onClick={onRefresh} disabled={loading || entities.length === 0}>Обновить</button>
+        <button onClick={() => dispatch(fetchEntities())} disabled={loading || entities.length === 0}>Обновить</button>
       </div>
       {error && <small style={{ color: 'tomato' }}>{error}</small>}
     </section>

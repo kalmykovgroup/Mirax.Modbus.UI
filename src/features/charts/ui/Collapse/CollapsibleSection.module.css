@@ -1,4 +1,4 @@
-.wrap { margin-bottom: 16px; }
+
 
 .toggle {
     appearance: none;
@@ -8,6 +8,9 @@
     border-radius: 8px;
     padding: 8px 12px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .panel { margin-top: 8px; }

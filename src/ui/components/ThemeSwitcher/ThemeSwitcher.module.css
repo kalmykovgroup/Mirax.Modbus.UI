@@ -5,7 +5,7 @@
     --thumb: var(--h);
 
     /* Цвета */
-    --bg-off: #f18c16;   /* фон при light */
+    --bg-off: #ffffff;   /* фон при light */
     --bg-on:  #247abe;   /* фон при dark */
     --ring:   rgba(0, 0, 0, 0.25);
 
@@ -23,13 +23,22 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,.08);
+
     transition: background .18s ease;
     contain: layout paint;
 }
 
+.switch[data-checked="false"]  {
+    color: #f18c16;
+    box-shadow: 0 0 2px #ecb779;
+}
+.switch[data-checked="false"] .moon {
+    color: var(--bg-on) ;
+}
+
 .switch[data-checked="true"] {
     background: var(--bg-on);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.08);
 }
 
 .switch:focus-visible {

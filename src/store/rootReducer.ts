@@ -1,24 +1,44 @@
 import { combineReducers } from '@reduxjs/toolkit';
-import {authApi} from "@login/shared/api/authApi.ts";
-import {scenarioApi} from "@/features/scenarioEditor/shared/api/scenarioApi.ts";
-import userReducer from "@/features/user/store/userSlice.ts";
-import authReducer from "@login/store/authSlice.ts";
-import {workflowApi} from "@/features/scenarioEditor/shared/api/workflowApi.ts";
 
-import {branchApi} from "@/features/scenarioEditor/shared/api/branchApi.ts";
-import {stepApi} from "@/features/scenarioEditor/shared/api/stepApi.ts";
-import {stepRelationApi} from "@/features/scenarioEditor/shared/api/stepRelationApi.ts";
-import scenarioSlice from "@/features/scenarioEditor/store/scenarioSlice.ts";
-import workflowSlice from "@/features/scenarioEditor/store/workflowSlice.ts";
-import {chartsApi} from "@charts/shared/api/chartsApi.ts";
-import chartsSlice from "@charts/store/chartsSlice.ts";
-import chartsTemplatesSlice from "@charts/store/chartsTemplatesSlice.ts";
-import {chartReqTemplatesApi} from "@charts/shared/api/chartReqTemplatesApi.ts";
-import chartsMetaSlice from "@charts/store/chartsMetaSlice.ts";
-import {metadataApi} from "@charts/shared/api/metadataApi.ts";
+// RTK Query reducers
+import { authApi } from '@login/shared/api/authApi';
+import { scenarioApi } from '@/features/scenarioEditor/shared/api/scenarioApi';
+import { workflowApi } from '@/features/scenarioEditor/shared/api/workflowApi';
+import { branchApi } from '@/features/scenarioEditor/shared/api/branchApi';
+import { stepApi } from '@/features/scenarioEditor/shared/api/stepApi';
+import { stepRelationApi } from '@/features/scenarioEditor/shared/api/stepRelationApi';
+import { chartsApi } from '@charts/shared/api/chartsApi';
+import { chartReqTemplatesApi } from '@charts/shared/api/chartReqTemplatesApi';
+import { metadataApi } from '@charts/shared/api/metadataApi';
+
+// обычные слайсы
+import { authReducer } from '@login/store/authSlice';
+import userReducer from '@/features/user/store/userSlice';
+import { chartsTemplatesReducer } from '@charts/store/chartsTemplatesSlice';
+import { scenarioReducer } from '@scenario/store/scenarioSlice';
+import { workflowReducer } from '@scenario/store/workflowSlice';
+import { chartsReducer } from '@charts/store/chartsSlice';
+import { chartsMetaReducer } from '@charts/store/chartsMetaSlice';
+import {uiReducer} from "@/store/uiSlice.ts";
+import {chartsSettingsReducer} from "@charts/store/chartsSettingsSlice.ts";
+// ВАЖНО: никаких самодельных _persist, только реальные редьюсеры
 
 export const rootReducer = combineReducers({
-    // RTK Query хранит кэш ИМЕННО под своим reducerPath
+    // Persisted slices
+    auth: authReducer,
+    users: userReducer,
+    chartsTemplates: chartsTemplatesReducer,
+    scenario: scenarioReducer,
+    workflow: workflowReducer,
+    chartsSettings: chartsSettingsReducer,
+
+    // In-memory
+    charts: chartsReducer,
+    chartsMeta: chartsMetaReducer,
+
+    ui: uiReducer,
+
+    // RTK Query
     [authApi.reducerPath]: authApi.reducer,
     [scenarioApi.reducerPath]: scenarioApi.reducer,
     [workflowApi.reducerPath]: workflowApi.reducer,
@@ -28,14 +48,4 @@ export const rootReducer = combineReducers({
     [chartsApi.reducerPath]: chartsApi.reducer,
     [chartReqTemplatesApi.reducerPath]: chartReqTemplatesApi.reducer,
     [metadataApi.reducerPath]: metadataApi.reducer,
-
-    charts: chartsSlice,
-    chartsMeta: chartsMetaSlice,
-    chartsTemplates: chartsTemplatesSlice,
-    auth: authReducer ,
-    users: userReducer,
-    scenario: scenarioSlice,
-    workflow: workflowSlice,
-
-
 });

@@ -1,0 +1,15 @@
+.container{
+
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.container[data-theme="dark"] {
+    --color-text: rgb(255, 183, 0);
+}
+.container[data-theme="light"] {
+    --color-text: #242424;
+}
+

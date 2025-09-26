@@ -1,0 +1,25 @@
+.container{
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: repeat(15, auto);
+    gap: 10px;
+}
+
+.chartTemplatesPanel{
+    grid-column: 2;
+    grid-row: 1/15;
+}
+.settingsBlock{
+     grid-column: 1;
+     grid-row: 1;
+}
+.dataSourcePanel{
+    grid-column: 1;
+    grid-row: 2;
+    box-sizing: border-box;
+}
+.chartPanel{
+    grid-column: 1;
+    grid-row: 3;
+}

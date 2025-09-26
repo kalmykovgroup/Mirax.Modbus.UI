@@ -54,12 +54,13 @@ export const selectUsername = (state: RootState) => state.auth.user?.fullName ??
 // ---------------- PERSIST ----------------
 // Конфиг persist лежит здесь, как ты просил.
 // Храним только user и isAuthenticated (без isLoading/error).
-export const authPersistConfig = {
+
+const authPersistConfig = {
     key: 'auth',
-    storage,
-    whitelist: ['user', 'isAuthenticated'],
+    storage, // localStorage: всегда
+    whitelist: ['user', 'isAuthenticated'], // Сохраняем все поля (или ['token', 'userId'] для конкретных)
+    // blacklist: ['loading', 'error'], // Если нужно исключить transient
 };
 
-// Экспортируем уже обёрнутый редьюсер
-const authReducer = persistReducer(authPersistConfig, slice.reducer);
-export default authReducer;
+export const authReducer = persistReducer(authPersistConfig, slice.reducer); // ← Замените default export на это
+

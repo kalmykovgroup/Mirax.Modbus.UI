@@ -14,9 +14,13 @@ export type ChartReqTemplateDto = {
     name: string
     description?: string | undefined
 
+    //Это исходный при старте графика
+    from?: Date | undefined
+    to?: Date | undefined
+
     // настройки графиков
     databaseId : Guid
-    database?: DatabaseDto | undefined
+    database: DatabaseDto
     entity: EntityDto
     timeField: FieldDto
     selectedFields: FieldDto[]
@@ -26,4 +30,6 @@ export type ChartReqTemplateDto = {
 
     sql?: SqlFilter | undefined
 }
+
+
 

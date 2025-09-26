@@ -5,22 +5,21 @@ import type {FilterClause} from "@charts/shared/contracts/chartTemplate/Dtos/Fil
 import type {SqlParam} from "@charts/shared/contracts/chartTemplate/Dtos/SqlParam.ts";
 import type {SqlFilter} from "@charts/shared/contracts/chartTemplate/Dtos/SqlFilter.ts";
 
-export type CharReqTemplateAssembled = {
-    id: Guid
+export type ResolvedCharReqTemplate = {
+    readonly id: Guid
 
     // настройки графиков
-    databaseId : Guid
+    readonly databaseId: Guid
 
-    //Это исходный при старте графика
-    from?: Date | undefined
-    to?: Date | undefined
+    readonly from: Date
+    readonly to: Date
 
-    entity: EntityDto
-    timeField: FieldDto
-    selectedFields: FieldDto[]
+    readonly entity: EntityDto
+    readonly timeField: FieldDto
+    readonly selectedFields: ReadonlyArray<FieldDto>
 
-    where?: FilterClause[]
-    params?: SqlParam[]
+    readonly where?: ReadonlyArray<FilterClause> | undefined
+    readonly params?: ReadonlyArray<SqlParam> | undefined
 
-    sql?: SqlFilter | undefined
+    readonly sql?: SqlFilter | undefined
 }

@@ -2,7 +2,6 @@
     font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
     line-height: 1.5;
     font-weight: 400;
-
     position: relative;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
@@ -10,6 +9,10 @@
     -moz-osx-font-smoothing: grayscale;
 
 }
+
+
+
+
 
 /* Скрыть стрелки (WebKit/Chromium) */
 input::-webkit-outer-spin-button,
@@ -23,14 +26,36 @@ input[type="number"] {
     -moz-appearance: textfield;
     appearance: textfield;
 }
+/*
 
-/* Темы отдельно */
+!* Темы отдельно *!
 [data-theme="dark"] {
     --color-bg: #242424;
     --color-text: rgba(255, 255, 255, 0.87);
 }
 [data-theme="light"] {
     --color-bg: rgba(255, 255, 255, 0.87);
+    --color-text: #242424;
+}
+*/
+
+body {
+    /* значения по умолчанию для компонента */
+    --color-bg: #f5f5f5;
+    --color-text: #222;
+    background: var(--color-bg);
+    color: var(--color-text);
+    padding: 12px;
+    border-radius: 8px;
+}
+
+/* темы — ТОЛЬКО для этого компонента */
+body[data-theme="dark"] {
+    --color-bg: #242424;
+    --color-text: rgba(255,255,255,.87);
+}
+body[data-theme="light"] {
+    --color-bg: rgba(255,255,255,.87);
     --color-text: #242424;
 }
 

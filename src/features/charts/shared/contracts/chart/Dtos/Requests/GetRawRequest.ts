@@ -1,12 +1,15 @@
 
-import type {Guid} from "@app/lib/types/Guid.ts";
+import type {FieldDto} from "@charts/shared/contracts/metadata/Dtos/FieldDto.ts";
+import type {ResolvedCharReqTemplate} from "@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate.ts";
 
 export type GetRawRequest = {
-    templateId: Guid
+    template: ResolvedCharReqTemplate;
 
-    from: string;
-    to: string;
+    field: FieldDto
+
+    from?: Date | undefined;
+    to?: Date | undefined;
+
     maxPoints?: number | undefined; // ограничитель на всякий случай, чтобы не сломать сервер
 
-    values?: Record<string, unknown> | undefined;
 }

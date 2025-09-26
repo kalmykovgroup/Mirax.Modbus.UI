@@ -17,14 +17,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return (localStorage.getItem("theme") as Theme) || "system";
     });
 
-    // Применить тему в <html data-theme="">
+
     const applyTheme = (t: Theme) => {
-        let effectiveTheme = t;
-        if (t === "system") {
-            const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-            effectiveTheme = systemDark ? "dark" : "light";
-        }
-        document.documentElement.setAttribute("data-theme", effectiveTheme);
+        const effectiveTheme =
+            t === "system"
+                ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+                : t;
+
+        const root = document.documentElement;
+        root.setAttribute("data-theme", effectiveTheme);    // ключевой фикс
+        root.classList.toggle("dark", effectiveTheme === "dark"); // для Tailwind-стратегии "class"
     };
 
     const setTheme = (t: Theme) => {

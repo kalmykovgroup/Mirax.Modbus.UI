@@ -2,7 +2,6 @@ import type { ChartReqTemplateDto } from '@charts/shared/contracts/chartTemplate
 import type { FilterClause } from '@charts/shared/contracts/chartTemplate/Dtos/FilterClause'
 import type { SqlFilter } from '@charts/shared/contracts/chartTemplate/Dtos/SqlFilter'
 import type { SqlParam } from '@charts/shared/contracts/chartTemplate/Dtos/SqlParam'
-import type { SqlParamType } from '@charts/shared/contracts/chartTemplate/Dtos/SqlParamType'
 
 const KeyRx = /{{\s*([\w:.\-]+)\s*}}/g
 
@@ -40,120 +39,98 @@ export function extractAllKeysFromTemplate(tpl: ChartReqTemplateDto): string[] {
     return extractAllKeys(where, sql ?? null)
 }
 
+
+/** Поиск меты параметра по ключу (оставляем как есть) */
 export function getParamMeta(params: SqlParam[] | undefined, key: string): SqlParam | undefined {
     return (params ?? []).find(p => (p?.key ?? '').trim() === key.trim())
 }
 
-export function coerceByType(raw: string, type?: SqlParamType | string): unknown {
-    const t = (type || '').toString().toLowerCase()
-    if (!t) return raw
-    if (['int','integer','smallint','bigint'].includes(t)) {
-        const n = parseInt(raw, 10); return Number.isFinite(n) ? n : raw
-    }
-    if (['double','numeric','decimal','real','float'].includes(t)) {
-        const n = Number(raw.replace(',', '.')); return Number.isFinite(n) ? n : raw
-    }
-    if (['bool','boolean'].includes(t)) {
-        const s = raw.trim().toLowerCase()
-        return (s === 'true' || s === '1' || s === 'yes' || s === 'y' || s === 'on')
-    }
-    // uuid/text/string/date/timestamp/timestamptz → оставляем строкой
-    return raw
-}
-
-function replaceInString(source: string, key: string, val: unknown): string {
-    const needle = new RegExp(`{{\\s*${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*}}`, 'g')
-    return source.replace(needle, String(val))
-}
-
-export function resolveWhere(where: FilterClause[], values: Record<string, unknown>, params?: SqlParam[]): FilterClause[] {
-    const clone = JSON.parse(JSON.stringify(where)) as FilterClause[]
-    for (const c of clone as any[]) {
-        const v = c.value
-        if (typeof v === 'string') {
-            const m = v.match(/^{{\s*([\w:.\-]+)\s*}}$/)
-            if (m) {
-                const key: string | undefined = m[1]
-
-                if(key == undefined) throw Error(`Expected ${m[1]} to be a string`)
-
-                const meta = getParamMeta(params, key)
-                const raw = values[key]
-                c.value = meta ? coerceByType(String(raw ?? ''), (meta as any).type) : raw
-            } else {
-                let s = v
-                const keys = extractKeysFromString(v)
-                for (const k of keys) s = replaceInString(s, k, values[k] ?? '')
-                c.value = s
-            }
-        } else if (Array.isArray(v)) {
-            c.value = v.map(el => {
-                if (typeof el === 'string') {
-                    const m = el.match(/^{{\s*([\w:.\-]+)\s*}}$/)
-                    if (m) {
-                        const key: string | undefined = m[1]
-
-                        if(key == undefined) throw Error(`Expected ${m[1]} to be a string`)
-
-                        const meta = getParamMeta(params, key)
-                        const raw = values[key]
-                        return meta ? coerceByType(String(raw ?? ''), (meta as any).type) : raw
-                    } else {
-                        let s = el
-                        const keys = extractKeysFromString(el)
-                        for (const k of keys) s = replaceInString(s, k, values[k] ?? '')
-                        return s
-                    }
-                }
-                return el
-            })
-        }
-    }
-    return clone
-}
-
-export function resolveSql(sql: SqlFilter | null | undefined, values: Record<string, unknown>): SqlFilter | null {
-    if (!sql?.whereSql) return null
-    let s = sql.whereSql
-    const keys = extractKeysFromString(s)
-    for (const k of keys) s = replaceInString(s, k, values[k] ?? '')
-    return { whereSql: s }
-}
-
-/**
- * Возвращает НОВЫЙ ChartReqTemplateDto, в котором:
- *  - все плейсхолдеры {{key}} в where/sql подставлены,
- *  - типы значений where c {{key}} приведены по SqlParam.type при наличии
- * Остальные поля (entity, timeField, selectedFields и т.д.) — без изменений.
+/** Приведение значения по типу колонки из param.field.type.
+ * Поддерживает скалярные типы и массивы (например, "text", "int", "timestamptz", "text[]", "int[]").
  */
-export function resolveTemplate(tpl: ChartReqTemplateDto, typedValuesOrStrings: Record<string, unknown>): ChartReqTemplateDto {
-    // @ts-ignore
-    const where: FilterClause[] | undefined = (tpl as any).where
-    // @ts-ignore
-    const sql: SqlFilter | null | undefined = (tpl as any).sql
+export function coerceByFieldType(raw: unknown, fieldType?: string): unknown {
+    if (raw == null) return raw
+
+    const t = (fieldType ?? '').toLowerCase().trim()
+    const isArray = t.endsWith('[]')
+    const base = isArray ? t.slice(0, -2) : t
+
+    const coerceScalar = (val: unknown): unknown => {
+        if (val == null) return val
+        const s = typeof val === 'string' ? val.trim() : String(val)
+
+        if (['int', 'integer', 'smallint', 'bigint', 'int4', 'int8'].includes(base)) {
+            const n = parseInt(s, 10); return Number.isFinite(n) ? n : val
+        }
+        if (['double', 'float', 'float8', 'real', 'float4', 'numeric', 'decimal'].includes(base)) {
+            const n = Number(s.replace(',', '.')); return Number.isFinite(n) ? n : val
+        }
+        if (['bool', 'boolean'].includes(base)) {
+            const v = s.toLowerCase()
+            return (v === 'true' || v === '1' || v === 'yes' || v === 'y' || v === 'on')
+        }
+        // uuid/text/string/date/timestamp/timestamptz — оставляем строкой
+        return typeof val === 'string' ? val : s
+    }
+
+    if (!isArray) {
+        return coerceScalar(raw)
+    }
+
+    // массивы: принимаем либо строку "a,b;c", либо реальный массив
+    const toArray = (v: unknown): string[] => {
+        if (Array.isArray(v)) return v.map(x => (x == null ? '' : String(x)))
+        if (typeof v === 'string') {
+            return v.split(/[,;]+/).map(x => x.trim()).filter(x => x.length > 0)
+        }
+        return [String(v)]
+    }
+
+    return toArray(raw).map(coerceScalar)
+}
+
+/** Готовим шаблон для сервера: НЕ трогаем where/sql, только заполняем params[].value по values[key]. */
+export function resolveTemplateForServer(
+    tpl: ChartReqTemplateDto,
+    values: Record<string, unknown>
+): ChartReqTemplateDto {
     // @ts-ignore
     const params: SqlParam[] | undefined = (tpl as any).params
 
-    // Приведём типы там, где значение в where — ровно {{key}}
-    const typed: Record<string, unknown> = {}
-    const keys = Object.keys(typedValuesOrStrings)
-    for (const k of keys) {
-        const meta = getParamMeta(params, k)
-        const v = typedValuesOrStrings[k]
-        typed[k] = (typeof v === 'string' && meta)
-            ? coerceByType(v, (meta as any).type)
-            : v
-    }
+    const filledParams: SqlParam[] | undefined = params?.map(p => {
+        const key = (p?.key ?? '').trim()
+        const raw = values[key]
+        return {
+            ...p,
+            value: coerceByFieldType(raw, p?.field?.type)   // тип берём из p.field.type
+        }
+    })
 
-    const resolvedWhere = where && where.length ? resolveWhere(where, typed, params) : undefined
-    const resolvedSql = resolveSql(sql ?? null, typed) ?? undefined
-
+    // ВАЖНО: where и sql — без изменений
     return {
         ...(tpl as any),
-        where: resolvedWhere,
-        sql: resolvedSql,
+        params: filledParams
     } as ChartReqTemplateDto
 }
+
+/** Валидация обязательных параметров (до отправки на сервер). */
+export function missingRequiredParams(
+    params: SqlParam[] | undefined,
+    values: Record<string, unknown>
+): string[] {
+    const missing: string[] = []
+    for (const p of (params ?? [])) {
+        if (p?.required) {
+            const v = values[p.key]
+            if (v == null || String(v).trim() === '') missing.push(p.key)
+        }
+    }
+    return missing
+}
+
+
+
+
 
 export function isMissingRequired(keys: string[], params: SqlParam[], values: Record<string, string>): boolean {
     return keys.some(k => {

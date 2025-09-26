@@ -1,6 +1,8 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type {RootState} from "@/store/types.ts";
 import type { RunningScenarioData } from "@shared/contracts/Dtos/LocalDtos/ScenarioEngine/RunningScenarioData.ts";
+import {persistReducer} from "redux-persist";
+import sessionStorage from "redux-persist/lib/storage/session";
 
 /** Локальное UI-состояние для Workflow */
 export interface WorkflowState {
@@ -8,7 +10,7 @@ export interface WorkflowState {
 }
 
 const initialState: WorkflowState = {
-    runningScenarios: [],
+    runningScenarios: [] as RunningScenarioData[],
 };
 
 
@@ -49,7 +51,6 @@ export const {
     removeRunningScenario,
 } = workflowSlice.actions;
 
-export default workflowSlice.reducer;
 
 /* ====================== Selectors ====================== */
 
@@ -62,3 +63,10 @@ export const selectRunningScenarioById =
 export const selectRunningScenarioExists =
     (scenarioId: string) => (s: RootState) =>
         s.workflow.runningScenarios.some(x => x.scenarioId === scenarioId);
+
+const workflowPersistConfig = {
+    key: 'workflow',
+    storage: sessionStorage, // Временно
+};
+
+export const workflowReducer = persistReducer(workflowPersistConfig, workflowSlice.reducer);

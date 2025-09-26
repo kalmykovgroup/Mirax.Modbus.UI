@@ -1,0 +1,31 @@
+/* TimeZonePicker.module.css */
+
+.selectStylePicker {
+    margin-bottom: 10px;
+}
+
+.timezoneSelect {
+    color: #333;
+    font-size: 14px;
+}
+
+.timezoneSelect:disabled {
+    color: #999;
+    opacity: 0.6;
+}
+
+/* Стили для выбранного UTC */
+.utcSelected {
+    font-weight: 500;
+    color: #0066cc !important;
+}
+
+.timezoneSelect option {
+    color: #333;
+    background-color: #fff;
+}
+
+.timezoneSelect option:disabled {
+    color: #999;
+    background-color: #f5f5f5;
+}

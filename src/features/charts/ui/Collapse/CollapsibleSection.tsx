@@ -1,9 +1,19 @@
-import { useState } from 'react';
-import s from './SettingsBlock.module.css';
+import React, { useState } from 'react';
+import s from './CollapsibleSection.module.css';
 import Collapse from "@charts/ui/Collapse/Collapse.tsx";
 
-export default function SettingsBlock({className}: {className? : string | undefined}   ) {
-    const [open, setOpen] = useState(true);
+export default function CollapsibleSection({
+    children,
+    defaultState = false,
+    label,
+    className
+}: {
+    children: React.ReactNode;
+    defaultState?: boolean | undefined;
+    label?: string | undefined | React.ReactNode;
+    className? : string | undefined
+}   ) {
+    const [open, setOpen] = useState(defaultState);
 
     return (
         <section className={`${className} ${s.wrap}`}>
@@ -14,45 +24,26 @@ export default function SettingsBlock({className}: {className? : string | undefi
                 aria-expanded={open}
                 aria-controls="settings-panel"
             >
-                {open ? 'Спрятать настройки' : 'Показать настройки'}
+                {open ? (
+                       <>
+                           {label}
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                               <polyline points="6 9 12 15 18 9"></polyline>
+                           </svg>
+                       </>
+                ) : (
+
+                    <>
+                        {label}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </>
+                )}
             </button>
 
             <Collapse open={open} duration={220} className={s.panel} >
-                <div id="settings-panel" className={s.content}>
-                    {/* ваши поля настроек */}
-                    <div className={s.row}>
-                        <label>Параметр A</label>
-                        <input type="text" placeholder="..." />
-                    </div>
-                    <div className={s.row}>
-                        <label>Параметр B</label>
-                        <input type="number" />
-                    </div>
-                    <div className={s.row}>
-                        <label>Параметр B</label>
-                        <input type="number" />
-                    </div>
-                    <div className={s.row}>
-                        <label>Параметр B</label>
-                        <input type="number" />
-                    </div>
-                    <div className={s.row}>
-                        <label>Параметр B</label>
-                        <input type="number" />
-                    </div>
-                    <div className={s.row}>
-                        <label>Параметр B</label>
-                        <input type="number" />
-                    </div>
-                    <div className={s.row}>
-                        <label>Параметр B</label>
-                        <input type="number" />
-                    </div>
-                    <div className={s.row}>
-                        <label>Параметр B</label>
-                        <input type="number" />
-                    </div>
-                </div>
+                {children}
             </Collapse>
         </section>
     );
