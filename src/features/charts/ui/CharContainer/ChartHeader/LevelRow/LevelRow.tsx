@@ -21,7 +21,7 @@ export const LevelRow: React.FC<{
                 {level.isCurrent && (
                     <span className={styles.currentIndicator} />
                 )}
-                Уровень: {level.bucketLabel}
+                {level.bucketLabel}
             </div>
 
             {/* Статистика */}

@@ -5,6 +5,7 @@ import {useSelector} from "react-redux";
 import {useTheme} from "@app/providers/theme/useTheme.ts";
 import {selectResolvedTemplate} from "@charts/store/selectors.ts";
 import ChartCollection from "@charts/ui/CharContainer/ChartCollection/ChartCollection.tsx";
+import classNames from "classnames";
 
 interface ChartContainerProps {
     className? : string | undefined;
@@ -19,7 +20,7 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({className}) => {
     // Проверки на наличие данных
     if (!template) {
         return (
-            <div className={`${className} ${styles.container}`} data-theme={theme}>
+            <div className={classNames(styles.chartContainerComponent, className)} data-theme={theme}>
                 <div className={styles.emptyState}>
                     <span>Нет активного шаблона</span>
                 </div>
@@ -29,7 +30,7 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({className}) => {
 
     if (!template.selectedFields || template.selectedFields.length === 0) {
         return (
-            <div className={`${className} ${styles.container}`} data-theme={theme}>
+            <div className={classNames(styles.chartContainerComponent, className)}  data-theme={theme}>
                 <div className={styles.emptyState}>
                     <span>Не выбраны поля для отображения</span>
                 </div>
@@ -38,10 +39,8 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({className}) => {
     }
 
     return (
-        <div className={`${className} ${styles.container}`} data-theme={theme}>
-            <div className={styles.chartsGrid}>
-                 <ChartCollection template={template}/>
-            </div>
+        <div className={classNames(styles.chartContainerComponent, className)}  data-theme={theme}>
+             <ChartCollection template={template}/>
         </div>
     );
 

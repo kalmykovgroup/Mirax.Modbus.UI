@@ -110,7 +110,7 @@ export default function ChartTemplatesPanel({ onExecuteDone, className }: {
     }
 
     return (
-        <div className={`${styles.container} ${className ?? ''}`} data-theme={theme}>
+        <div className={`${styles.chartTemplatePanelContainer} ${className ?? ''}`} data-theme={theme}>
 
             <div className={styles.header}>
                 <div style={{ fontWeight: 600 }}>Шаблоны</div>

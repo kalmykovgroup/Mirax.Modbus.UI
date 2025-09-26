@@ -86,7 +86,7 @@ export const ChartHeader: React.FC<HeaderProps> = ({
                                                        title,
                                                        showDetails = true,
                                                        enableTestControls = true,
-                                                       enableDebugLogs = false // По умолчанию включена отладка
+                                                       enableDebugLogs = true // По умолчанию включена отладка
                                                    }) => {
     const dispatch = useAppDispatch();
     const [isTestRunning, setIsTestRunning] = useState(false);

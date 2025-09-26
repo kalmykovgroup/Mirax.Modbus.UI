@@ -14,7 +14,7 @@
     grid-template-columns: 1fr auto;
     align-items: center;
     gap: 16px;
-    padding-bottom: 12px;
+    padding-bottom: 3px;
     border-bottom: 1px solid #e5e7eb;
 }
 
@@ -52,7 +52,7 @@
 }
 
 .statValue {
-    font-size: 20px;
+    font-size: 15px;
     font-weight: 600;
     color: #1f2937;
     font-variant-numeric: tabular-nums;
@@ -88,7 +88,7 @@
 .testControls {
     display: flex;
     gap: 8px;
-    padding: 12px;
+    padding: 3px;
     background-color: #f3f4f6;
     border-radius: 8px;
     flex-wrap: wrap;

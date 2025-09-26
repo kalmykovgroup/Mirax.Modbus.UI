@@ -33,7 +33,7 @@ const initialState: ChartsSettingsState = {
         minTargetPoints: 20,
         enableWeeklyMultiples: false,
         maxWeeksMultiple: 52,
-        niceMilliseconds: [  // <-- Изменено с niceSeconds на niceMilliseconds
+        niceMilliseconds: [
             1000,        // 1 секунда
             2000,        // 2 секунды
             5000,        // 5 секунд

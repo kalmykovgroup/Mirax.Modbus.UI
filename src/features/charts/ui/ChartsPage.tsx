@@ -28,22 +28,21 @@ export default function ChartsPage() {
 
 
     return (
-        <div className={styles.container}>
+        <div className={styles.charPageContainer}>
 
             <TimeZonePicker
                 value={timeSettings}
                 onChange={handleTimeSettingsChange}
-                className={styles.timezonePicker}
                 label="Использовать временную зону"
             />
 
-            <ChartTemplatesPanel className={styles.chartTemplatesPanel} onExecuteDone={onExecuteDone}  />
+            <ChartTemplatesPanel onExecuteDone={onExecuteDone}  />
 
-            <CollapsibleSection className={styles.settingsBlock}>
-            <DataSourcePanel className={styles.dataSourcePanel}/>
+            <CollapsibleSection>
+                  <DataSourcePanel />
             </CollapsibleSection>
 
-           {<ChartContainer className={styles.chartPanel}/>}
+           <ChartContainer />
 
         </div>
     )

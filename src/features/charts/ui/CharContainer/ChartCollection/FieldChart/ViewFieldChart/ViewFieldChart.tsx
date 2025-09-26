@@ -28,7 +28,6 @@ export interface ViewFieldChartProps {
 }
 
 const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
-                                                           domain,
                                                            fieldName,
                                                            chartOption,
                                                            stats,
@@ -146,126 +145,107 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
         <div
             ref={containerRef}
             className={classNames(
-                styles.container,
+                styles.chartContainerWrapper,
                 isExpanded && styles.expanded,
                 className
             )}
         >
-            <ChartHeader fieldName={fieldName} />
+            <div className={styles.chartContainer}>
+                <ChartHeader fieldName={fieldName} />
 
-            {/* Отладочная информация о домене */}
-            <div className={styles.domainInfo} style={{ fontSize: '10px', opacity: 0.6 }}>
-                Домен: {domain?.from.toLocaleDateString()} {domain?.from.toLocaleTimeString()} -
-                {domain?.to.toLocaleDateString()} {domain?.to.toLocaleTimeString()}
-            </div>
-
-            {/* Заголовок */}
-            <div className={styles.header}>
-                <div className={styles.titleSection}>
-                    <h3 className={styles.title}>
-                        {fieldName}
-                        {getQualityIndicator()}
-                    </h3>
-                    <span className={styles.bucket}>
+                <div className={styles.header}>
+                    <div className={styles.titleSection}>
+                        <h3 className={styles.title}>
+                            {fieldName}
+                            {getQualityIndicator()}
+                        </h3>
+                        <span className={styles.bucket}>
                         Интервал: {stats.currentBucket}
                     </span>
-                </div>
+                    </div>
 
-                <div className={styles.statsSection}>
-                    <div className={styles.stat}>
-                        <span className={styles.statLabel}>Покрытие:</span>
-                        <span className={styles.statValue}>{stats.coverage}%</span>
-                    </div>
-                    <div className={styles.stat}>
-                        <span className={styles.statLabel}>Плотность:</span>
-                        <span className={styles.statValue}>{stats.density.toFixed(2)}</span>
-                    </div>
-                    <div className={styles.stat}>
-                        <span className={styles.statLabel}>Точек:</span>
-                        <span className={styles.statValue}>
+                    <div className={styles.statsSection}>
+                        <div className={styles.stat}>
+                            <span className={styles.statLabel}>Покрытие:</span>
+                            <span className={styles.statValue}>{stats.coverage}%</span>
+                        </div>
+                        <div className={styles.stat}>
+                            <span className={styles.statLabel}>Плотность:</span>
+                            <span className={styles.statValue}>{stats.density.toFixed(2)}</span>
+                        </div>
+                        <div className={styles.stat}>
+                            <span className={styles.statLabel}>Точек:</span>
+                            <span className={styles.statValue}>
                             {stats.visiblePoints}/{stats.totalPoints}
                         </span>
+                        </div>
+                        {stats.gaps !== undefined && stats.gaps > 0 && (
+                            <div className={styles.stat}>
+                                <span className={styles.statLabel}>Разрывов:</span>
+                                <span className={styles.statValue}>{stats.gaps}</span>
+                            </div>
+                        )}
                     </div>
-                    {stats.gaps !== undefined && stats.gaps > 0 && (
-                        <div className={styles.stat}>
-                            <span className={styles.statLabel}>Разрывов:</span>
-                            <span className={styles.statValue}>{stats.gaps}</span>
+
+                    <div className={styles.actions}>
+                        <button
+                            className={styles.actionBtn}
+                            onClick={handleExport}
+                            title="Экспорт данных"
+                        >
+                            📥
+                        </button>
+                        <button
+                            className={styles.actionBtn}
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            title="Развернуть/Свернуть"
+                        >
+                            {isExpanded ? '↙' : '↗'}
+                        </button>
+                    </div>
+                </div>
+
+                <div className={styles.chartWrapper}
+                     style={{height: !isExpanded ? height : undefined}}>
+                    {loading && (
+                        <div className={styles.loadingOverlay}>
+                            <div className={styles.spinner} />
+                            <span>Загрузка данных...</span>
                         </div>
                     )}
-                </div>
 
-                <div className={styles.actions}>
-                    <button
-                        className={styles.actionBtn}
-                        onClick={handleExport}
-                        title="Экспорт данных"
-                    >
-                        📥
-                    </button>
-                    <button
-                        className={styles.actionBtn}
-                        onClick={() => setIsExpanded(!isExpanded)}
-                        title="Развернуть/Свернуть"
-                    >
-                        {isExpanded ? '↙' : '↗'}
-                    </button>
-                </div>
-            </div>
-
-            {/* График */}
-            <div className={styles.chartWrapper}
-                 style={{ height: height}}>
-                {loading && (
-                    <div className={styles.loadingOverlay}>
-                        <div className={styles.spinner} />
-                        <span>Загрузка данных...</span>
-                    </div>
-                )}
-
-                {error && !loading && (
-                    <div className={styles.errorOverlay}>
-                        <span className={styles.errorIcon}>⚠️</span>
-                        <span className={styles.errorText}>{error}</span>
-                    </div>
-                )}
-
-                {/* Информационное сообщение показываем более деликатно */}
-                {!error && !loading && info && (
-                    <div className={styles.infoOverlay} style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        padding: '10px 20px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        border: '1px solid #d9d9d9',
-                        borderRadius: '4px',
-                        color: '#666',
-                        fontSize: '14px',
-                        pointerEvents: 'none',
-                        zIndex: 10
-                    }}>
-                        <span>ℹ️ {info}</span>
-                        <div style={{ fontSize: '12px', marginTop: '5px', color: '#999' }}>
-                            Используйте колесо мыши для возврата к предыдущему масштабу
+                    {error && !loading && (
+                        <div className={styles.errorOverlay}>
+                            <span className={styles.errorIcon}>⚠️</span>
+                            <span className={styles.errorText}>{error}</span>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                <ReactECharts
-                    ref={chartRef}
-                    option={chartOption}
-                    style={{ height: '100%', width: '100%' }}
-                    opts={{
-                        renderer: 'canvas'
-                    }}
-                    notMerge={false}
-                    lazyUpdate={true}
-                    onEvents={events}
-                />
+
+                    {!error && !loading && info && (
+                        <div className={styles.infoOverlay} >
+                            <span>ℹ️ {info}</span>
+                            <div style={{ fontSize: '12px', marginTop: '5px', color: '#999' }}>
+                                Используйте колесо мыши для возврата к предыдущему масштабу
+                            </div>
+                        </div>
+                    )}
+
+                    <ReactECharts
+                        ref={chartRef}
+                        option={chartOption}
+                        style={{ height: '100%', width: '100%' }}
+                        opts={{
+                            renderer: 'canvas'
+                        }}
+                        notMerge={false}
+                        lazyUpdate={true}
+                        onEvents={events}
+                    />
+                </div>
+
+                {loading && <div className={styles.loadingBar} />}
             </div>
-
-            {loading && <div className={styles.loadingBar} />}
         </div>
     );
 };

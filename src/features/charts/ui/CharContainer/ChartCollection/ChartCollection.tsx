@@ -215,8 +215,9 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
         );
     }
 
+
     return (
-        <div ref={containerRef} className={styles.container}>
+        <div ref={containerRef} className={styles.chartCollectionContainer}>
             <div className={styles.header}>
                 <h2>Графики данных</h2>
                 <div className={styles.info}>
@@ -252,24 +253,6 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
                     )}
                 </div>
 
-                <div className={styles.infoNote}>
-                    ℹ️ Даты хранятся как локальные, на сервер отправляются в UTC
-                </div>
-
-                {/* Индикатор загрузки по полям */}
-                {Object.entries(fieldsLoadingState).some(([_, loading]) => loading) && (
-                    <div className={styles.fieldsLoadingInfo}>
-                        <span>Загрузка данных для полей: </span>
-                        {Object.entries(fieldsLoadingState)
-                            .filter(([_, loading]) => loading)
-                            .map(([field, _]) => (
-                                <span key={field} className={styles.fieldLoadingBadge}>
-                                    {field}
-                                </span>
-                            ))
-                        }
-                    </div>
-                )}
             </div>
 
             <div className={styles.chartsGrid}>

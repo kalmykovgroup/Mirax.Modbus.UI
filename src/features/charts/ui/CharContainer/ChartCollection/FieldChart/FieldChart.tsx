@@ -325,7 +325,7 @@ const FieldChart: React.FC<Props> = ({
 
         // Переключаем уровень если необходимо
         if (shouldSwitchLevel) {
-           dispatch(setCurrentBucketMs({
+            dispatch(setCurrentBucketMs({
                 field: field.name,
                 bucketMs: optimalBucket
             }));

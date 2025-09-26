@@ -1,28 +1,12 @@
 /* charts/ui/CharContainer/FieldChart/ViewFieldChart.module.css */
 
-.container {
-    display: flex;
-    flex-direction: column;
+.chartContainerWrapper{
+    position: relative;
     background: #ffffff;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     transition: all 0.3s ease;
-
-}
-
-.container:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.expanded {
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    right: 20px;
-    bottom: 20px;
-    z-index: 1000;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .header {
@@ -33,6 +17,41 @@
     background: #fafafa;
     border-bottom: 1px solid #f0f0f0;
 }
+
+.chartContainer{
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.chartWrapper{
+    position: relative;
+    height: 100%;
+}
+
+.expanded {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+
+.chartContainerWrapper:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+
+
+
+
+
 
 .titleSection {
     display: flex;
@@ -116,12 +135,21 @@
     border-color: #d1d5db;
 }
 
-.chartWrapper {
-    position: relative;
-    display: flex;
-    min-height: 300px;
-}
 
+.infoOverlay{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 10px 20px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    color: #666;
+    font-size: 14px;
+    pointer-events: none;
+    z-index: 10;
+}
 .loadingOverlay,
 .errorOverlay {
     position: absolute;
