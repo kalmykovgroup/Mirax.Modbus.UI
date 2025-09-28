@@ -462,14 +462,19 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             },
             axisLabel: {
                 color: currentTheme.text,
+                rotate: 45,  // Поворот меток на 45 градусов
+                interval: 'auto',  // Автоматический интервал или 0 для показа всех меток
+                showMinLabel: true,  // Всегда показывать первую метку
+                showMaxLabel: true,  // Всегда показывать последнюю метку
+                fontSize: 11,  // Размер шрифта
                 formatter: (value: number) => {
                     try {
                         const date = new Date(value);
                         if (useTimeZone && timeZone) {
+                            // Упрощенный формат для вертикальных меток
                             return date.toLocaleString('ru-RU', {
                                 timeZone: timeZone,
-                                year: 'numeric',
-                                month: '2-digit',
+                                month: 'short',
                                 day: '2-digit',
                                 hour: '2-digit',
                                 minute: '2-digit'

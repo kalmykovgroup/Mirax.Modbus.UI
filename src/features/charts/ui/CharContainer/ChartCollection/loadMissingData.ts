@@ -1,13 +1,13 @@
 import type { FieldDto } from '@charts/shared/contracts/metadata/Dtos/FieldDto';
-import { type BucketsMs, upsertTiles} from '@charts/store/chartsSlice';
+import {type BucketsMs, type TimeRange, upsertTiles} from '@charts/store/chartsSlice';
 import { fetchMultiSeriesRaw } from '@charts/store/thunks';
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '@/store/store';
 
 interface LoadMissingDataParams {
     field: FieldDto;
-    targetBucketMs?: BucketsMs | undefined;
-    containerWidth: number;
+    targetBucketMs: BucketsMs;
+    newRange: TimeRange;
 }
 
 /**
@@ -20,8 +20,8 @@ boolean, // возвращает true если данные были загру�
 { state: RootState }
 >(
     'charts/loadMissingData',
-        async ({ field, targetBucketMs, containerWidth }, { getState, dispatch }) => {
-            try {
+        async ({ field, targetBucketMs, newRange }, { getState, dispatch }) => {
+
                 // Получаем все необходимые данные из state
                 const state = getState();
                 const fieldView = state.charts.view[field.name];
@@ -37,14 +37,15 @@ boolean, // возвращает true если данные были загру�
                     return false;
                 }
 
+                if(fieldView.px == undefined) throw Error("FieldView.px не инициализирован");
+
                 // Берем from/to из currentRange поля
-                const { from, to } = fieldView.currentRange;
+                const { from, to } = newRange;
 
                 // Определяем bucket для проверки
-                const bucketMs = targetBucketMs ?? fieldView.currentBucketsMs;
 
                 // Получаем тайлы для текущего уровня
-                const currentLevelTiles = fieldView.seriesLevel[bucketMs] ?? [];
+                const currentLevelTiles = fieldView.seriesLevel[targetBucketMs] ?? [];
 
                 // Проверяем покрытие для текущего диапазона
                 const requestedFromMs = from.getTime();
@@ -57,9 +58,6 @@ boolean, // возвращает true если данные были загру�
 
                 // Если нет готовых тайлов - нужна загрузка всего диапазона
                 if (readyTiles.length === 0) {
-                    console.log(
-                        `[loadMissingData] No data for field ${field.name}, bucket ${bucketMs}ms, loading full range`
-                    );
 
                     // Для полной загрузки используем весь диапазон
                     const response = await dispatch(fetchMultiSeriesRaw({
@@ -67,8 +65,8 @@ boolean, // возвращает true если данные были загру�
                             template: template,
                             from: from,
                             to: to,
-                            px: containerWidth,
-                            bucketMs: bucketMs
+                            px: fieldView.px,
+                            bucketMs: targetBucketMs
                         },
                         field: field,
                     })).unwrap();
@@ -77,8 +75,8 @@ boolean, // возвращает true если данные были загру�
                     const responseBucketMs = Math.max(1, Math.floor(response.bucketMilliseconds ?? 1));
 
                     // Проверяем соответствие bucket
-                    if (responseBucketMs !== bucketMs) {
-                        console.warn(`[loadMissingData] Bucket mismatch: requested ${bucketMs}ms, got ${responseBucketMs}ms`);
+                    if (responseBucketMs !== targetBucketMs) {
+                        console.warn(`[loadMissingData] Bucket mismatch: requested ${targetBucketMs}ms, got ${responseBucketMs}ms`);
                         return false;
                     }
 
@@ -175,7 +173,7 @@ boolean, // возвращает true если данные были загру�
 
                     if (firstCoverage <= requestedFromMs && lastCoverage >= requestedToMs) {
                         console.log(
-                            `[loadMissingData] All data present for field ${field.name}, bucket ${bucketMs}ms`
+                            `[loadMissingData] All data present for field ${field.name}, bucket ${targetBucketMs}ms`
                         );
                         return false;
                     }
@@ -196,26 +194,14 @@ boolean, // возвращает true если данные были загру�
                     template.to.getTime()
                 ));
 
-                console.log(`[loadMissingData] Loading missing data for ${field.name}:`, {
-                    gap: {
-                        from: new Date(gapStart).toISOString(),
-                        to: new Date(gapEnd).toISOString()
-                    },
-                    expanded: {
-                        from: loadFrom.toISOString(),
-                        to: loadTo.toISOString()
-                    },
-                    bucketMs
-                });
-
                 // Делаем запрос только для недостающего диапазона
                 const response = await dispatch(fetchMultiSeriesRaw({
                     request: {
                         template: template,
                         from: loadFrom,
                         to: loadTo,
-                        px: containerWidth,
-                        bucketMs: bucketMs
+                        px: fieldView.px,
+                        bucketMs: targetBucketMs
                     },
                     field: field,
                 })).unwrap();
@@ -223,24 +209,14 @@ boolean, // возвращает true если данные были загру�
                 // ОБРАБАТЫВАЕМ ПОЛУЧЕННЫЕ ДАННЫЕ
                 const responseBucketMs = Math.max(1, Math.floor(response.bucketMilliseconds ?? 1));
 
-                console.log(`[loadMissingData] RESPONSE for ${field.name}:`, {
-                    field: field.name,
-                    requestedBucketMs: bucketMs,
-                    receivedBucketMs: responseBucketMs,
-                    receivedbucketMilliseconds: response.bucketMilliseconds,
-                    mismatch: bucketMs !== responseBucketMs,
-                    binsCount: response.series.map(s => ({
-                        field: s.field.name,
-                        count: s.bins?.length ?? 0
-                    }))
-                });
+
 
                 // Если есть несоответствие - пропускаем
-                if (responseBucketMs !== bucketMs) {
+                if (responseBucketMs !== targetBucketMs) {
                     console.warn(`[loadMissingData] ⚠️ BUCKET MISMATCH for ${field.name}:`, {
-                        requested: `${bucketMs}ms (${bucketMs/1000}s)`,
+                        requested: `${targetBucketMs}ms (${targetBucketMs/1000}s)`,
                         received: `${responseBucketMs}ms (${response.bucketMilliseconds}s)`,
-                        difference: `${Math.abs(bucketMs - responseBucketMs)}ms`
+                        difference: `${Math.abs(targetBucketMs - responseBucketMs)}ms`
                     });
                     return false;
                 }
@@ -294,9 +270,6 @@ boolean, // возвращает true если данные были загру�
                 console.log(`[loadMissingData] Successfully added ${addedBinsCount} bins for ${field.name} at bucket ${responseBucketMs}ms`);
                 return true;
 
-            } catch (error) {
-                console.error(`[loadMissingData] Error:`, error);
-                return false;
-            }
+
         }
 );

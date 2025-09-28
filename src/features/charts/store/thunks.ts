@@ -1,33 +1,33 @@
 // src/store/thunks.ts
-import { createAsyncThunk } from '@reduxjs/toolkit';
-import type { RootState } from '@/store/store';
+import {createAsyncThunk} from '@reduxjs/toolkit';
+import type {RootState} from '@/store/store';
 
-import { chartsApi } from '@charts/shared/api/chartsApi';
-import { withDb } from '@charts/shared/api/base/types';
-import { notify } from '@app/lib/notify';
+import {chartsApi} from '@charts/shared/api/chartsApi';
+import {withDb} from '@charts/shared/api/base/types';
+import {notify} from '@app/lib/notify';
 
-import type { GetMultiSeriesRequest } from '@charts/shared/contracts/chart/Dtos/Requests/GetMultiSeriesRequest';
-import type { MultiSeriesResponse } from '@charts/shared/contracts/chart/Dtos/Responses/MultiSeriesResponse';
-import type { MultiSeriesItemDto } from '@charts/shared/contracts/chart/Dtos/MultiSeriesItemDto';
-import type { FieldDto } from '@charts/shared/contracts/metadata/Dtos/FieldDto';
-import type { SeriesBinDto } from '@charts/shared/contracts/chart/Dtos/SeriesBinDto';
+import type {GetMultiSeriesRequest} from '@charts/shared/contracts/chart/Dtos/Requests/GetMultiSeriesRequest';
+import type {MultiSeriesResponse} from '@charts/shared/contracts/chart/Dtos/Responses/MultiSeriesResponse';
+import type {MultiSeriesItemDto} from '@charts/shared/contracts/chart/Dtos/MultiSeriesItemDto';
+import type {FieldDto} from '@charts/shared/contracts/metadata/Dtos/FieldDto';
+import type {SeriesBinDto} from '@charts/shared/contracts/chart/Dtos/SeriesBinDto';
 
 import {
-    ensureView,
-    ensureLevels,
-    setFieldLoading,
-    setFieldError,
-    setCurrentBucketMs,
-    upsertTiles,
     type BucketsMs,
-    type CoverageInterval, type TimeRange, setIsDataLoaded,
+    type CoverageInterval,
+    finishLoading, setFieldError,
+    setIsDataLoaded,
+    startLoading,
+    type TimeRange,
+    updateView,
+    upsertTiles,
 } from './chartsSlice';
 
-import {selectChartBucketingConfig} from '@charts/store/chartsSettingsSlice';
-import {selectIsDataLoaded, selectIsSyncEnabled, selectSyncFields} from "@charts/store/selectors.ts";
+import {selectChartBucketingConfig} from '@charts/store/selectors';
+import {selectIsSyncEnabled, selectSyncFields} from "@charts/store/selectors.ts";
+import {LoadingType} from "@charts/ui/CharContainer/types.ts";
 
-
-const buildLowerOrEqualBucketsMs = (
+export const buildLowerOrEqualBucketsMs = (
     topBucketMs: BucketsMs,
     niceMilliseconds: number[]
 ): BucketsMs[] => {
@@ -59,7 +59,6 @@ const makeReadyTile = (interval: CoverageInterval, bins: SeriesBinDto[]) => ({
     bins,
     status: 'ready' as const,
 });
-
 
 export const fetchMultiSeriesInit = createAsyncThunk<
     void,
@@ -104,23 +103,20 @@ export const fetchMultiSeriesInit = createAsyncThunk<
         currentRange.to = new Date(maxTo);
     }
 
+    dispatch(setIsDataLoaded(true))
 
     // Инициализируем view и уровни для каждого выбранного поля
     for (const f of request.template.selectedFields) {
-        dispatch(setIsDataLoaded(true))
         dispatch(
-            ensureView({
+            updateView({
                 field: f.name,
                 px: px,
                 currentRange: currentRange, // локальные даты для отображения
-                currentBucketsMs: data.bucketMilliseconds,
+                currentBucketsMs: data.bucketMilliseconds, //Устанавливаем BucketMs, по которому можно определить текущий уровень
+                seriesLevels: bucketListDesc //Создаем пустые массивы для каждого уровня
             })
         );
-        //Создаем пустые массивы для каждого уровня
-        dispatch(ensureLevels({ field: f.name, bucketList: bucketListDesc }));
 
-        //Устанавливаем BucketMs, по которому можно определить текущий уровень
-        dispatch(setCurrentBucketMs({ field: f.name, bucketMs: data.bucketMilliseconds }));
     }
 
     // Для снаппинга используем конвертированные даты (они соответствуют данным от сервера)
@@ -147,34 +143,36 @@ export const fetchMultiSeriesInit = createAsyncThunk<
     }
 })
 
-
-
-
 export const fetchMultiSeriesRaw = createAsyncThunk<
-    MultiSeriesResponse,
+    MultiSeriesResponse | undefined,
     {
         request: GetMultiSeriesRequest;
         field: FieldDto;
     },
-{ state: RootState }
+    { state: RootState }
 >('charts/fetchMultiSeriesRaw', async ({ request, field }, { getState, dispatch }) => {
 
     const state = getState();
 
+    // Получаем текущий bucket из state для проверки
+    const fieldName = typeof field.name === 'string' ? field.name : String(field.name);
+    const checkBucketRelevance = () => {
+        const currentState = getState();
+        const currentBucket = currentState.charts.view[fieldName]?.currentBucketsMs;
+        return currentBucket === request.bucketMs;
+    };
+
     // Получаем флаг синхронизации и синхронизированные поля из state
-    const isSyncEnabled = selectIsSyncEnabled(state); // boolean
-    const syncFields = selectSyncFields(state); // ReadonlyArray<FieldDto>
+    const isSyncEnabled = selectIsSyncEnabled(state);
+    const syncFields = selectSyncFields(state);
 
     // Определяем список полей для загрузки
     let fieldsToLoad: ReadonlyArray<FieldDto>;
 
     if (isSyncEnabled && syncFields.length > 0) {
-        // Если синхронизация включена и есть поля для синхронизации
-        // Создаем Set для уникальности по id
         const fieldIds = new Set<FieldDto>();
         const uniqueFields: FieldDto[] = [];
 
-        // Добавляем поля из syncFields
         syncFields.forEach(f => {
             if (!fieldIds.has(f)) {
                 fieldIds.add(f);
@@ -182,15 +180,12 @@ export const fetchMultiSeriesRaw = createAsyncThunk<
             }
         });
 
-        // Добавляем переданное поле, если его еще нет
         if (!fieldIds.has(field)) {
             uniqueFields.push(field);
         }
 
         fieldsToLoad = uniqueFields;
     } else {
-        // Если синхронизация выключена или нет полей для синхронизации
-        // Загружаем только переданное поле
         fieldsToLoad = [field];
     }
 
@@ -205,13 +200,49 @@ export const fetchMultiSeriesRaw = createAsyncThunk<
 
     try {
         // Вызываем основной thunk для загрузки данных
-         return await dispatch(fetchMultiSeries(modifiedRequest)).unwrap();
+        const result = await dispatch(fetchMultiSeries(modifiedRequest)).unwrap();
+
+        // Проверяем актуальность после загрузки
+        if (!checkBucketRelevance()) {
+            console.log('Bucket changed during request, skipping update');
+            return undefined; // Не обновляем state если bucket изменился
+        }
+
+        // Если bucket актуален, обрабатываем результат
+        if (result && result.series) {
+            const snapped = snapToBucketMs(
+                request.from || new Date(),
+                request.to || new Date(),
+                result.bucketMilliseconds
+            );
+
+            for (const s of result.series) {
+                const convertedBins = s.bins?.map(bin => ({
+                    ...bin,
+                    t: bin.t
+                })) ?? [];
+
+                // Обновляем только если bucket все еще актуален
+                if (checkBucketRelevance()) {
+                    dispatch(
+                        upsertTiles({
+                            field: s.field.name,
+                            bucketMs: result.bucketMilliseconds,
+                            tiles: [makeReadyTile(snapped, convertedBins)],
+                        })
+                    );
+                }
+            }
+        }
+
+        return result;
 
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
         throw error;
     }
 });
+
 
 /**
  * Первый загрузочный thunk:
@@ -232,8 +263,14 @@ const fetchMultiSeries = createAsyncThunk<
 
     // selectedFields гарантированно не пустой
     const fieldsForStatus: readonly FieldDto[] = request.template.selectedFields;
+
+    // Запускаем загрузку для всех полей
     fieldsForStatus.forEach((f) =>
-        dispatch(setFieldLoading({ field: f.name, loading: true }))
+        dispatch(startLoading({
+            field: f.name,
+            type: LoadingType.Initial,
+            message: 'Загрузка данных...'
+        }))
     );
 
     // RTK Query запрос с тостами
@@ -244,7 +281,7 @@ const fetchMultiSeries = createAsyncThunk<
     );
 
     try {
-        return (await notify.run(
+        const result = await notify.run(
             sub.unwrap(),
             {
                 loading: { text: 'Загружаю MultiSeries… ' },
@@ -252,19 +289,30 @@ const fetchMultiSeries = createAsyncThunk<
                 error: { text: 'Не удалось загрузить MultiSeries', toastOptions: { duration: 3000 } },
             },
             { id: 'fetch-fields' }
-        )) as MultiSeriesResponse;
+        ) as MultiSeriesResponse;
+
+        // Завершаем загрузку успешно
+        fieldsForStatus.forEach((f) =>
+            dispatch(finishLoading({
+                field: f.name,
+                success: true
+            }))
+        );
+
+        return result;
 
     } catch (e: any) {
         const msg = e?.message ?? 'Request failed';
-        fieldsForStatus.forEach((f) =>
-            dispatch(setFieldError({ field: f.name, error: msg }))
-        );
+        fieldsForStatus.forEach((f) => {
+            dispatch(setFieldError({ fieldName: f.name, error: msg }));
+            dispatch(finishLoading({
+                field: f.name,
+                success: false,
+                error: msg
+            }));
+        });
         throw e;
     } finally {
-        // завершение статусов загрузки
-        fieldsForStatus.forEach((f) =>
-            dispatch(setFieldLoading({ field: f.name, loading: false }))
-        );
         // @ts-ignore
         sub.unsubscribe?.();
     }

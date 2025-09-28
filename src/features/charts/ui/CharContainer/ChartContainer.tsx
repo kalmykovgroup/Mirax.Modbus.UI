@@ -4,8 +4,8 @@ import styles from "./ChartContainer.module.css"
 import {useSelector} from "react-redux";
 import {useTheme} from "@app/providers/theme/useTheme.ts";
 import {selectResolvedTemplate} from "@charts/store/selectors.ts";
-import ChartCollection from "@charts/ui/CharContainer/ChartCollection/ChartCollection.tsx";
 import classNames from "classnames";
+import {ChartCollection} from "@charts/ui/CharContainer/ChartCollection/ChartCollection.tsx";
 
 interface ChartContainerProps {
     className? : string | undefined;

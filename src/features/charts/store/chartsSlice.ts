@@ -1,15 +1,16 @@
 // src/store/chartsSlice.ts
 
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { ResolvedCharReqTemplate } from '@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate';
-import type { SeriesBinDto } from '@charts/shared/contracts/chart/Dtos/SeriesBinDto';
+import {createSlice, type PayloadAction} from '@reduxjs/toolkit';
+import type {ResolvedCharReqTemplate} from '@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate';
+import type {SeriesBinDto} from '@charts/shared/contracts/chart/Dtos/SeriesBinDto';
 import type {FieldDto} from "@charts/shared/contracts/metadata/Dtos/FieldDto.ts";
+import {type LoadingState, LoadingType} from '@charts/ui/CharContainer/types';
 
 // Типы
 export type FieldName = string;
 export type BucketsMs = number;
 export type TimeRange = { from: Date; to: Date };
-export type TimeRangeBounds  = { from: Date | undefined; to: Date | undefined };
+export type TimeRangeBounds = { from: Date | undefined; to: Date | undefined };
 export type CoverageInterval = { fromMs: number; toMs: number };
 
 export interface SeriesTile {
@@ -20,12 +21,12 @@ export interface SeriesTile {
 }
 
 export interface FieldView {
-    px: number;
-    currentRange: TimeRange;
-    loading: boolean;
-    error?: string | undefined;
-    currentBucketsMs: BucketsMs;
+    px?: number | undefined;
+    currentRange?: TimeRange | undefined;
+    currentBucketsMs?: BucketsMs | undefined;
     seriesLevel: Record<BucketsMs, SeriesTile[]>;
+    loadingState: LoadingState;
+    error?: string | undefined;
 }
 
 export type ChartsState = {
@@ -40,7 +41,6 @@ export type ChartsState = {
 const initialState: ChartsState = {
     syncEnabled: false,
     syncFields: [],
-    template: undefined,
     view: {},
     isDataLoaded: false,
 };
@@ -67,7 +67,6 @@ function mergeTiles(tiles: SeriesTile[]): SeriesTile[] {
                 current.coverageInterval.toMs,
                 next.coverageInterval.toMs
             );
-            // Объединяем bins и сортируем
             const allBins = [...current.bins, ...next.bins];
             const uniqueBins = new Map<number, SeriesBinDto>();
 
@@ -88,6 +87,29 @@ function mergeTiles(tiles: SeriesTile[]): SeriesTile[] {
     return result;
 }
 
+function createInitialFieldView(): FieldView {
+
+    return {
+        px: undefined,
+        currentRange: undefined,
+        currentBucketsMs: undefined,
+        seriesLevel: {},
+        loadingState: createInitialLoadingState(),
+        error: undefined
+    } as FieldView
+}
+
+// Функция для создания начального состояния загрузки
+function createInitialLoadingState(): LoadingState {
+    return {
+        active: false,
+        type: LoadingType.Initial,
+        progress: 0,
+        message: undefined,
+        startTime: Date.now(),
+    } as LoadingState;
+}
+
 // Slice
 const chartsSlice = createSlice({
     name: 'charts',
@@ -95,101 +117,154 @@ const chartsSlice = createSlice({
     reducers: {
         setResolvedCharReqTemplate(
             state,
-            action: PayloadAction<ResolvedCharReqTemplate | undefined>
+            action: PayloadAction<{template: ResolvedCharReqTemplate}>
         ) {
-            state.template = action.payload;
-        },
+            const { template } = action.payload;
 
-        ensureView(
+            // @ts-ignore
+            state.template = template;
+
+            template.selectedFields.forEach(field => {
+                state.view[field.name] = createInitialFieldView();
+            });
+        },
+        // chartsSlice.ts - улучшаем updateView
+        updateView(
             state,
             action: PayloadAction<{
                 field: FieldName;
-                px: number;
-                currentRange: TimeRange;
-                currentBucketsMs: BucketsMs;
-            }>
-        ) {
-            const { field, px, currentRange, currentBucketsMs } = action.payload;
-
-            if (!state.view[field]) {
-                state.view[field] = {
-                    px,
-                    loading: false,
-                    error: undefined,
-                    currentRange: currentRange,
-                    currentBucketsMs,
-                    seriesLevel: {},
-                };
-            } else {
-                const view = state.view[field];
-                view.px = px;
-                if (currentRange) {
-                    view.currentRange = currentRange;
-                }
-                view.currentBucketsMs = currentBucketsMs;
-            }
-        },
-
-        ensureLevels(
-            state,
-            action: PayloadAction<{
-                field: FieldName;
-                bucketList: BucketsMs[]
-            }>
-        ) {
-            const { field, bucketList } = action.payload;
-            const view = state.view[field];
-            if (!view) return;
-
-            for (const bucket of bucketList) {
-                if (!view.seriesLevel[bucket]) {
-                    view.seriesLevel[bucket] = [];
-                }
-            }
-        },
-
-        setCurrentBucketMs(
-            state,
-            action: PayloadAction<{
-                field: FieldName;
-                bucketMs: BucketsMs
-            }>
-        ) {
-            const view = state.view[action.payload.field];
-            if (view) {
-                view.currentBucketsMs = action.payload.bucketMs;
-            }
-        },
-
-        setFieldLoading(
-            state,
-            action: PayloadAction<{
-                field: FieldName;
-                loading: boolean
-            }>
-        ) {
-            const view = state.view[action.payload.field];
-            if (view) {
-                view.loading = action.payload.loading;
-                if (action.payload.loading) {
-                    view.error = undefined;
-                }
-            }
-        },
-
-        setFieldError(
-            state,
-            action: PayloadAction<{
-                field: FieldName;
+                px?: number | undefined;
+                currentRange?: TimeRange | undefined;
+                currentBucketsMs?: BucketsMs | undefined;
+                seriesLevels?: BucketsMs[] | undefined;
                 error?: string | undefined
             }>
         ) {
-            const view = state.view[action.payload.field];
-            if (view) {
-                view.error = action.payload.error;
-                view.loading = false;
+            const { field, px, currentRange, currentBucketsMs, seriesLevels, error } = action.payload;
+
+            let view = state.view[field];
+
+            if (!view) {
+                view = createInitialFieldView();
+                state.view[field] = view;
+            }
+
+            // Атомарное обновление всех полей
+            if (px !== undefined) view.px = px;
+            if (currentRange !== undefined) view.currentRange = currentRange;
+            if (currentBucketsMs !== undefined) view.currentBucketsMs = currentBucketsMs;
+            if (error !== undefined) view.error = error;
+
+            if (seriesLevels) {
+                for (const bucket of seriesLevels) {
+                    if (!view.seriesLevel[bucket]) {
+                        view.seriesLevel[bucket] = [];
+                    }
+                }
             }
         },
+
+        setFieldError(state, action: PayloadAction<{fieldName: FieldName, error?: string | undefined}>){
+           const {fieldName, error} = action.payload;
+
+            const view = state.view[fieldName]
+
+            if(!view) throw Error("view not found");
+
+            view.error = error;
+        },
+
+
+        setLoadingState(
+            state,
+            action: PayloadAction<{
+                field: FieldName;
+                loadingState: Partial<LoadingState>
+            }>
+        ) {
+            const view = state.view[action.payload.field];
+            if (view) {
+                view.loadingState = {
+                    ...view.loadingState,
+                    ...action.payload.loadingState
+                };
+            }
+        },
+
+        startLoading(
+            state,
+            action: PayloadAction<{
+                field: FieldName;
+                type: LoadingType;
+                message?: string;
+            }>
+        ) {
+            const view = state.view[action.payload.field];
+            if (view) {
+                view.loadingState = {
+                    active: true,
+                    type: action.payload.type,
+                    progress: 0,
+                    message: action.payload.message,
+                    startTime: Date.now()
+                };
+                view.error = undefined;
+            }
+        },
+
+        updateLoadingProgress(
+            state,
+            action: PayloadAction<{
+                field: FieldName;
+                progress: number;
+                message?: string;
+                estimatedEndTime?: number;
+                bytesLoaded?: number;
+                totalBytes?: number;
+            }>
+        ) {
+            const view = state.view[action.payload.field];
+            if (view && view.loadingState.active) {
+                view.loadingState.progress = action.payload.progress;
+
+                if (action.payload.message !== undefined) {
+                    view.loadingState.message = action.payload.message;
+                }
+                if (action.payload.estimatedEndTime !== undefined) {
+                    view.loadingState.estimatedEndTime = action.payload.estimatedEndTime;
+                }
+                if (action.payload.bytesLoaded !== undefined) {
+                    view.loadingState.bytesLoaded = action.payload.bytesLoaded;
+                }
+                if (action.payload.totalBytes !== undefined) {
+                    view.loadingState.totalBytes = action.payload.totalBytes;
+                }
+            }
+        },
+
+        finishLoading(
+            state,
+            action: PayloadAction<{
+                field: FieldName;
+                success: boolean;
+                error?: string | undefined;
+            }>
+        ) {
+            const view = state.view[action.payload.field];
+
+            if(!view) throw Error("view is not initialized");
+
+
+            view.loadingState.active = false;
+            view.loadingState.progress = action.payload.success ? 100 : view.loadingState.progress;
+
+            if (!action.payload.success && action.payload.error) {
+                view.error = action.payload.error;
+            }
+
+        },
+
+
 
         upsertTiles(
             state,
@@ -203,34 +278,20 @@ const chartsSlice = createSlice({
             const view = state.view[field];
             if (!view) return;
 
-            // Инициализируем уровень если его нет
             if (!view.seriesLevel[bucketMs]) {
                 view.seriesLevel[bucketMs] = [];
             }
 
-            // Добавляем новые тайлы
             const existingTiles = view.seriesLevel[bucketMs];
             const readyTiles = tiles.map(t => ({
                 ...t,
                 status: 'ready' as const
             }));
 
-            // Простое добавление и слияние
             view.seriesLevel[bucketMs] = mergeTiles([...existingTiles, ...readyTiles]);
         },
 
-        clearLevel(
-            state,
-            action: PayloadAction<{
-                field: FieldName;
-                bucketMs: BucketsMs
-            }>
-        ) {
-            const view = state.view[action.payload.field];
-            if (view) {
-                delete view.seriesLevel[action.payload.bucketMs];
-            }
-        },
+
 
         clearField(state, action: PayloadAction<FieldName>) {
             delete state.view[action.payload];
@@ -240,30 +301,37 @@ const chartsSlice = createSlice({
             state.template = undefined;
             state.view = {};
         },
-        updateCurrentRange(state, action: PayloadAction<{field: FieldName, range: TimeRange}>){
 
-            const view = state.view[action.payload.field];
-            if(view == undefined) throw Error("view was not undefined");
-            view.currentRange = action.payload.range;
-        },
+
         toggleSync(state) {
             state.syncEnabled = !state.syncEnabled;
         },
+
         addSyncField(state, action: PayloadAction<FieldDto>) {
             const exists = state.syncFields.some(f => f.name === action.payload.name);
             if (!exists) {
                 state.syncFields = [...state.syncFields, action.payload];
             }
         },
-        removeSyncField(state, action: PayloadAction<string>) { // по id
+
+        removeSyncField(state, action: PayloadAction<string>) {
             state.syncFields = state.syncFields.filter(f => f.name !== action.payload);
         },
+
         clearSyncFields(state) {
             state.syncFields = [];
         },
+
         setIsDataLoaded(state, action: PayloadAction<boolean>) {
-            //Защита от повторного первого вызова.
             state.isDataLoaded = action.payload;
+        },
+        setPx(state, action: PayloadAction<number>) {
+            Object.values(state.view).forEach((view) => {
+                if (view) {
+                    view.px = action.payload;
+                    console.log("setPx", view.px)
+                }
+            });
         }
     },
 });
@@ -273,20 +341,19 @@ export const chartsReducer = chartsSlice.reducer;
 
 export const {
     setResolvedCharReqTemplate,
-    ensureView,
-    ensureLevels,
-    setCurrentBucketMs,
-    setFieldLoading,
+    updateView,
     setFieldError,
+    finishLoading,
     upsertTiles,
-    clearLevel,
+    startLoading,
+    setIsDataLoaded,
+    setPx,
+    setLoadingState,
+    updateLoadingProgress,
     clearField,
     clearAll,
-    updateCurrentRange,
     toggleSync,
     addSyncField,
     removeSyncField,
     clearSyncFields,
-    setIsDataLoaded
 } = chartsSlice.actions;
-

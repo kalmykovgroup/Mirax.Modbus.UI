@@ -8,12 +8,12 @@ import styles from "./SplashScreen.module.css";
  * Используется при инициализации приложения (например, во время восстановления состояния Redux).
  */
 type Props = {
-    label?: string;
+    label?: string | undefined;
     /** Сделать полноэкранным перекрытием (fixed inset-0) */
-    fullScreen?: boolean;
+    fullScreen?: boolean | undefined;
     /** Доп. класс, если нужно */
-    className?: string;
-    threePointOffset?: boolean;
+    className?: string | undefined;
+    threePointOffset?: boolean | undefined;
 };
 
 const SplashScreen: React.FC<Props> = ({ label, fullScreen, className, threePointOffset }) => {

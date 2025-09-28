@@ -1,4 +1,4 @@
-// charts/ui/CharContainer/ChartCollection/FieldChart/tooltipBuilder.ts
+
 import { renderToStaticMarkup } from 'react-dom/server';
 import React from 'react';
 import ChartTooltip from './ChartTooltip';

@@ -1,4 +1,4 @@
-// charts/ui/CharContainer/ChartCollection/FieldChart/ChartTooltip.tsx
+
 import React from 'react';
 import styles from './ChartTooltip.module.css';
 import type {SeriesBinDto} from "@charts/shared/contracts/chart/Dtos/SeriesBinDto.ts";

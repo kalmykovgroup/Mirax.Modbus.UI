@@ -178,7 +178,7 @@ export function calculateOptimalBucket(params: BucketCalculationParams): BucketC
     const idealBucketMs = rangeMs / targetPoints;
 
     // Находим оптимальный bucket из доступных
-    let selectedBucket = availableBuckets[availableBuckets.length - 1];
+    let selectedBucket = availableBuckets[availableBuckets.length - 1]!;
     let reason: BucketCalculationResult['reason'] = 'optimal';
 
     // Стратегия выбора: ищем bucket, который даст количество точек близкое к целевому
@@ -200,7 +200,7 @@ export function calculateOptimalBucket(params: BucketCalculationParams): BucketC
     if (estimatedPoints < config.minTargetPoints) {
         const index = availableBuckets.indexOf(selectedBucket);
         if (index > 0) {
-            const smallerBucket = availableBuckets[index - 1];
+            const smallerBucket = availableBuckets[index - 1]!;
             const newPoints = Math.floor(rangeMs / smallerBucket);
 
             // Максимум 5000 точек для производительности
@@ -217,7 +217,7 @@ export function calculateOptimalBucket(params: BucketCalculationParams): BucketC
     if (estimatedPoints > MAX_POINTS) {
         // Ищем больший bucket
         for (let i = availableBuckets.length - 1; i >= 0; i--) {
-            const bucketMs = availableBuckets[i];
+            const bucketMs = availableBuckets[i]!;
             const points = Math.floor(rangeMs / bucketMs);
             if (points <= MAX_POINTS) {
                 selectedBucket = bucketMs;
@@ -328,8 +328,8 @@ export function findDataGaps(
     const sortedData = [...data].sort((a, b) => a.t.getTime() - b.t.getTime());
 
     for (let i = 1; i < sortedData.length; i++) {
-        const prevTime = sortedData[i - 1].t.getTime();
-        const currTime = sortedData[i].t.getTime();
+        const prevTime = sortedData[i - 1]!.t.getTime();
+        const currTime = sortedData[i]!.t.getTime();
         const gap = currTime - prevTime;
 
         // Если разрыв больше порогового значения

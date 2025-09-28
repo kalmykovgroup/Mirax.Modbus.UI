@@ -5,12 +5,11 @@ import type { SeriesBinDto } from '@charts/shared/contracts/chart/Dtos/SeriesBin
 import type { CoverageInterval, BucketsMs } from './chartsSlice';
 
 import {
-    ensureView,
-    ensureLevels,
-    setCurrentBucketMs,
+    updateView,
     upsertTiles,
     setFieldError,
-    setFieldLoading,
+    startLoading,
+    finishLoading,
 } from './chartsSlice';
 
 // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
@@ -110,7 +109,7 @@ export const testInitializeMultipleLevels = createAsyncThunk<
         }
     } else {
         // View не существует, инициализируем со стандартными уровнями
-        console.log('📝 View не инициализирован, создаем со стандартными уровнями...');
+        console.log('🔍 View не инициализирован, создаем со стандартными уровнями...');
         testLevels = [
             60 * 60 * 1000,   // 1 час
             5 * 60 * 1000,    // 5 минут
@@ -118,14 +117,14 @@ export const testInitializeMultipleLevels = createAsyncThunk<
         ];
 
         // Инициализируем view
-        dispatch(ensureView({
+        dispatch(updateView({
             field: fieldName,
             px: 1200,
             currentRange: timeRange,
             currentBucketsMs: existingView?.currentBucketsMs || testLevels[0],
         }));
 
-        dispatch(ensureLevels({
+        dispatch(initialLevels({
             field: fieldName,
             bucketList: testLevels,
         }));
@@ -159,7 +158,7 @@ export const testInitializeMultipleLevels = createAsyncThunk<
             }
         }
 
-        console.log(`  📝 План загрузки: ${chunksToLoad.length}/${numChunks} чанков`);
+        console.log(`  🔄 План загрузки: ${chunksToLoad.length}/${numChunks} чанков`);
 
         for (const j of chunksToLoad) {
             const chunkStart = from + j * chunkSize;
@@ -206,9 +205,10 @@ export const testInitializeMultipleLevels = createAsyncThunk<
 
             } else {
                 // 80% - успешная загрузка
-                dispatch(setFieldLoading({
+                dispatch(startLoading({
                     field: fieldName,
-                    loading: true
+                    type: 'initial',
+                    message: 'Загрузка данных...'
                 }));
 
                 // Имитируем загрузку
@@ -236,17 +236,17 @@ export const testInitializeMultipleLevels = createAsyncThunk<
 
                 console.log(`  ✅ Чанк ${j + 1}: ${bins.length} бинов (плотность ${(fillRate * 100).toFixed(0)}%)`);
 
-                dispatch(setFieldLoading({
+                dispatch(finishLoading({
                     field: fieldName,
-                    loading: false
+                    success: true
                 }));
             }
         }
 
         // Снимаем флаг загрузки
-        dispatch(setFieldLoading({
+        dispatch(finishLoading({
             field: fieldName,
-            loading: false
+            success: true
         }));
     }
 
@@ -318,7 +318,7 @@ export const testIncrementalLoad = createAsyncThunk<
             break;
         }
 
-        console.log(`📥 Загрузка дыры: ${formatMs(gap.fromMs)} - ${formatMs(gap.toMs)}`);
+        console.log(`🔥 Загрузка дыры: ${formatMs(gap.fromMs)} - ${formatMs(gap.toMs)}`);
 
         // Рандомно определяем результат загрузки
         const loadResult = Math.random();
@@ -355,9 +355,10 @@ export const testIncrementalLoad = createAsyncThunk<
         }
 
         // 75% - успешная загрузка
-        dispatch(setFieldLoading({
+        dispatch(startLoading({
             field: fieldName,
-            loading: true
+            type: 'zoom',
+            message: 'Дозагрузка данных...'
         }));
 
         // Имитируем сетевую задержку
@@ -379,9 +380,9 @@ export const testIncrementalLoad = createAsyncThunk<
         }));
 
         // Снимаем флаг загрузки
-        dispatch(setFieldLoading({
+        dispatch(finishLoading({
             field: fieldName,
-            loading: false
+            success: true
         }));
 
         // Обновляем текущее покрытие только для успешных загрузок
@@ -391,7 +392,7 @@ export const testIncrementalLoad = createAsyncThunk<
         console.log(`  ✅ Загружено ${bins.length} бинов (плотность ${(fillRate * 100).toFixed(0)}%), покрытие: ${currentPercent.toFixed(1)}%`);
     }
 
-    console.log('✨ TEST: Инкрементальная загрузка завершена');
+    console.log('\n✨ TEST: Инкрементальная загрузка завершена');
 });
 
 /**
@@ -448,7 +449,7 @@ export const testSwitchLevel = createAsyncThunk<
     // Проверяем, есть ли уже данные на новом уровне
     const targetTiles = view.seriesLevel[targetBucketMs];
     if (!targetTiles || targetTiles.length === 0) {
-        console.log('📥 Уровень пустой, загружаем начальные данные...');
+        console.log('🔥 Уровень пустой, загружаем начальные данные...');
 
         const template = state.charts.template;
         if (!template?.from || !template?.to) return;
@@ -467,9 +468,10 @@ export const testSwitchLevel = createAsyncThunk<
             toMs: loadEnd,
         };
 
-        dispatch(setFieldLoading({
+        dispatch(startLoading({
             field: fieldName,
-            loading: true
+            type: 'zoom',
+            message: 'Загрузка уровня...'
         }));
 
         await delay(800);
@@ -486,9 +488,9 @@ export const testSwitchLevel = createAsyncThunk<
             }],
         }));
 
-        dispatch(setFieldLoading({
+        dispatch(finishLoading({
             field: fieldName,
-            loading: false
+            success: true
         }));
 
         console.log(`✅ Загружено ${bins.length} бинов для нового уровня`);
@@ -544,11 +546,11 @@ export const testPanNavigation = createAsyncThunk<
     // Определяем размер шага панорамирования (20% от видимой области)
     const panStepSize = domainSpan * 0.2;
 
-    console.log(`📏 Шаг панорамирования: ${(panStepSize / (1000 * 60 * 60)).toFixed(2)} часов`);
+    console.log(`🔄 Шаг панорамирования: ${(panStepSize / (1000 * 60 * 60)).toFixed(2)} часов`);
 
     // Панорамирование влево
     if (direction === 'left' || direction === 'both') {
-        console.log('\n◀️ Панорамирование ВЛЕВО');
+        console.log('\n◀️ ПАНОРАМИРОВАНИЕ ВЛЕВО');
 
         for (let step = 1; step <= panSteps; step++) {
             console.log(`\n  Шаг ${step}/${panSteps} влево`);
@@ -569,9 +571,10 @@ export const testPanNavigation = createAsyncThunk<
             console.log(`  📍 Загружаем: ${formatMs(alignedStart)} - ${formatMs(alignedEnd)}`);
 
             // Показываем загрузку
-            dispatch(setFieldLoading({
+            dispatch(startLoading({
                 field: fieldName,
-                loading: true
+                type: 'background',
+                message: 'Загрузка области...'
             }));
 
             await delay(300 + Math.random() * 200);
@@ -590,9 +593,9 @@ export const testPanNavigation = createAsyncThunk<
                 }],
             }));
 
-            dispatch(setFieldLoading({
+            dispatch(finishLoading({
                 field: fieldName,
-                loading: false
+                success: true
             }));
 
             console.log(`  ✅ Загружено ${bins.length} бинов`);
@@ -601,7 +604,7 @@ export const testPanNavigation = createAsyncThunk<
 
     // Панорамирование вправо
     if (direction === 'right' || direction === 'both') {
-        console.log('\n▶️ Панорамирование ВПРАВО');
+        console.log('\n▶️ ПАНОРАМИРОВАНИЕ ВПРАВО');
 
         for (let step = 1; step <= panSteps; step++) {
             console.log(`\n  Шаг ${step}/${panSteps} вправо`);
@@ -639,9 +642,10 @@ export const testPanNavigation = createAsyncThunk<
                 }));
             } else {
                 // 90% - успешная загрузка
-                dispatch(setFieldLoading({
+                dispatch(startLoading({
                     field: fieldName,
-                    loading: true
+                    type: 'background',
+                    message: 'Загрузка области...'
                 }));
 
                 await delay(300 + Math.random() * 200);
@@ -659,9 +663,9 @@ export const testPanNavigation = createAsyncThunk<
                     }],
                 }));
 
-                dispatch(setFieldLoading({
+                dispatch(finishLoading({
                     field: fieldName,
-                    loading: false
+                    success: true
                 }));
 
                 console.log(`  ✅ Загружено ${bins.length} бинов`);
@@ -719,12 +723,13 @@ export const testLoadingErrors = createAsyncThunk<
             toMs: chunkEnd,
         };
 
-        console.log(`📥 Чанк ${i + 1}: ${scenario.status}`);
+        console.log(`🔥 Чанк ${i + 1}: ${scenario.status}`);
 
         // Показываем загрузку для визуальной демонстрации
-        dispatch(setFieldLoading({
+        dispatch(startLoading({
             field: fieldName,
-            loading: true
+            type: 'background',
+            message: `Загрузка чанка ${i + 1}/5...`
         }));
 
         if (scenario.delay > 0) {
@@ -771,18 +776,19 @@ export const testLoadingErrors = createAsyncThunk<
             console.log(`  ⏳ Оставлен в состоянии загрузки`);
         }
 
-        // Снимаем загрузку кроме последнего случая
+        // Снимаем флаг загрузки кроме последнего случая
         if (scenario.status !== 'loading') {
-            dispatch(setFieldLoading({
+            dispatch(finishLoading({
                 field: fieldName,
-                loading: false
+                success: scenario.status === 'success',
+                error: scenario.status === 'error' ? scenario.error : undefined
             }));
         }
     }
 
     // Устанавливаем общую ошибку поля для демонстрации
     dispatch(setFieldError({
-        field: fieldName,
+        fieldName: fieldName,
         error: 'Частичная загрузка данных: некоторые участки недоступны',
     }));
 

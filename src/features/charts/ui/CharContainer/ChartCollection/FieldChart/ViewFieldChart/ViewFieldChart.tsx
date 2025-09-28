@@ -5,16 +5,21 @@ import * as echarts from 'echarts';
 import type { ECharts, EChartsOption } from 'echarts';
 import styles from './ViewFieldChart.module.css';
 import classNames from 'classnames';
-import type { ChartStats } from "@charts/ui/CharContainer/types/ChartStats.ts";
-import { ChartHeader } from "@charts/ui/CharContainer/ChartHeader/ChartHeader.tsx";
 import type { TimeRange } from "@charts/store/chartsSlice.ts";
+import {type ChartStats, type LoadingState} from "@charts/ui/CharContainer/types.ts";
+import LoadingIndicator
+    from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/LoadingIndicator/LoadingIndicator.tsx";
+import {
+    ChartHeader
+} from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ChartHeader/ChartHeader.tsx";
+
 
 export interface ViewFieldChartProps {
-    domain: TimeRange;
+    originalRange: TimeRange;
     fieldName: string;
     chartOption: EChartsOption;
     stats: ChartStats;
-    loading: boolean;
+    loadingState: LoadingState;
     error?: string | undefined;
     info?: string | undefined;
     onChartReady: (chart: echarts.ECharts) => void;
@@ -23,8 +28,6 @@ export interface ViewFieldChartProps {
     onBrush?: ((params: any) => void) | undefined;
     onClick?: ((params: any) => void) | undefined;
     className?: string | undefined;
-    height: number;
-    loadingProgress?: number;
 }
 
 /**
@@ -34,7 +37,7 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                                                            fieldName,
                                                            chartOption,
                                                            stats,
-                                                           loading,
+                                                           loadingState,
                                                            error,
                                                            info,
                                                            onChartReady,
@@ -43,9 +46,7 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                                                            onBrush,
                                                            onClick,
                                                            className,
-                                                           height,
-                                                           domain,
-                                                           loadingProgress = 0
+                                                           originalRange,
                                                        }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -62,7 +63,8 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
     const pendingOptionRef = useRef<EChartsOption | null>(null);
     const pendingResizeRef = useRef(false);
 
-    // Инициализация графика - убираем лишние ограничения
+    // Инициализация графика - только один раз при монтировании
+    // В инициализации графика добавьте защиту для событий:
     useEffect(() => {
         if (!chartContainerRef.current || isInitializedRef.current) return;
 
@@ -83,9 +85,37 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                 // Устанавливаем начальные опции
                 chartInstance.setOption(chartOption, true);
 
-                // Подписываемся на события после небольшой задержки
+                // НОВОЕ: Отключаем события мыши до полной загрузки данных
+                chartInstance.setOption({
+                    tooltip: {
+                        trigger: 'none'
+                    },
+                    axisPointer: {
+                        show: false
+                    }
+                }, {
+                    notMerge: false
+                });
+
+                // Подписываемся на события с задержкой
                 setTimeout(() => {
                     if (!chartInstance || chartInstance.isDisposed()) return;
+
+                    // НОВОЕ: Включаем события только если есть данные
+                    const option = chartInstance.getOption() as any;
+                    const hasData = option?.series?.some((s: any) => s.data && s.data.length > 0);
+
+                    if (hasData) {
+                        // Восстанавливаем tooltip
+                        chartInstance.setOption({
+                            tooltip: chartOption.tooltip,
+                            axisPointer: {
+                                show: true
+                            }
+                        }, {
+                            notMerge: false
+                        });
+                    }
 
                     const handleDataZoom = (params: any) => {
                         if (!isProcessingRef.current) {
@@ -94,7 +124,7 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                     };
 
                     const handleClick = (params: any) => {
-                        if (!isProcessingRef.current) {
+                        if (!isProcessingRef.current && params.dataIndex !== undefined) {
                             onClick?.(params);
                         }
                     };
@@ -113,8 +143,20 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
 
                     // Уведомляем что график готов
                     onChartReady(chartInstance);
-                }, 100);
 
+                    // Cleanup
+                    return () => {
+                        chartInstance.off('datazoom', handleDataZoom);
+                        chartInstance.off('click', handleClick);
+                        if (onBrush) {
+                            chartInstance.off('brush', handleBrush);
+                        }
+                        chartInstance.dispose();
+                        chartInstanceRef.current = null;
+                        isInitializedRef.current = false;
+                        isProcessingRef.current = false;
+                    };
+                }, 200); // Увеличиваем задержку
             } finally {
                 isProcessingRef.current = false;
             }
@@ -235,14 +277,14 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
 
     // Управление состоянием скелетона
     useEffect(() => {
-        if (loading) {
+        if (loadingState.active) {
             setShowSkeleton(true);
         } else {
             // Плавное исчезновение скелетона
             const timer = setTimeout(() => setShowSkeleton(false), 300);
             clearTimeout(timer);
         }
-    }, [loading]);
+    }, [loadingState]);
 
     // ResizeObserver для адаптивности
     useEffect(() => {
@@ -411,7 +453,7 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                 minute: '2-digit'
             });
         };
-        return `${formatDate(domain.from)} - ${formatDate(domain.to)}`;
+        return `${formatDate(originalRange.from)} - ${formatDate(originalRange.to)}`;
     };
 
     return (
@@ -420,12 +462,11 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
             className={classNames(
                 styles.chartContainerWrapper,
                 isExpanded && styles.expanded,
-                loading && styles.loadingState,
                 error && styles.hasError,
                 className
             )}
         >
-            <div className={styles.chartContainer}>
+
                 <ChartHeader fieldName={fieldName} />
 
                 {/* Заголовок и статистика */}
@@ -488,21 +529,13 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                 </div>
 
                 {/* График */}
-                <div
-                    className={styles.chartWrapper}
-                    style={{ height: !isExpanded ? height : undefined }}
-                >
+                <div className={styles.chartWrapper} >
+
                     {/* Минималистичный индикатор загрузки */}
-                    {loading && (
-                        <div className={styles.loadingIndicator}>
-                            <div className={styles.loadingDots}>
-                                <div className={styles.loadingDot}></div>
-                                <div className={styles.loadingDot}></div>
-                                <div className={styles.loadingDot}></div>
-                            </div>
-                            <span className={styles.loadingText}>Загрузка</span>
-                        </div>
-                    )}
+                    <div className={styles.indicationContainer}>
+                        <LoadingIndicator state={loadingState} position="aboveAxis" />
+                    </div>
+
 
                     {/* Скелетон для первичной загрузки */}
                     {showSkeleton && !error && (
@@ -511,18 +544,9 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                         </div>
                     )}
 
-                    {/* Прогресс-бар */}
-                    {loading && loadingProgress > 0 && (
-                        <div className={styles.progressBar}>
-                            <div
-                                className={styles.progressBarFill}
-                                style={{ width: `${loadingProgress}%` }}
-                            />
-                        </div>
-                    )}
 
                     {/* Оверлей ошибки */}
-                    {error && !loading && (
+                    {error && !loadingState.active && (
                         <div className={styles.errorOverlay}>
                             <span className={styles.errorIcon}>⚠️</span>
                             <span className={styles.errorText}>{error}</span>
@@ -536,7 +560,7 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                     )}
 
                     {/* Информационное сообщение */}
-                    {!error && !loading && info && (
+                    {!error && !loadingState.active && info && (
                         <div className={styles.infoOverlay}>
                             <span>ℹ️ {info}</span>
                         </div>
@@ -547,7 +571,7 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                         ref={chartContainerRef}
                         className={classNames(
                             styles.chartContent,
-                            loading && styles.loading
+                            loadingState.active && styles.loading
                         )}
                         style={{
                             width: '100%',
@@ -556,7 +580,7 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                         }}
                     />
                 </div>
-            </div>
+
         </div>
     );
 };

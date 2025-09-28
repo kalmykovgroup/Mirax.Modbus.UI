@@ -6,7 +6,6 @@ import {
     selectFieldView,
     selectTemplateDomain,
 } from '@charts/store/selectors';
-import { LevelRow } from '@charts/ui/CharContainer/ChartHeader/LevelRow/LevelRow';
 import {
     runFullTestSuite,
     testInitializeMultipleLevels,
@@ -16,6 +15,9 @@ import {
     testPanNavigation
 } from '@charts/store/thunks.test';
 import styles from './ChartHeader.module.css';
+import {
+    LevelRow
+} from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ChartHeader/LevelRow/LevelRow.tsx";
 
 export type HeaderProps = {
     fieldName: FieldName;

@@ -1,7 +1,11 @@
 import React from "react";
-import { TimelineCoverageBar } from "@charts/ui/CharContainer/ChartHeader/TimelineCoverageBar/TimelineCoverageBar.tsx";
-import type { LevelInfo } from "@charts/ui/CharContainer/ChartHeader/ChartHeader.tsx";
 import styles from "./LevelRow.module.css";
+import type {
+    LevelInfo
+} from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ChartHeader/ChartHeader.tsx";
+import {
+    TimelineCoverageBar
+} from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ChartHeader/TimelineCoverageBar/TimelineCoverageBar.tsx";
 
 export const LevelRow: React.FC<{
     level: LevelInfo;

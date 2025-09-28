@@ -10,8 +10,9 @@ import CollapsibleSection from "@charts/ui/Collapse/CollapsibleSection.tsx";
 import styles from "./ChartsPage.module.css"
 import {ChartContainer} from "@charts/ui/CharContainer/ChartContainer.tsx";
 import {useCallback} from "react";
-import {selectTimeSettings, setTimeSettings, type TimeSettings} from "@charts/store/chartsSettingsSlice.ts";
+import {selectTimeSettings} from "@charts/store/selectors.ts";
 import TimeZonePicker from "@charts/ui/TimeZonePicker/TimeZonePicker.tsx";
+import {setTimeSettings, type TimeSettings} from "@charts/store/chartsSettingsSlice.ts";
 export default function ChartsPage() {
     const dispatch = useAppDispatch();
     // Получаем настройки временной зоны из Redux store
@@ -23,7 +24,7 @@ export default function ChartsPage() {
     }, [dispatch]);
 
     const onExecuteDone = (completed: ResolvedCharReqTemplate) =>{
-         dispatch(setResolvedCharReqTemplate(completed))
+         dispatch(setResolvedCharReqTemplate({template: completed}))
     }
 
 

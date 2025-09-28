@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useAppSelector } from '@/store/hooks';
-import { selectTimeSettings } from '@charts/store/chartsSettingsSlice';
+import { selectTimeSettings } from '@charts/store/selectors.ts';
 import {
     getTimezoneOffsetFromSettings,
     toLocalInputValue,

@@ -1,13 +1,19 @@
 /* charts/ui/CharContainer/FieldChart/ViewFieldChart.module.css */
 
-.chartContainerWrapper{
+.chartContainerWrapper {
     position: relative;
     background: #ffffff;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Это теперь безопасно */
+    min-height: 0; /* КРИТИЧЕСКИ ВАЖНО для flex */
 }
+
+/* Убираем лишний .chartContainer - он не нужен */
 
 .header {
     display: flex;
@@ -16,20 +22,26 @@
     padding: 12px 16px;
     background: #fafafa;
     border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0; /* Заголовок не сжимается */
 }
 
-.chartContainer{
+.chartWrapper {
     position: relative;
-    height: 100%;
-    display: flex;
+    flex: 1; /* Занимает всё оставшееся место */
+    min-height: 0; /* КРИТИЧЕСКИ ВАЖНО - позволяет сжиматься */
+    overflow: hidden;
+    display: flex; /* Делаем flex-контейнером */
     flex-direction: column;
 }
 
-.chartWrapper{
-    position: relative;
+.chartContent {
+    width: 100%;
     height: 100%;
+    flex: 1; /* Растягивается на всю доступную высоту */
+    min-height: 0; /* Позволяет ECharts корректно вычислить размеры */
 }
 
+/* Для expanded состояния */
 .expanded {
     position: fixed;
     top: 20px;
@@ -38,13 +50,71 @@
     bottom: 20px;
     z-index: 1000;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    display: flex;
-    flex-direction: column;
+    height: auto !important;
 }
 
-.chartContainerWrapper:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+/* ===================================================
+   МИНИМАЛЬНАЯ ИНДИКАЦИЯ ЗАГРУЗКИ
+   =================================================== */
+
+.loadingBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    margin-left: 8px;
+    background: #e6f7ff;
+    color: #1890ff;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    animation: pulse 2s infinite;
 }
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.8;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+.topProgressBar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(24, 144, 255, 0.1);
+    z-index: 10;
+    pointer-events: none;
+}
+
+.topProgressFill {
+    height: 100%;
+    background: linear-gradient(90deg, #1890ff, #52c41a);
+    transition: width 0.3s ease;
+    box-shadow: 0 0 2px rgba(24, 144, 255, 0.5);
+}
+
+.initialPlaceholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    z-index: 1;
+}
+
+.placeholderText {
+    color: #8c8c8c;
+    font-size: 14px;
+}
+
+/* ===================================================
+   СТИЛИ ЗАГОЛОВКА И СТАТИСТИКИ
+   =================================================== */
 
 .titleSection {
     display: flex;
@@ -79,6 +149,11 @@
     padding: 2px 8px;
     background: #e5e7eb;
     border-radius: 4px;
+}
+
+.dateRange {
+    font-size: 12px;
+    color: #6b7280;
 }
 
 .statsSection {
@@ -128,155 +203,15 @@
     border-color: #d1d5db;
 }
 
-.infoOverlay{
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    padding: 10px 20px;
-    background-color: rgba(255, 255, 255, 0.9);
-    border: 1px solid #d9d9d9;
-    border-radius: 4px;
-    color: #666;
-    font-size: 14px;
-    pointer-events: none;
-    z-index: 10;
+.actionBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
-/* УЛУЧШЕННАЯ ЗАГРУЗКА БЕЗ БЛОКИРОВКИ СКРОЛЛА */
-.loadingState {
-    position: relative;
-}
+/* ===================================================
+   ОШИБКИ И ИНФОРМАЦИЯ
+   =================================================== */
 
-.loadingState::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.7) 50%,
-    rgba(255, 255, 255, 0) 100%);
-    pointer-events: none; /* Критически важно! */
-    z-index: 5;
-}
-
-/* Минималистичный индикатор загрузки в углу */
-.loadingIndicator {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    pointer-events: none; /* Не блокирует события */
-    z-index: 20;
-    animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateX(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-/* Анимированные точки загрузки */
-.loadingDots {
-    display: flex;
-    gap: 4px;
-}
-
-.loadingDot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #3b82f6;
-    animation: pulse 1.4s infinite ease-in-out both;
-}
-
-.loadingDot:nth-child(1) {
-    animation-delay: -0.32s;
-}
-
-.loadingDot:nth-child(2) {
-    animation-delay: -0.16s;
-}
-
-@keyframes pulse {
-    0%, 80%, 100% {
-        transform: scale(0.8);
-        opacity: 0.5;
-    }
-    40% {
-        transform: scale(1.2);
-        opacity: 1;
-    }
-}
-
-.loadingText {
-    font-size: 12px;
-    color: #6b7280;
-    font-weight: 500;
-}
-
-/* Скелетон для контента графика */
-.skeleton {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1;
-}
-
-.skeletonChart {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-            90deg,
-            #f3f4f6 25%,
-            #e5e7eb 37%,
-            #f3f4f6 50%
-    );
-    background-size: 400% 100%;
-    animation: shimmer 2s infinite ease-in-out;
-}
-
-@keyframes shimmer {
-    0% {
-        background-position: 100% 50%;
-    }
-    100% {
-        background-position: -100% 50%;
-    }
-}
-
-/* Прогресс-бар внизу (опциональный) */
-.progressBar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #e5e7eb;
-    pointer-events: none;
-    z-index: 25;
-}
-
-.progressBarFill {
-    height: 100%;
-    background: linear-gradient(90deg, #3b82f6, #60a5fa);
-    transition: width 0.3s ease;
-    box-shadow: 0 0 4px rgba(59, 130, 246, 0.5);
-}
-
-/* Стили для ошибок */
 .errorOverlay {
     position: absolute;
     top: 0;
@@ -289,7 +224,7 @@
     justify-content: center;
     gap: 12px;
     background: rgba(255, 255, 255, 0.95);
-    z-index: 10;
+    z-index: 100;
 }
 
 .errorIcon {
@@ -316,25 +251,64 @@
     background: #2563eb;
 }
 
-/* Затухание графика при загрузке */
-.chartContent {
-    transition: opacity 0.3s ease;
+.infoOverlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 10px 20px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    color: #666;
+    font-size: 14px;
+    pointer-events: none;
+    z-index: 10;
 }
 
-.chartContent.loading {
-    opacity: 0.3;
-    filter: blur(1px);
+.hasError {
+    border-color: #fecaca;
+    background: #fef2f2;
 }
 
-/* Адаптивный индикатор для мобильных */
-@media (max-width: 640px) {
-    .loadingIndicator {
-        top: 8px;
-        right: 8px;
-        padding: 4px 8px;
+.indicationContainer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 50;
+}
+
+/* Скелетон для первичной загрузки */
+.skeleton {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #fafafa;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.skeletonChart {
+    width: 90%;
+    height: 80%;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
     }
-
-    .loadingText {
-        display: none;
+    100% {
+        background-position: -200% 0;
     }
 }

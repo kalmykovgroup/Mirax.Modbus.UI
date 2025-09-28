@@ -1,96 +1,92 @@
 // charts/ui/CharContainer/ChartCollection/ChartCollection.tsx
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import {fetchMultiSeriesInit } from '@charts/store/thunks';
-import { selectTimeSettings } from '@charts/store/chartsSettingsSlice';
+import { fetchMultiSeriesInit } from '@charts/store/thunks';
+import { selectTimeSettings, selectIsDataLoaded } from '@charts/store/selectors.ts';
 import type { ResolvedCharReqTemplate } from '@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate';
 import type { GetMultiSeriesRequest } from '@charts/shared/contracts/chart/Dtos/Requests/GetMultiSeriesRequest';
 import styles from './ChartCollection.module.css';
-import type {ChartEvent} from "@charts/ui/CharContainer/types/ChartEvent.ts";
-import {formatDateWithTimezone} from "@charts/ui/TimeZonePicker/timezoneUtils.ts";
+import { formatDateWithTimezone } from "@charts/ui/TimeZonePicker/timezoneUtils.ts";
+import {
+    ResizableContainer,
+    SyncGroupControl
+} from "@charts/ui/CharContainer/ChartCollection/ResizableContainer/ResizableContainer.tsx";
 import FieldChart from "@charts/ui/CharContainer/ChartCollection/FieldChart/FieldChart.tsx";
-import {setCurrentBucketMs, updateCurrentRange} from "@charts/store/chartsSlice.ts";
-import { loadMissingData } from "@charts/ui/CharContainer/ChartCollection/loadMissingData.ts";
-import {selectIsDataLoaded} from "@charts/store/selectors.ts";
-
 
 interface ChartCollectionProps {
     template: ResolvedCharReqTemplate;
 }
 
-/**
- * АРХИТЕКТУРА РАБОТЫ С ДАТАМИ:
- *
- * 1. template.from/to - это ЛОКАЛЬНЫЕ даты пользователя (как он их видит в UI)
- * 2. В store храним ЛОКАЛЬНЫЕ даты
- * 3. Преобразование в UTC происходит ТОЛЬКО в thunk перед отправкой
- * 4. НЕ делаем преобразования в компонентах
- */
 export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) => {
     const dispatch = useAppDispatch();
     const containerRef = useRef<HTMLDivElement>(null);
-    const eventLogRef = useRef<ChartEvent[]>([]);
     const lastRequestRef = useRef<string>('');
+    const lastPxRef = useRef<number | undefined>(undefined);
+    const isInitializedRef = useRef(false);
 
-    // Изначально НЕ устанавливаем ширину, ждём реальное измерение
+    // Измеряем общую ширину коллекции для первичной загрузки
     const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
-    const [containerHeight, setContainerHeight] = useState(500);
+    // Отслеживаем только высоту через ResizableContainer
+    const [containerHeight, setContainerHeight] = useState<number>(800);
 
-    const [isContainerReady, setIsContainerReady] = useState(false);
-
-    // Добавляем состояние для отслеживания загрузки по полям
-    const [fieldsLoadingState, setFieldsLoadingState] = useState<Record<string, boolean>>({});
-
-    // Получаем настройки временной зоны из Redux store
     const timeSettings = useAppSelector(selectTimeSettings);
     const isDataLoaded = useAppSelector(selectIsDataLoaded);
 
     useEffect(() => {
-        // Сбрасываем ключ последнего запроса для перезагрузки данных
         lastRequestRef.current = '';
     }, [timeSettings]);
 
-    // Измеряем ширину контейнера
+    // Измеряем общую ширину коллекции
     useEffect(() => {
         if (!containerRef.current) return;
 
-        // Получаем начальную ширину синхронно
-        const initialWidth = containerRef.current.offsetWidth;
-        if (initialWidth > 0) {
-            setContainerWidth(Math.max(640, Math.round(initialWidth)));
-            setIsContainerReady(true);
-        }
+        const measureWidth = () => {
+            if (!containerRef.current) return;
+            const width = containerRef.current.offsetWidth;
+            if (width > 0) {
+                const newWidth = Math.max(640, Math.round(width));
+                setContainerWidth(newWidth);
+            }
+        };
 
-        // Подписываемся на изменения размера
+        // Начальное измерение
+        measureWidth();
+
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 const { width } = entry.contentRect;
                 if (width > 0) {
-                    setContainerWidth(Math.max(640, Math.round(width)));
-                    if (!isContainerReady) {
-                        setIsContainerReady(true);
-                    }
+                    const newWidth = Math.max(640, Math.round(width));
+                    // Только обновляем если ширина действительно изменилась
+                    setContainerWidth(prev => {
+                        if (prev !== newWidth) {
+                            return newWidth;
+                        }
+                        return prev;
+                    });
                 }
             }
         });
 
         resizeObserver.observe(containerRef.current);
         return () => resizeObserver.disconnect();
-    }, [isContainerReady]);
+    }, []);
 
-    // Загружаем данные ТОЛЬКО когда известна реальная ширина
+    // Сохраняем текущую ширину для отслеживания изменений
     useEffect(() => {
-        // Проверяем, что контейнер готов и ширина определена
-        if (!isContainerReady || containerWidth === undefined) {
+        if (containerWidth !== undefined) {
+            lastPxRef.current = containerWidth;
+        }
+    }, [containerWidth]);
+
+    // Загружаем данные когда известна ширина и есть template
+    useEffect(() => {
+        if (containerWidth === undefined || !template?.from || !template?.to) {
             return;
         }
 
-        if (!template?.from || !template?.to) {
-            return;
-        }
-
-        // Создаем уникальный ключ запроса
+        // Только при первой инициализации или изменении ключевых параметров
         const requestKey = [
             template.from.toISOString(),
             template.to.toISOString(),
@@ -99,142 +95,50 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
             timeSettings.useTimeZone
         ].join('-');
 
-        // Пропускаем дубликаты
         if (lastRequestRef.current === requestKey) {
             return;
         }
 
         lastRequestRef.current = requestKey;
 
-        if(!isDataLoaded){
-            // Передаем ЛОКАЛЬНЫЕ даты в запрос
-            // Thunk сам преобразует их в UTC если нужно
+        // Загружаем данные только если они еще не загружены или изменились параметры
+        if (!isDataLoaded || !isInitializedRef.current) {
             const request: GetMultiSeriesRequest = {
                 template: template,
-                from: template.from,  // Локальная дата
-                to: template.to,      // Локальная дата
+                from: template.from,
+                to: template.to,
                 px: containerWidth
             };
 
             dispatch(fetchMultiSeriesInit(request));
+            isInitializedRef.current = true;
         }
-
-
-    }, [dispatch, template, containerWidth, timeSettings, isContainerReady]);
-
-
-// Обновленный обработчик событий:
-
-    const handleChartEvent = useCallback(async (event: ChartEvent) => {
-        eventLogRef.current.push(event);
-
-        switch (event.type) {
-            case 'ready':
-                break;
-
-            case 'zoom':
-
-                const newFrom = new Date(event.payload.from);
-                const newTo = new Date(event.payload.to);
-
-                // Обновляем текущий диапазон
-                dispatch(updateCurrentRange({
-                    field: event.field.name,
-                    range: { from: newFrom, to: newTo }
-                }));
-
-                // Если нужна смена уровня - меняем
-                if (event.payload.needsLevelSwitch && event.payload.suggestedBucket) {
-                    dispatch(setCurrentBucketMs({
-                        field: event.field.name,
-                        bucketMs: event.payload.suggestedBucket
-                    }));
-                }
-
-                // ЕДИНСТВЕННЫЙ вызов loadMissingData
-                // Он сам определит какой bucket использовать из view
-                const loaded = await dispatch(loadMissingData({
-                    field: event.field,
-                    containerWidth : containerWidth!,
-                    targetBucketMs: event.payload.suggestedBucket // может быть undefined
-                })).unwrap();
-
-                if (loaded) {
-                    console.log(`[ChartCollection] Загружены данные для ${event.field.name}`);
-                }
-                break;
-
-
-            case 'dataRequest':
-                console.log(`Это событие информационное о начале загрузки ${event.field.name}`);
-                if (event.payload?.reason === 'loading') {
-                    setFieldsLoadingState(prev => ({
-                        ...prev,
-                        [event.field.name]: true
-                    }));
-                }
-                break;
-
-            case 'error':
-                console.error(`Ошибка в ${event.field.name}:`, event.payload);
-                setFieldsLoadingState(prev => ({
-                    ...prev,
-                    [event.field.name]: false
-                }));
-                break;
-        }
-    }, [dispatch, containerWidth]);
-
-    // Вычисляем общее состояние загрузки
-    const isAnyFieldLoading = Object.values(fieldsLoadingState).some(loading => loading);
+    }, [dispatch, template, containerWidth, timeSettings, isDataLoaded]);
 
     if (!template) {
         return (
-            <div className={styles.container}>
-                <div className={styles.emptyState}>Нет данных для отображения</div>
+            <div className={styles.emptyState}>
+                Нет данных для отображения
             </div>
         );
     }
 
-    // Показываем индикатор загрузки, пока контейнер не измерен
-    if (!isContainerReady || containerWidth === undefined) {
-        return (
-            <div ref={containerRef} className={styles.container}>
-                <div className={styles.header}>
-                    <h2>Графики данных</h2>
-                    <div className={styles.info}>
-                        <span>Инициализация...</span>
-                    </div>
-                </div>
-                <div className={styles.loadingState}>
-                    Измерение контейнера...
-                </div>
-            </div>
-        );
-    }
-
+    const groupId = "chart-collection";
 
     return (
         <div ref={containerRef} className={styles.chartCollectionContainer}>
+            <SyncGroupControl groupId={groupId} />
+
             <div className={styles.header}>
                 <h2>Графики данных</h2>
                 <div className={styles.info}>
                     <span>Полей: {template.selectedFields.length}</span>
                     <span>Ширина: {containerWidth}px</span>
-                    <span>Данные: {isDataLoaded ? '✓' : '⏳'}</span>
-                    <span>События: {eventLogRef.current.length}</span>
-                    {/* Добавляем общий индикатор загрузки */}
-                    {isAnyFieldLoading && (
-                        <span className={styles.loadingIndicator}>
-                            🔄 Загрузка уровня...
-                        </span>
-                    )}
+                    <span>Данные: {isDataLoaded ? '✓' : '⏺'}</span>
                 </div>
             </div>
 
-            {/* Панель управления временной зоной */}
             <div className={styles.controlPanel}>
-                {/* Отображение текущего диапазона */}
                 <div className={styles.dateRange}>
                     <span className={styles.dateLabel}>Диапазон (локальное время):</span>
                     <span className={styles.dateValue}>
@@ -250,23 +154,30 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
                         </span>
                     )}
                 </div>
-
             </div>
 
             <div className={styles.chartsGrid}>
-                {template.selectedFields.map((field) => (
-                    <FieldChart
-                        key={field.name}
-                        field={field}
-                        template={template}
-                        onEvent={handleChartEvent}
-                        containerWidth={containerWidth}
-                        containerHeight={containerHeight}
-                    />
-                ))}
+                {containerWidth && template.selectedFields.map((field) => {
+
+                  return (
+                        <ResizableContainer
+                            key={field.name}
+                            groupId={groupId}
+                            defaultHeight={containerHeight}
+                            minHeight={300}
+                            maxHeight={1000}
+                            onHeightChange={setContainerHeight}
+                        >
+                            <FieldChart
+                                field={field}
+                                template={template}
+                                containerWidth={containerWidth}
+                                containerHeight={containerHeight}
+                            />
+                        </ResizableContainer>
+                    );
+                })}
             </div>
         </div>
     );
 };
-
-export default ChartCollection;

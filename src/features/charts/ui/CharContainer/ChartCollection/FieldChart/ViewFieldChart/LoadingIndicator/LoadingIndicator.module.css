@@ -1,0 +1,107 @@
+/* LoadingIndicator.module.css */
+
+/* Контейнер индикатора */
+.container {
+    position: absolute;
+    bottom: 40px; /* Размещаем над осью X (обычно ось занимает ~40px) */
+    left: 60px;   /* Отступ слева для оси Y */
+    right: 20px;  /* Отступ справа */
+    height: 3px;
+    background: rgba(0, 0, 0, 0.05);
+    z-index: 100;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* Альтернативное расположение - под датами */
+.containerBottom {
+    position: absolute;
+    bottom: 10px; /* Под осью X */
+    left: 60px;
+    right: 20px;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.05);
+    z-index: 100;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* Расположение над графиком */
+.containerTop {
+    position: absolute;
+    top: 10px;    /* Сверху графика */
+    left: 60px;
+    right: 20px;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.05);
+    z-index: 100;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* Полоса прогресса с определенным значением */
+.progressBar {
+    height: 100%;
+    background: linear-gradient(
+            90deg,
+            #3b82f6 0%,
+            #8b5cf6 25%,
+            #ec4899 50%,
+            #f59e0b 75%,
+            #10b981 100%
+    );
+    background-size: 200% 100%;
+    animation: colorShift 3s ease infinite, moveProgress 2s ease-in-out infinite;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+    border-radius: 2px;
+}
+
+/* Индикатор неопределенного прогресса */
+.indeterminate {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 30%;
+    background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(59, 130, 246, 0.8),
+            transparent
+    );
+    animation: indeterminate 1.5s linear infinite;
+}
+
+/* Анимация смены цветов */
+@keyframes colorShift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Анимация пульсации полосы */
+@keyframes moveProgress {
+    0%, 100% {
+        transform: translateX(0) scaleX(1);
+    }
+    50% {
+        transform: translateX(5px) scaleX(1.05);
+    }
+}
+
+/* Анимация неопределенного прогресса */
+@keyframes indeterminate {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(400%);
+    }
+}
