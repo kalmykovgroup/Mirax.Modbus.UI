@@ -332,7 +332,8 @@ const chartsSlice = createSlice({
                     console.log("setPx", view.px)
                 }
             });
-        }
+        },
+
     },
 });
 

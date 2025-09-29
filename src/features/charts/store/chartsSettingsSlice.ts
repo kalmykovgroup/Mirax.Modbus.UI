@@ -15,7 +15,7 @@ export type ChartBucketingConfig = {
 }
 
 const MIN_TARGET_POINTS = 20;
-const TARGET_POINTS_PER_PX = 0.1;
+const TARGET_POINTS_PER_PX = 0.05;
 const NICE_BUCKETS_MS = [
     1000,        // 1 секунда
     2000,        // 2 секунды

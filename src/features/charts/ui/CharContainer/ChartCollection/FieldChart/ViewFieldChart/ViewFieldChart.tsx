@@ -1,18 +1,16 @@
-// charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ViewFieldChart.tsx
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as echarts from 'echarts';
-import type { ECharts, EChartsOption } from 'echarts';
+import type {ECharts, EChartsOption, SeriesOption} from 'echarts';
 import styles from './ViewFieldChart.module.css';
 import classNames from 'classnames';
 import type { TimeRange } from "@charts/store/chartsSlice.ts";
-import {type ChartStats, type LoadingState} from "@charts/ui/CharContainer/types.ts";
-import LoadingIndicator
-    from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/LoadingIndicator/LoadingIndicator.tsx";
-import {
-    ChartHeader
-} from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ChartHeader/ChartHeader.tsx";
-
+import {type ChartStats, type LoadingState, LoadingType} from "@charts/ui/CharContainer/types.ts";
+import LoadingIndicator from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/LoadingIndicator/LoadingIndicator.tsx";
+import { ChartHeader } from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ChartHeader/ChartHeader.tsx";
+import DataQualityIndicator from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/DataQualityIndicator/DataQualityIndicator.tsx";
+import type {DataQuality} from "@charts/store/DataProxyService.ts";
+import ChartToggles
+    from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ChartToggles/ChartToggles.tsx";
 
 export interface ViewFieldChartProps {
     originalRange: TimeRange;
@@ -22,17 +20,33 @@ export interface ViewFieldChartProps {
     loadingState: LoadingState;
     error?: string | undefined;
     info?: string | undefined;
+
+    dataQuality?: DataQuality | undefined;
+    isStale?: boolean | undefined;
+    dataCoverage?: number | undefined;
+    sourceBucketMs?: number | undefined;
+    targetBucketMs?: number | undefined;
+
     onChartReady: (chart: echarts.ECharts) => void;
     onZoom: (params: any) => void;
     onResize: (width: number, height: number) => void;
     onBrush?: ((params: any) => void) | undefined;
     onClick?: ((params: any) => void) | undefined;
     className?: string | undefined;
+
+    showMin: boolean,
+    showMax: boolean,
+    showArea: boolean,
+    setShowMin : (showMin: boolean) => void,
+    setShowMax : (showMax: boolean) => void,
+    setShowArea : (showArea: boolean) => void,
+
 }
 
-/**
- * Презентационный компонент для отображения графика поля
- */
+function isSeriesArray(x: SeriesOption | SeriesOption[] | undefined): x is SeriesOption[] {
+    return Array.isArray(x);
+}
+
 const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                                                            fieldName,
                                                            chartOption,
@@ -40,6 +54,11 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                                                            loadingState,
                                                            error,
                                                            info,
+                                                           dataQuality,
+                                                           isStale,
+                                                           dataCoverage,
+                                                           sourceBucketMs,
+                                                           targetBucketMs,
                                                            onChartReady,
                                                            onZoom,
                                                            onResize,
@@ -47,6 +66,12 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                                                            onClick,
                                                            className,
                                                            originalRange,
+                                                           showMin,
+                                                           showMax,
+                                                           showArea,
+                                                           setShowMin,
+                                                           setShowMax,
+                                                           setShowArea
                                                        }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -54,314 +79,132 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
     const [isExpanded, setIsExpanded] = useState(false);
     const [showSkeleton, setShowSkeleton] = useState(true);
 
-    // Флаги для управления обновлениями
     const isInitializedRef = useRef(false);
     const lastOptionHashRef = useRef<string>('');
 
-    // Флаги для предотвращения одновременных операций
-    const isProcessingRef = useRef(false);
-    const pendingOptionRef = useRef<EChartsOption | null>(null);
-    const pendingResizeRef = useRef(false);
-
-    // Инициализация графика - только один раз при монтировании
-    // В инициализации графика добавьте защиту для событий:
+    // Инициализация графика - только один раз
     useEffect(() => {
         if (!chartContainerRef.current || isInitializedRef.current) return;
 
         const initChart = () => {
             if (!chartContainerRef.current) return;
 
-            try {
-                isProcessingRef.current = true;
-
-                const chartInstance = echarts.init(chartContainerRef.current, undefined, {
-                    renderer: 'canvas',
-                    useDirtyRect: true
-                });
-
-                chartInstanceRef.current = chartInstance;
-                isInitializedRef.current = true;
-
-                // Устанавливаем начальные опции
-                chartInstance.setOption(chartOption, true);
-
-                // НОВОЕ: Отключаем события мыши до полной загрузки данных
-                chartInstance.setOption({
-                    tooltip: {
-                        trigger: 'none'
-                    },
-                    axisPointer: {
-                        show: false
-                    }
-                }, {
-                    notMerge: false
-                });
-
-                // Подписываемся на события с задержкой
-                setTimeout(() => {
-                    if (!chartInstance || chartInstance.isDisposed()) return;
-
-                    // НОВОЕ: Включаем события только если есть данные
-                    const option = chartInstance.getOption() as any;
-                    const hasData = option?.series?.some((s: any) => s.data && s.data.length > 0);
-
-                    if (hasData) {
-                        // Восстанавливаем tooltip
-                        chartInstance.setOption({
-                            tooltip: chartOption.tooltip,
-                            axisPointer: {
-                                show: true
-                            }
-                        }, {
-                            notMerge: false
-                        });
-                    }
-
-                    const handleDataZoom = (params: any) => {
-                        if (!isProcessingRef.current) {
-                            onZoom(params);
-                        }
-                    };
-
-                    const handleClick = (params: any) => {
-                        if (!isProcessingRef.current && params.dataIndex !== undefined) {
-                            onClick?.(params);
-                        }
-                    };
-
-                    const handleBrush = (params: any) => {
-                        if (!isProcessingRef.current) {
-                            onBrush?.(params);
-                        }
-                    };
-
-                    chartInstance.on('datazoom', handleDataZoom);
-                    chartInstance.on('click', handleClick);
-                    if (onBrush) {
-                        chartInstance.on('brush', handleBrush);
-                    }
-
-                    // Уведомляем что график готов
-                    onChartReady(chartInstance);
-
-                    // Cleanup
-                    return () => {
-                        chartInstance.off('datazoom', handleDataZoom);
-                        chartInstance.off('click', handleClick);
-                        if (onBrush) {
-                            chartInstance.off('brush', handleBrush);
-                        }
-                        chartInstance.dispose();
-                        chartInstanceRef.current = null;
-                        isInitializedRef.current = false;
-                        isProcessingRef.current = false;
-                    };
-                }, 200); // Увеличиваем задержку
-            } finally {
-                isProcessingRef.current = false;
+            // Проверяем и удаляем существующий экземпляр
+            const existingChart = echarts.getInstanceByDom(chartContainerRef.current);
+            if (existingChart && !existingChart.isDisposed()) {
+                existingChart.dispose();
             }
+
+            const chartInstance = echarts.init(chartContainerRef.current, undefined, {
+                renderer: 'canvas',
+                useDirtyRect: true
+            });
+
+            chartInstanceRef.current = chartInstance;
+            isInitializedRef.current = true;
+
+            // Устанавливаем начальные опции
+            chartInstance.setOption(chartOption, true);
+
+            // Подписываемся на события
+            chartInstance.on('dataZoom', (params: any) => {
+                onZoom(params);
+            });
+
+            chartInstance.on('click', (params: any) => {
+                if (params.dataIndex !== undefined) {
+                    onClick?.(params);
+                }
+            });
+
+            if (onBrush) {
+                chartInstance.on('brush', (params: any) => {
+                    onBrush(params);
+                });
+            }
+
+            // Уведомляем что график готов
+            onChartReady(chartInstance);
         };
 
         requestAnimationFrame(initChart);
-    }, []);
 
-    // В useEffect для обновления опций графика (строки ~150-200):
+        return () => {
+            if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
+                chartInstanceRef.current.dispose();
+            }
+            chartInstanceRef.current = null;
+            isInitializedRef.current = false;
+        };
+    }, []); // Только при монтировании
+
+    // Обновление опций графика
     useEffect(() => {
         if (!chartInstanceRef.current || !isInitializedRef.current) return;
+        if (chartInstanceRef.current.isDisposed()) return;
 
+        // Создаем простой хеш для проверки изменений
         const optionHash = JSON.stringify({
-            series: chartOption.series,
-            xAxis: chartOption.xAxis,
-            yAxis: chartOption.yAxis
+            seriesLength: isSeriesArray(chartOption.series) ? chartOption.series.length : chartOption.series ? 1 : 0,
+            firstSeriesLength: (chartOption.series as any)?.[0]?.data?.length || 0
         });
 
-        if (optionHash !== lastOptionHashRef.current) {
-            lastOptionHashRef.current = optionHash;
-
-            const updateChart = () => {
-                if (!chartInstanceRef.current || chartInstanceRef.current.isDisposed()) return;
-
-                if (isProcessingRef.current) {
-                    pendingOptionRef.current = chartOption;
-                    return;
-                }
-
-                // Используем микрозадачу для отложенного выполнения
-                queueMicrotask(() => {
-                    if (!chartInstanceRef.current || chartInstanceRef.current.isDisposed()) {
-                        return;
-                    }
-
-                    try {
-                        isProcessingRef.current = true;
-
-                        // Очищаем все состояния перед обновлением
-                        chartInstanceRef.current.dispatchAction({
-                            type: 'downplay'
-                        });
-
-                        chartInstanceRef.current.dispatchAction({
-                            type: 'hideTip'
-                        });
-
-                        // Получаем текущее состояние zoom
-                        const currentOption = chartInstanceRef.current.getOption() as any;
-                        const currentDataZoom = currentOption?.dataZoom || [];
-
-                        // Подсчитываем общее количество точек данных
-                        const totalDataPoints = chartOption.series?.reduce((acc: number, s: any) => {
-                            return acc + (s.data?.length || 0);
-                        }, 0) || 0;
-
-                        // Для больших объемов данных или первой загрузки используем clear
-                        const needsClear = totalDataPoints > 1000 ||
-                            (totalDataPoints > 0 && !currentOption?.series?.[0]?.data?.length);
-
-                        if (needsClear) {
-                            chartInstanceRef.current.clear();
-                            // Даём время на очистку
-                            setTimeout(() => {
-                                if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
-                                    chartInstanceRef.current.setOption({
-                                        ...chartOption,
-                                        dataZoom: currentDataZoom.length > 0 ? currentDataZoom : chartOption.dataZoom
-                                    }, true);
-                                    setShowSkeleton(false);
-                                }
-                                isProcessingRef.current = false;
-                                checkPendingUpdates();
-                            }, 10);
-                        } else {
-                            // Обычное обновление для небольших изменений
-                            chartInstanceRef.current.setOption({
-                                ...chartOption,
-                                dataZoom: currentDataZoom.length > 0 ? currentDataZoom : chartOption.dataZoom
-                            }, {
-                                notMerge: false,
-                                lazyUpdate: true,
-                                replaceMerge: ['series']
-                            });
-                            setShowSkeleton(false);
-                            isProcessingRef.current = false;
-                            checkPendingUpdates();
-                        }
-                    } catch (error) {
-                        console.warn('Chart update error:', error);
-                        isProcessingRef.current = false;
-                        checkPendingUpdates();
-                    }
-                });
-            };
-
-            // Функция проверки отложенных обновлений
-            const checkPendingUpdates = () => {
-                if (pendingOptionRef.current) {
-                    pendingOptionRef.current = null;
-                    setTimeout(() => {
-                        if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
-                            lastOptionHashRef.current = '';
-                            updateChart();
-                        }
-                    }, 50);
-                }
-            };
-
-            // Используем requestIdleCallback для низкоприоритетного обновления
-            if ('requestIdleCallback' in window) {
-                requestIdleCallback(updateChart, { timeout: 100 });
-            } else {
-                requestAnimationFrame(updateChart);
-            }
+        if (optionHash === lastOptionHashRef.current) {
+            return; // Данные не изменились
         }
+
+        lastOptionHashRef.current = optionHash;
+
+        requestAnimationFrame(() => {
+            if (!chartInstanceRef.current || chartInstanceRef.current.isDisposed()) {
+                return;
+            }
+
+            try {
+                // Простое обновление без сложной логики
+                chartInstanceRef.current.setOption(chartOption, {
+                    notMerge: false,
+                    lazyUpdate: true,
+                    replaceMerge: ['series']
+                });
+
+                setShowSkeleton(false);
+            } catch (error) {
+                console.error('Ошибка обновления графика:', error);
+            }
+        });
     }, [chartOption]);
 
-    // Управление состоянием скелетона
+    // Управление скелетоном
     useEffect(() => {
-        if (loadingState.active) {
+        if (loadingState.active && loadingState.type === LoadingType.Initial) {
             setShowSkeleton(true);
-        } else {
-            // Плавное исчезновение скелетона
-            const timer = setTimeout(() => setShowSkeleton(false), 300);
-            clearTimeout(timer);
+        } else if (!loadingState.active) {
+            setTimeout(() => setShowSkeleton(false), 300);
         }
     }, [loadingState]);
 
-    // ResizeObserver для адаптивности
+    // ResizeObserver
     useEffect(() => {
         if (!containerRef.current) return;
 
         let resizeTimeout: NodeJS.Timeout | null = null;
-        let lastWidth = 0;
-        let lastHeight = 0;
 
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 const { width, height } = entry.contentRect;
 
-                // Игнорируем незначительные изменения размера
-                if (Math.abs(width - lastWidth) < 5 && Math.abs(height - lastHeight) < 5) {
-                    return;
-                }
-
-                lastWidth = width;
-                lastHeight = height;
-
-                // Вызываем onResize сразу
                 onResize(width, height);
 
-                // Debounce для resize графика
                 if (resizeTimeout) {
                     clearTimeout(resizeTimeout);
                 }
 
                 resizeTimeout = setTimeout(() => {
-                    if (!chartInstanceRef.current ||
-                        chartInstanceRef.current.isDisposed() ||
-                        isProcessingRef.current) {
-                        return;
+                    if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
+                        chartInstanceRef.current.resize();
                     }
-
-                    // Используем queueMicrotask для безопасного resize
-                    queueMicrotask(() => {
-                        if (!chartInstanceRef.current ||
-                            chartInstanceRef.current.isDisposed() ||
-                            isProcessingRef.current) {
-                            return;
-                        }
-
-                        try {
-                            // Временно блокируем обработку
-                            isProcessingRef.current = true;
-
-                            // Скрываем tooltip перед resize
-                            chartInstanceRef.current.dispatchAction({
-                                type: 'hideTip'
-                            });
-
-                            // Выполняем resize
-                            chartInstanceRef.current.resize();
-
-                            // Разблокируем через небольшую задержку
-                            setTimeout(() => {
-                                isProcessingRef.current = false;
-
-                                // Проверяем отложенный resize
-                                if (pendingResizeRef.current) {
-                                    pendingResizeRef.current = false;
-                                    // Рекурсивный вызов через timeout
-                                    resizeTimeout = setTimeout(() => {
-                                        if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
-                                            chartInstanceRef.current.resize();
-                                        }
-                                    }, 100);
-                                }
-                            }, 50);
-                        } catch (error) {
-                            console.warn('Chart resize error:', error);
-                            isProcessingRef.current = false;
-                        }
-                    });
-                }, 200); // Увеличиваем debounce
+                }, 200);
             }
         });
 
@@ -375,14 +218,12 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
         };
     }, [onResize]);
 
-    // Экспорт данных в CSV
+    // Экспорт в CSV
     const handleExport = useCallback(() => {
         if (!chartInstanceRef.current) return;
 
         const option = chartInstanceRef.current.getOption() as any;
         const series = option.series || [];
-
-        // Ищем серию с основными данными (avg)
         const avgSeries = series.find((s: any) => s.name?.includes('avg')) || series[0];
         const data = avgSeries?.data || [];
 
@@ -411,37 +252,11 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
     const toggleExpanded = useCallback(() => {
         setIsExpanded(prev => !prev);
         setTimeout(() => {
-            if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed() && !isProcessingRef.current) {
-                requestAnimationFrame(() => {
-                    if (chartInstanceRef.current) {
-                        chartInstanceRef.current.resize();
-                    }
-                });
+            if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
+                chartInstanceRef.current.resize();
             }
         }, 300);
     }, []);
-
-    // Индикатор качества данных
-    const getQualityIndicator = () => {
-        if (!stats.quality) return null;
-
-        const indicators = {
-            good: { icon: '✓', color: '#52c41a', text: 'Хорошее' },
-            medium: { icon: '!', color: '#faad14', text: 'Среднее' },
-            poor: { icon: '✗', color: '#f5222d', text: 'Плохое' }
-        };
-
-        const indicator = indicators[stats.quality];
-        return (
-            <span
-                className={styles.quality}
-                style={{ backgroundColor: indicator.color + '20', color: indicator.color }}
-                title={`Качество данных: ${indicator.text}`}
-            >
-                {indicator.icon}
-            </span>
-        );
-    };
 
     // Форматирование диапазона дат
     const formatDateRange = () => {
@@ -466,121 +281,124 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                 className
             )}
         >
+            <ChartHeader fieldName={fieldName} />
 
-                <ChartHeader fieldName={fieldName} />
+            <ChartToggles
+                showMin={showMin} setShowMin={setShowMin}
+                showMax={showMax} setShowMax={setShowMax}
+                showArea={showArea} setShowArea={setShowArea}
+            />
 
-                {/* Заголовок и статистика */}
-                <div className={styles.header}>
-                    <div className={styles.titleSection}>
-                        <h3 className={styles.title}>
-                            {fieldName}
-                            {getQualityIndicator()}
-                        </h3>
-                        <span className={styles.bucket}>
-                            {stats.currentBucket}
-                        </span>
-                        <span className={styles.dateRange}>
-                            {formatDateRange()}
-                        </span>
-                    </div>
 
-                    <div className={styles.statsSection}>
-                        <div className={styles.stat}>
-                            <span className={styles.statLabel}>Покрытие:</span>
-                            <span className={styles.statValue}>{stats.coverage}%</span>
-                        </div>
-                        <div className={styles.stat}>
-                            <span className={styles.statLabel}>Плотность:</span>
-                            <span className={styles.statValue}>
-                                {stats.density.toFixed(2)} точек/px
-                            </span>
-                        </div>
-                        <div className={styles.stat}>
-                            <span className={styles.statLabel}>Видимо:</span>
-                            <span className={styles.statValue}>
-                                {stats.visiblePoints} из {stats.totalPoints}
-                            </span>
-                        </div>
-                        {stats.gaps !== undefined && stats.gaps > 0 && (
-                            <div className={styles.stat}>
-                                <span className={styles.statLabel}>Разрывов:</span>
-                                <span className={styles.statValue}>{stats.gaps}</span>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className={styles.actions}>
-                        <button
-                            className={styles.actionBtn}
-                            onClick={handleExport}
-                            title="Экспортировать данные в CSV"
-                            disabled={stats.totalPoints === 0}
-                        >
-                            📥
-                        </button>
-                        <button
-                            className={styles.actionBtn}
-                            onClick={toggleExpanded}
-                            title={isExpanded ? "Свернуть" : "Развернуть"}
-                        >
-                            {isExpanded ? '⬇' : '⬆'}
-                        </button>
-                    </div>
+            <div className={styles.header}>
+                <div className={styles.titleSection}>
+                    <h3 className={styles.title}>
+                        {fieldName}
+                        <DataQualityIndicator
+                            quality={dataQuality}
+                            isStale={isStale}
+                            isLoading={loadingState.active}
+                            coverage={dataCoverage}
+                            sourceBucketMs={sourceBucketMs}
+                            targetBucketMs={targetBucketMs}
+                            className={styles.qualityIndicatorPosition}
+                        />
+                    </h3>
+                    <span className={styles.bucket}>
+                        {stats.currentBucket}
+                    </span>
+                    <span className={styles.dateRange}>
+                        {formatDateRange()}
+                    </span>
                 </div>
 
-                {/* График */}
-                <div className={styles.chartWrapper} >
-
-                    {/* Минималистичный индикатор загрузки */}
-                    <div className={styles.indicationContainer}>
-                        <LoadingIndicator state={loadingState} position="aboveAxis" />
+                <div className={styles.statsSection}>
+                    <div className={styles.stat}>
+                        <span className={styles.statLabel}>Покрытие:</span>
+                        <span className={styles.statValue}>{stats.coverage}%</span>
                     </div>
-
-
-                    {/* Скелетон для первичной загрузки */}
-                    {showSkeleton && !error && (
-                        <div className={styles.skeleton}>
-                            <div className={styles.skeletonChart} />
+                    <div className={styles.stat}>
+                        <span className={styles.statLabel}>Плотность:</span>
+                        <span className={styles.statValue}>
+                            {stats.density.toFixed(2)} точек/px
+                        </span>
+                    </div>
+                    <div className={styles.stat}>
+                        <span className={styles.statLabel}>Видимо:</span>
+                        <span className={styles.statValue}>
+                            {stats.visiblePoints} из {stats.totalPoints}
+                        </span>
+                    </div>
+                    {stats.gaps !== undefined && stats.gaps > 0 && (
+                        <div className={styles.stat}>
+                            <span className={styles.statLabel}>Разрывов:</span>
+                            <span className={styles.statValue}>{stats.gaps}</span>
                         </div>
                     )}
-
-
-                    {/* Оверлей ошибки */}
-                    {error && !loadingState.active && (
-                        <div className={styles.errorOverlay}>
-                            <span className={styles.errorIcon}>⚠️</span>
-                            <span className={styles.errorText}>{error}</span>
-                            <button
-                                className={styles.retryBtn}
-                                onClick={() => window.location.reload()}
-                            >
-                                Попробовать снова
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Информационное сообщение */}
-                    {!error && !loadingState.active && info && (
-                        <div className={styles.infoOverlay}>
-                            <span>ℹ️ {info}</span>
-                        </div>
-                    )}
-
-                    {/* Контейнер для ECharts */}
-                    <div
-                        ref={chartContainerRef}
-                        className={classNames(
-                            styles.chartContent,
-                            loadingState.active && styles.loading
-                        )}
-                        style={{
-                            width: '100%',
-                            height: '100%',
-                            visibility: error ? 'hidden' : 'visible'
-                        }}
-                    />
                 </div>
 
+                <div className={styles.actions}>
+                    <button
+                        className={styles.actionBtn}
+                        onClick={handleExport}
+                        title="Экспортировать данные в CSV"
+                        disabled={stats.totalPoints === 0}
+                    >
+                        📥
+                    </button>
+                    <button
+                        className={styles.actionBtn}
+                        onClick={toggleExpanded}
+                        title={isExpanded ? "Свернуть" : "Развернуть"}
+                    >
+                        {isExpanded ? '⬇' : '⬆'}
+                    </button>
+                </div>
+            </div>
+
+            <div className={styles.chartWrapper}>
+                <div className={styles.indicationContainer}>
+                    <LoadingIndicator state={loadingState} position="aboveAxis" />
+                </div>
+
+                {showSkeleton && !error && (
+                    <div className={styles.skeleton}>
+                        <div className={styles.skeletonChart} />
+                    </div>
+                )}
+
+                {error && !loadingState.active && (
+                    <div className={styles.errorOverlay}>
+                        <span className={styles.errorIcon}>⚠️</span>
+                        <span className={styles.errorText}>{error}</span>
+                        <button
+                            className={styles.retryBtn}
+                            onClick={() => window.location.reload()}
+                        >
+                            Попробовать снова
+                        </button>
+                    </div>
+                )}
+
+                {!error && !loadingState.active && info && (
+                    <div className={styles.infoOverlay}>
+                        <span>ℹ️ {info}</span>
+                    </div>
+                )}
+
+                <div
+                    ref={chartContainerRef}
+                    className={classNames(
+                        styles.chartContent,
+                        loadingState.active && styles.loading
+                    )}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        visibility: error ? 'hidden' : 'visible'
+                    }}
+                />
+            </div>
         </div>
     );
 };

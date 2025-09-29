@@ -28,7 +28,7 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
     // Измеряем общую ширину коллекции для первичной загрузки
     const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
     // Отслеживаем только высоту через ResizableContainer
-    const [containerHeight, setContainerHeight] = useState<number>(800);
+    const [containerHeight, setContainerHeight] = useState<number>(1000);
 
     const timeSettings = useAppSelector(selectTimeSettings);
     const isDataLoaded = useAppSelector(selectIsDataLoaded);
@@ -165,7 +165,7 @@ export const ChartCollection: React.FC<ChartCollectionProps> = ({ template }) =>
                             groupId={groupId}
                             defaultHeight={containerHeight}
                             minHeight={300}
-                            maxHeight={1000}
+                            maxHeight={2000}
                             onHeightChange={setContainerHeight}
                         >
                             <FieldChart

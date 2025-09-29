@@ -5,7 +5,10 @@ import {formatTimeByBucket} from './utils';
 import type {SeriesBinDto} from "@charts/shared/contracts/chart/Dtos/SeriesBinDto.ts";
 import {
     createTooltipFormatter
-} from "@charts/ui/CharContainer/ChartCollection/FieldChart/ChartTooltip/tooltipBuilder.ts";
+} from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ChartTooltip/tooltipBuilder.ts";
+
+import type { ScaleDataValue, LabelFormatterParams } from 'echarts/types/dist/shared';
+
 
 interface ChartOptionParams {
     data: SeriesBinDto[];
@@ -19,9 +22,16 @@ interface ChartOptionParams {
     showMinimap?: boolean;
     coverage?: Array<{ from: number; to: number }>;
     loadingZones?: Array<{ from: number; to: number }>;
-    showMinMaxArea?: boolean;
-    timeZone?: string;
-    useTimeZone?: boolean;
+    showMin?: boolean | undefined;
+    showMax?: boolean | undefined;
+    showArea?: boolean | undefined;
+    timeZone?: string | undefined;
+    useTimeZone?: boolean | undefined;
+    opacity?: number | undefined;
+    lineStyle?: {
+        width?: number | undefined;
+        type?: 'solid' | 'dashed' | 'dotted' | undefined;
+    } | undefined;
 }
 
 // Утилита для поиска разрывов в данных
@@ -32,52 +42,79 @@ function findDataGaps(
 ): Array<{ from: number; to: number }> {
     const gaps: Array<{ from: number; to: number }> = [];
 
-    if(data.length < 2) return gaps;
+    if(!data || data.length < 2) return gaps;
 
     for (let i = 1; i < data.length; i++) {
-        const prevTime = new Date(data[i - 1]!.t).getTime();
-        const currTime = new Date(data[i]!.t).getTime();
-        const gap = currTime - prevTime;
+        try {
+            const prevTime = new Date(data[i - 1]!.t).getTime();
+            const currTime = new Date(data[i]!.t).getTime();
 
-        if (gap > bucketMs * threshold) {
-            gaps.push({
-                from: prevTime + bucketMs,
-                to: currTime - bucketMs
-            });
+            if (isNaN(prevTime) || isNaN(currTime)) continue;
+
+            const gap = currTime - prevTime;
+
+            if (gap > bucketMs * threshold) {
+                gaps.push({
+                    from: prevTime + bucketMs,
+                    to: currTime - bucketMs
+                });
+            }
+        } catch (error) {
+            console.warn('Error calculating gap:', error);
         }
     }
 
     return gaps;
 }
 
-// Подготовка данных для всех трёх линий
-function prepareAllSeriesData(
-    data: SeriesBinDto[],
-    useTimeZone: boolean,
-    timeZone?: string
-): {
-    avgData: Array<[number, number | null]>;
-    minData: Array<[number, number | null]>;
-    maxData: Array<[number, number | null]>;
+// Подготовка данных с защитой от некорректных значений
+function prepareAllSeriesData(data: SeriesBinDto[]): {
+    avgData: Array<[number, number | undefined]>;
+    minData: Array<[number, number | undefined]>;
+    maxData: Array<[number, number | undefined]>;
 } {
-    // ВАЖНО: НЕ конвертируем временные метки, используем их как есть
-    // ECharts работает с миллисекундами Unix timestamp, которые не зависят от временной зоны
-    const avgData: Array<[number, number | null]> = data.map(bin =>
-        [bin.t.getTime(), bin.avg] as [number, number | null]
-    );
-    const minData: Array<[number, number | null]> = data.map(bin =>
-        [bin.t.getTime(), bin.min] as [number, number | null]
-    );
-    const maxData: Array<[number, number | null]> = data.map(bin =>
-        [bin.t.getTime(), bin.max] as [number, number | null]
-    );
+   if (!data || !Array.isArray(data) || data.length === 0) {
+        console.warn('[prepareAllSeriesData] No data provided');
+        return { avgData: [], minData: [], maxData: [] };
+    }
+
+    const avgData: Array<[number, number | undefined]> = [];
+    const minData: Array<[number, number | undefined]> = [];
+    const maxData: Array<[number, number | undefined]> = [];
+    let validCount = 0;
+    let invalidCount = 0;
+
+    for (const bin of data) {
+        if (!bin || bin.t === null || bin.t === undefined) {
+            invalidCount++;
+            continue;
+        }
+
+        try {
+            const timestamp = bin.t.getTime();
+
+            if (isNaN(timestamp)) {
+                invalidCount++;
+                continue;
+            }
+
+            avgData.push([timestamp, bin.avg]);
+            minData.push([timestamp, bin.min]);
+            maxData.push([timestamp, bin.max]);
+            validCount++;
+        } catch (error) {
+            console.warn('Invalid bin data:', bin, error);
+            invalidCount++;
+        }
+    }
+
 
     return { avgData, minData, maxData };
 }
 
 export function createChartOption(params: ChartOptionParams): EChartsOption {
     const {
-        data,
+        data = [],
         fieldName,
         domain,
         visibleRange,
@@ -88,13 +125,23 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
         showMinimap = true,
         coverage = [],
         loadingZones = [],
-        showMinMaxArea = true,
+        showMin = true,
+        showMax = true,
+        showArea = true,
         timeZone = 'UTC',
-        useTimeZone = false
+        useTimeZone = false,
+        opacity = 1,
+        lineStyle = {}
     } = params;
 
 
-    // Темы с улучшенной видимостью
+    // Валидация обязательных параметров
+    if (!domain || !domain.from || !domain.to) {
+        console.error('Invalid domain provided to createChartOption');
+        return {} as EChartsOption;
+    }
+
+    // Темы
     const themes = {
         light: {
             background: '#ffffff',
@@ -121,14 +168,17 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
     };
 
     const currentTheme = themes[theme];
-    const gaps = showDataGaps ? findDataGaps(data, bucketMs) : [];
-    const { avgData, minData, maxData } = prepareAllSeriesData(data, useTimeZone, timeZone);
 
+    // Подготавливаем данные
+    const { avgData, minData, maxData } = prepareAllSeriesData(data);
+    const hasData = avgData.length > 0 || minData.length > 0 || maxData.length > 0;
+
+
+    const gaps = showDataGaps && hasData ? findDataGaps(data, bucketMs) : [];
     const series: LineSeriesOption[] = [];
 
-    // Область между min и max с улучшенной видимостью
-    if (showMinMaxArea && data.length > 0) {
-        // Заполнение области между min и max
+    // Область между min и max
+    if (showMin && showMax && minData.length > 0 && maxData.length > 0) {
         series.push({
             name: `${fieldName} Range`,
             type: 'line',
@@ -138,7 +188,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             symbol: 'none',
             areaStyle: {
                 color: currentTheme.minMaxArea,
-                opacity: 0.7
+                opacity: 0.7 * opacity
             },
             z: 1,
             silent: true,
@@ -149,9 +199,11 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             name: `${fieldName} Range Top`,
             type: 'line',
             data: maxData.map((point, index) => {
-                const minValue = minData[index]?.[1];
-                const maxValue = point[1];
-                if (minValue === null || minValue == undefined || maxValue === null) return [point[0], null];
+                const minValue: number | undefined  = minData[index]?.[1];
+                const maxValue: number | undefined = point[1];
+                if (minValue === null || minValue === undefined || maxValue === null || maxValue == undefined) {
+                    return [point[0], null];
+                }
                 return [point[0], maxValue - minValue];
             }),
             lineStyle: { opacity: 0 },
@@ -168,189 +220,190 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
     }
 
     // Линия минимума
-    series.push({
-        name: `${fieldName} (min)`,
-        type: 'line',
-        data: minData || [],
-        symbol: 'circle',
-        symbolSize: 4,
-        sampling: 'lttb',
-        lineStyle: {
-            width: 1.5,
-            color: currentTheme.minLine,
-            type: 'dashed',
-            opacity: 0.8
-        },
-        itemStyle: {
-            color: currentTheme.minLine,
-            borderColor: currentTheme.pointBorder,
-            borderWidth: 1
-        },
-        emphasis: {
-            focus: 'series',
+    if (showMin && minData.length > 0) {
+        series.push({
+            name: `${fieldName} (min)`,
+            type: 'line',
+            data: minData,
+            symbol: 'circle',
+            symbolSize: 4,
+            sampling: 'lttb',
             lineStyle: {
-                width: 2.5
+                width: (lineStyle.width || 1.5) * 0.8,
+                color: currentTheme.minLine,
+                type: lineStyle.type || 'dashed',
+                opacity: 0.8 * opacity
             },
             itemStyle: {
+                color: currentTheme.minLine,
+                borderColor: currentTheme.pointBorder,
+                borderWidth: 1
+            },
+            emphasis: {
+                focus: 'series',
+                lineStyle: { width: 2.5 },
+                itemStyle: {
+                    borderWidth: 2,
+                    shadowBlur: 10,
+                    shadowColor: currentTheme.minLine
+                }
+            },
+            connectNulls: false,
+            smooth: false,
+            z: 3,
+            animation: true,
+            animationDuration: 300,
+            showSymbol: true,
+            showAllSymbol: data.length < 100
+        });
+    }
+
+    // Линия максимума
+    if (showMax && maxData.length > 0) {
+        series.push({
+            name: `${fieldName} (max)`,
+            type: 'line',
+            data: maxData,
+            symbol: 'circle',
+            symbolSize: 4,
+            sampling: 'lttb',
+            lineStyle: {
+                width: (lineStyle.width || 1.5) * 0.8,
+                color: currentTheme.maxLine,
+                type: lineStyle.type || 'dashed',
+                opacity: 0.8 * opacity
+            },
+            itemStyle: {
+                color: currentTheme.maxLine,
+                borderColor: currentTheme.pointBorder,
+                borderWidth: 1
+            },
+            emphasis: {
+                focus: 'series',
+                lineStyle: { width: 2.5 },
+                itemStyle: {
+                    borderWidth: 2,
+                    shadowBlur: 10,
+                    shadowColor: currentTheme.maxLine
+                }
+            },
+            connectNulls: false,
+            smooth: false,
+            z: 3,
+            animation: true,
+            animationDuration: 300,
+            showSymbol: true,
+            showAllSymbol: data.length < 100
+        });
+    }
+
+    // Основная линия среднего значения
+    // avgData: Array<[number, number | null]>  // важно: null, не undefined
+
+    if (showArea && avgData.length > 0) {
+        const avgSeriesBase = {
+            name: `${fieldName} (avg)`,
+            type: 'line' as const,
+            data: avgData,
+            symbol: 'circle' as const,
+            symbolSize: 6,
+            sampling: 'lttb' as const,
+            lineStyle: {
+                width: lineStyle.width ?? 2.5,
+                color: currentTheme.avgLine,
+                type: lineStyle.type ?? 'solid',
+                opacity: opacity,
+                shadowBlur: 2,
+                shadowColor: currentTheme.avgLine,
+                shadowOffsetY: 2,
+            },
+            itemStyle: {
+                color: currentTheme.avgLine,
+                borderColor: currentTheme.pointBorder,
                 borderWidth: 2,
-                shadowBlur: 10,
-                shadowColor: currentTheme.minLine
-            }
-        },
-        connectNulls: false,
-        smooth: false,
-        large: true,
-        largeThreshold: 2000,
-        z: 3,
-        animation: true,
-        animationDuration: 300,
-        showSymbol: true,
-        showAllSymbol: data.length < 100
-    });
-
-// Линия максимума
-    series.push({
-        name: `${fieldName} (max)`,
-        type: 'line',
-        data: maxData || [],
-        symbol: 'circle',
-        symbolSize: 4,
-        sampling: 'lttb',
-        lineStyle: {
-            width: 1.5,
-            color: currentTheme.maxLine,
-            type: 'dashed',
-            opacity: 0.8
-        },
-        itemStyle: {
-            color: currentTheme.maxLine,
-            borderColor: currentTheme.pointBorder,
-            borderWidth: 1
-        },
-        emphasis: {
-            focus: 'series',
-            lineStyle: {
-                width: 2.5
             },
-            itemStyle: {
-                borderWidth: 2,
-                shadowBlur: 10,
-                shadowColor: currentTheme.maxLine
-            }
-        },
-        connectNulls: false,
-        smooth: false,
-        large: true,
-        largeThreshold: 2000,
-        z: 3,
-        animation: true,
-        animationDuration: 300,
-        showSymbol: true,
-        showAllSymbol: data.length < 100
-    });
-
-// Основная линия среднего значения
-    series.push({
-        name: `${fieldName} (avg)`,
-        type: 'line',
-        data: avgData || [],
-        symbol: 'circle',
-        symbolSize: 6,
-        sampling: 'lttb',
-        lineStyle: {
-            width: 2.5,
-            color: currentTheme.avgLine,
-            shadowBlur: 2,
-            shadowColor: currentTheme.avgLine,
-            shadowOffsetY: 2
-        },
-        itemStyle: {
-            color: currentTheme.avgLine,
-            borderColor: currentTheme.pointBorder,
-            borderWidth: 2
-        },
-        emphasis: {
-            focus: 'series',
-            scale: 1.5,
-            lineStyle: {
-                width: 3.5
+            emphasis: {
+                focus: 'series' as const,
+                lineStyle: { width: 3.5 },
+                itemStyle: {
+                    borderWidth: 3,
+                    shadowBlur: 20,
+                    shadowColor: currentTheme.avgLine,
+                },
             },
-            itemStyle: {
-                borderWidth: 3,
-                shadowBlur: 20,
-                shadowColor: currentTheme.avgLine
-            }
-        },
-        connectNulls: false,
-        smooth: 0.1,
-        large: true,
-        largeThreshold: 2000,
-        progressive: 5000,
-        progressiveThreshold: 10000,
-        z: 5,
-        animation: true,
-        animationDuration: 300,
-        showSymbol: true,
-        showAllSymbol: data.length < 100,
+            connectNulls: false,
+            smooth: 0.1,
+            progressive: 5000,
+            progressiveThreshold: 10000,
+            z: 5,
+            animation: true,
+            animationDuration: 300,
+            showSymbol: true,
+            showAllSymbol: data.length < 100,
+            markLine: {
+                silent: true,
+                symbol: ['none', 'none'] as const,
+                label: { position: 'insideEndTop', formatter: '{b}: {c}' },
+                lineStyle: { color: currentTheme.avgLine, type: 'dashed', opacity: 0.5 },
+                data: [{ type: 'average' as const, name: 'Среднее' }],
+            },
+        };
 
-        markArea: {
-            silent: true,
-            data: [
-                // Разрывы в данных
-                ...gaps.map(gap => [
-                    {
-                        xAxis: gap.from,
+        // Собираем markArea только если есть разрывы,
+        // иначе СОВСЕМ не добавляем свойство (из-за exactOptionalPropertyTypes)
+        const markAreaPart =
+            gaps.length > 0
+                ? {
+                    markArea: {
+                        silent: true,
+                        // общий стиль области (задаём на уровне markArea)
                         itemStyle: {
                             color: 'rgba(255, 120, 117, 0.1)',
                             borderColor: currentTheme.gap,
                             borderWidth: 1,
-                            borderType: 'dashed'
-                        }
+                            borderType: 'dashed' as const,
+                        },
+                        // пары [from, to] по оси x
+                        data: gaps.map(gap => [
+                            { xAxis: gap.from },
+                            { xAxis: gap.to },
+                        ]),
                     },
-                    { xAxis: gap.to }
-                ])
-            ]
-        },
+                } as LineSeriesOption
+                : {} as LineSeriesOption;
 
-        markLine: {
-            silent: true,
-            symbol: ['none', 'none'],
-            label: {
-                position: 'insideEndTop',
-                formatter: '{b}: {c}'
-            },
-            lineStyle: {
-                color: currentTheme.avgLine,
-                type: 'dashed',
-                opacity: 0.5
-            },
-            data: [
-                { type: 'average', name: 'Среднее' }
-            ]
-        }
-    });
+        series.push({
+            ...avgSeriesBase,
+            ...markAreaPart,
+        } as LineSeriesOption);
+    }
 
-    // Вычисляем начальную позицию слайдера
+
+
+    // Вычисляем позицию слайдера
     let sliderStart = 0;
     let sliderEnd = 100;
 
     if (visibleRange) {
-        const domainStart = domain.from.getTime();
-        const domainEnd = domain.to.getTime();
-        const domainSpan = domainEnd - domainStart;
+        try {
+            const domainStart = domain.from.getTime();
+            const domainEnd = domain.to.getTime();
+            const domainSpan = domainEnd - domainStart;
 
-        const visibleStart = visibleRange.from.getTime();
-        const visibleEnd = visibleRange.to.getTime();
+            const visibleStart = visibleRange.from.getTime();
+            const visibleEnd = visibleRange.to.getTime();
 
-        // Вычисляем проценты для слайдера
-        sliderStart = ((visibleStart - domainStart) / domainSpan) * 100;
-        sliderEnd = ((visibleEnd - domainStart) / domainSpan) * 100;
+            sliderStart = ((visibleStart - domainStart) / domainSpan) * 100;
+            sliderEnd = ((visibleEnd - domainStart) / domainSpan) * 100;
 
-        // Ограничиваем значения диапазоном 0-100
-        sliderStart = Math.max(0, Math.min(100, sliderStart));
-        sliderEnd = Math.max(0, Math.min(100, sliderEnd));
+            sliderStart = Math.max(0, Math.min(100, sliderStart));
+            sliderEnd = Math.max(0, Math.min(100, sliderEnd));
+        } catch (error) {
+            console.warn('Error calculating slider position:', error);
+        }
     }
 
+    // Конфигурация графика
     return {
         backgroundColor: currentTheme.background,
         animation: true,
@@ -365,7 +418,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             containLabel: true
         },
 
-        tooltip: {
+        tooltip: hasData ? {
             trigger: 'axis',
             confine: true,
             transitionDuration: 0,
@@ -388,46 +441,52 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             borderWidth: 1,
             borderColor: '#ccc',
             padding: 10,
-            textStyle: {
-                color: '#333'
-            },
+            textStyle: { color: '#333' },
             formatter: (params: any) => {
                 try {
-                    // Дополнительная проверка валидности params
-                    if (!params || !Array.isArray(params) || params.length === 0) {
-                        return '';
-                    }
+                    if (!params) return '';
 
-                    // Проверяем что у каждого элемента есть необходимые данные
-                    const validParams = params.filter((item: any) =>
-                        item &&
-                        item.data !== undefined &&
-                        item.seriesName !== undefined
-                    );
+                    const paramsArray = Array.isArray(params) ? params : [params];
 
-                    if (validParams.length === 0) {
-                        return '';
-                    }
+                    if (paramsArray.length === 0) return 'Нет данных';
 
-                    const formatter = createTooltipFormatter({
-                        fieldName,
-                        data,
-                        bucketMs,
-                        timeZone,
-                        useTimeZone
+                    const validParams = paramsArray.filter((item: any) => {
+                        return item && item.data !== undefined && item.seriesName !== undefined;
                     });
 
-                    return formatter(validParams);
-                } catch (error) {
-                    console.warn('Tooltip formatter error:', error);
-                    if (params && params[0]) {
-                        const date = new Date(params[0].axisValue);
-                        return `${fieldName}<br/>${date.toLocaleString()}`;
+                    if (validParams.length === 0) return 'Нет данных';
+
+                    try {
+                        const formatter = createTooltipFormatter({
+                            fieldName,
+                            data,
+                            bucketMs,
+                            timeZone,
+                            useTimeZone
+                        });
+                        return formatter(validParams);
+                    } catch (formatterError) {
+                        const firstParam = validParams[0];
+                        if (firstParam && firstParam.data) {
+                            const time = Array.isArray(firstParam.data)
+                                ? firstParam.data[0]
+                                : firstParam.value?.[0];
+                            const value = Array.isArray(firstParam.data)
+                                ? firstParam.data[1]
+                                : firstParam.value?.[1];
+
+                            return `${fieldName}<br/>
+                                   ${new Date(time).toLocaleString()}<br/>
+                                   Значение: ${value ?? 'N/A'}`;
+                        }
+                        return fieldName;
                     }
-                    return '';
+                } catch (error) {
+                    console.error('Tooltip error:', error);
+                    return fieldName;
                 }
             }
-        },
+        } : undefined,
 
         toolbox: {
             feature: {
@@ -438,9 +497,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
                         back: 'Сбросить масштаб'
                     }
                 },
-                restore: {
-                    title: 'Восстановить'
-                },
+                restore: { title: 'Восстановить' },
                 saveAsImage: {
                     pixelRatio: 2,
                     title: 'Сохранить как изображение'
@@ -451,152 +508,194 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
         },
 
         xAxis: {
-            type: 'time',
-            boundaryGap: false,
+            type: 'time' as const,
+            boundaryGap: [0, 0] as const,   // <= для time/value осей нужен кортеж, не boolean
             min: domain.from.getTime(),
             max: domain.to.getTime(),
-            axisLine: {
-                lineStyle: {
-                    color: currentTheme.grid
-                }
-            },
+
+            axisLine: { lineStyle: { color: currentTheme.grid } },
+
             axisLabel: {
                 color: currentTheme.text,
-                rotate: 45,  // Поворот меток на 45 градусов
-                interval: 'auto',  // Автоматический интервал или 0 для показа всех меток
-                showMinLabel: true,  // Всегда показывать первую метку
-                showMaxLabel: true,  // Всегда показывать последнюю метку
-                fontSize: 11,  // Размер шрифта
-                formatter: (value: number) => {
+                rotate: 45,
+                interval: 'auto' as const,
+                showMinLabel: true,
+                showMaxLabel: true,
+                fontSize: 11,
+                // (value, index) => string; value: ScaleDataValue (number|string|Date)
+                formatter: (value: number | string | Date, _index: number) => {
                     try {
-                        const date = new Date(value);
+                        const ts =
+                            value instanceof Date
+                                ? value.getTime()
+                                : typeof value === 'string'
+                                    ? Number(value)
+                                    : value; // number
+
+                        if (!Number.isFinite(ts)) return '';
+
+                        const date = new Date(ts);
+                        if (Number.isNaN(date.getTime())) return '';
+
                         if (useTimeZone && timeZone) {
-                            // Упрощенный формат для вертикальных меток
                             return date.toLocaleString('ru-RU', {
-                                timeZone: timeZone,
+                                timeZone,
                                 month: 'short',
                                 day: '2-digit',
                                 hour: '2-digit',
-                                minute: '2-digit'
+                                minute: '2-digit',
                             });
                         }
                         return formatTimeByBucket(date, bucketMs);
                     } catch {
                         return '';
                     }
-                }
+                },
             },
+
             splitLine: {
                 show: true,
                 lineStyle: {
                     color: currentTheme.grid,
-                    type: 'dashed',
-                    opacity: 0.3
-                }
+                    type: 'dashed' as const,
+                    opacity: 0.3,
+                },
             },
+
             axisPointer: {
                 show: true,
                 snap: true,
                 label: {
-                    formatter: (params: { value: number }) => {
+                    // formatter(params) => string; params.value: ScaleDataValue
+                    formatter: (params: { value: number | string | Date }) => {
                         try {
-                            const date = new Date(params.value);
+                            const raw = params.value;
+                            const ts =
+                                raw instanceof Date
+                                    ? raw.getTime()
+                                    : typeof raw === 'string'
+                                        ? Number(raw)
+                                        : raw; // number
+
+                            if (!Number.isFinite(ts)) return '';
+
+                            const date = new Date(ts);
+                            if (Number.isNaN(date.getTime())) return '';
+
                             if (useTimeZone && timeZone) {
                                 return date.toLocaleString('ru-RU', {
-                                    timeZone: timeZone,
+                                    timeZone,
                                     year: 'numeric',
                                     month: '2-digit',
                                     day: '2-digit',
                                     hour: '2-digit',
                                     minute: '2-digit',
-                                    second: '2-digit'
+                                    second: '2-digit',
                                 });
                             }
                             return formatTimeByBucket(date, bucketMs);
-                        } catch (error) {
+                        } catch {
                             return '';
                         }
-                    }
-                }
-            }
+                    },
+                },
+            },
         },
 
         yAxis: {
-            type: 'value',
+            type: 'value' as const,
             name: fieldName,
             nameTextStyle: {
                 color: currentTheme.text,
                 fontSize: 14,
-                fontWeight: 'bold'
+                fontWeight: 'bold',
             },
             scale: true,
             axisLine: {
                 show: true,
-                lineStyle: {
-                    color: currentTheme.grid
-                }
+                lineStyle: { color: currentTheme.grid },
             },
             axisLabel: {
                 color: currentTheme.text,
-                formatter: (value: number) => {
+                // для value-оси форматтер (value, index) => string | number
+                formatter: (value: number | string , _index?: number) => {
                     try {
-                        if (value === 0) return '0';
-                        const absValue = Math.abs(value);
-                        if (absValue >= 1000000000) {
-                            return (value / 1000000000).toFixed(1) + 'B';
-                        }
-                        if (absValue >= 1000000) {
-                            return (value / 1000000).toFixed(1) + 'M';
-                        }
-                        if (absValue >= 1000) {
-                            return (value / 1000).toFixed(1) + 'K';
-                        }
-                        if (absValue < 0.01) {
-                            return value.toExponential(2);
-                        }
-                        return value.toFixed(2);
+                        const v = typeof value === 'string' ? Number(value) : value;
+                        if (!Number.isFinite(v)) return '';
+                        if (v === 0) return '0';
+                        const abs = Math.abs(v);
+                        if (abs >= 1_000_000_000) return (v / 1_000_000_000).toFixed(1) + 'B';
+                        if (abs >= 1_000_000)     return (v / 1_000_000).toFixed(1) + 'M';
+                        if (abs >= 1_000)         return (v / 1_000).toFixed(1) + 'K';
+                        if (abs < 0.01)           return v.toExponential(2);
+                        return v.toFixed(2);
                     } catch {
                         return String(value);
                     }
-                }
+                },
             },
             splitLine: {
                 lineStyle: {
                     color: currentTheme.grid,
-                    type: 'dashed',
-                    opacity: 0.3
-                }
+                    type: 'dashed' as const,
+                    opacity: 0.3,
+                },
             },
             axisPointer: {
                 show: true,
                 label: {
-                    formatter: (params: { value: number }) => {
+                    // СТРОГО: принимает LabelFormatterParams из echarts v6
+                    formatter: (params: LabelFormatterParams): string => {
                         try {
-                            return Number(params.value).toFixed(2);
+                            const raw = params.value as ScaleDataValue;
+                            const num =
+                                raw instanceof Date
+                                    ? raw.getTime()
+                                    : typeof raw === 'string'
+                                        ? Number(raw)
+                                        : raw; // number
+
+                            if (!Number.isFinite(num)) return '';
+                            return num.toFixed(2);
                         } catch {
                             return '';
                         }
-                    }
-                }
-            }
+                    },
+                },
+            },
         },
 
+
+        // КРИТИЧНО: всегда используем filterMode: 'none' чтобы избежать getRawIndex ошибок
         dataZoom: [
+            // X: Ctrl + колесо — зум по времени
             {
-                type: 'inside',
+                type: 'inside' as const,
                 xAxisIndex: 0,
                 start: sliderStart,
                 end: sliderEnd,
-                filterMode: 'filter', // ВЕРНУЛИ обратно 'filter'
-                zoomOnMouseWheel: true,
+                filterMode: 'none' as const,
+                zoomOnMouseWheel: 'ctrl' as const,
                 moveOnMouseMove: true,
                 moveOnMouseWheel: false,
                 preventDefaultMouseMove: false,
                 zoomLock: false,
                 throttle: 100,
-                minValueSpan: 1000, // Минимальный диапазон в миллисекундах
-                maxValueSpan: domain.to.getTime() - domain.from.getTime() // Максимальный диапазон
+                minValueSpan: 1000,
+                maxValueSpan: domain.to.getTime() - domain.from.getTime(),
             },
+
+            // Y: Shift + колесо — «растяжка» по вертикали
+            {
+                type: 'inside' as const,
+                yAxisIndex: 0,
+                filterMode: 'none' as const,
+                zoomOnMouseWheel: 'shift' as const,
+                moveOnMouseWheel: false,
+                throttle: 100,
+            },
+
+            // Слайдер-минимап по X
             ...(showMinimap ? [{
                 type: 'slider' as const,
                 xAxisIndex: 0,
@@ -607,53 +706,51 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
                 borderColor: currentTheme.grid,
                 backgroundColor: 'rgba(47,69,84,0.05)',
                 dataBackground: {
-                    lineStyle: {
-                        color: currentTheme.avgLine,
-                        width: 1
-                    },
-                    areaStyle: {
-                        color: currentTheme.avgLine,
-                        opacity: 0.2
-                    }
+                    lineStyle: { color: currentTheme.avgLine, width: 1 },
+                    areaStyle: { color: currentTheme.avgLine, opacity: 0.2 },
                 },
                 fillerColor: 'rgba(70,130,180,0.15)',
-                handleIcon: 'path://M10.7,11.9H9.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4h1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z',
+                handleIcon:
+                    'path://M10.7,11.9H9.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4h1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z',
                 handleSize: '100%',
                 handleStyle: {
                     color: currentTheme.avgLine,
                     shadowBlur: 3,
                     shadowColor: 'rgba(0, 0, 0, 0.3)',
                     shadowOffsetX: 2,
-                    shadowOffsetY: 2
+                    shadowOffsetY: 2,
                 },
-                textStyle: {
-                    color: currentTheme.text,
-                    fontSize: 11
-                },
+                textStyle: { color: currentTheme.text, fontSize: 11 },
                 moveHandleSize: 7,
+
+                // ВАЖНО: в v6 handleLabel обязателен внутри emphasis
                 emphasis: {
+                    handleLabel: { show: false }, // минимально допустимый объект
                     handleStyle: {
                         borderColor: currentTheme.avgLine,
                         shadowBlur: 10,
-                        shadowColor: currentTheme.avgLine
-                    }
+                        shadowColor: currentTheme.avgLine,
+                    },
+                    // moveHandleStyle можно не задавать — он опционален
                 },
-                filterMode: 'filter', // ВЕРНУЛИ обратно 'filter'
+
+                filterMode: 'none' as const,
                 realtime: true,
-                throttle: 100
-            }] : [])
+                throttle: 100,
+            }] : []),
         ],
+
 
         ...(enableBrush ? {
             brush: {
                 xAxisIndex: 0,
                 brushLink: 'all',
-                outOfBrush: {
-                    colorAlpha: 0.1
-                }
+                outOfBrush: { colorAlpha: 0.1 }
             }
         } : {}),
 
         series: series
-    };
+    } as EChartsOption;
+
+
 }

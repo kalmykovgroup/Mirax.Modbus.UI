@@ -15,10 +15,11 @@ import type {SeriesBinDto} from '@charts/shared/contracts/chart/Dtos/SeriesBinDt
 import {
     type BucketsMs,
     type CoverageInterval,
-    finishLoading, setFieldError,
+    finishLoading,
+    setFieldError,
     setIsDataLoaded,
     startLoading,
-    type TimeRange,
+    type TimeRange, updateLoadingProgress,
     updateView,
     upsertTiles,
 } from './chartsSlice';
@@ -26,6 +27,11 @@ import {
 import {selectChartBucketingConfig} from '@charts/store/selectors';
 import {selectIsSyncEnabled, selectSyncFields} from "@charts/store/selectors.ts";
 import {LoadingType} from "@charts/ui/CharContainer/types.ts";
+import {requestManager} from "@charts/store/RequestManager.ts";
+import {dataProxyService} from "@charts/store/DataProxyService.ts";
+
+// Добавить Map для хранения отложенных запросов
+
 
 export const buildLowerOrEqualBucketsMs = (
     topBucketMs: BucketsMs,
@@ -60,14 +66,20 @@ const makeReadyTile = (interval: CoverageInterval, bins: SeriesBinDto[]) => ({
     status: 'ready' as const,
 });
 
+// В thunks.ts - обновите вызов fetchMultiSeries в fetchMultiSeriesInit
+
 export const fetchMultiSeriesInit = createAsyncThunk<
     void,
     GetMultiSeriesRequest,
     { state: RootState }
 >('charts/fetchMultiSeriesRaw', async (request, { getState, dispatch }) => {
 
-    // Вызываем fetchMultiSeriesSimple и получаем результат
-    const data = await dispatch(fetchMultiSeries(request)).unwrap();
+    // Вызываем fetchMultiSeries для первоначальной загрузки
+    // ВАЖНО: Здесь не используем fetchMultiSeriesRaw с проверками покрытия
+    const data = await dispatch(fetchMultiSeries({
+        request: request,
+        loadingType: LoadingType.Initial
+    })).unwrap();
 
     // список уровней: top и всё ниже по niceMilliseconds
     const cfg = selectChartBucketingConfig(getState());
@@ -76,34 +88,33 @@ export const fetchMultiSeriesInit = createAsyncThunk<
     const bucketListDesc = buildLowerOrEqualBucketsMs(data.bucketMilliseconds, cfg.niceMilliseconds);
 
     const px = request.px;
-
-    const requestFrom = request.from
-    const requestTo = request.to
+    const requestFrom = request.from;
+    const requestTo = request.to;
 
     // ВАЖНО: для currentRange используем ОРИГИНАЛЬНЫЕ даты, не конвертированные
     // Это локальные даты, как их видит пользователь
-
     const currentRange = { from: requestFrom, to: requestTo } as TimeRange;
 
     //Если from или to были не заданы, то находим в ответе диапазон
     if(currentRange.from == undefined){
-        let minFrom : number = 0;
-
+        let minFrom = Number.MAX_VALUE;
         data.series.forEach(s => {
-            Math.min(minFrom, Math.min(...(s.bins.map(b => b.t.getTime()))))
-        })
+            const minTime = Math.min(...(s.bins.map(b => new Date(b.t).getTime())));
+            minFrom = Math.min(minFrom, minTime);
+        });
         currentRange.from = new Date(minFrom);
     }
 
     if(currentRange.to == undefined){
-        let maxTo : number = 0;
+        let maxTo = Number.MIN_VALUE;
         data.series.forEach(s => {
-            Math.max(maxTo, Math.max(...(s.bins.map(b => b.t.getTime()))))
-        })
+            const maxTime = Math.max(...(s.bins.map(b => new Date(b.t).getTime())));
+            maxTo = Math.max(maxTo, maxTime);
+        });
         currentRange.to = new Date(maxTo);
     }
 
-    dispatch(setIsDataLoaded(true))
+    dispatch(setIsDataLoaded(true));
 
     // Инициализируем view и уровни для каждого выбранного поля
     for (const f of request.template.selectedFields) {
@@ -116,7 +127,6 @@ export const fetchMultiSeriesInit = createAsyncThunk<
                 seriesLevels: bucketListDesc //Создаем пустые массивы для каждого уровня
             })
         );
-
     }
 
     // Для снаппинга используем конвертированные даты (они соответствуют данным от сервера)
@@ -125,123 +135,277 @@ export const fetchMultiSeriesInit = createAsyncThunk<
     const series: MultiSeriesItemDto[] = data.series ?? [];
 
     for (const s of series) {
-        // Конвертируем даты в bins обратно в локальное время если нужно
-        const convertedBins = s.bins?.map(bin => ({
-            ...bin,
-            // Если используем временную зону и это не UTC,
-            // нужно конвертировать время обратно для отображения
-            t: bin.t // Оставляем как есть, конверсия должна быть в компоненте отображения
-        })) ?? [];
-
         dispatch(
             upsertTiles({
                 field: s.field.name,
                 bucketMs: data.bucketMilliseconds,
-                tiles: [makeReadyTile(snapped, convertedBins)],
+                tiles: [makeReadyTile(snapped, s.bins)],
             })
         );
     }
-})
+});
 
 export const fetchMultiSeriesRaw = createAsyncThunk<
-    MultiSeriesResponse | undefined,
+MultiSeriesResponse | undefined,
     {
         request: GetMultiSeriesRequest;
         field: FieldDto;
+        skipDebounce?: boolean;
+        skipCoverageCheck?: boolean;
     },
-    { state: RootState }
->('charts/fetchMultiSeriesRaw', async ({ request, field }, { getState, dispatch }) => {
-
+{ state: RootState }
+>('charts/fetchMultiSeriesRaw', async ({ request, field, skipDebounce = false, skipCoverageCheck = false }, { getState, dispatch }) => {
     const state = getState();
-
-    // Получаем текущий bucket из state для проверки
     const fieldName = typeof field.name === 'string' ? field.name : String(field.name);
-    const checkBucketRelevance = () => {
-        const currentState = getState();
-        const currentBucket = currentState.charts.view[fieldName]?.currentBucketsMs;
-        return currentBucket === request.bucketMs;
-    };
 
-    // Получаем флаг синхронизации и синхронизированные поля из state
-    const isSyncEnabled = selectIsSyncEnabled(state);
-    const syncFields = selectSyncFields(state);
-
-    // Определяем список полей для загрузки
-    let fieldsToLoad: ReadonlyArray<FieldDto>;
-
-    if (isSyncEnabled && syncFields.length > 0) {
-        const fieldIds = new Set<FieldDto>();
-        const uniqueFields: FieldDto[] = [];
-
-        syncFields.forEach(f => {
-            if (!fieldIds.has(f)) {
-                fieldIds.add(f);
-                uniqueFields.push(f);
-            }
-        });
-
-        if (!fieldIds.has(field)) {
-            uniqueFields.push(field);
-        }
-
-        fieldsToLoad = uniqueFields;
-    } else {
-        fieldsToLoad = [field];
+    const view = state.charts.view[fieldName];
+    if (!view || !request.template) {
+        console.warn(`[fetchMultiSeriesRaw] No view or template for field: ${fieldName}`);
+        return undefined;
     }
 
-    // Создаем модифицированный запрос
-    const modifiedRequest: GetMultiSeriesRequest = {
-        ...request,
-        template: {
-            ...request.template,
-            selectedFields: fieldsToLoad
+    const targetBucketMs = request.bucketMs || 60000;
+
+    // ИСПРАВЛЕНИЕ: Используем правильный метод с правильными параметрами
+    if (!skipCoverageCheck && view.seriesLevel && request.from && request.to) {
+        // Используем метод checkDataNeedsLoading вместо checkExactLevelCoverage
+        const coverageCheck = dataProxyService.checkDataNeedsLoading(
+            view.seriesLevel,  // Передаем весь Record
+            {
+                bucketMs: targetBucketMs,
+                from: request.from,
+                to: request.to,
+                minCoveragePercent: 95
+            }
+        );
+
+        if (coverageCheck.hasSufficientCoverage && coverageCheck.quality === 'exact') {
+            console.log(
+                `[fetchMultiSeriesRaw] Sufficient exact coverage (${coverageCheck.coveragePercent.toFixed(1)}%) ` +
+                `on bucket ${targetBucketMs}ms for ${fieldName}, skipping request`
+            );
+            return undefined;
         }
-    };
+
+        // Если есть stale данные, можем их использовать временно
+        if (coverageCheck.hasSufficientCoverage && coverageCheck.quality !== 'exact') {
+            console.log(
+                `[fetchMultiSeriesRaw] Using ${coverageCheck.quality} data ` +
+                `(${coverageCheck.coveragePercent.toFixed(1)}%) for ${fieldName}`
+            );
+            // Продолжаем загрузку для получения точных данных
+        }
+    }
 
     try {
-        // Вызываем основной thunk для загрузки данных
-        const result = await dispatch(fetchMultiSeries(modifiedRequest)).unwrap();
+        const executeRequestFn = async (signal: AbortSignal): Promise<MultiSeriesResponse> => {
+            const currentState = getState();
+            const isSyncEnabled = selectIsSyncEnabled(currentState);
+            const syncFields = selectSyncFields(currentState);
 
-        // Проверяем актуальность после загрузки
-        if (!checkBucketRelevance()) {
-            console.log('Bucket changed during request, skipping update');
-            return undefined; // Не обновляем state если bucket изменился
+            let fieldsToLoad: ReadonlyArray<FieldDto> = [field];
+
+            // Обработка синхронизированных полей
+            if (isSyncEnabled && syncFields.length > 0) {
+                const fieldIds = new Set<string>();
+                const uniqueFields: FieldDto[] = [];
+
+                syncFields.forEach(f => {
+                    if (!fieldIds.has(f.name)) {
+                        fieldIds.add(f.name);
+                        uniqueFields.push(f);
+                    }
+                });
+
+                if (!fieldIds.has(field.name)) {
+                    fieldIds.add(field.name);
+                    uniqueFields.push(field);
+                }
+
+                fieldsToLoad = uniqueFields;
+
+                // Проверяем покрытие для всех синхронизированных полей
+                if (!skipCoverageCheck) {
+                    let allHaveCoverage = true;
+
+                    for (const syncField of fieldsToLoad) {
+                        const syncFieldView = currentState.charts.view[syncField.name];
+                        if (!syncFieldView || !syncFieldView.seriesLevel) {
+                            allHaveCoverage = false;
+                            break;
+                        }
+
+                        const syncCoverageCheck = dataProxyService.checkDataNeedsLoading(
+                            syncFieldView.seriesLevel,
+                            {
+                                bucketMs: targetBucketMs,
+                                from: request.from,
+                                to: request.to,
+                                minCoveragePercent: 95
+                            }
+                        );
+
+                        if (!syncCoverageCheck.hasSufficientCoverage ||
+                            syncCoverageCheck.quality !== 'exact') {
+                            allHaveCoverage = false;
+                            console.log(
+                                `[fetchMultiSeriesRaw] Sync field ${syncField.name} needs data: ` +
+                                `${syncCoverageCheck.coveragePercent.toFixed(1)}% ${syncCoverageCheck.quality}`
+                            );
+                            break;
+                        }
+                    }
+
+                    if (allHaveCoverage) {
+                        console.log(`[fetchMultiSeriesRaw] All sync fields have sufficient coverage, skipping`);
+                        throw new DOMException('All fields have sufficient coverage', 'AbortError');
+                    }
+                }
+            }
+
+            // Создаем запрос с выбранными полями
+            const modifiedRequest: GetMultiSeriesRequest = {
+                ...request,
+                template: {
+                    ...request.template,
+                    selectedFields: fieldsToLoad
+                }
+            };
+
+            // Вызываем API
+            const response = await dispatch(
+                fetchMultiSeries({
+                    request: modifiedRequest,
+                    loadingType: LoadingType.Zoom
+                })
+            ).unwrap();
+
+            if (signal.aborted) {
+                throw new DOMException('Request was aborted', 'AbortError');
+            }
+
+            return response;
+        };
+
+        // Используем RequestManager для управления запросом
+        let result: MultiSeriesResponse;
+
+        if (skipDebounce) {
+            const abortController = new AbortController();
+            result = await executeRequestFn(abortController.signal);
+        } else {
+            result = await requestManager.executeRequest<MultiSeriesResponse>(
+                {
+                    field,
+                    bucketMs: targetBucketMs,
+                    from: request.from,
+                    to: request.to,
+                    px: request.px || 1200,
+                    onProgress: (progress) => {
+                        dispatch(updateLoadingProgress({
+                            field: fieldName,
+                            progress,
+                            message: `Загрузка данных: ${Math.round(progress)}%`,
+                            estimatedEndTime: Date.now() + ((100 - progress) * 20)
+                        }));
+                    }
+                },
+                executeRequestFn
+            );
         }
 
-        // Если bucket актуален, обрабатываем результат
-        if (result && result.series) {
+        // Проверяем актуальность bucket после загрузки
+        const currentState = getState();
+        const currentView = currentState.charts.view[fieldName];
+
+        if (!currentView || currentView.currentBucketsMs !== targetBucketMs) {
+            console.log(
+                `[fetchMultiSeriesRaw] Bucket changed during request for ${fieldName}, ` +
+                `was ${targetBucketMs}ms, now ${currentView?.currentBucketsMs}ms`
+            );
+            return undefined;
+        }
+
+        // Обработка полученных данных
+        if (result && result.series && Array.isArray(result.series)) {
             const snapped = snapToBucketMs(
-                request.from || new Date(),
-                request.to || new Date(),
+                request.from,
+                request.to,
                 result.bucketMilliseconds
             );
 
-            for (const s of result.series) {
-                const convertedBins = s.bins?.map(bin => ({
-                    ...bin,
-                    t: bin.t
-                })) ?? [];
+            for (const seriesItem of result.series) {
+                const targetFieldName = seriesItem.field.name;
+                const targetView = currentState.charts.view[targetFieldName];
 
-                // Обновляем только если bucket все еще актуален
-                if (checkBucketRelevance()) {
-                    dispatch(
-                        upsertTiles({
-                            field: s.field.name,
-                            bucketMs: result.bucketMilliseconds,
-                            tiles: [makeReadyTile(snapped, convertedBins)],
-                        })
-                    );
+                if (!targetView) {
+                    console.warn(`[fetchMultiSeriesRaw] No view for field ${targetFieldName}`);
+                    continue;
                 }
+
+                if (targetView.currentBucketsMs !== result.bucketMilliseconds) {
+                    console.log(
+                        `[fetchMultiSeriesRaw] Bucket mismatch for ${targetFieldName}, ` +
+                        `expected ${targetView.currentBucketsMs}ms, got ${result.bucketMilliseconds}ms`
+                    );
+                    continue;
+                }
+
+                const bins = seriesItem.bins || [];
+                const convertedBins: SeriesBinDto[] = bins.map(bin => ({
+                    ...bin,
+                    t: bin.t instanceof Date ? bin.t : new Date(bin.t)
+                }));
+
+                dispatch(
+                    upsertTiles({
+                        field: targetFieldName,
+                        bucketMs: result.bucketMilliseconds,
+                        tiles: [makeReadyTile(snapped, convertedBins)],
+                    })
+                );
+
+                console.log(
+                    `[fetchMultiSeriesRaw] Saved ${convertedBins.length} bins for ${targetFieldName} ` +
+                    `at bucket ${result.bucketMilliseconds}ms`
+                );
             }
         }
 
         return result;
 
-    } catch (error) {
-        console.error('Ошибка загрузки данных:', error);
+    } catch (error: any) {
+        if (error.name === 'AbortError') {
+            console.log(`[fetchMultiSeriesRaw] Request for ${fieldName} was cancelled`);
+
+            // Завершаем загрузку без ошибки для отмененных запросов
+            dispatch(finishLoading({
+                field: fieldName,
+                success: false,
+                error: undefined
+            }));
+
+            return undefined;
+        }
+
+        console.error(`[fetchMultiSeriesRaw] Error loading data for ${fieldName}:`, error);
+        const errorMessage = error?.message || 'Ошибка загрузки данных';
+
+        dispatch(setFieldError({
+            fieldName,
+            error: errorMessage
+        }));
+
+        dispatch(finishLoading({
+            field: fieldName,
+            success: false,
+            error: errorMessage
+        }));
+
         throw error;
     }
 });
+
 
 
 /**
@@ -254,9 +418,11 @@ export const fetchMultiSeriesRaw = createAsyncThunk<
 
 const fetchMultiSeries = createAsyncThunk<
     MultiSeriesResponse,
-    GetMultiSeriesRequest,
+    { request: GetMultiSeriesRequest, loadingType: LoadingType, loadingMessage?: string | undefined },
     { state: RootState }
->('charts/fetchMultiSeriesRaw', async (request, { dispatch }) => {
+>('charts/fetchMultiSeriesRaw', async (data, { dispatch }) => {
+
+    const{ request, loadingType, loadingMessage } = data;
 
     if (!request.template) throw new Error('ResolvedCharReqTemplate is undefined');
     if (!request.template.databaseId) throw new Error('ResolvedCharReqTemplate.databaseId is undefined');
@@ -268,8 +434,8 @@ const fetchMultiSeries = createAsyncThunk<
     fieldsForStatus.forEach((f) =>
         dispatch(startLoading({
             field: f.name,
-            type: LoadingType.Initial,
-            message: 'Загрузка данных...'
+            type: loadingType,
+            message: loadingMessage ?? 'Загрузка данных...'
         }))
     );
 

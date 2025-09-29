@@ -6,11 +6,63 @@ import type { SeriesBinDto } from '@charts/shared/contracts/chart/Dtos/SeriesBin
 import type { RootState } from "@/store/store.ts";
 import type { FieldDto } from "@charts/shared/contracts/metadata/Dtos/FieldDto.ts";
 import { type LoadingState } from '@charts/ui/CharContainer/types';
+import {dataProxyService, type DataQuality} from "@charts/store/DataProxyService.ts";
 
 // Базовые селекторы
 export const selectChartsState = (state: RootState) => state.charts;
 export const selectChartBucketingConfig = (state: RootState) => state.chartsSettings.bucketing;
 export const selectTimeSettings = (state: RootState) => state.chartsSettings.timeSettings;
+
+
+
+/**
+ * Селектор для получения лучших доступных данных
+ * Всегда возвращает данные, даже если не точного уровня
+ */
+export const selectOptimalFieldData = createSelector(
+    [
+        (state: RootState, fieldName: string) => selectFieldView(state, fieldName),
+        (state: RootState, fieldName: string) => selectFieldTiles(state, fieldName)
+    ],
+    (view, { tiles }): {
+        data: SeriesBinDto[];
+        quality: DataQuality;
+        isLoading: boolean;
+        isStale: boolean;
+        coverage: number;
+        sourceBucketMs?: number | undefined;
+    } => {
+        if (!view || !view.currentBucketsMs || !view.currentRange) {
+            return {
+                data: [],
+                quality: 'none' as DataQuality,
+                isLoading: false,
+                isStale: false,
+                coverage: 0
+            };
+        }
+
+        // Проверяем, есть ли точные данные
+        const hasExactData = tiles.some(t => t.status === 'ready' && t.bins.length > 0);
+        const isLoadingExact = tiles.some(t => t.status === 'loading');
+
+        // Получаем лучшие доступные данные
+        const proxyResult = dataProxyService.getBestAvailableData(
+            view.seriesLevel,
+            view.currentBucketsMs,
+            view.currentRange
+        );
+
+        return {
+            data: proxyResult.data,
+            quality: proxyResult.quality,
+            isLoading: isLoadingExact,
+            isStale: proxyResult.isStale && !hasExactData,
+            coverage: proxyResult.coverage,
+            sourceBucketMs: proxyResult.sourceBucketMs
+        };
+    }
+);
 
 // Селекторы синхронизации
 export const selectIsSyncEnabled = (state: RootState) => state.charts.syncEnabled;
