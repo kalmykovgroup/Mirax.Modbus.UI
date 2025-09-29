@@ -131,7 +131,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
         timeZone = 'UTC',
         useTimeZone = false,
         opacity = 1,
-        lineStyle = {}
+        lineStyle = {},
     } = params;
 
 
@@ -252,7 +252,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             smooth: false,
             z: 3,
             animation: true,
-            animationDuration: 300,
+            animationDuration: 700,
             showSymbol: true,
             showAllSymbol: data.length < 100
         });
@@ -291,7 +291,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             smooth: false,
             z: 3,
             animation: true,
-            animationDuration: 300,
+            animationDuration: 700,
             showSymbol: true,
             showAllSymbol: data.length < 100
         });
@@ -337,7 +337,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             progressiveThreshold: 10000,
             z: 5,
             animation: true,
-            animationDuration: 300,
+            animationDuration: 700,
             showSymbol: true,
             showAllSymbol: data.length < 100,
             markLine: {
@@ -407,7 +407,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
     return {
         backgroundColor: currentTheme.background,
         animation: true,
-        animationDuration: 300,
+        animationDuration: 700,
         animationEasing: 'cubicOut',
 
         grid: {
@@ -418,23 +418,19 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             containLabel: true
         },
 
+        // В createChartOption, секция tooltip
         tooltip: hasData ? {
             trigger: 'axis',
             confine: true,
             transitionDuration: 0,
             axisPointer: {
                 type: 'cross',
-                animation: true,
+                animation: false, // Отключаем анимацию
                 snap: true,
                 label: {
                     backgroundColor: '#6a7985',
                     borderColor: '#6a7985',
                     shadowBlur: 0
-                },
-                crossStyle: {
-                    color: '#999',
-                    width: 1,
-                    type: 'dashed'
                 }
             },
             backgroundColor: 'rgba(255,255,255,0.95)',
@@ -444,49 +440,52 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
             textStyle: { color: '#333' },
             formatter: (params: any) => {
                 try {
+                    // КРИТИЧЕСКАЯ ПРОВЕРКА: есть ли вообще данные в series
+                    if (!series || series.length === 0) {
+                        return 'Нет данных';
+                    }
+
+                    // Проверяем что есть хотя бы одна серия с данными
+                    const hasSeriesData = series.some(s =>
+                        s.data && Array.isArray(s.data) && s.data.length > 0
+                    );
+
+                    if (!hasSeriesData) {
+                        return 'Загрузка...';
+                    }
+
                     if (!params) return '';
 
                     const paramsArray = Array.isArray(params) ? params : [params];
-
                     if (paramsArray.length === 0) return 'Нет данных';
 
+                    // Фильтруем только валидные параметры
                     const validParams = paramsArray.filter((item: any) => {
-                        return item && item.data !== undefined && item.seriesName !== undefined;
+                        // Проверяем что у параметра есть data и seriesIndex
+                        return item &&
+                            item.data !== undefined &&
+                            item.seriesIndex !== undefined &&
+                            item.seriesIndex < series.length;
                     });
 
                     if (validParams.length === 0) return 'Нет данных';
 
-                    try {
-                        const formatter = createTooltipFormatter({
-                            fieldName,
-                            data,
-                            bucketMs,
-                            timeZone,
-                            useTimeZone
-                        });
-                        return formatter(validParams);
-                    } catch (formatterError) {
-                        const firstParam = validParams[0];
-                        if (firstParam && firstParam.data) {
-                            const time = Array.isArray(firstParam.data)
-                                ? firstParam.data[0]
-                                : firstParam.value?.[0];
-                            const value = Array.isArray(firstParam.data)
-                                ? firstParam.data[1]
-                                : firstParam.value?.[1];
+                    // Безопасно вызываем formatter
+                    const formatter = createTooltipFormatter({
+                        fieldName,
+                        data: data || [], // Защита от undefined
+                        bucketMs,
+                        timeZone,
+                        useTimeZone
+                    });
 
-                            return `${fieldName}<br/>
-                                   ${new Date(time).toLocaleString()}<br/>
-                                   Значение: ${value ?? 'N/A'}`;
-                        }
-                        return fieldName;
-                    }
+                    return formatter(validParams);
                 } catch (error) {
-                    console.error('Tooltip error:', error);
+                    console.error('Tooltip formatter error:', error);
                     return fieldName;
                 }
             }
-        } : undefined,
+        } : { show: false }, // Если нет данных - отключаем tooltip полностью
 
         toolbox: {
             feature: {
@@ -667,7 +666,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
 
 
         // КРИТИЧНО: всегда используем filterMode: 'none' чтобы избежать getRawIndex ошибок
-        dataZoom: [
+        dataZoom: hasData ? [
             // X: Ctrl + колесо — зум по времени
             {
                 type: 'inside' as const,
@@ -738,7 +737,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
                 realtime: true,
                 throttle: 100,
             }] : []),
-        ],
+        ] : [],
 
 
         ...(enableBrush ? {

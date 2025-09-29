@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, {useRef, useEffect, useState, useCallback} from 'react';
 import * as echarts from 'echarts';
 import type {ECharts, EChartsOption, SeriesOption} from 'echarts';
 import styles from './ViewFieldChart.module.css';
@@ -11,9 +11,12 @@ import DataQualityIndicator from "@charts/ui/CharContainer/ChartCollection/Field
 import type {DataQuality} from "@charts/store/DataProxyService.ts";
 import ChartToggles
     from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ChartToggles/ChartToggles.tsx";
+import {echartsDebugger} from "@charts/ui/CharContainer/ChartCollection/FieldChart/EChartsDebugger.tsx";
 
 export interface ViewFieldChartProps {
     originalRange: TimeRange;
+    visualRange?: TimeRange | undefined;
+    setVisualRange?: ((range: TimeRange | undefined) => void) | undefined;
     fieldName: string;
     chartOption: EChartsOption;
     stats: ChartStats;
@@ -47,32 +50,13 @@ function isSeriesArray(x: SeriesOption | SeriesOption[] | undefined): x is Serie
     return Array.isArray(x);
 }
 
-const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
-                                                           fieldName,
-                                                           chartOption,
-                                                           stats,
-                                                           loadingState,
-                                                           error,
-                                                           info,
-                                                           dataQuality,
-                                                           isStale,
-                                                           dataCoverage,
-                                                           sourceBucketMs,
-                                                           targetBucketMs,
-                                                           onChartReady,
-                                                           onZoom,
-                                                           onResize,
-                                                           onBrush,
-                                                           onClick,
-                                                           className,
-                                                           originalRange,
-                                                           showMin,
-                                                           showMax,
-                                                           showArea,
-                                                           setShowMin,
-                                                           setShowMax,
-                                                           setShowArea
-                                                       }) => {
+const ViewFieldChart: React.FC<ViewFieldChartProps> = (props) => {
+
+
+    const {fieldName, chartOption, stats, loadingState, error, info, dataQuality, isStale,
+        dataCoverage, sourceBucketMs, targetBucketMs, onChartReady, onZoom, onResize, onBrush,
+        onClick, className, originalRange, showMin, showMax, showArea, setShowMin, setShowMax, setShowArea} = props
+    
     const containerRef = useRef<HTMLDivElement>(null);
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartInstanceRef = useRef<ECharts | null>(null);
@@ -82,6 +66,9 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
     const isInitializedRef = useRef(false);
     const lastOptionHashRef = useRef<string>('');
 
+    const prevDataLengthRef = useRef<number>(0);
+
+
     // Инициализация графика - только один раз
     useEffect(() => {
         if (!chartContainerRef.current || isInitializedRef.current) return;
@@ -89,7 +76,6 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
         const initChart = () => {
             if (!chartContainerRef.current) return;
 
-            // Проверяем и удаляем существующий экземпляр
             const existingChart = echarts.getInstanceByDom(chartContainerRef.current);
             if (existingChart && !existingChart.isDisposed()) {
                 existingChart.dispose();
@@ -103,12 +89,27 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
             chartInstanceRef.current = chartInstance;
             isInitializedRef.current = true;
 
-            // Устанавливаем начальные опции
             chartInstance.setOption(chartOption, true);
 
-            // Подписываемся на события
+            // КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ - отключаем tooltip перед zoom
             chartInstance.on('dataZoom', (params: any) => {
+
+                const currentOption = chartInstance.getOption() as any;
+                const hasData = currentOption?.series?.[0]?.data?.length > 0;
+
+                if (!hasData) {
+                    console.warn('[ViewFieldChart] Zoom ignored - no data in chart');
+                    return;
+                }
+
+                if (!params || (params.batch && params.batch.length === 0)) {
+                    console.warn('[ViewFieldChart] Invalid zoom params');
+                    return;
+                }
+
+                // Вызываем обработчик
                 onZoom(params);
+
             });
 
             chartInstance.on('click', (params: any) => {
@@ -123,7 +124,6 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                 });
             }
 
-            // Уведомляем что график готов
             onChartReady(chartInstance);
         };
 
@@ -136,21 +136,46 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
             chartInstanceRef.current = null;
             isInitializedRef.current = false;
         };
-    }, []); // Только при монтировании
+    }, []);
 
-    // Обновление опций графика
+    useEffect(() => {
+        if (!chartInstanceRef.current || chartInstanceRef.current.isDisposed()) return;
+
+        const hasData = (chartOption.series as any)?.[0]?.data?.length > 0;
+
+        if (!hasData) {
+            // Отключаем все события tooltip при отсутствии данных
+            chartInstanceRef.current.off('mousemove');
+            chartInstanceRef.current.off('mouseout');
+
+            // Программно скрываем tooltip
+            chartInstanceRef.current.dispatchAction({
+                type: 'hideTip'
+            });
+
+            // Отключаем tooltip через setOption
+            chartInstanceRef.current.setOption({
+                tooltip: { show: false }
+            }, { lazyUpdate: false });
+        } else {
+            // Включаем обратно
+            chartInstanceRef.current.setOption({
+                tooltip: { show: true }
+            }, { lazyUpdate: false });
+        }
+    }, [chartOption]);
+
     useEffect(() => {
         if (!chartInstanceRef.current || !isInitializedRef.current) return;
         if (chartInstanceRef.current.isDisposed()) return;
 
-        // Создаем простой хеш для проверки изменений
         const optionHash = JSON.stringify({
-            seriesLength: isSeriesArray(chartOption.series) ? chartOption.series.length : chartOption.series ? 1 : 0,
+            seriesLength: isSeriesArray(chartOption.series) ? chartOption.series.length : 1,
             firstSeriesLength: (chartOption.series as any)?.[0]?.data?.length || 0
         });
 
         if (optionHash === lastOptionHashRef.current) {
-            return; // Данные не изменились
+            return;
         }
 
         lastOptionHashRef.current = optionHash;
@@ -161,19 +186,25 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
             }
 
             try {
-                // Простое обновление без сложной логики
+                // Используем ref, объявленный на верхнем уровне
+                const currentDataLength = (chartOption.series as any)?.[0]?.data?.length || 0;
+                const significantChange = Math.abs(currentDataLength - prevDataLengthRef.current) > 50;
+
                 chartInstanceRef.current.setOption(chartOption, {
-                    notMerge: false,
-                    lazyUpdate: true,
-                    replaceMerge: ['series']
+                    notMerge: significantChange,
+                    lazyUpdate: false,
+                    replaceMerge: significantChange ? [] : ['series'],
+                    silent: true
                 });
 
+                prevDataLengthRef.current = currentDataLength;
                 setShowSkeleton(false);
             } catch (error) {
                 console.error('Ошибка обновления графика:', error);
             }
         });
     }, [chartOption]);
+
 
     // Управление скелетоном
     useEffect(() => {
@@ -270,6 +301,8 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
         };
         return `${formatDate(originalRange.from)} - ${formatDate(originalRange.to)}`;
     };
+
+
 
     return (
         <div
@@ -398,6 +431,27 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = ({
                         visibility: error ? 'hidden' : 'visible'
                     }}
                 />
+
+                {/* Кнопка для дампа отладки */}
+                {process.env.NODE_ENV === 'development' && (
+                    <button
+                        onClick={() => echartsDebugger.dumpFullState()}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            right: 0,
+                            zIndex: 1000,
+                            padding: '4px 8px',
+                            background: 'red',
+                            color: 'white',
+                            border: 'none',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Dump Debug
+                    </button>
+                )}
+
             </div>
         </div>
     );

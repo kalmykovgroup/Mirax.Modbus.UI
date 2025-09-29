@@ -1,6 +1,6 @@
 // charts/ui/CharContainer/ChartCollection/FieldChart/FieldChart.tsx
 
-import React, {useCallback, useEffect, useMemo, useRef} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { createChartOption } from './OptionECharts';
 import {
@@ -26,6 +26,8 @@ import type { FieldDto } from "@charts/shared/contracts/metadata/Dtos/FieldDto.t
 import type { GetMultiSeriesRequest } from "@charts/shared/contracts/chart/Dtos/Requests/GetMultiSeriesRequest.ts";
 import type { ChartStats, LoadingState } from "@charts/ui/CharContainer/types.ts";
 import {dataProxyService} from "@charts/store/DataProxyService.ts";
+import {echartsDebugger} from "@charts/ui/CharContainer/ChartCollection/FieldChart/EChartsDebugger.tsx";
+
 
 interface Props {
     field: FieldDto;
@@ -77,14 +79,6 @@ const FieldChart: React.FC<Props> = ({
     const lastRequestParamsRef = useRef<string>('');
     const maxBucketMsRef = useRef<number | null>(null);
 
-    const [showMin, setShowMin] = React.useState(true);
-    const [showMax, setShowMax] = React.useState(true);
-    const [showArea, setShowArea] = React.useState(true);
-
-    // Конфигурации
-    const bucketingConfig = useAppSelector(selectChartBucketingConfig);
-    const timeSettings = useAppSelector(selectTimeSettings);
-
     // Создаем дефолтный диапазон
     const getDefaultRange = useCallback((): TimeRange => {
         const now = Date.now();
@@ -93,6 +87,19 @@ const FieldChart: React.FC<Props> = ({
             to: new Date(now)
         };
     }, []);
+
+
+    const [visualRange, setVisualRange] = useState<TimeRange | undefined>(undefined);
+
+    const [showMin, setShowMin] = React.useState(true);
+    const [showMax, setShowMax] = React.useState(true);
+    const [showArea, setShowArea] = React.useState(true);
+
+    // Конфигурации
+    const bucketingConfig = useAppSelector(selectChartBucketingConfig);
+    const timeSettings = useAppSelector(selectTimeSettings);
+
+
 
     // Фиксированный домен из template
     const originalRange = useMemo((): TimeRange => {
@@ -104,8 +111,7 @@ const FieldChart: React.FC<Props> = ({
         return getDefaultRange();
     }, [template.from, template.to, getDefaultRange]);
 
-    // Загрузка данных при изменении параметров
-    // FieldChart.tsx - строки ~106-197
+    // Загрузка данных при изменении параметров 7
     useEffect(() => {
         if (!view?.currentRange || !view?.currentBucketsMs || !template) {
             console.log(`[FieldChart ${fieldName}] Skip load - missing required params`);
@@ -175,18 +181,53 @@ const FieldChart: React.FC<Props> = ({
         return originalRange;
     }, [view?.currentRange, originalRange]);
 
+    // В FieldChart.tsx, добавьте перед созданием chartOption:
+    useEffect(() => {
+        // Проверка согласованности данных
+        if (data && data.length > 0 && view) {
+            const firstPoint = data[0];
+            const lastPoint = data[data.length - 1];
+
+            echartsDebugger.log('DATA_CONSISTENCY_CHECK', {
+                fieldName,
+                dataLength: data.length,
+                firstPoint: {
+                    time: firstPoint?.t,
+                    value: firstPoint?.avg
+                },
+                lastPoint: {
+                    time: lastPoint?.t,
+                    value: lastPoint?.avg
+                },
+                viewRange: {
+                    from: view.currentRange?.from,
+                    to: view.currentRange?.to
+                },
+                bucketMs: view.currentBucketsMs,
+                quality,
+                coverage
+            });
+
+            // Проверка на дубликаты времени
+            const timeMap = new Map<number, number>();
+            data.forEach((point, idx) => {
+                const time = new Date(point.t).getTime();
+                if (timeMap.has(time)) {
+                    echartsDebugger.log('DATA_WARNING_DUPLICATE', {
+                        fieldName,
+                        duplicateTime: point.t,
+                        firstIndex: timeMap.get(time),
+                        secondIndex: idx
+                    });
+                }
+                timeMap.set(time, idx);
+            });
+        }
+    }, [data, view, fieldName, quality, coverage]);
+
     // Создание опций для графика
-    const chartOption = useMemo(() => {
-        // Отладка данных
-        console.log(`[FieldChart ${fieldName}] Creating chart options:`, {
-            dataLength: data.length,
-            quality,
-            isStale,
-            currentBucketsMs: view?.currentBucketsMs,
-            hasView: !!view,
-            firstDataPoint: data[0],
-            lastDataPoint: data[data.length - 1]
-        });
+    let chartOption = useMemo(() => {
+        const effectiveRange = visualRange || view?.currentRange || originalRange;
 
         // Визуальные подсказки о качестве данных
         const opacity = isStale ? 0.7 : 1;
@@ -198,7 +239,7 @@ const FieldChart: React.FC<Props> = ({
             data: data,
             fieldName: fieldName,
             domain: originalRange,
-            visibleRange: view?.currentRange || originalRange,
+            visibleRange: effectiveRange,
             bucketMs: view?.currentBucketsMs || 60000,
             theme: 'light',
             showMinimap: true,
@@ -215,7 +256,7 @@ const FieldChart: React.FC<Props> = ({
         data,
         fieldName,
         originalRange,
-        view?.currentRange,
+        visualRange,
         view?.currentBucketsMs,
         quality,
         isStale,
@@ -269,15 +310,16 @@ const FieldChart: React.FC<Props> = ({
 
     // Используем ref для хранения актуального view
     const viewRef = useRef(view);
+
     useEffect(() => {
         viewRef.current = view;
     }, [view]);
+
 
     // Обработчик зума с проверкой покрытия данными
     // Исправленный handleZoom в FieldChart.tsx (замените существующий)
 
     const handleZoom = useCallback((params: any) => {
-        console.log(`[FieldChart ${fieldName}] Zoom event:`, params);
 
         const currentView = viewRef.current;
 
@@ -288,6 +330,13 @@ const FieldChart: React.FC<Props> = ({
 
         if (!chartInstanceRef.current || !chartInstanceRef.current.getOption) {
             console.warn('График не готов для операции zoom');
+            return;
+        }
+
+        // Защита от невалидных параметров
+        if (!params || (params.start === undefined && params.end === undefined &&
+            (!params.batch || params.batch.length === 0))) {
+            console.warn('[handleZoom] Invalid zoom params:', params);
             return;
         }
 
@@ -327,6 +376,8 @@ const FieldChart: React.FC<Props> = ({
         const newFrom = new Date(domainStart + (domainSpan * zoomStart / 100));
         const newTo = new Date(domainStart + (domainSpan * zoomEnd / 100));
 
+        setVisualRange({ from: newFrom, to: newTo });
+
         if (newTo.getTime() <= newFrom.getTime()) {
             console.warn('Защита от некорректных значений');
             return;
@@ -342,71 +393,69 @@ const FieldChart: React.FC<Props> = ({
 
         // Проверяем изменения
         const bucketChanged = currentView.currentBucketsMs !== newBucket;
-        const rangeChanged =
-            Math.abs((currentView.currentRange?.from?.getTime() || 0) - newFrom.getTime()) > 1000 ||
-            Math.abs((currentView.currentRange?.to?.getTime() || 0) - newTo.getTime()) > 1000;
 
-        if (!rangeChanged && !bucketChanged) {
-            console.log(`[FieldChart ${fieldName}] No changes, skipping`);
-            return;
+        if (bucketChanged) {
+
+            // Обновляем view
+            dispatch(updateView({
+                field: fieldName,
+                currentRange: { from: newFrom, to: newTo },
+                currentBucketsMs: newBucket
+            }));
+
+
+            // Проверяем активные загрузки
+            const targetLevels = currentView.seriesLevel;
+            const tiles = targetLevels[newBucket] || [];
+            const hasLoadingTiles = dataProxyService.hasLoadingTilesInRange(
+                tiles,
+                { from: newFrom.getTime(), to: newTo.getTime() }
+            );
+
+            if (hasLoadingTiles) {
+                console.log(`[FieldChart ${fieldName}] Loading already in progress for zoom`);
+                return;
+            }
+
+            const request: GetMultiSeriesRequest = {
+                template: template,
+                from: newFrom,
+                to: newTo,
+                px: containerWidth,
+                bucketMs: newBucket
+            };
+
+            // Проверяем дубликаты
+            const requestKey = `${fieldName}_${newBucket}_${newFrom.getTime()}_${newTo.getTime()}`;
+
+            if (lastRequestRef.current === requestKey) {
+                console.log(`[FieldChart ${fieldName}] Duplicate zoom request prevented`);
+                return;
+            }
+
+            lastRequestRef.current = requestKey;
+
+            console.log(`[FieldChart ${fieldName}] Loading zoom data for bucket ${newBucket}ms`);
+
+            dispatch(fetchMultiSeriesRaw({
+                request,
+                field,
+                skipCoverageCheck: false // Для zoom всегда проверяем покрытие в thunk
+            }))
+                .unwrap()
+                .then(() => {
+                    console.log(`[FieldChart ${fieldName}] Zoom data loaded`);
+                })
+                .catch((error: any) => {
+                    if (error.name !== 'AbortError') {
+                        console.error(`[FieldChart ${fieldName}] Zoom load error:`, error);
+                    }
+                    lastRequestRef.current = '';
+                });
+
         }
 
-        // Обновляем view
-        dispatch(updateView({
-            field: fieldName,
-            currentRange: { from: newFrom, to: newTo },
-            ...(bucketChanged ? { currentBucketsMs: newBucket } : {})
-        }));
 
-
-        // Проверяем активные загрузки
-        const targetLevels = currentView.seriesLevel;
-        const tiles = targetLevels[newBucket] || [];
-        const hasLoadingTiles = dataProxyService.hasLoadingTilesInRange(
-            tiles,
-            { from: newFrom.getTime(), to: newTo.getTime() }
-        );
-
-        if (hasLoadingTiles) {
-            console.log(`[FieldChart ${fieldName}] Loading already in progress for zoom`);
-            return;
-        }
-
-        const request: GetMultiSeriesRequest = {
-            template: template,
-            from: newFrom,
-            to: newTo,
-            px: containerWidth,
-            bucketMs: newBucket
-        };
-
-        // Проверяем дубликаты
-        const requestKey = `${fieldName}_${newBucket}_${newFrom.getTime()}_${newTo.getTime()}`;
-
-        if (lastRequestRef.current === requestKey) {
-            console.log(`[FieldChart ${fieldName}] Duplicate zoom request prevented`);
-            return;
-        }
-
-        lastRequestRef.current = requestKey;
-
-        console.log(`[FieldChart ${fieldName}] Loading zoom data for bucket ${newBucket}ms`);
-
-        dispatch(fetchMultiSeriesRaw({
-            request,
-            field,
-            skipCoverageCheck: false // Для zoom всегда проверяем покрытие в thunk
-        }))
-            .unwrap()
-            .then(() => {
-                console.log(`[FieldChart ${fieldName}] Zoom data loaded`);
-            })
-            .catch((error: any) => {
-                if (error.name !== 'AbortError') {
-                    console.error(`[FieldChart ${fieldName}] Zoom load error:`, error);
-                }
-                lastRequestRef.current = '';
-            });
 
 
     }, [field, fieldName, originalRange, dispatch, containerWidth, template]);
@@ -462,35 +511,44 @@ const FieldChart: React.FC<Props> = ({
         return <div>Инициализация графика...</div>;
     }
 
+
+
     return (
-        <ViewFieldChart
-            originalRange={originalRange}
-            fieldName={fieldName}
-            chartOption={chartOption}
-            stats={displayStats}
-            loadingState={loadingState}
-            error={errorMessage}
-            // Передаем данные о качестве
-            dataQuality={quality}
-            isStale={isStale}
-            dataCoverage={coverage}
-            sourceBucketMs={sourceBucketMs}
-            targetBucketMs={view?.currentBucketsMs}
+        <>
+            loadingState: {loadingState.active ? "true" : "false"} <br/>
+            data.length: {data.length} <br/>
 
-            onChartReady={handleChartReady}
-            onZoom={debouncedHandleZoom}
-            onResize={handleResize}
-            onBrush={handleBrush}
-            onClick={handleClick}
+            <ViewFieldChart
+                originalRange={originalRange}
+                visualRange={visualRange}
+                setVisualRange={setVisualRange}
+                fieldName={fieldName}
+                chartOption={chartOption}
+                stats={displayStats}
+                loadingState={loadingState}
+                error={errorMessage}
+                // Передаем данные о качестве
+                dataQuality={quality}
+                isStale={isStale}
+                dataCoverage={coverage}
+                sourceBucketMs={sourceBucketMs}
+                targetBucketMs={view?.currentBucketsMs}
 
-            showMin={showMin}
-            showMax={showMax}
-            showArea={showArea}
+                onChartReady={handleChartReady}
+                onZoom={debouncedHandleZoom}
+                onResize={handleResize}
+                onBrush={handleBrush}
+                onClick={handleClick}
 
-            setShowMin={setShowMin}
-            setShowMax={setShowMax}
-            setShowArea={setShowArea}
-        />
+                showMin={showMin}
+                showMax={showMax}
+                showArea={showArea}
+
+                setShowMin={setShowMin}
+                setShowMax={setShowMax}
+                setShowArea={setShowArea}
+            />
+        </>
     );
 };
 
