@@ -20,13 +20,14 @@ import { calculateBucket } from '@charts/store/chartsSettingsSlice';
 import { fetchMultiSeriesRaw } from '@charts/store/thunks';
 import type { ResolvedCharReqTemplate } from "@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate.ts";
 import ViewFieldChart from "@charts/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ViewFieldChart.tsx";
-import { calculateOptimalBucket, formatBucketSize } from './utils';
+import { formatBucketSize } from './utils';
 import { debounce } from "lodash";
 import type { FieldDto } from "@charts/shared/contracts/metadata/Dtos/FieldDto.ts";
-import type { GetMultiSeriesRequest } from "@charts/shared/contracts/chart/Dtos/Requests/GetMultiSeriesRequest.ts";
+import type { GetMultiSeriesRequest } from "@charts/shared/contracts/chart/Dtos/Requests_/GetMultiSeriesRequest.ts";
 import type { ChartStats, LoadingState } from "@charts/ui/CharContainer/types.ts";
 import {dataProxyService} from "@charts/store/DataProxyService.ts";
 import {echartsDebugger} from "@charts/ui/CharContainer/ChartCollection/FieldChart/EChartsDebugger.tsx";
+import {requestManager} from "@charts/store/RequestManager.ts";
 
 
 interface Props {
@@ -41,35 +42,15 @@ const FieldChart: React.FC<Props> = ({
                                          containerWidth = 1200,
                                      }) => {
     const dispatch = useAppDispatch();
-    const lastRequestRef = useRef<string>('');
 
     // Получаем имя поля как строку
     const fieldName = field.name;
 
     // Состояния и селекторы
     const view: FieldView | undefined = useAppSelector(state => selectFieldView(state, fieldName));
-    const {
-        data,
-        quality,
-        isLoading,
-        isStale,
-        coverage,
-        sourceBucketMs
-    } = useAppSelector(state => selectOptimalFieldData(state, fieldName));
 
-    // Отладка данных из селектора
-    useEffect(() => {
-        console.log(`[FieldChart ${fieldName}] Data from selector:`, {
-            dataLength: data?.length || 0,
-            quality,
-            isLoading,
-            isStale,
-            coverage,
-            sourceBucketMs,
-            firstPoint: data?.[0],
-            lastPoint: data?.[data?.length - 1]
-        });
-    }, [data, quality, fieldName, isLoading, isStale, coverage, sourceBucketMs]);
+    const { data, quality, isLoading, isStale, coverage, sourceBucketMs } =
+        useAppSelector(state => selectOptimalFieldData(state, fieldName));
 
     const fieldStats = useAppSelector(state => selectFieldStatsSafe(state, fieldName));
     const loadingState: LoadingState = useAppSelector(state => selectFieldLoadingState(state, fieldName));
@@ -77,7 +58,6 @@ const FieldChart: React.FC<Props> = ({
     const chartInstanceRef = useRef<any>(null);
     const isAdjustingRangeRef = useRef(false);
     const lastRequestParamsRef = useRef<string>('');
-    const maxBucketMsRef = useRef<number | null>(null);
 
     // Создаем дефолтный диапазон
     const getDefaultRange = useCallback((): TimeRange => {
@@ -225,18 +205,38 @@ const FieldChart: React.FC<Props> = ({
         }
     }, [data, view, fieldName, quality, coverage]);
 
-    // Создание опций для графика
-    let chartOption = useMemo(() => {
-        const effectiveRange = visualRange || view?.currentRange || originalRange;
+    //Echats options
 
-        // Визуальные подсказки о качестве данных
+    // Ref для хранения предыдущего option
+    const chartOptionRef = useRef<any>(null);
+    const dataHashRef = useRef<string>('');
+
+// Стабильная мемоизация данных
+    const memoizedData = useMemo(() => {
+        if (!data || data.length === 0) return [];
+
+        // Создаем стабильный хеш
+        const hash = `${data.length}_${data[0]?.t.getTime()}_${data[data.length - 1]?.t.getTime()}`;
+
+        // Если данные не изменились - возвращаем предыдущую ссылку
+        if (hash === dataHashRef.current && chartOptionRef.current) {
+            return chartOptionRef.currentData || data;
+        }
+
+        dataHashRef.current = hash;
+        return data;
+    }, [data]);
+
+// chartOption создается ТОЛЬКО когда данные реально изменились
+    const chartOption = useMemo(() => {
+        const effectiveRange = visualRange || view?.currentRange || originalRange;
         const opacity = isStale ? 0.7 : 1;
         const lineStyle = quality === 'exact'
             ? { width: 2.5 }
             : { width: 2, type: quality === 'interpolated' ? 'dashed' as const : 'solid' as const };
 
-        return createChartOption({
-            data: data,
+        const newOption = createChartOption({
+            data: memoizedData,
             fieldName: fieldName,
             domain: originalRange,
             visibleRange: effectiveRange,
@@ -252,8 +252,14 @@ const FieldChart: React.FC<Props> = ({
             timeZone: timeSettings.timeZone,
             useTimeZone: timeSettings.useTimeZone
         });
+
+        // Сохраняем данные для следующего сравнения
+        chartOptionRef.current = newOption;
+        chartOptionRef.currentData = memoizedData;
+
+        return newOption;
     }, [
-        data,
+        memoizedData, // ГЛАВНАЯ зависимость
         fieldName,
         originalRange,
         visualRange,
@@ -266,6 +272,9 @@ const FieldChart: React.FC<Props> = ({
         showMax,
         showArea,
     ]);
+
+    //END ---- Echats options
+
 
     // Вычисление статистики
     const displayStats = useMemo((): ChartStats => {
@@ -315,12 +324,12 @@ const FieldChart: React.FC<Props> = ({
         viewRef.current = view;
     }, [view]);
 
+    // FieldChart.tsx:276 (ПОЛНАЯ ЗАМЕНА)
 
-    // Обработчик зума с проверкой покрытия данными
-    // Исправленный handleZoom в FieldChart.tsx (замените существующий)
+    const previousRangeRef = useRef<TimeRange | undefined>(undefined);
+    const activeTileRequestsRef = useRef<Set<string>>(new Set());
 
     const handleZoom = useCallback((params: any) => {
-
         const currentView = viewRef.current;
 
         if (isAdjustingRangeRef.current || !currentView) {
@@ -328,12 +337,12 @@ const FieldChart: React.FC<Props> = ({
             return;
         }
 
-        if (!chartInstanceRef.current || !chartInstanceRef.current.getOption) {
+        if (!chartInstanceRef.current?.getOption) {
             console.warn('График не готов для операции zoom');
             return;
         }
 
-        // Защита от невалидных параметров
+        // Валидация параметров (без изменений)
         if (!params || (params.start === undefined && params.end === undefined &&
             (!params.batch || params.batch.length === 0))) {
             console.warn('[handleZoom] Invalid zoom params:', params);
@@ -341,7 +350,7 @@ const FieldChart: React.FC<Props> = ({
         }
 
         const currentOption = chartInstanceRef.current.getOption();
-        if (!currentOption || !currentOption.dataZoom || currentOption.dataZoom.length === 0) {
+        if (!currentOption?.dataZoom || currentOption.dataZoom.length === 0) {
             console.warn('DataZoom не инициализирован');
             return;
         }
@@ -369,19 +378,19 @@ const FieldChart: React.FC<Props> = ({
         }
 
         // Вычисляем новый диапазон
-        const domainStart = new Date(originalRange.from).getTime();
-        const domainEnd = new Date(originalRange.to).getTime();
+        const domainStart = originalRange.from.getTime();
+        const domainEnd = originalRange.to.getTime();
         const domainSpan = domainEnd - domainStart;
 
         const newFrom = new Date(domainStart + (domainSpan * zoomStart / 100));
         const newTo = new Date(domainStart + (domainSpan * zoomEnd / 100));
 
-        setVisualRange({ from: newFrom, to: newTo });
-
         if (newTo.getTime() <= newFrom.getTime()) {
             console.warn('Защита от некорректных значений');
             return;
         }
+
+        setVisualRange({ from: newFrom, to: newTo });
 
         if (!currentView.px) {
             console.error("view.px is undefined");
@@ -389,77 +398,128 @@ const FieldChart: React.FC<Props> = ({
         }
 
         // Выбираем оптимальный bucket
-        const newBucket = calculateBucket(newFrom, newTo, currentView.px);
+        const newBucket = calculateBucket(
+            newFrom,
+            newTo,
+            currentView.px,
+            bucketingConfig.enableWeeklyMultiples,
+            bucketingConfig.maxWeeksMultiple
+        );
 
-        // Проверяем изменения
         const bucketChanged = currentView.currentBucketsMs !== newBucket;
+        const effectiveBucket = bucketChanged ? newBucket : currentView.currentBucketsMs!;
 
-        if (bucketChanged) {
+        // КРИТИЧНО: Определяем tiles для загрузки
+        const panStrategy = dataProxyService.determineTilesForPan(
+            currentView.seriesLevel,
+            effectiveBucket,
+            { from: newFrom, to: newTo },
+            previousRangeRef.current,
+            0.3 // 30% prefetch
+        );
 
-            // Обновляем view
-            dispatch(updateView({
-                field: fieldName,
-                currentRange: { from: newFrom, to: newTo },
-                currentBucketsMs: newBucket
-            }));
-
-
-            // Проверяем активные загрузки
-            const targetLevels = currentView.seriesLevel;
-            const tiles = targetLevels[newBucket] || [];
-            const hasLoadingTiles = dataProxyService.hasLoadingTilesInRange(
-                tiles,
-                { from: newFrom.getTime(), to: newTo.getTime() }
-            );
-
-            if (hasLoadingTiles) {
-                console.log(`[FieldChart ${fieldName}] Loading already in progress for zoom`);
-                return;
-            }
-
-            const request: GetMultiSeriesRequest = {
-                template: template,
-                from: newFrom,
-                to: newTo,
-                px: containerWidth,
-                bucketMs: newBucket
-            };
-
-            // Проверяем дубликаты
-            const requestKey = `${fieldName}_${newBucket}_${newFrom.getTime()}_${newTo.getTime()}`;
-
-            if (lastRequestRef.current === requestKey) {
-                console.log(`[FieldChart ${fieldName}] Duplicate zoom request prevented`);
-                return;
-            }
-
-            lastRequestRef.current = requestKey;
-
-            console.log(`[FieldChart ${fieldName}] Loading zoom data for bucket ${newBucket}ms`);
-
-            dispatch(fetchMultiSeriesRaw({
-                request,
-                field,
-                skipCoverageCheck: false // Для zoom всегда проверяем покрытие в thunk
+        console.log(`[FieldChart ${fieldName}] Pan strategy:`, {
+            bucketChanged,
+            newBucket,
+            effectiveBucket,
+            needsLoading: panStrategy.needsLoading,
+            direction: panStrategy.direction,
+            tilesToLoad: panStrategy.tilesToLoad.map(t => ({
+                reason: t.reason,
+                range: `${new Date(t.fromMs).toISOString()} - ${new Date(t.toMs).toISOString()}`
             }))
-                .unwrap()
-                .then(() => {
-                    console.log(`[FieldChart ${fieldName}] Zoom data loaded`);
-                })
-                .catch((error: any) => {
-                    if (error.name !== 'AbortError') {
-                        console.error(`[FieldChart ${fieldName}] Zoom load error:`, error);
-                    }
-                    lastRequestRef.current = '';
-                });
+        });
 
+        // Обновляем previousRange для следующего вызова
+        previousRangeRef.current = { from: newFrom, to: newTo };
+
+        // ИСПРАВЛЕНИЕ: Обновляем view ВСЕГДА (даже если bucket не изменился)
+        dispatch(updateView({
+            field: fieldName,
+            currentRange: { from: newFrom, to: newTo },
+            ...(bucketChanged ? { currentBucketsMs: newBucket } : {})
+        }));
+
+        // Отменяем устаревшие prefetch-запросы при смене направления
+        if (panStrategy.direction !== 'none') {
+            requestManager.cancelFieldRequestsExceptDirection(
+                fieldName,
+                effectiveBucket,
+                panStrategy.direction
+            );
         }
 
+        // Загружаем tiles если нужно
+        if (panStrategy.needsLoading) {
+            // ИСПРАВЛЕНИЕ: Сортируем tiles по priority (high сначала)
+            const sortedTiles = [...panStrategy.tilesToLoad].sort((a, b) => {
+                const priorityOrder = { high: 0, normal: 1, low: 2 };
+                return priorityOrder[a.priority] - priorityOrder[b.priority];
+            });
 
+            sortedTiles.forEach((tile, index) => {
+                const tileFrom = new Date(tile.fromMs);
+                const tileTo = new Date(tile.toMs);
 
+                const tileKey = `${fieldName}_${effectiveBucket}_${tile.fromMs}_${tile.toMs}_${tile.reason}`;
 
-    }, [field, fieldName, originalRange, dispatch, containerWidth, template]);
+                if (activeTileRequestsRef.current.has(tileKey)) {
+                    console.log(`[FieldChart ${fieldName}] Duplicate tile request prevented: ${tile.reason}`);
+                    return;
+                }
 
+                activeTileRequestsRef.current.add(tileKey);
+
+                const request: GetMultiSeriesRequest = {
+                    template: template,
+                    from: tileFrom,
+                    to: tileTo,
+                    px: containerWidth,
+                    bucketMs: effectiveBucket,
+                    // НОВОЕ: Добавляем metadata
+                    metadata: {
+                        reason: tile.reason,
+                        priority: tile.priority
+                    }
+                };
+
+                console.log(
+                    `[FieldChart ${fieldName}] Loading tile #${index + 1}/${sortedTiles.length}:`,
+                    `${tile.reason} (${tile.priority})`,
+                    `range: ${tileFrom.toISOString()} - ${tileTo.toISOString()}`
+                );
+
+                dispatch(fetchMultiSeriesRaw({
+                    request,
+                    field,
+                    skipCoverageCheck: true,
+                    skipDebounce: tile.priority === 'high'
+                }))
+                    .unwrap()
+                    .then(() => {
+                        console.log(`[FieldChart ${fieldName}] Tile loaded: ${tile.reason}`);
+                        activeTileRequestsRef.current.delete(tileKey);
+                    })
+                    .catch((error: any) => {
+                        if (error.name !== 'AbortError') {
+                            console.error(`[FieldChart ${fieldName}] Tile load error:`, error);
+                        }
+                        activeTileRequestsRef.current.delete(tileKey);
+                    });
+            });
+        } else {
+            console.log(`[FieldChart ${fieldName}] No loading needed - sufficient coverage`);
+        }
+
+    }, [
+        field,
+        fieldName,
+        originalRange,
+        dispatch,
+        containerWidth,
+        template,
+        bucketingConfig
+    ]);
 
     const debouncedHandleZoom = useMemo(
         () => debounce(handleZoom, 150),
@@ -471,16 +531,14 @@ const FieldChart: React.FC<Props> = ({
         const currentView = viewRef.current;
 
         if (currentView?.currentRange && !isAdjustingRangeRef.current && currentView?.currentBucketsMs) {
-            const result = calculateOptimalBucket({
-                containerWidthPx: width,
-                from: currentView.currentRange.from,
-                to: currentView.currentRange.to,
-                config: bucketingConfig,
-                maxBucketMs: maxBucketMsRef.current || undefined,
-                availableBuckets: availableBuckets.length > 0 ? availableBuckets : undefined
-            });
 
-            const optimalBucket = result.selectedBucket;
+            const optimalBucket = calculateBucket(
+                currentView.currentRange.from,
+                currentView.currentRange.to,
+                width,
+                bucketingConfig.enableWeeklyMultiples,
+                bucketingConfig.maxWeeksMultiple
+            );
 
             if (optimalBucket !== currentView.currentBucketsMs) {
                 const ratio = optimalBucket / currentView.currentBucketsMs;
@@ -515,9 +573,6 @@ const FieldChart: React.FC<Props> = ({
 
     return (
         <>
-            loadingState: {loadingState.active ? "true" : "false"} <br/>
-            data.length: {data.length} <br/>
-
             <ViewFieldChart
                 originalRange={originalRange}
                 visualRange={visualRange}
@@ -552,4 +607,11 @@ const FieldChart: React.FC<Props> = ({
     );
 };
 
-export default FieldChart;
+export default React.memo(FieldChart, (prevProps, nextProps) => {
+
+    return (
+        prevProps.field.name === nextProps.field.name &&
+        prevProps.containerWidth === nextProps.containerWidth &&
+        prevProps.template === nextProps.template
+    );
+});

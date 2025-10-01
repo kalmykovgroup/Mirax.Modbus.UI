@@ -1,14 +1,9 @@
 import { useEffect, useState, useMemo } from 'react'
 import {  useSelector } from 'react-redux'
-import {
-    fetchChartReqTemplates,
-    deleteChartReqTemplate,
-    selectChartReqTemplates, applyTemplate, selectChartReqTemplatesLoaded,
-} from '@charts/store/chartsTemplatesSlice'
+
 
 import styles from "./ChartTemplatesPanel.module.css"
 
-import type { ChartReqTemplateDto } from '@charts/shared/contracts/chartTemplate/Dtos/ChartReqTemplateDto'
 import TemplatesList from './TemplatesList/TemplatesList.tsx'
 import ExecuteTemplateModal from './ExecuteTemplateModal/ExecuteTemplateModal.tsx'
 import {
@@ -16,11 +11,19 @@ import {
     resolveTemplateForServer,
     missingRequiredParams
 } from './templateResolve'
-import type {ResolvedCharReqTemplate} from "@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate.ts";
-import {selectDatabasesLoaded} from "@charts/store/chartsMetaSlice.ts";
 import {useAppDispatch} from "@/store/hooks.ts";
 import {useConfirm} from "@ui/components/ConfirmProvider/ConfirmProvider.tsx";
 import {useTheme} from "@app/providers/theme/useTheme.ts";
+import type {ResolvedCharReqTemplate} from "@charts/template/shared/dtos/ResolvedCharReqTemplate.ts";
+import {
+    applyTemplate,
+    deleteChartReqTemplate,
+    fetchChartReqTemplates,
+    selectChartReqTemplates,
+    selectChartReqTemplatesLoaded
+} from "@charts/template/store/chartsTemplatesSlice.ts";
+import {selectDatabasesLoaded} from "@charts/metaData/store/chartsMetaSlice.ts";
+import type {ChartReqTemplateDto} from "@charts/template/shared/dtos/ChartReqTemplateDto.ts";
 
 export default function ChartTemplatesPanel({ onExecuteDone, className }: {
     onExecuteDone: (resolvedTpl: ResolvedCharReqTemplate) => void

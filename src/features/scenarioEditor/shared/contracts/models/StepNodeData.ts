@@ -1,4 +1,4 @@
-// только данные, лежащие в node.data (без hover/over)
+// только данные, лежащие в node.shared (без hover/over)
 
 
 import type {ConnectContext} from "@/features/scenarioEditor/shared/contracts/models/ConnectContext.ts";

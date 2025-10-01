@@ -1,22 +1,23 @@
 
 import {useSelector} from "react-redux";
-import type {
-    UpdateChartReqTemplateRequest
-} from "@charts/shared/contracts/chartTemplate/Dtos/Request/UpdateChartReqTemplateRequest.ts";
-import type {
-    CreateChartReqTemplateRequest
-} from "@charts/shared/contracts/chartTemplate/Dtos/Request/CreateChartReqTemplateRequest.ts";
+
+
+import {useAppDispatch} from "@/store/hooks.ts";
 import {
     clearBoundActiveTemplate,
     createChartReqTemplate,
-    selectTemplate,
-    updateChartReqTemplate
-} from "@charts/store/chartsTemplatesSlice.ts";
-import {useAppDispatch} from "@/store/hooks.ts";
+    selectActiveTemplate, updateChartReqTemplate,
+} from "@charts/template/store/chartsTemplatesSlice.ts";
+import type {
+    UpdateChartReqTemplateRequest
+} from "@charts/template/shared/dtos/requests/UpdateChartReqTemplateRequest.ts";
+import type {
+    CreateChartReqTemplateRequest
+} from "@charts/template/shared/dtos/requests/CreateChartReqTemplateRequest.ts";
 
 export function FooterActions( ) {
     const dispatch = useAppDispatch();
-    const template = useSelector(selectTemplate);
+    const template = useSelector(selectActiveTemplate);
 
     const validate = () => {
         const missing: string[] = []

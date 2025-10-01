@@ -1,12 +1,13 @@
 
 import { useSelector} from "react-redux";
-import {
-    fetchEntities,
-    selectErrors,
-    selectChartsMetaLoading,
-} from "@charts/store/chartsMetaSlice.ts";
-import {selectActiveEntity, selectEntities, setActiveTemplateEntity} from "@charts/store/chartsTemplatesSlice.ts";
+
 import {useAppDispatch} from "@/store/hooks.ts";
+import {fetchEntities, selectChartsMetaLoading, selectErrors} from "@charts/metaData/store/chartsMetaSlice.ts";
+import {
+    selectActiveEntity,
+    selectEntities,
+    setActiveTemplateEntity
+} from "@charts/template/store/chartsTemplatesSlice.ts";
 
 export function EntitySection( ) {
     const dispatch = useAppDispatch();

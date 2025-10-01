@@ -1,8 +1,8 @@
 import * as React from 'react';
 
-import type { FieldDto } from '@charts/shared/contracts/metadata/Dtos/FieldDto';
-import type { SqlParam } from '@charts/shared/contracts/chartTemplate/Dtos/SqlParam.ts';
 import {SqlParamType} from "@charts/ui/DataSourcePanel/types.ts";
+import type {FieldDto} from "@charts/metaData/shared/dtos/FieldDto.ts";
+import type {SqlParam} from "@charts/template/shared/dtos/SqlParam.ts";
 
 // UI-only mark for auto-created params (not sent to server)
 type UiSqlParam = SqlParam & { __auto?: boolean };

@@ -46,7 +46,7 @@ export default function SmartStepEdge(props: EdgeProps) {
         throw new Error(`Target node ${source} not found`);
     })();
 
-    // hover-флаг, который ты ставишь в edgeMove.data в onEdgeMouseEnter/Leave
+    // hover-флаг, который ты ставишь в edgeMove.shared в onEdgeMouseEnter/Leave
     const hovered = Boolean((data as any)?.__hovered);
 
     // единый цвет для хвоста и головы

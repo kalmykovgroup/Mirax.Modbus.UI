@@ -1,13 +1,14 @@
 import styles from './TemplatesList.module.css'
-import type { ChartReqTemplateDto } from '@charts/shared/contracts/chartTemplate/Dtos/ChartReqTemplateDto'
-import {useSelector} from "react-redux";
-import {
-    type NewChartReqTemplate,
-    selectChartReqTemplatesLoading,
-    selectTemplate
-} from "@charts/store/chartsTemplatesSlice.ts";
+
 import {useTheme} from "@app/providers/theme/useTheme.ts";
 import SplashScreen from "@ui/components/SplashScreen/SplashScreen.tsx";
+import {
+    type NewChartReqTemplate,
+    selectActiveTemplate,
+    selectChartReqTemplatesLoading
+} from "@charts/template/store/chartsTemplatesSlice.ts";
+import type {ChartReqTemplateDto} from "@charts/template/shared/dtos/ChartReqTemplateDto.ts";
+import {useSelector} from "react-redux";
 
 export default function TemplatesList({
                                           items,
@@ -24,7 +25,7 @@ export default function TemplatesList({
 }) {
     const loading = useSelector(selectChartReqTemplatesLoading)
 
-    const template: ChartReqTemplateDto | NewChartReqTemplate = useSelector(selectTemplate)
+    const template: ChartReqTemplateDto | NewChartReqTemplate = useSelector(selectActiveTemplate)
     const {theme} = useTheme()
 
 

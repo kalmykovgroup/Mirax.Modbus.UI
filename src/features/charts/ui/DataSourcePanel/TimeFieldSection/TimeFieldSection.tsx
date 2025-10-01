@@ -1,11 +1,14 @@
-import type {FieldDto} from "@charts/shared/contracts/metadata/Dtos/FieldDto.ts";
-import { useSelector} from "react-redux";
-import {
-    selectChartsMetaLoading,
-} from "@charts/store/chartsMetaSlice.ts";
-import {useEffect, useMemo, useState} from "react";
-import {selectActiveTimeField, selectFields, setActiveTemplateTimeField} from "@charts/store/chartsTemplatesSlice.ts";
+
 import {useAppDispatch} from "@/store/hooks.ts";
+import {selectChartsMetaLoading} from "@charts/metaData/store/chartsMetaSlice.ts";
+import {useSelector} from "react-redux";
+import {
+    selectActiveTimeField,
+    selectFields,
+    setActiveTemplateTimeField
+} from "@charts/template/store/chartsTemplatesSlice.ts";
+import {useEffect, useMemo, useState} from "react";
+import type {FieldDto} from "@charts/metaData/shared/dtos/FieldDto.ts";
 
 export function TimeFieldSection() {
     const dispatch = useAppDispatch();

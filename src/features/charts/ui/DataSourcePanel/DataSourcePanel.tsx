@@ -9,19 +9,20 @@ import {FooterActions} from "@charts/ui/DataSourcePanel/FooterActions/FooterActi
 import {FiltersAndSqlPanel} from "@charts/ui/DataSourcePanel/SqlAndFiltersSection/FiltersAndSqlPanel.tsx";
 import {FromToFields} from "@charts/ui/DataSourcePanel/FromToFields/FromToFields.tsx";
 import {useSelector} from "react-redux";
-import {
-    selectTemplate,
-    setActiveTemplateFrom,
-    setActiveTemplateTo
-} from "@charts/store/chartsTemplatesSlice.ts";
+
 import {useAppDispatch} from "@/store/hooks.ts";
 
 import styles from "./DataSourcePanel.module.css"
+import {
+    selectActiveTemplate,
+    setActiveTemplateFrom,
+    setActiveTemplateTo
+} from "@charts/template/store/chartsTemplatesSlice.ts";
 
 export function DataSourcePanel({className}: {className? : string | undefined}) {
     const dispatch = useAppDispatch();
 
-    const selectTemp = useSelector(selectTemplate);
+    const selectTemp = useSelector(selectActiveTemplate);
 
     return (
         <div className={`${className} ${styles.container}`} >

@@ -1,13 +1,17 @@
 
 import {useSelector} from "react-redux";
-import {selectTemplate, setActiveTemplateDesc, setActiveTemplateName} from "@charts/store/chartsTemplatesSlice.ts";
 import {useAppDispatch} from "@/store/hooks.ts";
+import {
+    selectActiveTemplate,
+    setActiveTemplateDesc,
+    setActiveTemplateName
+} from "@charts/template/store/chartsTemplatesSlice.ts";
 
 export function TemplateMetaSection( ) {
 
     const dispatch = useAppDispatch();
 
-    const template = useSelector(selectTemplate);
+    const template = useSelector(selectActiveTemplate);
   return (
     <div>
       <label style={{ display: 'grid', gap: 6 }}>

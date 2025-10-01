@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { useAppSelector } from '@/store/hooks';
-import { selectTimeSettings } from '@charts/store/selectors.ts';
 import {
     getTimezoneOffsetFromSettings,
     toLocalInputValue,
@@ -8,7 +7,8 @@ import {
     toDate
 } from "@charts/ui/TimeZonePicker/timezoneUtils";
 import s from './FromToFields.module.css';
-import type { TimeRangeBounds } from "@charts/store/chartsSlice";
+import type {TimeRangeBounds} from "@charts/charts/core/types/chart.types.ts";
+import {selectTimeSettings} from "@charts/charts/core/store/chartsSettingsSlice.ts";
 
 interface FromToFieldsProps {
     range: TimeRangeBounds;

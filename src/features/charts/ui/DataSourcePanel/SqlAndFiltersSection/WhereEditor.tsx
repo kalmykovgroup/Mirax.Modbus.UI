@@ -1,7 +1,8 @@
-import type { FieldDto } from '@charts/shared/contracts/metadata/Dtos/FieldDto';
-import type { FilterClause } from '@charts/shared/contracts/chartTemplate/Dtos/FilterClause.ts';
-import { FilterOp } from '@charts/shared/contracts/chart/Types/FilterOp';
+
 import {notify} from "@app/lib/notify.ts";
+import type {FieldDto} from "@charts/metaData/shared/dtos/FieldDto.ts";
+import type {FilterClause} from "@charts/template/shared/dtos/FilterClause.ts";
+import {FilterOp} from "@charts/metaData/shared/dtos/types/FilterOp.ts";
 
 type Props = {
     availableFields: FieldDto[];

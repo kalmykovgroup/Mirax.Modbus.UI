@@ -103,7 +103,7 @@ export const RightPanel = () => {
                     );
                 }
 
-                // создаём DTO для data.object (как и раньше)
+                // создаём DTO для shared.object (как и раньше)
                 const object = createByFlowType(type, { id }); // по возможности пробрасываем id внутрь dto
 
                 const newNode: FlowNode = {

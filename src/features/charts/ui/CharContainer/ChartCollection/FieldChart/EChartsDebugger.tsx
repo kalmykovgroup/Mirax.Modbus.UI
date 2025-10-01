@@ -80,7 +80,7 @@ export class EChartsDebugger {
                 return value;
             }));
         } catch (e) {
-            return { error: 'Could not sanitize data', original: String(data) };
+            return { error: 'Could not sanitize shared', original: String(data) };
         }
     }
 
@@ -183,7 +183,7 @@ export class EChartsDebugger {
             const option = chartInstance.getOption();
             if (!option?.series?.[0]?.data || option.series[0].data.length === 0) {
                 this.log('ZOOM_ABORTED', {
-                    reason: 'No data in series',
+                    reason: 'No shared in series',
                     fieldName,
                     seriesInfo: option?.series?.map((s: any) => ({
                         type: s.type,

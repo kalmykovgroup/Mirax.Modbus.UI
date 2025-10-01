@@ -1,4 +1,4 @@
-import type { SqlFilter } from '@charts/shared/contracts/chartTemplate/Dtos/SqlFilter.ts';
+import type {SqlFilter} from "@charts/template/shared/dtos/SqlFilter.ts";
 
 type Props = {
     sql: SqlFilter | undefined;

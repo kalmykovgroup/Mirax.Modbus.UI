@@ -16,7 +16,7 @@ type Params = {
 };
 
 /**
- * Ведём «контекст соединения» и оповещаем ноды через node.data:
+ * Ведём «контекст соединения» и оповещаем ноды через node.shared:
  *  - connectFrom: 'source' | 'target' | null
  *  - connectFromType: FlowType | undefined
  *  - isConnecting: boolean
@@ -57,12 +57,12 @@ export function useConnectContext({ rf, setNodes }: Params) {
     const onConnectEnd = useCallback(() => setConnectCtx(undefined), []);
 
 
-    /** Широковещание статуса в node.data (визуальные подсказки нодам) */
+    /** Широковещание статуса в node.shared (визуальные подсказки нодам) */
 
     useEffect(() => {
         setNodes((nds) =>
             nds.map((n) => {
-                // скопировали data
+                // скопировали shared
                 const data = { ...n.data } as StepNodeData<object>;
 
                 if (connectCtx === undefined) {

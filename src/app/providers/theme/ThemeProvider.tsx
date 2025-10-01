@@ -25,7 +25,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 : t;
 
         const root = document.documentElement;
-        root.setAttribute("data-theme", effectiveTheme);    // ключевой фикс
+        root.setAttribute("shared-theme", effectiveTheme);    // ключевой фикс
         root.classList.toggle("dark", effectiveTheme === "dark"); // для Tailwind-стратегии "class"
     };
 

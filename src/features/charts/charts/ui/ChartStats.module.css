@@ -1,0 +1,66 @@
+/* components/chart/ChartStats/ChartStats.module.css */
+
+.stats {
+    display: flex;
+    gap: 16px;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    font-size: 12px;
+    flex-wrap: wrap;
+}
+
+.statItem {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.label {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.value {
+    color: #212529;
+    font-weight: 600;
+}
+
+.value[data-status="good"] {
+    color: #28a745;
+}
+
+.value[data-status="warning"] {
+    color: #ffc107;
+}
+
+.value[data-status="error"] {
+    color: #dc3545;
+}
+
+/* Компактная версия */
+.statsCompact {
+    display: flex;
+    gap: 12px;
+    padding: 4px 8px;
+    background-color: rgba(248, 249, 250, 0.8);
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.compactItem {
+    color: #495057;
+    font-weight: 600;
+}
+
+.compactItem[data-status="good"] {
+    color: #28a745;
+}
+
+.compactItem[data-status="warning"] {
+    color: #ffc107;
+}
+
+.compactItem[data-status="error"] {
+    color: #dc3545;
+}

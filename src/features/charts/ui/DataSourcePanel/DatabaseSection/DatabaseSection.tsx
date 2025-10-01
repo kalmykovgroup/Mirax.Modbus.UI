@@ -1,16 +1,16 @@
 import type {Guid} from "@app/lib/types/Guid.ts";
 import { useSelector} from "react-redux";
+
+import {useEffect} from "react";
+
+import {useAppDispatch} from "@/store/hooks.ts";
 import {
     fetchDatabases,
-    selectDatabases,
-    selectGetDatabasesById, selectErrors, selectChartsMetaLoading, selectDatabasesLoaded,
-} from "@charts/store/chartsMetaSlice.ts";
-import {useEffect} from "react";
-import {
-    selectActiveDatabase,
-    setActiveTemplateDb
-} from "@charts/store/chartsTemplatesSlice.ts";
-import {useAppDispatch} from "@/store/hooks.ts";
+    selectChartsMetaLoading,
+    selectDatabases, selectDatabasesLoaded, selectErrors,
+    selectGetDatabasesById
+} from "@charts/metaData/store/chartsMetaSlice.ts";
+import {selectActiveDatabase, setActiveTemplateDb} from "@charts/template/store/chartsTemplatesSlice.ts";
 
 
 export function DatabaseSection() {

@@ -1,10 +1,5 @@
 import * as React from 'react';
 
-import type { FieldDto } from '@charts/shared/contracts/metadata/Dtos/FieldDto';
-import type { FilterClause } from '@charts/shared/contracts/chartTemplate/Dtos/FilterClause.ts';
-import type { SqlFilter } from '@charts/shared/contracts/chartTemplate/Dtos/SqlFilter.ts';
-import type { SqlParam } from '@charts/shared/contracts/chartTemplate/Dtos/SqlParam.ts';
-
 import { WhereEditor } from './WhereEditor';
 import { ParamsEditor } from './ParamsEditor';
 import { SqlEditor } from './SqlEditor';
@@ -12,14 +7,18 @@ import { SqlEditor } from './SqlEditor';
 import { useSelector } from 'react-redux';
 
 import {SqlParamType} from "@charts/ui/DataSourcePanel/types.ts";
+
+import {useAppDispatch} from "@/store/hooks.ts";
+import type {SqlParam} from "@charts/template/shared/dtos/SqlParam.ts";
+import type {FieldDto} from "@charts/metaData/shared/dtos/FieldDto.ts";
+import type {FilterClause} from "@charts/template/shared/dtos/FilterClause.ts";
+import type {SqlFilter} from "@charts/template/shared/dtos/SqlFilter.ts";
 import {
-    selectFields,
-    selectTemplate,
-    setActiveTemplateParams,
+    selectActiveTemplate,
+    selectFields, setActiveTemplateParams,
     setActiveTemplateSql,
     setActiveTemplateWhere
-} from "@charts/store/chartsTemplatesSlice.ts";
-import {useAppDispatch} from "@/store/hooks.ts";
+} from "@charts/template/store/chartsTemplatesSlice.ts";
 
 // UI-only mark for auto-created params (not sent to server)
 type UiSqlParam = SqlParam & { __auto?: boolean };
@@ -93,7 +92,7 @@ function guessTypeFromField(f?: FieldDto): SqlParamType | undefined {
 export function FiltersAndSqlPanel() {
     const dispatch = useAppDispatch();
 
-    const template = useSelector(selectTemplate);
+    const template = useSelector(selectActiveTemplate);
     const fields = useSelector(selectFields) ?? [];
 
     // требуемая сигнатура стейта — допускаем undefined

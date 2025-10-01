@@ -4,15 +4,15 @@
 import {DataSourcePanel} from "@charts/ui/DataSourcePanel/DataSourcePanel.tsx";
 import ChartTemplatesPanel from "@charts/ui/ChartTemplatesPanel/ChartTemplatesPanel.tsx";
 import {useAppDispatch, useAppSelector} from "@/store/hooks.ts";
-import {  setResolvedCharReqTemplate} from "@charts/store/chartsSlice.ts";
-import type {ResolvedCharReqTemplate} from "@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate.ts";
 import CollapsibleSection from "@charts/ui/Collapse/CollapsibleSection.tsx";
 import styles from "./ChartsPage.module.css"
-import {ChartContainer} from "@charts/ui/CharContainer/ChartContainer.tsx";
 import {useCallback} from "react";
-import {selectTimeSettings} from "@charts/store/selectors.ts";
 import TimeZonePicker from "@charts/ui/TimeZonePicker/TimeZonePicker.tsx";
-import {setTimeSettings, type TimeSettings} from "@charts/store/chartsSettingsSlice.ts";
+import {selectTimeSettings, setTimeSettings, type TimeSettings} from "@charts/charts/core/store/chartsSettingsSlice.ts";
+import {setResolvedCharReqTemplate} from "@charts/charts/core/store/chartsSlice.ts";
+import {ChartContainer} from "@charts/charts/ui/ChartContainer.tsx";
+import type {ResolvedCharReqTemplate} from "@charts/template/shared/dtos/ResolvedCharReqTemplate.ts";
+import {RequestManagerProvider} from "@charts/charts/orchestration/requests/RequestManagerProvider.tsx";
 export default function ChartsPage() {
     const dispatch = useAppDispatch();
     // Получаем настройки временной зоны из Redux store
@@ -43,7 +43,9 @@ export default function ChartsPage() {
                   <DataSourcePanel />
             </CollapsibleSection>
 
-           <ChartContainer />
+            <RequestManagerProvider>
+                <ChartContainer />
+            </RequestManagerProvider>
 
         </div>
     )

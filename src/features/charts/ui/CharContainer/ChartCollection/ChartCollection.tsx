@@ -5,7 +5,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchMultiSeriesInit } from '@charts/store/thunks';
 import { selectTimeSettings, selectIsDataLoaded } from '@charts/store/selectors.ts';
 import type { ResolvedCharReqTemplate } from '@charts/shared/contracts/chartTemplate/Dtos/ResolvedCharReqTemplate';
-import type { GetMultiSeriesRequest } from '@charts/shared/contracts/chart/Dtos/Requests/GetMultiSeriesRequest';
+import type { GetMultiSeriesRequest } from '@charts/shared/contracts/chart/Dtos/Requests_/GetMultiSeriesRequest';
 import styles from './ChartCollection.module.css';
 import { formatDateWithTimezone } from "@charts/ui/TimeZonePicker/timezoneUtils.ts";
 import {

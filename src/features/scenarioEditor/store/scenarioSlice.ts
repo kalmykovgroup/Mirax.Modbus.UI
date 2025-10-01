@@ -271,7 +271,7 @@ export const {
 const scenarioPersistConfig = {
     key: 'scenario',
     storage: sessionStorage, // Временно: до закрытия браузера
-    whitelist: [], // Все или ['data'] для ключевых
+    whitelist: [], // Все или ['shared'] для ключевых
 };
 
 export const scenarioReducer = persistReducer(scenarioPersistConfig, scenariosSlice.reducer); // ← Замените default

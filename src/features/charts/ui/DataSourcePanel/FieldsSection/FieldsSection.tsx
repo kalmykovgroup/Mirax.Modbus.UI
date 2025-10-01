@@ -1,17 +1,14 @@
 
 import React from "react";
 import { useSelector} from "react-redux";
-import {
-    selectErrors,
-    selectChartsMetaLoading,
-} from "@charts/store/chartsMetaSlice.ts";
+
+import {useAppDispatch} from "@/store/hooks.ts";
+import {selectChartsMetaLoading, selectErrors} from "@charts/metaData/store/chartsMetaSlice.ts";
 import {
     selectFields,
     selectSelectedFields,
-    setActiveTemplateSelectedFields,
-    toggleActiveTemplateSelectedField
-} from "@charts/store/chartsTemplatesSlice.ts";
-import {useAppDispatch} from "@/store/hooks.ts";
+    setActiveTemplateSelectedFields, toggleActiveTemplateSelectedField
+} from "@charts/template/store/chartsTemplatesSlice.ts";
 
 
 export function FieldsSection() {

@@ -92,13 +92,14 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = (props) => {
             chartInstance.setOption(chartOption, true);
 
             // КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ - отключаем tooltip перед zoom
-            chartInstance.on('dataZoom', (params: any) => {
+            let zoomDebounceTimeout: NodeJS.Timeout | null = null;
 
+            chartInstance.on('dataZoom', (params: any) => {
                 const currentOption = chartInstance.getOption() as any;
                 const hasData = currentOption?.series?.[0]?.data?.length > 0;
 
                 if (!hasData) {
-                    console.warn('[ViewFieldChart] Zoom ignored - no data in chart');
+                    console.warn('[ViewFieldChart] Zoom ignored - no shared in chart');
                     return;
                 }
 
@@ -107,9 +108,15 @@ const ViewFieldChart: React.FC<ViewFieldChartProps> = (props) => {
                     return;
                 }
 
-                // Вызываем обработчик
-                onZoom(params);
+                // ИСПРАВЛЕНИЕ: Debounce для pan событий
+                if (zoomDebounceTimeout) {
+                    clearTimeout(zoomDebounceTimeout);
+                }
 
+                zoomDebounceTimeout = setTimeout(() => {
+                    onZoom(params);
+                    zoomDebounceTimeout = null;
+                }, 50); // 50ms debounce для плавности
             });
 
             chartInstance.on('click', (params: any) => {

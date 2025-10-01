@@ -29,11 +29,11 @@ input[type="number"] {
 /*
 
 !* Темы отдельно *!
-[data-theme="dark"] {
+[shared-theme="dark"] {
     --color-bg: #242424;
     --color-text: rgba(255, 255, 255, 0.87);
 }
-[data-theme="light"] {
+[shared-theme="light"] {
     --color-bg: rgba(255, 255, 255, 0.87);
     --color-text: #242424;
 }

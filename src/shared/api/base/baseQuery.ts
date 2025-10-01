@@ -62,6 +62,7 @@ export const axiosBaseQuery =
                 // Необёрнутый ответ — вернём как есть
                 return ok(payload)
             } catch (e) {
+
                 const err = e as AxiosError<unknown>;
                 const payload = err.response?.data ?? err.message;
                 notify.error(extractErrorMessage(payload));

@@ -74,7 +74,7 @@ function prepareAllSeriesData(data: SeriesBinDto[]): {
     maxData: Array<[number, number | undefined]>;
 } {
    if (!data || !Array.isArray(data) || data.length === 0) {
-        console.warn('[prepareAllSeriesData] No data provided');
+        console.warn('[prepareAllSeriesData] No shared provided');
         return { avgData: [], minData: [], maxData: [] };
     }
 
@@ -103,7 +103,7 @@ function prepareAllSeriesData(data: SeriesBinDto[]): {
             maxData.push([timestamp, bin.max]);
             validCount++;
         } catch (error) {
-            console.warn('Invalid bin data:', bin, error);
+            console.warn('Invalid bin shared:', bin, error);
             invalidCount++;
         }
     }
@@ -461,7 +461,7 @@ export function createChartOption(params: ChartOptionParams): EChartsOption {
 
                     // Фильтруем только валидные параметры
                     const validParams = paramsArray.filter((item: any) => {
-                        // Проверяем что у параметра есть data и seriesIndex
+                        // Проверяем что у параметра есть shared и seriesIndex
                         return item &&
                             item.data !== undefined &&
                             item.seriesIndex !== undefined &&
