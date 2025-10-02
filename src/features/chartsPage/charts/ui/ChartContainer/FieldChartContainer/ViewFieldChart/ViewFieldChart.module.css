@@ -1,0 +1,105 @@
+/* components/chart/ViewFieldChart/ViewFieldChart.module.css */
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #212529;
+}
+
+.chartData{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.chartData .label{
+    font-weight: normal;
+}
+
+.chartWrapper {
+    position: relative;
+    width: 100%;
+    background-color: #fafafa;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.footer {
+    padding-top: 8px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.chartData {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 8px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.chartData span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.label {
+    color: #666;
+    font-weight: 500;
+}
+
+
+/* statsBadge */
+
+.statsBadge {
+    display: flex;
+    gap: 16px;
+    padding: 8px 12px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.stat {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.statLabel {
+    color: #666;
+}
+
+.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}

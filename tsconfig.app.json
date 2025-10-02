@@ -28,7 +28,7 @@
       "@app/*": ["app/*"],
       "@ui/*": ["ui/*"],
       "@assets/*": ["assets/*"],
-      "@charts/*": ["features/charts/*"],
+      "@chartsPage/*": ["features/chartsPage/*"],
       "@login/*": ["features/login/*"],
       "@scenario/*": ["features/scenarioEditor/*"]
     },

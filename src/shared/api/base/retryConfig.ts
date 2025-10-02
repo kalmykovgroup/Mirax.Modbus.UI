@@ -1,4 +1,4 @@
-// src/shared/api/base/retryConfig.ts
+// src/shared/baseApi/base/retryConfig.ts
 import axiosRetry, { type IAxiosRetryConfig } from 'axios-retry';
 import { API_RETRY_BASE_DELAY, API_RETRY_COUNT } from './config';
 

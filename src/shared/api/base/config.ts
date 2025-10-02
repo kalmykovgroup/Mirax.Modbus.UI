@@ -1,4 +1,4 @@
-// src/shared/api/base/config.ts
+// src/shared/baseApi/base/config.ts
 
 /** Базовый URL API (Vite: VITE_API_URL в .env) */
 export const getApiBaseUrl = (): string =>

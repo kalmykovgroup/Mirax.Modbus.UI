@@ -1,4 +1,4 @@
-// src/shared/api/stepApi.ts
+// src/shared/baseApi/stepApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { axiosBaseQuery } from '@shared/api/base/baseQuery.ts';
 
@@ -22,7 +22,7 @@ export const stepApi = createApi({
         getStepsByBranch: builder.query<StepBaseDto[], { branchId: Guid }>(
             {
                 query: ({ branchId }) => ({
-                    url: API.STEP.ALL(branchId), // константа вида '/api/steps'
+                    url: API.STEP.ALL(branchId), // константа вида '/baseApi/steps'
                     method: 'get',
                     params: { branchId },
                 }),

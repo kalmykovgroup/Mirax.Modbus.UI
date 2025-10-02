@@ -1,4 +1,4 @@
-// src/shared/api/stepRelationApi.ts
+// src/shared/baseApi/stepRelationApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { axiosBaseQuery } from '@shared/api/base/baseQuery.ts';
 

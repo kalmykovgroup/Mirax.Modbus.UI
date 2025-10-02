@@ -1,4 +1,4 @@
-// src/shared/api/base/baseQuery.ts
+// src/shared/baseApi/base/baseQuery.ts
 import type { BaseQueryFn } from '@reduxjs/toolkit/query'
 import type { AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios'
 import { apiClient } from './apiClient'

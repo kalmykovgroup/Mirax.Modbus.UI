@@ -1,4 +1,5 @@
-import type {RootState} from "@/store/types.ts";
+import type {RootState} from "@/store/store.ts";
+
 
 export const selectFormattedLastActive = (state: RootState) => {
     const ts = state.users.lastActive;

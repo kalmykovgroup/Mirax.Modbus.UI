@@ -1,6 +1,6 @@
 // src/app/lib/notify.ts
 import toast, { type ToastOptions } from 'react-hot-toast'
-import { extractErrorMessage } from '@charts/api/errorHandlers.ts'
+import { extractErrorMessage } from '@chartsPage/baseApi/errorHandlers.ts'
 
 export { extractErrorMessage }
 

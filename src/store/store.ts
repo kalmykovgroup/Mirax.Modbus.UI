@@ -8,9 +8,9 @@ import { scenarioApi } from '@/features/scenarioEditor/shared/api/scenarioApi';
 import { workflowApi } from '@/features/scenarioEditor/shared/api/workflowApi';
 import { branchApi } from '@/features/scenarioEditor/shared/api/branchApi';
 import { stepApi } from '@/features/scenarioEditor/shared/api/stepApi';
-import {chartReqTemplatesApi} from "@charts/template/shared/api/chartReqTemplatesApi.ts";
-import {metadataApi} from "@charts/metaData/shared/api/metadataApi.ts";
-import {chartsApi} from "@charts/charts/core/api/chartsApi.ts";
+import {chartReqTemplatesApi} from "@chartsPage/template/shared//api/chartReqTemplatesApi.ts";
+import {metadataApi} from "@chartsPage/metaData/shared/api/metadataApi.ts";
+import {chartsApi} from "@chartsPage/charts/core/api/chartsApi.ts";
 
 // НЕ используем types из других файлов, чтобы не создать цикл
 type ReduxStore = ReturnType<typeof configureStore>;

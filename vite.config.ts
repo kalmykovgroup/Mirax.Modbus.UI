@@ -25,7 +25,7 @@ export default defineConfig({
             '@app': path.resolve(__dirname, './src/app'),
             '@ui': path.resolve(__dirname, './src/ui'),
             '@assets': path.resolve(__dirname, './src/ui/assets'),
-            '@charts': path.resolve(__dirname, './src/features/charts'),
+            '@chartsPage': path.resolve(__dirname, './src/features/chartsPage'),
             '@login': path.resolve(__dirname, './src/features/login'),
             '@scenario': path.resolve(__dirname, './src/features/scenarioEditor'),
         },

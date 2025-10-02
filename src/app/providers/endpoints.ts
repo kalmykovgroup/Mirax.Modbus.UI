@@ -26,7 +26,7 @@ export const API = {
     },
     //Local we abi
     WORKFLOW: {
-        BASE: "/api/workflow",
+        BASE: "/baseApi/workflow",
         RUN: (id: Guid) => `/api/workflow/run/${id}`,                 // GET
         SCENARIO_PAUSE: `/api/workflow/scenario/pause`,           // POST
         SCENARIO_RESUME: `/api/workflow/scenario/resume`,         // POST
@@ -37,7 +37,7 @@ export const API = {
     },
 
 
-    //remote web api
+    //remote web baseApi
     MODBUS_DEVICE_ACTION: {
         GET_ALL: `/api/modbus/device/action/all`,
         APPLY: `/api/modbus/device/action/apply`,

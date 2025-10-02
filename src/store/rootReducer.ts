@@ -14,13 +14,13 @@ import userReducer from '@/features/user/store/userSlice';
 import { scenarioReducer } from '@scenario/store/scenarioSlice';
 import { workflowReducer } from '@scenario/store/workflowSlice';
 import {uiReducer} from "@/store/uiSlice.ts";
-import {chartsReducer} from "@charts/charts/core/store/chartsSlice.ts";
-import {chartsSettingsReducer} from "@charts/charts/core/store/chartsSettingsSlice.ts";
-import {chartsMetaReducer} from "@charts/metaData/store/chartsMetaSlice.ts";
-import {metadataApi} from "@charts/metaData/shared/api/metadataApi.ts";
-import {chartsTemplatesReducer} from "@charts/template/store/chartsTemplatesSlice.ts";
-import {chartReqTemplatesApi} from "@charts/template/shared/api/chartReqTemplatesApi.ts";
-import {chartsApi} from "@charts/charts/core/api/chartsApi.ts";
+import {chartsReducer} from "@chartsPage/charts/core/store/chartsSlice.ts";
+import {chartsSettingsReducer} from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
+import {chartsMetaReducer} from "@chartsPage/metaData/store/chartsMetaSlice.ts";
+import {metadataApi} from "@chartsPage/metaData/shared/api/metadataApi.ts";
+import {chartsTemplatesReducer} from "@chartsPage/template/store/chartsTemplatesSlice.ts";
+import {chartReqTemplatesApi} from "@chartsPage/template/shared//api/chartReqTemplatesApi.ts";
+import {chartsApi} from "@chartsPage/charts/core/api/chartsApi.ts";
 // ВАЖНО: никаких самодельных _persist, только реальные редьюсеры
 
 export const rootReducer = combineReducers({

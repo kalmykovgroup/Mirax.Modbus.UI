@@ -1,4 +1,4 @@
-// src/shared/api/authApi.ts
+// src/shared/baseApi/authApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react'
 import { axiosBaseQuery } from '@shared/api/base/baseQuery.ts'
 
