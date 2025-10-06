@@ -91,21 +91,19 @@ export function ChartCanvas({   options,
         const chart = chartRef.current;
         if (!chart) return;
 
-        // Проверяем: изменились ли данные?
-        const prevSeries = lastOptionsRef.current.series;
-        const currSeries = options.series;
+        // ✅ Всегда обновляем при изменении options (useMemo гарантирует что options меняется только при реальных изменениях данных)
+        chart.setOption(options, {
+            notMerge: false,  // Мержим с существующими опциями
+            lazyUpdate: false, // ✅ ИСПРАВЛЕНО: Немедленное обновление
+            silent: false
+        });
 
-        const dataChanged = prevSeries !== currSeries;
+        console.log('[ChartCanvas] Options updated', {
+            seriesCount: (options.series as any[])?.length,
+            totalPoints
+        });
 
-        if (dataChanged) {
-            chart.setOption(options, {
-                notMerge: false,
-                lazyUpdate: true,
-                silent: false
-            });
-            lastOptionsRef.current = options;
-        }
-    }, [options]);
+    }, [options, totalPoints]);
 
     // ============================================
     // LOADING STATE

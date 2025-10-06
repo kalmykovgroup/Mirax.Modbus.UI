@@ -1,26 +1,20 @@
-// charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/createEChartsOptions.ts
 
-import type { EChartsOption, LineSeriesOption } from 'echarts';
-import type { EChartsPoint } from '@chartsPage/charts/core/store/selectors/visualization.selectors';
-import type { TimeSettings } from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
-import { formatDateWithTimezone } from "@chartsPage/charts/ui/TimeZonePicker/timezoneUtils.ts";
-import type { TimeRange } from "@chartsPage/charts/core/store/types/chart.types.ts";
 import {
-    selectChartRenderData,
-    selectChartStats
-} from '@chartsPage/charts/core/store/selectors/visualization.selectors';
-
-// ============================================
-// ГЛАВНАЯ ФУНКЦИЯ
-// ============================================
+    type EChartsPoint,
+} from "@chartsPage/charts/core/store/selectors/visualization.selectors.ts";
+import type {GapsInfo, OriginalRange} from "@chartsPage/charts/core/store/types/chart.types.ts";
+import type {TimeSettings} from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
+import type {EChartsOption, LineSeriesOption, MarkAreaComponentOption} from "echarts";
+import {formatDateWithTimezone} from "@chartsPage/charts/ui/TimeZonePicker/timezoneUtils.ts";
 
 export function createOptions(
-    avgPoints: readonly EChartsPoint[],
-    minPoints: readonly EChartsPoint[],
-    maxPoints: readonly EChartsPoint[],
+    avgPoints: EChartsPoint[],
+    minPoints: EChartsPoint[],
+    maxPoints: EChartsPoint[],
     fieldName: string,
-    originalRange: TimeRange | undefined,
-    timeSettings: TimeSettings
+    originalRange: OriginalRange | undefined,
+    timeSettings: TimeSettings,
+    gapsInfo?: GapsInfo | undefined
 ): EChartsOption {
     if (avgPoints.length === 0) {
         return {
@@ -31,13 +25,11 @@ export function createOptions(
         };
     }
 
-    const xAxisMin = originalRange?.from.getTime();
-    const xAxisMax = originalRange?.to.getTime();
-    const showSymbols = avgPoints.length < 100;
+    const xAxisMin = originalRange?.fromMs;
+    const xAxisMax = originalRange?.toMs;
     const symbolSize = avgPoints.length < 50 ? 6 : 4;
 
-    //  КРИТИЧНО: Вычисляем min/max ТОЛЬКО из avg точек
-    // Это гарантирует, что шкала не прыгнет из-за выбросов в min/max линиях
+    // Вычисляем min/max ТОЛЬКО из avg точек
     let globalMin = Number.POSITIVE_INFINITY;
     let globalMax = Number.NEGATIVE_INFINITY;
 
@@ -49,14 +41,12 @@ export function createOptions(
         }
     }
 
-    // Если все точки одинаковые или диапазон слишком мал
     if (globalMin === globalMax) {
         const base = globalMin !== 0 ? Math.abs(globalMin) * 0.1 : 1;
         globalMin -= base;
         globalMax += base;
     }
 
-    // Добавляем 5% padding для визуального комфорта
     const range = globalMax - globalMin;
     const padding = range * 0.05;
     const yMin = globalMin - padding;
@@ -64,17 +54,8 @@ export function createOptions(
 
     const series: LineSeriesOption[] = [];
 
-    // ============================================
-    //  ИСПРАВЛЕНО: Область min-max БЕЗ stack
-    // ============================================
-
-    // Используем подход из старой версии:
-    // 1. Две невидимые линии (min и max)
-    // 2. С areaStyle для создания заливки между ними
-    // 3. БЕЗ stack (чтобы не суммировались значения)
-
+    // Область min-max БЕЗ stack
     if (minPoints.length > 0 && maxPoints.length > 0) {
-        // Нижняя граница (invisible line + area)
         series.push({
             name: `${fieldName} (область)`,
             type: 'line',
@@ -90,7 +71,6 @@ export function createOptions(
             animation: false
         } as LineSeriesOption);
 
-        // Верхняя граница (invisible line, NO areaStyle to avoid double fill)
         series.push({
             name: `${fieldName} (область верх)`,
             type: 'line',
@@ -103,19 +83,14 @@ export function createOptions(
         } as LineSeriesOption);
     }
 
-    // ============================================
-    // ЛИНИЯ МИНИМУМА
-    // ============================================
-
+    // Линия минимума
     if (minPoints.length > 0) {
         series.push({
             name: `${fieldName} (min)`,
             type: 'line',
             data: minPoints,
-            sampling: 'lttb',
             smooth: false,
-            connectNulls: true,
-            symbol: showSymbols ? 'diamond' : 'none',
+            symbol: 'circle',
             symbolSize: symbolSize - 1,
             lineStyle: {
                 width: 1.5,
@@ -137,24 +112,20 @@ export function createOptions(
                     shadowColor: '#82ca9d'
                 }
             },
+            connectNulls: false,
             animation: false,
             z: 2
         } as LineSeriesOption);
     }
 
-    // ============================================
-    // ЛИНИЯ МАКСИМУМА
-    // ============================================
-
+    // Линия максимума
     if (maxPoints.length > 0) {
         series.push({
             name: `${fieldName} (max)`,
             type: 'line',
             data: maxPoints,
-            sampling: 'lttb',
             smooth: false,
-            connectNulls: true,
-            symbol: showSymbols ? 'triangle' : 'none',
+            symbol: 'circle',
             symbolSize: symbolSize - 1,
             lineStyle: {
                 width: 1.5,
@@ -176,23 +147,21 @@ export function createOptions(
                     shadowColor: '#ff6b6b'
                 }
             },
+            connectNulls: false,
             animation: false,
             z: 2
         } as LineSeriesOption);
     }
 
-    // ============================================
-    // ОСНОВНАЯ ЛИНИЯ СРЕДНЕГО
-    // ============================================
+    const markArea = createGapsMarkArea(gapsInfo, yMin, yMax);
 
+    // Основная линия среднего
     series.push({
         name: fieldName,
         type: 'line',
         data: avgPoints,
-        sampling: 'lttb',
         smooth: false,
-        connectNulls: true,
-        symbol: showSymbols ? 'circle' : 'none',
+        symbol: 'circle',
         symbolSize: symbolSize,
         lineStyle: {
             width: 2.5,
@@ -215,6 +184,8 @@ export function createOptions(
                 shadowColor: '#4A90E2'
             }
         },
+        connectNulls: false,
+        markArea, // markArea
         animation: false,
         z: 3
     } as LineSeriesOption);
@@ -235,22 +206,39 @@ export function createOptions(
             padding: 10,
             textStyle: { color: '#333' },
             formatter: (params: any) => {
+                // Усиленная защита от undefined
                 if (!Array.isArray(params) || params.length === 0) return '';
 
                 const visibleParams = params.filter((p: any) =>
-                    p.seriesName === fieldName ||
-                    p.seriesName === `${fieldName} (min)` ||
-                    p.seriesName === `${fieldName} (max)`
+                        p && p.seriesName && (
+                            p.seriesName === fieldName ||
+                            p.seriesName === `${fieldName} (min)` ||
+                            p.seriesName === `${fieldName} (max)`
+                        )
                 );
+
+                if (visibleParams.length === 0) return '';
 
                 const avgSeries = visibleParams.find((p: any) => p.seriesName === fieldName);
                 const minSeries = visibleParams.find((p: any) => p.seriesName === `${fieldName} (min)`);
                 const maxSeries = visibleParams.find((p: any) => p.seriesName === `${fieldName} (max)`);
 
-                if (!avgSeries) return '';
+                //   КРИТИЧНО: Проверка наличия avgSeries и его value
+                if (!avgSeries || !avgSeries.value || !Array.isArray(avgSeries.value) || avgSeries.value.length < 2) {
+                    console.warn('[createOptions] Invalid avgSeries in tooltip:', avgSeries);
+                    return '';
+                }
+
+                const timestamp = avgSeries.value[0];
+
+                // Дополнительная проверка timestamp
+                if (typeof timestamp !== 'number' || !Number.isFinite(timestamp)) {
+                    console.warn('[createOptions] Invalid timestamp:', timestamp);
+                    return '';
+                }
 
                 const time = formatDateWithTimezone(
-                    avgSeries.value[0],
+                    timestamp,
                     timeSettings,
                     {
                         year: 'numeric',
@@ -262,14 +250,20 @@ export function createOptions(
                     }
                 );
 
-                // ✅ ЗАЩИТА ОТ NULL
-                const avgValue = avgSeries.value?.[1];
+                //   ЗАЩИТА ОТ NULL
+                const avgValue = avgSeries.value[1];
                 const minValue = minSeries?.value?.[1];
                 const maxValue = maxSeries?.value?.[1];
 
-                const avg = avgValue != null ? avgValue.toFixed(2) : 'N/A';
-                const min = minValue != null ? minValue.toFixed(2) : 'N/A';
-                const max = maxValue != null ? maxValue.toFixed(2) : 'N/A';
+                const avg = avgValue != null && Number.isFinite(avgValue)
+                    ? avgValue.toFixed(2)
+                    : 'N/A';
+                const min = minValue != null && Number.isFinite(minValue)
+                    ? minValue.toFixed(2)
+                    : 'N/A';
+                const max = maxValue != null && Number.isFinite(maxValue)
+                    ? maxValue.toFixed(2)
+                    : 'N/A';
 
                 return `
         <div style="padding: 4px;">
@@ -294,8 +288,8 @@ export function createOptions(
 
         xAxis: {
             type: 'time',
-            min: xAxisMin!,
-            max: xAxisMax!,
+            min: xAxisMin,
+            max: xAxisMax,
             axisLabel: {
                 formatter: (value: number) => {
                     return formatDateWithTimezone(
@@ -313,9 +307,9 @@ export function createOptions(
 
         yAxis: {
             type: 'value',
-            scale: true,        //  Включаем scale mode
-            min: yMin,          //  ФИКСИРУЕМ на основе avg точек
-            max: yMax,          //  ФИКСИРУЕМ на основе avg точек
+            scale: true,
+            min: yMin,
+            max: yMax,
             name: 'Значение',
             nameTextStyle: {
                 fontSize: 12,
@@ -385,44 +379,66 @@ export function createOptions(
     };
 }
 
-// ============================================
-// УТИЛИТЫ
-// ============================================
 
-type ChartRenderData = ReturnType<typeof selectChartRenderData>;
-type ChartStatsType = ReturnType<typeof selectChartStats>;
+//
+// Создание markArea для gaps
+//
 
-export function getOverlayType(
-    chartData: ChartRenderData,
-    stats: ChartStatsType
-): 'loading' | 'empty' | 'stale' | null {
-    const hasPoints = chartData.avgPoints.length > 0;
-
-    if (!hasPoints && !stats.isLoading) {
-        return 'empty';
+function createGapsMarkArea(
+    gapsInfo: GapsInfo | undefined,
+    yMin: number,
+    yMax: number
+): MarkAreaComponentOption | undefined {
+    if (!gapsInfo || (gapsInfo.dataGaps.length === 0 && gapsInfo.loadingGaps.length === 0)) {
+        return undefined;
     }
 
-    if (!hasPoints && stats.isLoading) {
-        return 'loading';
+    const data: any[] = [];
+
+    // Gaps без данных (красноватый оттенок)
+    for (const gap of gapsInfo.dataGaps) {
+        data.push([
+            {
+                name: 'Нет данных',
+                xAxis: gap.fromMs,
+                yAxis: yMin,
+                itemStyle: {
+                    color: 'rgba(255, 107, 107, 0.1)',
+                    borderColor: 'rgba(255, 107, 107, 0.3)',
+                    borderWidth: 1,
+                    borderType: 'dashed'
+                }
+            },
+            {
+                xAxis: gap.toMs,
+                yAxis: yMax
+            }
+        ]);
     }
 
-    return null;
-}
-
-export function getOverlayMessage(
-    type: 'loading' | 'empty' | 'stale',
-    stats: ChartStatsType
-): string {
-    switch (type) {
-        case 'loading':
-            return stats.loadingProgress > 0
-                ? `Загрузка: ${stats.loadingProgress}%`
-                : 'Загрузка данных...';
-        case 'stale':
-            return 'Загрузка точных данных...';
-        case 'empty':
-            return 'Нет данных';
-        default:
-            return '';
+    // Gaps в процессе загрузки (жёлтый оттенок)
+    for (const gap of gapsInfo.loadingGaps) {
+        data.push([
+            {
+                name: 'Загрузка...',
+                xAxis: gap.fromMs,
+                yAxis: yMin,
+                itemStyle: {
+                    color: 'rgba(251, 191, 36, 0.08)',
+                    borderColor: 'rgba(251, 191, 36, 0.4)',
+                    borderWidth: 1,
+                    borderType: 'dotted'
+                }
+            },
+            {
+                xAxis: gap.toMs,
+                yAxis: yMax
+            }
+        ]);
     }
+
+    return {
+        silent: true,
+        data
+    };
 }

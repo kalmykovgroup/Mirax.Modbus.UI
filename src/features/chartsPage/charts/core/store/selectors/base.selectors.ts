@@ -9,7 +9,7 @@ import type {FieldDto} from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
 import type {
     BucketsMs,
     FieldName,
-    FieldView,
+    FieldView, OriginalRange,
     SeriesTile,
     TimeRange
 } from "@chartsPage/charts/core/store/types/chart.types.ts";
@@ -61,7 +61,7 @@ export const selectFieldView = (
 export const selectFieldOriginalRange = (
     state: RootState,
     fieldName: FieldName
-): TimeRange | undefined =>
+): OriginalRange | undefined =>
     state.charts.view[fieldName]?.originalRange;
 
 export const selectFieldCurrentRange = (

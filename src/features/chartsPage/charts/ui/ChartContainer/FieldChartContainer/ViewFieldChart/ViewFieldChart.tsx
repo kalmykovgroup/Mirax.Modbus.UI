@@ -5,18 +5,16 @@ import { useSelector } from 'react-redux';
 import { useCallback, useMemo, memo } from 'react';
 import type { RootState } from '@/store/store';
 import {
+    type ChartStats,
     selectChartRenderData,
-    selectChartStats
+    selectChartStats, selectFieldGaps
 } from '@chartsPage/charts/core/store/selectors/visualization.selectors';
 import styles from './ViewFieldChart.module.css';
 import {selectFieldOriginalRange} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 
-import { ChartOverlay } from "@chartsPage/charts/ui/ChartOverlay/ChartOverlay.tsx";
-
 import {selectTimeSettings} from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
 import {
-    createOptions, getOverlayMessage,
-    getOverlayType
+    createOptions
 } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/createEChartsOptions.ts";
 import {
     ChartCanvas
@@ -28,6 +26,8 @@ import {
     ChartFooter
 } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartFooter/ChartFooter.tsx";
 import {ChartHeader} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ChartHeader/ChartHeader.tsx";
+import LoadingIndicator
+    from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/LoadingIndicator/LoadingIndicator.tsx";
 
 interface ViewFieldChartProps {
     readonly fieldName: string;
@@ -40,12 +40,11 @@ interface ViewFieldChartProps {
 export const ViewFieldChart = memo(function ViewFieldChart({
                                                                fieldName,
                                                                onZoomEnd,
-                                                               onRetry,
                                                                height = 400
                                                            }: ViewFieldChartProps) {
     const chartData = useSelector((state: RootState) => selectChartRenderData(state, fieldName));
-    const stats = useSelector((state: RootState) => selectChartStats(state, fieldName));
-
+    const chartFieldStatus: ChartStats = useSelector((state: RootState) => selectChartStats(state, fieldName));
+    const gapsInfo = useSelector((state: RootState) => selectFieldGaps(state, fieldName));
     const originalRange = useSelector((state: RootState) => selectFieldOriginalRange(state, fieldName));
     const timeSettings = useSelector((state: RootState) => selectTimeSettings(state));
 
@@ -62,12 +61,13 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                 chartData.maxPoints,
                 fieldName,
                 originalRange,
-                timeSettings
+                timeSettings,
+                gapsInfo
             ),
-        [chartData.avgPoints, chartData.minPoints, chartData.maxPoints, fieldName, originalRange, timeSettings]
+        [chartData.avgPoints, chartData.minPoints, chartData.maxPoints, fieldName, originalRange, timeSettings, gapsInfo]
     );
 
-    const overlayType = getOverlayType(chartData, stats);
+    console.log("Update ViewFieldChart")
 
     return (
         <div className={styles.viewFieldChartContainer} style={{height: height}}>
@@ -76,9 +76,9 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                 <h3 className={styles.title}>{fieldName}</h3>
                 <StatsBadge
                     totalPoints={chartData.avgPoints.length + chartData.minPoints.length  + chartData.maxPoints.length }
-                    coverage={stats.coverage}
+                    coverage={chartFieldStatus.coverage}
                     quality={chartData.quality}
-                    isLoading={stats.isLoading}
+                    isLoading={chartFieldStatus.isLoading}
                     fieldName={fieldName}
                 />
             </div>
@@ -88,17 +88,13 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                     options={options}
                     totalPoints={chartData.avgPoints.length + chartData.minPoints.length  + chartData.maxPoints.length}
                     onZoomEnd={handleZoomEnd}
-                    loading={stats.isLoading}
                 />
 
-                {overlayType && (
-                    <ChartOverlay
-                        type={overlayType}
-                        message={getOverlayMessage(overlayType, stats)}
-                        onRetry={onRetry}
-                    />
-                )}
             </div>
+            <div className={styles.indicationContainer}>
+                <LoadingIndicator chartFieldStatus={chartFieldStatus} position={"aboveAxis"} />
+            </div>
+
 
             <ChartFooter fieldName={fieldName}/>
         </div>

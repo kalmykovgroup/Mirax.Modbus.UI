@@ -72,6 +72,7 @@ export function formatDateWithTimezone(
 
     // Проверка на валидность даты
     if (!dt || isNaN(dt.getTime())) {
+
         console.warn('[formatDateWithTimezone] Invalid date:', date);
         return '';
     }

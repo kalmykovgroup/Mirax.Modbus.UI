@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import styles from './TimelineCoverageBar.module.css';
 import classNames from 'classnames';
-import type { CoverageInterval } from "@chartsPage/charts/core/store/types/chart.types.ts";
+import type {CoverageInterval, OriginalRange} from "@chartsPage/charts/core/store/types/chart.types.ts";
 
 // ============================================
 // ТИПЫ
@@ -11,8 +11,7 @@ import type { CoverageInterval } from "@chartsPage/charts/core/store/types/chart
 export type TimelineCoverageBarProps = {
     // Основные данные
     readonly coverage: readonly CoverageInterval[];
-    readonly domainFrom: number;
-    readonly domainTo: number;
+    readonly originalRange: OriginalRange;
 
     // Цвета для разных состояний
     readonly backgroundColor?: string | undefined;
@@ -91,8 +90,7 @@ function intervalToSegment(
 
 export const TimelineCoverageBar: React.FC<TimelineCoverageBarProps> = ({
                                                                             coverage,
-                                                                            domainFrom,
-                                                                            domainTo,
+                                                                            originalRange,
                                                                             backgroundColor = '#e5e7eb',
                                                                             coverageColor = '#3b82f6',
                                                                             loadingColor = '#fbbf24',
@@ -107,13 +105,13 @@ export const TimelineCoverageBar: React.FC<TimelineCoverageBarProps> = ({
     // ============================================
 
     const segments = useMemo((): Segments => {
-        const span = domainTo - domainFrom;
+        const span = originalRange.toMs - originalRange.fromMs;
 
         // Проверка корректности диапазона
         if (span <= 0) {
             console.warn('[TimelineCoverageBar] Invalid domain range:', {
-                domainFrom,
-                domainTo,
+                fromMs: originalRange.fromMs,
+                toMs: originalRange.toMs,
                 span
             });
             return { covered: [], loading: [] };
@@ -121,37 +119,37 @@ export const TimelineCoverageBar: React.FC<TimelineCoverageBarProps> = ({
 
         // Конвертируем покрытые интервалы в сегменты
         const covered = coverage
-            .map(interval => intervalToSegment(interval, domainFrom, domainTo))
+            .map(interval => intervalToSegment(interval, originalRange.fromMs, originalRange.toMs))
             .filter((segment): segment is Segment => segment !== null);
 
         // Конвертируем загружаемые интервалы в сегменты
         const loading = loadingIntervals
-            .map(interval => intervalToSegment(interval, domainFrom, domainTo))
+            .map(interval => intervalToSegment(interval, originalRange.fromMs, originalRange.toMs))
             .filter((segment): segment is Segment => segment !== null);
 
         return { covered, loading };
-    }, [coverage, loadingIntervals, domainFrom, domainTo]);
+    }, [coverage, loadingIntervals, originalRange]);
 
     // ============================================
     // ВЫЧИСЛЕНИЕ ПРОЦЕНТА ПОКРЫТИЯ
     // ============================================
 
     const coveragePercent = useMemo((): number => {
-        const span = domainTo - domainFrom;
+        const span = originalRange.toMs - originalRange.fromMs;
         if (span <= 0) return 0;
 
         let totalCovered = 0;
 
         coverage.forEach(interval => {
-            const start = Math.max(interval.fromMs, domainFrom);
-            const end = Math.min(interval.toMs, domainTo);
+            const start = Math.max(interval.fromMs, originalRange.fromMs);
+            const end = Math.min(interval.toMs, originalRange.toMs);
             if (end > start) {
                 totalCovered += (end - start);
             }
         });
 
         return Math.round((totalCovered / span) * 100);
-    }, [coverage, domainFrom, domainTo]);
+    }, [coverage, originalRange.fromMs, originalRange.toMs]);
 
     // ============================================
     // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ

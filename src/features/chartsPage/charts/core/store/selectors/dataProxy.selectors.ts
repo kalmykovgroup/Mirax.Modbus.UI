@@ -5,18 +5,21 @@ import {
     selectAvailableBuckets,
     selectFieldCurrentBucketMs,
     selectFieldCurrentRange,
+    selectFieldOriginalRange,
     selectFieldSeriesLevels,
     selectTilesByBucket
 } from './base.selectors';
 import { DataProxyService, type OptimalDataResult } from '@chartsPage/charts/orchestration/services/DataProxyService';
 import type {BucketsMs, CoverageResult, FieldName} from "@chartsPage/charts/core/store/types/chart.types.ts";
+import {TileSystemCore} from "@chartsPage/charts/core/store/tile-system/TileSystemCore.ts";
 
 /**
- *  Покрытие текущего диапазона — используется только RequestManager
+ *  ✅ РЕФАКТОРИНГ: Используем TileSystemCore напрямую
  */
 export const selectCurrentCoverage = createSelector(
     [
         (state: RootState, fieldName: FieldName) => selectFieldCurrentRange(state, fieldName),
+        (state: RootState, fieldName: FieldName) => selectFieldOriginalRange(state, fieldName),
         (state: RootState, fieldName: FieldName) => selectFieldCurrentBucketMs(state, fieldName),
         (state: RootState, fieldName: FieldName) => {
             const bucketMs = selectFieldCurrentBucketMs(state, fieldName);
@@ -24,61 +27,85 @@ export const selectCurrentCoverage = createSelector(
             return selectTilesByBucket(state, fieldName, bucketMs);
         }
     ],
-    (currentRange, bucketMs, tiles): CoverageResult => {
-        if (!currentRange || !bucketMs) {
+    (currentRange, originalRange, bucketMs, tiles): CoverageResult => {
+        if (!currentRange || !bucketMs || !originalRange) {
             return { coverage: 0, gaps: [], coveredRanges: [] };
         }
 
-        return DataProxyService.calculateCoverage(
+        // ✅ Используем TileSystemCore напрямую
+        const gapsResult = TileSystemCore.findGaps(
+            originalRange,
             tiles,
-            currentRange.from.getTime(),
-            currentRange.to.getTime()
+            { fromMs: currentRange.from.getTime(), toMs: currentRange.to.getTime() }
         );
+
+        return {
+            coverage: gapsResult.coverage,
+            gaps: gapsResult.gaps.map(g => ({ from: g.fromMs, to: g.toMs })),
+            coveredRanges: []
+        };
     }
 );
 
 /**
- *  Coverage для конкретного bucket — для prefetch
+ *  ✅ РЕФАКТОРИНГ: Используем TileSystemCore
  */
 export const selectBucketCoverageForRange = createSelector(
     [
         (_state: RootState, _fieldName: FieldName, _bucketMs: BucketsMs, fromMs: number) => fromMs,
         (_state: RootState, _fieldName: FieldName, _bucketMs: BucketsMs, _fromMs: number, toMs: number) => toMs,
+        (state: RootState, fieldName: FieldName) => selectFieldOriginalRange(state, fieldName),
         (state: RootState, fieldName: FieldName, bucketMs: BucketsMs) =>
             selectTilesByBucket(state, fieldName, bucketMs)
     ],
-    (fromMs, toMs, tiles): CoverageResult => {
-        return DataProxyService.calculateCoverage(tiles, fromMs, toMs);
+    (fromMs, toMs, originalRange, tiles): CoverageResult => {
+        if (!originalRange) {
+            return { coverage: 0, gaps: [], coveredRanges: [] };
+        }
+
+        const gapsResult = TileSystemCore.findGaps(
+            originalRange,
+            tiles,
+            { fromMs, toMs }
+        );
+
+        return {
+            coverage: gapsResult.coverage,
+            gaps: gapsResult.gaps.map(g => ({ from: g.fromMs, to: g.toMs })),
+            coveredRanges: []
+        };
     }
 );
 
 /**
- *  ИСПРАВЛЕНО: НЕ зависит от currentRange
- *
- * Возвращает ВСЕ bins из оптимального bucket-уровня.
- * Фильтрация по видимому диапазону — задача ECharts.
+ *  ✅ ИСПРАВЛЕНО: Передаем originalRange в DataProxyService
  */
 export const selectOptimalData = createSelector(
     [
         (state: RootState, fieldName: FieldName) => selectFieldCurrentBucketMs(state, fieldName),
+        (state: RootState, fieldName: FieldName) => selectFieldCurrentRange(state, fieldName),
+        (state: RootState, fieldName: FieldName) => selectFieldOriginalRange(state, fieldName),
         (state: RootState, fieldName: FieldName) => selectFieldSeriesLevels(state, fieldName),
         (state: RootState, fieldName: FieldName) => selectAvailableBuckets(state, fieldName)
     ],
-    (currentBucketMs, seriesLevels, availableBuckets): OptimalDataResult => {
-        if (!currentBucketMs || !seriesLevels) {
+    (currentBucketMs, currentRange, originalRange, seriesLevels, availableBuckets): OptimalDataResult => {
+        if (!currentBucketMs || !seriesLevels || !currentRange || !originalRange) {
             return {
                 data: [],
                 quality: 'none',
-                coverage: 100, // Нет данных — 100% покрытие пустоты
+                coverage: 0,
                 sourceBucketMs: undefined,
                 isStale: false,
                 gaps: []
             };
         }
 
-        //  Используем весь диапазон из tiles (без фильтрации)
-        return DataProxyService.selectOptimalDataWithoutRange({
+        // ✅ Передаем originalRange в DataProxyService
+        return DataProxyService.selectOptimalData({
             targetBucketMs: currentBucketMs,
+            targetFromMs: currentRange.from.getTime(),
+            targetToMs: currentRange.to.getTime(),
+            originalRange,
             seriesLevels,
             availableBuckets
         });

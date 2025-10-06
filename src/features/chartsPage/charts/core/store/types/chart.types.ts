@@ -1,17 +1,26 @@
 
 import type {LoadingState} from "@chartsPage/charts/core/store/types/loading.types.ts";
 import type {SeriesBinDto} from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
+//Visualization
+export interface GapsInfo {
+    readonly dataGaps: readonly CoverageInterval[]; // Gaps без данных
+    readonly loadingGaps: readonly CoverageInterval[]; // Gaps в процессе загрузки
+}
 
 export type FieldName = string;
 export type BucketsMs = number;
 export type TimeRange = { from: Date; to: Date };
+export interface OriginalRange {
+    readonly fromMs: number;
+    readonly toMs: number;
+}
 export type CoverageInterval = { fromMs: number; toMs: number };
 export type TimeRangeBounds = { from: Date | undefined; to: Date | undefined };
 
 export interface SeriesTile {
     coverageInterval: CoverageInterval;
     bins: SeriesBinDto[];
-    status: 'ready' | 'loading' | 'error' | 'empty';
+    status: 'ready' | 'loading' | 'error';
     error?: string | undefined;
     requestId?: string | undefined;
     loadedAt?: number | undefined;
@@ -19,7 +28,7 @@ export interface SeriesTile {
 
 export interface FieldView {
     px?: number | undefined;
-    originalRange?: TimeRange | undefined;
+    originalRange?: OriginalRange | undefined;
     currentRange?: TimeRange | undefined;
     topBucketsMs?: BucketsMs | undefined;
     currentBucketsMs?: BucketsMs | undefined;

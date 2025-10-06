@@ -5,19 +5,16 @@ import type { LevelInfo } from "@chartsPage/charts/ui/ChartContainer/FieldChartC
 import {
     TimelineCoverageBar
 } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ChartHeader/TimelineCoverageBar/TimelineCoverageBar.tsx";
+import type {OriginalRange} from "@chartsPage/charts/core/store/types/chart.types.ts";
 
 // ============================================
 // ТИПЫ
 // ============================================
 
-type RangeMs = {
-    readonly from: number;
-    readonly to: number;
-};
 
 type LevelRowProps = {
     readonly level: LevelInfo;
-    readonly originalRange: RangeMs;
+    readonly originalRange: OriginalRange;
     readonly showDetails?: boolean | undefined;
 };
 
@@ -112,8 +109,7 @@ export const LevelRow: React.FC<LevelRowProps> = ({
                 <TimelineCoverageBar
                     coverage={level.coverage}
                     loadingIntervals={level.loadingCoverage}
-                    domainFrom={originalRange.from}
-                    domainTo={originalRange.to}
+                    originalRange={originalRange}
                     coverageColor={coverageColor}
                     loadingColor={loadingColor}
                     backgroundColor={backgroundColor}

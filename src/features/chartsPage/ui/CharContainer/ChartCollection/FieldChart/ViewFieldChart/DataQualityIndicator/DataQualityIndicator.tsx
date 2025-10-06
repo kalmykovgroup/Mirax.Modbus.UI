@@ -3,7 +3,7 @@
 import React from 'react';
 import classNames from 'classnames';
 import styles from './DataQualityIndicator.module.css';
-import type {DataQuality} from "@chartsPage/store/DataProxyService.ts";
+import type {DataQuality} from "@chartsPage/charts/core/store/types/chart.types.ts";
 
 export interface DataQualityIndicatorProps {
     quality?: DataQuality | undefined;

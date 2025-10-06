@@ -6,22 +6,34 @@ import type {
     CoverageInterval,
     SeriesTile,
     FieldName,
+    OriginalRange
 } from '@chartsPage/charts/core/store/types/chart.types';
-import { replaceTiles } from '@chartsPage/charts/core/store/chartsSlice';
+import { batchUpdateTiles } from '@chartsPage/charts/core/store/chartsSlice';
 import { selectFieldView } from '@chartsPage/charts/core/store/selectors/base.selectors';
 import type { RootState } from '@/store/store';
 import type { MultiSeriesResponse } from "@chartsPage/charts/core/dtos/responses/MultiSeriesResponse.ts";
 import type { SeriesBinDto } from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
 import type { GetMultiSeriesRequest } from "@chartsPage/charts/core/dtos/requests/GetMultiSeriesRequest.ts";
+import { TileSystemCore } from "@chartsPage/charts/core/store/tile-system/TileSystemCore.ts";
 
+// ============================================
+// ТИПЫ
+// ============================================
 
 export interface ProcessServerResponseParams {
     readonly response: MultiSeriesResponse;
     readonly bucketMs: BucketsMs;
     readonly requestedInterval: CoverageInterval;
-    readonly tiles: readonly SeriesTile[];
-    readonly field: FieldName;
     readonly dispatch: Dispatch;
+    readonly getState: () => RootState;
+}
+
+interface ProcessFieldResult {
+    readonly field: FieldName;
+    readonly success: boolean;
+    readonly newTiles: SeriesTile[] | null;
+    readonly binsReceived: number;
+    readonly error?: string | undefined;
 }
 
 // ============================================
@@ -29,8 +41,301 @@ export interface ProcessServerResponseParams {
 // ============================================
 
 export class DataProcessingService {
+
+    static processServerResponse(params: ProcessServerResponseParams): void {
+        const { response, bucketMs, requestedInterval, dispatch, getState } = params;
+
+        console.log('[processServerResponse] Processing response:', {
+            seriesCount: response.series.length,
+            bucketMs,
+            requestedInterval: {
+                from: new Date(requestedInterval.fromMs).toISOString(),
+                to: new Date(requestedInterval.toMs).toISOString()
+            }
+        });
+
+        const results: ProcessFieldResult[] = [];
+        const updates: Array<{
+            field: FieldName;
+            bucketMs: BucketsMs;
+            tiles: SeriesTile[];
+        }> = [];
+
+        for (const series of response.series) {
+            const result = this.processFieldSeries({
+                fieldName: series.field.name,
+                bins: series.bins,
+                bucketMs,
+                requestedInterval,
+                getState
+            });
+
+            results.push(result);
+
+            if (result.success && result.newTiles) {
+                updates.push({
+                    field: series.field.name,
+                    bucketMs,
+                    tiles: result.newTiles
+                });
+            }
+        }
+
+        if (updates.length > 0) {
+            dispatch(batchUpdateTiles(updates));
+        }
+
+        console.log('[processServerResponse] Complete:', {
+            totalFields: results.length,
+            successful: results.filter(r => r.success).length,
+            failed: results.filter(r => !r.success).length,
+            totalBins: results.reduce((sum, r) => sum + r.binsReceived, 0),
+            updatedFields: updates.map(u => u.field)
+        });
+    }
+
+
+    private static processFieldSeries(params: {
+        readonly fieldName: FieldName;
+        readonly bins: readonly any[];
+        readonly bucketMs: BucketsMs;
+        readonly requestedInterval: CoverageInterval;
+        readonly getState: () => RootState;
+    }): ProcessFieldResult {
+        const { fieldName, bins, bucketMs, requestedInterval, getState } = params;
+
+        try {
+            const state = getState();
+            const fieldView = selectFieldView(state, fieldName);
+
+            if (!fieldView) {
+                return {
+                    field: fieldName,
+                    success: false,
+                    newTiles: null,
+                    binsReceived: 0,
+                    error: 'Field view not found'
+                };
+            }
+
+            if (!fieldView.originalRange) {
+                return {
+                    field: fieldName,
+                    success: false,
+                    newTiles: null,
+                    binsReceived: 0,
+                    error: 'Original range not found'
+                };
+            }
+
+            const existingTiles = fieldView.seriesLevel[bucketMs] ?? [];
+            const convertedBins = this.convertAndFilterBins(bins, requestedInterval);
+
+            console.log('[processFieldSeries] Processing:', {
+                field: fieldName,
+                bucketMs,
+                existingTiles: existingTiles.length,
+                binsReceived: bins.length,
+                binsConverted: convertedBins.length
+            });
+
+            const newTile: SeriesTile = {
+                coverageInterval: requestedInterval,
+                bins: convertedBins,
+                status: 'ready',
+                loadedAt: Date.now()
+            };
+
+            //   ИСПРАВЛЕНО: Умный callback для фильтрации легитимных замен
+            const addResult = TileSystemCore.addTile(
+                fieldView.originalRange,
+                [...existingTiles],
+                newTile,
+                {
+                    strategy: 'replace',
+                    validate: true,
+                    onDataLoss: (lostTile) => {
+                        //   Проверка 1: Точное совпадение интервалов → повторная загрузка (игнорируем)
+                        const isSameInterval =
+                            lostTile.coverageInterval.fromMs === requestedInterval.fromMs &&
+                            lostTile.coverageInterval.toMs === requestedInterval.toMs;
+
+                        if (isSameInterval) {
+                            console.debug('[processFieldSeries] Data refresh (same interval):', {
+                                field: fieldName,
+                                interval: {
+                                    from: new Date(lostTile.coverageInterval.fromMs).toISOString(),
+                                    to: new Date(lostTile.coverageInterval.toMs).toISOString()
+                                },
+                                oldBins: lostTile.bins.length,
+                                newBins: convertedBins.length
+                            });
+                            return;
+                        }
+
+                        //   Проверка 2: Новый тайл содержит старый (zoom in) → легитимная замена (debug-уровень)
+                        const isZoomIn =
+                            requestedInterval.fromMs <= lostTile.coverageInterval.fromMs &&
+                            requestedInterval.toMs >= lostTile.coverageInterval.toMs &&
+                            convertedBins.length > lostTile.bins.length;
+
+                        if (isZoomIn) {
+                            console.debug('[processFieldSeries] Zoom refinement (expected):', {
+                                field: fieldName,
+                                oldInterval: {
+                                    from: new Date(lostTile.coverageInterval.fromMs).toISOString(),
+                                    to: new Date(lostTile.coverageInterval.toMs).toISOString()
+                                },
+                                newInterval: {
+                                    from: new Date(requestedInterval.fromMs).toISOString(),
+                                    to: new Date(requestedInterval.toMs).toISOString()
+                                },
+                                oldBins: lostTile.bins.length,
+                                newBins: convertedBins.length
+                            });
+                            return;
+                        }
+
+                        //   Проверка 3: Реальная потеря данных → WARNING
+                        console.warn('[processFieldSeries] ⚠️ Unexpected data loss:', {
+                            field: fieldName,
+                            lostTile: {
+                                interval: {
+                                    from: new Date(lostTile.coverageInterval.fromMs).toISOString(),
+                                    to: new Date(lostTile.coverageInterval.toMs).toISOString()
+                                },
+                                bins: lostTile.bins.length,
+                                status: lostTile.status
+                            },
+                            newTile: {
+                                interval: {
+                                    from: new Date(requestedInterval.fromMs).toISOString(),
+                                    to: new Date(requestedInterval.toMs).toISOString()
+                                },
+                                bins: convertedBins.length
+                            },
+                            reason: 'Tiles do not match expected patterns'
+                        });
+                    }
+                }
+            );
+
+            console.log('[processFieldSeries] Tile system result:', {
+                field: fieldName,
+                wasAdded: addResult.wasAdded,
+                wasMerged: addResult.wasMerged,
+                totalTiles: addResult.tiles.length,
+                readyTiles: addResult.tiles.filter(t => t.status === 'ready').length
+            });
+
+            return {
+                field: fieldName,
+                success: true,
+                newTiles: [...addResult.tiles],
+                binsReceived: convertedBins.length
+            };
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+
+            console.error('[processFieldSeries] Error:', {
+                field: fieldName,
+                error: errorMessage
+            });
+
+            return {
+                field: fieldName,
+                success: false,
+                newTiles: null,
+                binsReceived: 0,
+                error: errorMessage
+            };
+        }
+    }
+
     /**
-     * ГЛАВНЫЙ МЕТОД: Анализ необходимости загрузки
+     *   НОВЫЙ МЕТОД: Подготовка loading тайлов
+     */
+    static prepareLoadingTiles(params: {
+        readonly fields: readonly FieldName[];
+        readonly bucketMs: BucketsMs;
+        readonly loadingInterval: CoverageInterval;
+        readonly requestId: string;
+        readonly getState: () => RootState;
+    }): Array<{ field: FieldName; bucketMs: BucketsMs; tiles: SeriesTile[] }> {
+        const { fields, bucketMs, loadingInterval, requestId, getState } = params;
+
+        const updates: Array<{
+            field: FieldName;
+            bucketMs: BucketsMs;
+            tiles: SeriesTile[];
+        }> = [];
+
+        const state = getState();
+
+        for (const fieldName of fields) {
+            const fieldView = selectFieldView(state, fieldName);
+
+            if (!fieldView || !fieldView.originalRange) {
+                console.warn('[prepareLoadingTiles] No view for field:', fieldName);
+                continue;
+            }
+
+            const existingTiles = fieldView.seriesLevel[bucketMs] ?? [];
+
+            // Проверяем есть ли уже loading тайл для этого интервала
+            const hasLoadingTile = existingTiles.some(t =>
+                t.status === 'loading' &&
+                t.coverageInterval.fromMs === loadingInterval.fromMs &&
+                t.coverageInterval.toMs === loadingInterval.toMs
+            );
+
+            if (hasLoadingTile) {
+                console.log('[prepareLoadingTiles] Loading tile exists:', fieldName);
+                continue;
+            }
+
+            // Создаем loading тайл
+            const loadingTile: SeriesTile = {
+                coverageInterval: loadingInterval,
+                bins: [],
+                status: 'loading',
+                requestId
+            };
+
+            //   Используем TileSystemCore
+            const addResult = TileSystemCore.addTile(
+                fieldView.originalRange,
+                [...existingTiles],
+                loadingTile,
+                {
+                    strategy: 'replace',
+                    validate: false // Loading тайлы могут перекрываться
+                }
+            );
+
+            updates.push({
+                field: fieldName,
+                bucketMs,
+                tiles: [...addResult.tiles]
+            });
+
+            console.log('[prepareLoadingTiles] Prepared:', {
+                field: fieldName,
+                interval: {
+                    from: new Date(loadingInterval.fromMs).toISOString(),
+                    to: new Date(loadingInterval.toMs).toISOString()
+                }
+            });
+        }
+
+        return updates;
+    }
+
+    // ... остальные методы (analyzeLoadNeeds, calculateLoadInterval, и т.д.) остаются без изменений
+
+    /**
+     * Анализ необходимости загрузки
      */
     static analyzeLoadNeeds(
         fieldName: FieldName,
@@ -43,367 +348,23 @@ export class DataProcessingService {
         const state = getState();
         const fieldView = selectFieldView(state, fieldName);
 
-        if (!fieldView) {
-            console.warn('[DataProcessingService] No field view found');
+        if (!fieldView || !fieldView.originalRange) {
+            console.warn('[analyzeLoadNeeds] No field view or original range');
             return false;
         }
 
-        // 1. Выравниваем границы по bucket
+        const tiles = fieldView.seriesLevel[bucketMs] ?? [];
+
+        // Выравниваем границы
         const alignedFrom = Math.floor(from / bucketMs) * bucketMs;
         const alignedTo = Math.ceil(to / bucketMs) * bucketMs;
-        const originalRange = fieldView.originalRange;
-        const tiles = fieldView.seriesLevel[bucketMs] ?? [];
 
-        // 2. Проверяем текущее покрытие
-        const coverage = this.calculateCoverageInBuckets(
-            tiles,
-            alignedFrom,
-            alignedTo,
-            bucketMs
-        );
-
-        // Если хватает хотя бы одного bucket - нужно грузить
-        const requiredBuckets = Math.ceil((alignedTo - alignedFrom) / bucketMs);
-        const missingBuckets = requiredBuckets - coverage.coveredBuckets;
-
-
-        if (missingBuckets === 0) {
-            console.log("Нет не прогруженных бакетов")
-            return false;
-        }
-
-        // Оптимизируем интервал с учётом границ графика
-        const optimalInterval = this.optimizeLoadInterval(
-            tiles,
-            alignedFrom,
-            alignedTo,
+        console.log('[analyzeLoadNeeds] Request:', {
+            field: fieldName,
             bucketMs,
-            originalRange // передаём границы графика
-        );
-
-        if (!optimalInterval) {
-            return false;
-        }
-
-        // 4. Проверяем loading tiles
-        const hasLoadingCoverage = tiles.some(t =>
-            t.status === 'loading' &&
-            t.coverageInterval.fromMs <= optimalInterval.fromMs &&
-            t.coverageInterval.toMs >= optimalInterval.toMs
-        );
-
-        if (hasLoadingCoverage) {
-            console.log('[DataProcessingService] Already loading this interval');
-            return false;
-        }
-
-        // 5. Формируем запрос
-        const template = state.charts.template;
-        if (!template) {
-            console.error('[DataProcessingService] No template in state');
-            return false;
-        }
-
-        const field = template.selectedFields.find(f => f.name === fieldName);
-        if (!field) {
-            console.error('[DataProcessingService] Field not found in template:', fieldName);
-            return false;
-        }
-
-        const syncFields = state.charts.syncEnabled ? state.charts.syncFields : [];
-        const allFields = [field, ...syncFields.filter(f => f.name !== fieldName)];
-
-        const request: GetMultiSeriesRequest = {
-            template: {
-                ...template,
-                selectedFields: allFields
-            },
-            from: new Date(optimalInterval.fromMs),
-            to: new Date(optimalInterval.toMs),
-            px,
-            bucketMs
-        };
-
-        console.log('Загрузка оптимального диапазона', request.from?.toISOString());
-        console.log('Загрузка оптимального диапазона', request.to?.toISOString());
-        console.log('Загрузка оптимального диапазона', request.bucketMs);
-
-        return request;
-    }
-
-    /**
-     * Оптимизация интервала для соединения с соседними тайлами
-     */
-    private static optimizeLoadInterval(
-        tiles: readonly SeriesTile[],
-        alignedFrom: number,
-        alignedTo: number,
-        bucketMs: BucketsMs,
-        originalRange?: { from: Date; to: Date }
-    ): { fromMs: number; toMs: number } | null {
-
-        const requestSizeBuckets = Math.ceil((alignedTo - alignedFrom) / bucketMs);
-        const singleBucketThreshold = 3;
-        const percentThreshold = 0.2;
-
-        // Используем requestSizeBuckets для логирования
-        console.log('[optimizeLoadInterval] Starting optimization:', {
-            requestSizeBuckets,
-            bucketMs,
-            alignedRange: {
+            requested: {
                 from: new Date(alignedFrom).toISOString(),
                 to: new Date(alignedTo).toISOString()
-            }
-        });
-
-        const activeTiles = tiles
-            .filter(t => t.status === 'ready' || t.status === 'loading')
-            .sort((a, b) => a.coverageInterval.fromMs - b.coverageInterval.fromMs);
-
-        if (activeTiles.length === 0) {
-            return { fromMs: alignedFrom, toMs: alignedTo };
-        }
-
-        let optimalFrom = alignedFrom;
-        let optimalTo = alignedTo;
-
-        const graphStart = originalRange?.from.getTime();
-        const graphEnd = originalRange?.to.getTime();
-
-        // === АНАЛИЗ ЛЕВОЙ ГРАНИЦЫ ===
-
-        // Проверяем близость к началу графика
-        if (graphStart !== undefined) {
-            const distanceToGraphStart = alignedFrom - graphStart;
-            const distanceInBuckets = Math.floor(distanceToGraphStart / bucketMs);
-
-            // Используем requestSizeBuckets для определения относительного размера
-            const relativeDistance = distanceToGraphStart / (alignedTo - alignedFrom);
-
-            if (distanceInBuckets <= singleBucketThreshold || relativeDistance <= percentThreshold) {
-                optimalFrom = Math.floor(graphStart / bucketMs) * bucketMs;
-                console.log('[optimizeLoadInterval] Extending left to graph start:', {
-                    distanceInBuckets,
-                    relativeToRequest: (relativeDistance * 100).toFixed(1) + '%'
-                });
-            }
-        }
-
-        // Проверяем соседние тайлы
-        if (optimalFrom === alignedFrom) {
-            const tilesOnLeft = activeTiles.filter(t =>
-                t.coverageInterval.toMs <= alignedFrom
-            );
-
-            if (tilesOnLeft.length > 0) {
-                const nearestLeft = tilesOnLeft[tilesOnLeft.length - 1];
-                const gapInBuckets = Math.floor(
-                    (alignedFrom - nearestLeft.coverageInterval.toMs) / bucketMs
-                );
-                const gapPercent = (alignedFrom - nearestLeft.coverageInterval.toMs) /
-                    (alignedTo - alignedFrom);
-
-                // Логируем с использованием requestSizeBuckets
-                console.log('[optimizeLoadInterval] Left neighbor analysis:', {
-                    gapInBuckets,
-                    gapPercent: (gapPercent * 100).toFixed(1) + '%',
-                    requestSizeBuckets,
-                    shouldMerge: gapInBuckets <= singleBucketThreshold || gapPercent <= percentThreshold
-                });
-
-                if (gapInBuckets <= singleBucketThreshold || gapPercent <= percentThreshold) {
-                    optimalFrom = nearestLeft.coverageInterval.toMs;
-                }
-            }
-        }
-
-        // === АНАЛИЗ ПРАВОЙ ГРАНИЦЫ ===
-
-        // Аналогично для правой границы
-        if (graphEnd !== undefined) {
-            const distanceToGraphEnd = graphEnd - alignedTo;
-            const distanceInBuckets = Math.floor(distanceToGraphEnd / bucketMs);
-            const relativeDistance = distanceToGraphEnd / (alignedTo - alignedFrom);
-
-            if (distanceInBuckets <= singleBucketThreshold || relativeDistance <= percentThreshold) {
-                optimalTo = Math.ceil(graphEnd / bucketMs) * bucketMs;
-                console.log('[optimizeLoadInterval] Extending right to graph end:', {
-                    distanceInBuckets,
-                    relativeToRequest: (relativeDistance * 100).toFixed(1) + '%'
-                });
-            }
-        }
-
-        if (optimalTo === alignedTo) {
-            const tilesOnRight = activeTiles.filter(t =>
-                t.coverageInterval.fromMs >= alignedTo
-            );
-
-            if (tilesOnRight.length > 0) {
-                const nearestRight = tilesOnRight[0];
-                const gapInBuckets = Math.floor(
-                    (nearestRight.coverageInterval.fromMs - alignedTo) / bucketMs
-                );
-                const gapPercent = (nearestRight.coverageInterval.fromMs - alignedTo) /
-                    (alignedTo - alignedFrom);
-
-                console.log('[optimizeLoadInterval] Right neighbor analysis:', {
-                    gapInBuckets,
-                    gapPercent: (gapPercent * 100).toFixed(1) + '%',
-                    requestSizeBuckets,
-                    shouldMerge: gapInBuckets <= singleBucketThreshold || gapPercent <= percentThreshold
-                });
-
-                if (gapInBuckets <= singleBucketThreshold || gapPercent <= percentThreshold) {
-                    optimalTo = nearestRight.coverageInterval.fromMs;
-                }
-            }
-        }
-
-        // Финальная проверка
-        if (optimalTo <= optimalFrom) {
-            return null;
-        }
-
-        const hasFullCoverage = activeTiles.some(t =>
-            t.status === 'ready' &&
-            t.coverageInterval.fromMs <= optimalFrom &&
-            t.coverageInterval.toMs >= optimalTo
-        );
-
-        if (hasFullCoverage) {
-            return null;
-        }
-
-        // Финальный размер в buckets
-        const optimizedSizeBuckets = Math.ceil((optimalTo - optimalFrom) / bucketMs);
-
-        console.log('[optimizeLoadInterval] Final result:', {
-            originalBuckets: requestSizeBuckets,
-            optimizedBuckets: optimizedSizeBuckets,
-            expansionFactor: (optimizedSizeBuckets / requestSizeBuckets).toFixed(2) + 'x'
-        });
-
-        return { fromMs: optimalFrom, toMs: optimalTo };
-    }
-
-    /**
-     * Подсчёт покрытия в buckets
-     */
-    // DataProcessingService.ts - исправленный метод
-
-    private static calculateCoverageInBuckets(
-        tiles: readonly SeriesTile[],
-        fromMs: number,
-        toMs: number,
-        bucketMs: BucketsMs
-    ): { coveredBuckets: number; totalBuckets: number; percentage: number } {
-        const totalBuckets = Math.ceil((toMs - fromMs) / bucketMs);
-
-        // Проверяем покрытие через интервалы тайлов, а не через отдельные bins
-        const coveredBucketsSet = new Set<number>();
-
-        for (const tile of tiles) {
-            if (tile.status !== 'ready') continue;
-
-            // Проверяем пересечение интервала тайла с запрашиваемым диапазоном
-            const tileStart = tile.coverageInterval.fromMs;
-            const tileEnd = tile.coverageInterval.toMs;
-
-            // Если тайл пересекается с запрашиваемым диапазоном
-            if (tileEnd > fromMs && tileStart < toMs) {
-                // Вычисляем какие buckets покрывает этот тайл
-                const startBucket = Math.max(0, Math.floor((tileStart - fromMs) / bucketMs));
-                const endBucket = Math.min(totalBuckets - 1, Math.ceil((tileEnd - fromMs) / bucketMs));
-
-                // Если у тайла есть данные - считаем что он покрывает свой интервал
-                if (tile.bins.length > 0) {
-                    for (let i = startBucket; i <= endBucket; i++) {
-                        coveredBucketsSet.add(i);
-                    }
-                }
-            }
-        }
-
-        const coveredBuckets = coveredBucketsSet.size;
-        const percentage = totalBuckets > 0 ? (coveredBuckets / totalBuckets) * 100 : 0;
-
-        console.log('[calculateCoverageInBuckets] Coverage details:', {
-            fromMs: new Date(fromMs).toISOString(),
-            toMs: new Date(toMs).toISOString(),
-            totalBuckets,
-            coveredBuckets,
-            percentage: percentage.toFixed(1) + '%',
-            tilesChecked: tiles.filter(t => t.status === 'ready').length
-        });
-
-        return { coveredBuckets, totalBuckets, percentage };
-    }
-
-    /**
-     * Подготовка loading tiles
-     */
-    static prepareLoadingTiles(params: {
-        readonly field: FieldName;
-        readonly bucketMs: BucketsMs;
-        readonly loadingInterval: CoverageInterval;
-        readonly requestId: string;
-        readonly dispatch: Dispatch;
-        readonly getState: () => RootState;
-    }): void {
-        const { field, bucketMs, loadingInterval, requestId, dispatch, getState } = params;
-
-        const alignedInterval: CoverageInterval = {
-            fromMs: Math.floor(loadingInterval.fromMs / bucketMs) * bucketMs,
-            toMs: Math.ceil(loadingInterval.toMs / bucketMs) * bucketMs
-        };
-
-        const state = getState();
-        const fieldView = selectFieldView(state, field);
-
-        if (!fieldView) {
-            console.error('[DataProcessingService] No field view for prepareLoadingTiles');
-            return;
-        }
-
-        const tiles = fieldView.seriesLevel[bucketMs] ?? [];
-
-        const hasLoadingTile = tiles.some(t =>
-            t.status === 'loading' &&
-            t.coverageInterval.fromMs === alignedInterval.fromMs &&
-            t.coverageInterval.toMs === alignedInterval.toMs
-        );
-
-        if (hasLoadingTile) {
-            return;
-        }
-
-        const updatedTiles = [...tiles, {
-            coverageInterval: alignedInterval,
-            bins: [],
-            status: 'loading' as const,
-            requestId
-        }];
-
-        updatedTiles.sort((a, b) => a.coverageInterval.fromMs - b.coverageInterval.fromMs);
-
-        dispatch(replaceTiles({ field, bucketMs, tiles: updatedTiles }));
-    }
-
-    /**
-     * Обработка ответа от сервера
-     */
-    static processServerResponse(params: ProcessServerResponseParams): void {
-        const { response, bucketMs, requestedInterval, tiles, field, dispatch } = params;
-
-        const series = response.series?.find(s => s.field.name === field);
-
-        // Логируем что получили
-        console.log('[DataProcessingService] Processing response:', {
-            field,
-            requestedInterval: {
-                from: new Date(requestedInterval.fromMs).toISOString(),
-                to: new Date(requestedInterval.toMs).toISOString()
             },
             existingTiles: tiles.map(t => ({
                 status: t.status,
@@ -413,132 +374,653 @@ export class DataProcessingService {
             }))
         });
 
-        if (!series || !series.bins || series.bins.length === 0) {
-            // Заменяем loading на пустой ready
-            const updatedTiles = tiles.filter(tile => {
-                // Удаляем loading тайл который покрывает этот интервал
-                if (tile.status === 'loading') {
-                    const overlap = !(tile.coverageInterval.toMs <= requestedInterval.fromMs ||
-                        tile.coverageInterval.fromMs >= requestedInterval.toMs);
-                    return !overlap;
-                }
-                return true;
-            });
-
-            // Добавляем пустой ready тайл
-            updatedTiles.push({
-                coverageInterval: requestedInterval,
-                bins: [],
-                status: 'ready',
-                loadedAt: Date.now()
-            });
-
-            updatedTiles.sort((a, b) => a.coverageInterval.fromMs - b.coverageInterval.fromMs);
-            dispatch(replaceTiles({ field, bucketMs, tiles: updatedTiles }));
-            return;
-        }
-
-        // Фильтруем bins по интервалу
-        const bins = this.convertBins(series.bins).filter(bin =>
-            bin.t.getTime() >= requestedInterval.fromMs &&
-            bin.t.getTime() <= requestedInterval.toMs
+        // НАХОДИМ ФАКТИЧЕСКИЕ ПРОБЕЛЫ
+        const gapsResult = TileSystemCore.findGaps(
+            fieldView.originalRange,
+            tiles,
+            { fromMs: alignedFrom, toMs: alignedTo }
         );
 
-        // ВАЖНО: Проверяем нет ли пересечений с ready тайлами
-        const overlappingReady = tiles.filter(tile =>
-            tile.status === 'ready' &&
-            !(tile.coverageInterval.toMs <= requestedInterval.fromMs ||
-                tile.coverageInterval.fromMs >= requestedInterval.toMs)
-        );
-
-        if (overlappingReady.length > 0) {
-            console.warn('[DataProcessingService] Found overlapping ready tiles!', {
-                requested: {
-                    from: new Date(requestedInterval.fromMs).toISOString(),
-                    to: new Date(requestedInterval.toMs).toISOString()
-                },
-                overlapping: overlappingReady.map(t => ({
-                    from: new Date(t.coverageInterval.fromMs).toISOString(),
-                    to: new Date(t.coverageInterval.toMs).toISOString(),
-                    bins: t.bins.length
-                }))
-            });
-        }
-
-        // Удаляем ВСЕ loading тайлы которые пересекаются с новым
-        const filteredTiles = tiles.filter(tile => {
-            if (tile.status === 'loading') {
-                const overlap = !(tile.coverageInterval.toMs <= requestedInterval.fromMs ||
-                    tile.coverageInterval.fromMs >= requestedInterval.toMs);
-                if (overlap) {
-                    console.log('[DataProcessingService] Removing loading tile:', {
-                        from: new Date(tile.coverageInterval.fromMs).toISOString(),
-                        to: new Date(tile.coverageInterval.toMs).toISOString()
-                    });
-                    return false;
-                }
-            }
-            return true;
+        console.log('[analyzeLoadNeeds] Gaps analysis:', {
+            coverage: gapsResult.coverage.toFixed(1) + '%',
+            hasFull: gapsResult.hasFull,
+            gapsCount: gapsResult.gaps.length,
+            gaps: gapsResult.gaps.map(g => ({
+                from: new Date(g.fromMs).toISOString(),
+                to: new Date(g.toMs).toISOString(),
+                sizeMs: g.toMs - g.fromMs
+            }))
         });
 
-        // Добавляем новый ready тайл
-        const newTile: SeriesTile = {
-            coverageInterval: requestedInterval,
-            bins,
-            status: 'ready',
-            loadedAt: Date.now()
-        };
-
-        const updatedTiles = [...filteredTiles, newTile];
-        updatedTiles.sort((a, b) => a.coverageInterval.fromMs - b.coverageInterval.fromMs);
-
-        // Финальная проверка на дубликаты
-        const intervals = updatedTiles.map(t =>
-            `${new Date(t.coverageInterval.fromMs).toISOString()}_${new Date(t.coverageInterval.toMs).toISOString()}`
-        );
-        const uniqueIntervals = new Set(intervals);
-
-        if (intervals.length !== uniqueIntervals.size) {
-            console.error('[DataProcessingService] DUPLICATE TILES DETECTED!');
+        // Если полное покрытие - не грузим
+        if (gapsResult.hasFull || gapsResult.gaps.length === 0) {
+            console.log('[analyzeLoadNeeds] No gaps to load');
+            return false;
         }
 
-        dispatch(replaceTiles({ field, bucketMs, tiles: updatedTiles }));
+        // Проверяем loading тайлы в gaps
+        const hasLoadingInGaps = gapsResult.gaps.some(gap =>
+            this.checkLoadingCoverage(tiles, gap.fromMs, gap.toMs)
+        );
 
-        console.log('[DataProcessingService] Response processed:', {
-            field,
+        if (hasLoadingInGaps) {
+            console.log('[analyzeLoadNeeds] Already loading gaps');
+            return false;
+        }
+
+        // БЕРЁМ ОБЪЕДИНЁННЫЙ GAP (или самый большой)
+        const targetGap = this.selectTargetGap(gapsResult.gaps);
+
+        console.log('[analyzeLoadNeeds] Target gap:', {
+            from: new Date(targetGap.fromMs).toISOString(),
+            to: new Date(targetGap.toMs).toISOString(),
+            sizeMs: targetGap.toMs - targetGap.fromMs,
+            sizeBuckets: Math.ceil((targetGap.toMs - targetGap.fromMs) / bucketMs)
+        });
+
+        // ТЕПЕРЬ расширяем gap если близко к границам/тайлам
+        const optimizedInterval = this.optimizeGapInterval({
+            gap: targetGap,
+            tiles,
+            originalRange: fieldView.originalRange,
             bucketMs,
-            binsReceived: bins.length,
-            totalTiles: updatedTiles.length,
-            readyTiles: updatedTiles.filter(t => t.status === 'ready').length
+            minBucketsThreshold: 3,
+            proximityThreshold: 0.2
         });
+
+        console.log('[analyzeLoadNeeds] Optimized interval:', {
+            from: new Date(optimizedInterval.fromMs).toISOString(),
+            to: new Date(optimizedInterval.toMs).toISOString(),
+            expansion: (
+                Math.ceil((optimizedInterval.toMs - optimizedInterval.fromMs) / bucketMs) /
+                Math.ceil((targetGap.toMs - targetGap.fromMs) / bucketMs)
+            ).toFixed(2) + 'x'
+        });
+
+        // Формируем запрос
+        const template = state.charts.template;
+        if (!template) {
+            console.error('[analyzeLoadNeeds] No template');
+            return false;
+        }
+
+        const field = template.selectedFields.find(f => f.name === fieldName);
+        if (!field) {
+            console.error('[analyzeLoadNeeds] Field not found:', fieldName);
+            return false;
+        }
+
+        const selected = state.charts.syncEnabled ? [...state.charts.syncFields, field] : [field]
+
+        return {
+            template: {...template,
+                selectedFields: selected
+            },
+            from: new Date(optimizedInterval.fromMs),
+            to: new Date(optimizedInterval.toMs),
+            px,
+            bucketMs
+        };
     }
 
     /**
-     * Конвертация bins с валидацией
+     * Выбор целевого gap
      */
-    private static convertBins(bins: readonly any[]): SeriesBinDto[] {
+    private static selectTargetGap(
+        gaps: readonly CoverageInterval[]
+    ): CoverageInterval {
+        if (gaps.length === 0) {
+            throw new Error('[selectTargetGap] No gaps provided');
+        }
+
+        if (gaps.length === 1) {
+            return gaps[0]!;
+        }
+
+        // Стратегия: объединяем все gaps если их <= 3
+        // Иначе берём самый большой
+        if (gaps.length <= 3) {
+            const firstGap = gaps[0]!;
+            const lastGap = gaps[gaps.length - 1]!;
+
+            return {
+                fromMs: firstGap.fromMs,
+                toMs: lastGap.toMs
+            };
+        }
+
+        // Находим самый большой gap
+        let maxGap = gaps[0]!;
+        let maxSize = maxGap.toMs - maxGap.fromMs;
+
+        for (let i = 1; i < gaps.length; i++) {
+            const gap = gaps[i]!;
+            const size = gap.toMs - gap.fromMs;
+            if (size > maxSize) {
+                maxGap = gap;
+                maxSize = size;
+            }
+        }
+
+        return maxGap;
+    }
+
+    /**
+     *  Оптимизация gap (расширение до границ/тайлов)
+     */
+    private static optimizeGapInterval(params: {
+        readonly gap: CoverageInterval;
+        readonly tiles: readonly SeriesTile[];
+        readonly originalRange: OriginalRange;
+        readonly bucketMs: BucketsMs;
+        readonly minBucketsThreshold: number;
+        readonly proximityThreshold: number;
+    }): CoverageInterval {
+        const {
+            gap,
+            tiles,
+            originalRange,
+            bucketMs,
+            minBucketsThreshold,
+            proximityThreshold
+        } = params;
+
+        let optimalFrom = gap.fromMs;
+        let optimalTo = gap.toMs;
+
+        const gapSizeMs = gap.toMs - gap.fromMs;
+
+        // Расширяем до границ графика если близко
+        const distToStart = gap.fromMs - originalRange.fromMs;
+        const distToStartBuckets = Math.floor(distToStart / bucketMs);
+        const relDistStart = gapSizeMs > 0 ? distToStart / gapSizeMs : 0;
+
+        if (
+            distToStartBuckets <= minBucketsThreshold ||
+            relDistStart <= proximityThreshold
+        ) {
+            optimalFrom = Math.floor(originalRange.fromMs / bucketMs) * bucketMs;
+            console.log('[optimizeGapInterval] Extended to graph start');
+        }
+
+        const distToEnd = originalRange.toMs - gap.toMs;
+        const distToEndBuckets = Math.floor(distToEnd / bucketMs);
+        const relDistEnd = gapSizeMs > 0 ? distToEnd / gapSizeMs : 0;
+
+        if (
+            distToEndBuckets <= minBucketsThreshold ||
+            relDistEnd <= proximityThreshold
+        ) {
+            optimalTo = Math.ceil(originalRange.toMs / bucketMs) * bucketMs;
+            console.log('[optimizeGapInterval] Extended to graph end');
+        }
+
+        // Расширяем до соседних тайлов если близко
+        const activeTiles = tiles
+            .filter(t => t.status === 'ready' || t.status === 'loading')
+            .sort((a, b) => a.coverageInterval.fromMs - b.coverageInterval.fromMs);
+
+        // Левый тайл
+        const leftTiles = activeTiles.filter(t => t.coverageInterval.toMs <= gap.fromMs);
+        if (leftTiles.length > 0) {
+            const nearestLeft = leftTiles[leftTiles.length - 1]!;
+            const gapToLeft = gap.fromMs - nearestLeft.coverageInterval.toMs;
+            const gapBuckets = Math.floor(gapToLeft / bucketMs);
+            const relGap = gapSizeMs > 0 ? gapToLeft / gapSizeMs : 0;
+
+            if (gapBuckets <= minBucketsThreshold || relGap <= proximityThreshold) {
+                optimalFrom = nearestLeft.coverageInterval.toMs;
+                console.log('[optimizeGapInterval] Extended to left tile:', {
+                    gapBuckets,
+                    relGap: (relGap * 100).toFixed(1) + '%'
+                });
+            }
+        }
+
+        // Правый тайл
+        const rightTiles = activeTiles.filter(t => t.coverageInterval.fromMs >= gap.toMs);
+        if (rightTiles.length > 0) {
+            const nearestRight = rightTiles[0]!;
+            const gapToRight = nearestRight.coverageInterval.fromMs - gap.toMs;
+            const gapBuckets = Math.floor(gapToRight / bucketMs);
+            const relGap = gapSizeMs > 0 ? gapToRight / gapSizeMs : 0;
+
+            if (gapBuckets <= minBucketsThreshold || relGap <= proximityThreshold) {
+                optimalTo = nearestRight.coverageInterval.fromMs;
+                console.log('[optimizeGapInterval] Extended to right tile:', {
+                    gapBuckets,
+                    relGap: (relGap * 100).toFixed(1) + '%'
+                });
+            }
+        }
+
+        // Проверка минимального размера
+        const finalSizeBuckets = Math.ceil((optimalTo - optimalFrom) / bucketMs);
+        if (finalSizeBuckets < minBucketsThreshold) {
+            const needBuckets = minBucketsThreshold - finalSizeBuckets;
+            const needMs = needBuckets * bucketMs;
+            const halfNeedMs = Math.floor(needMs / 2);
+
+            optimalFrom = Math.max(
+                originalRange.fromMs,
+                Math.floor((optimalFrom - halfNeedMs) / bucketMs) * bucketMs
+            );
+
+            optimalTo = Math.min(
+                originalRange.toMs,
+                Math.ceil((optimalTo + needMs - halfNeedMs) / bucketMs) * bucketMs
+            );
+
+            console.log('[optimizeGapInterval] Expanded to minimum size');
+        }
+
+        return {
+            fromMs: optimalFrom,
+            toMs: optimalTo
+        };
+    }
+
+    /**
+     * Проверка loading покрытия
+     */
+    private static checkLoadingCoverage(
+        tiles: readonly SeriesTile[],
+        from: number,
+        to: number
+    ): boolean {
+        return tiles.some(t =>
+            t.status === 'loading' &&
+            t.coverageInterval.fromMs <= from &&
+            t.coverageInterval.toMs >= to
+        );
+    }
+
+    /**
+     * Конвертация и фильтрация bins
+     */
+    private static convertAndFilterBins(
+        bins: readonly any[],
+        interval: CoverageInterval
+    ): SeriesBinDto[] {
+        if (!bins || bins.length === 0) {
+            return [];
+        }
+
         const converted: SeriesBinDto[] = [];
+        let skipped = 0;
 
         for (const bin of bins) {
-            if (!bin) continue;
+            if (!bin || typeof bin !== 'object') {
+                skipped++;
+                continue;
+            }
+
+            let time: Date;
+            if (bin.t instanceof Date) {
+                time = bin.t;
+            } else if (typeof bin.t === 'string' || typeof bin.t === 'number') {
+                time = new Date(bin.t);
+            } else {
+                skipped++;
+                continue;
+            }
+
+            if (isNaN(time.getTime())) {
+                skipped++;
+                continue;
+            }
+
+            const timeMs = time.getTime();
+
+            if (timeMs < interval.fromMs || timeMs >= interval.toMs) {
+                skipped++;
+                continue;
+            }
+
+            const hasAvg = bin.avg != null && !isNaN(Number(bin.avg));
+            const hasMin = bin.min != null && !isNaN(Number(bin.min));
+            const hasMax = bin.max != null && !isNaN(Number(bin.max));
+
+            if (!hasAvg && !hasMin && !hasMax) {
+                skipped++;
+                continue;
+            }
 
             const convertedBin: SeriesBinDto = {
-                t: bin.t instanceof Date ? bin.t : new Date(bin.t),
-                avg: bin.avg != null ? Number(bin.avg) : undefined,
-                min: bin.min != null ? Number(bin.min) : undefined,
-                max: bin.max != null ? Number(bin.max) : undefined,
-                count: Number(bin.count) || 1
+                t: time,
+                avg: hasAvg ? Number(bin.avg) : undefined,
+                min: hasMin ? Number(bin.min) : undefined,
+                max: hasMax ? Number(bin.max) : undefined,
+                count: bin.count != null && !isNaN(Number(bin.count))
+                    ? Number(bin.count)
+                    : 1
             };
-
-            if (isNaN(convertedBin.t.getTime())) continue;
-
-            if (convertedBin.avg === undefined &&
-                convertedBin.min === undefined &&
-                convertedBin.max === undefined) continue;
 
             converted.push(convertedBin);
         }
 
+        if (skipped > 0) {
+            console.log('[convertAndFilterBins]', {
+                total: bins.length,
+                converted: converted.length,
+                skipped
+            });
+        }
+
+        converted.sort((a, b) => a.t.getTime() - b.t.getTime());
         return converted;
     }
+
+    /**
+     * Проверка полного покрытия
+     */
+    private static checkFullCoverage(
+        tiles: readonly SeriesTile[],
+        from: number,
+        to: number
+    ): boolean {
+        const readyTiles = tiles
+            .filter(t => t.status === 'ready')
+            .sort((a, b) => a.coverageInterval.fromMs - b.coverageInterval.fromMs);
+
+        let currentPos = from;
+
+        for (const tile of readyTiles) {
+            const tileStart = tile.coverageInterval.fromMs;
+            const tileEnd = tile.coverageInterval.toMs;
+
+            if (tileEnd <= from || tileStart >= to) {
+                continue;
+            }
+
+            if (tileStart > currentPos) {
+                return false;
+            }
+
+            currentPos = Math.max(currentPos, tileEnd);
+
+            if (currentPos >= to) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+
+    // calculateLoadInterval и вспомогательные методы остаются без изменений...
+    /**
+     * Расчет оптимального интервала для загрузки данных
+     *
+     * @returns Интервал для загрузки или null если загрузка не нужна
+     */
+    static calculateLoadInterval(params: {
+        readonly tiles: readonly SeriesTile[];
+        readonly originalRange: OriginalRange;
+        readonly requestedFrom: number;
+        readonly requestedTo: number;
+        readonly bucketMs: BucketsMs;
+        readonly minBucketsThreshold?: number | undefined;
+        readonly proximityThreshold?: number | undefined;
+    }): CoverageInterval | null {
+        const {
+            tiles,
+            originalRange,
+            requestedFrom,
+            requestedTo,
+            bucketMs,
+            minBucketsThreshold = 3,
+            proximityThreshold = 0.2
+        } = params;
+
+        // 1. Выравниваем границы по bucketMs
+        const alignedFrom = Math.floor(requestedFrom / bucketMs) * bucketMs;
+        const alignedTo = Math.ceil(requestedTo / bucketMs) * bucketMs;
+
+        if (alignedTo <= alignedFrom) {
+            console.warn('[calculateLoadInterval] Invalid range after alignment');
+            return null;
+        }
+
+        // 2. Размер запроса в buckets
+        const requestSizeBuckets = Math.ceil((alignedTo - alignedFrom) / bucketMs);
+
+        // 3. Проверяем полное покрытие ready тайлами
+        const hasFullCoverage = this.checkFullCoverage(tiles, alignedFrom, alignedTo);
+        if (hasFullCoverage) {
+            console.log('[calculateLoadInterval] Full coverage exists, no load needed');
+            return null;
+        }
+
+        // 4. Проверяем наличие loading тайлов покрывающих запрос
+        const hasLoadingCoverage = this.checkLoadingCoverage(tiles, alignedFrom, alignedTo);
+        if (hasLoadingCoverage) {
+            console.log('[calculateLoadInterval] Already loading this range');
+            return null;
+        }
+
+        // 5. Определяем оптимальные границы
+        let optimalFrom = alignedFrom;
+        let optimalTo = alignedTo;
+
+        // 6. Расширяем до границ графика если близко
+        const expandedToGraph = this.expandToGraphBoundaries({
+            from: optimalFrom,
+            to: optimalTo,
+            originalRange,
+            bucketMs,
+            requestSizeBuckets,
+            minBucketsThreshold,
+            proximityThreshold
+        });
+
+        optimalFrom = expandedToGraph.from;
+        optimalTo = expandedToGraph.to;
+
+        // 7. Расширяем до соседних тайлов если близко
+        const expandedToTiles = this.expandToNeighborTiles({
+            tiles,
+            from: optimalFrom,
+            to: optimalTo,
+            bucketMs,
+            requestSizeBuckets,
+            minBucketsThreshold,
+            proximityThreshold
+        });
+
+        optimalFrom = expandedToTiles.from;
+        optimalTo = expandedToTiles.to;
+
+        // 8. Финальная проверка
+        if (optimalTo <= optimalFrom) {
+            console.warn('[calculateLoadInterval] Invalid final range');
+            return null;
+        }
+
+        // 9. Проверяем что после расширения нет полного покрытия
+        const hasFinalCoverage = this.checkFullCoverage(tiles, optimalFrom, optimalTo);
+        if (hasFinalCoverage) {
+            console.log('[calculateLoadInterval] Full coverage after expansion');
+            return null;
+        }
+
+        // 10. Проверяем минимальный размер
+        const finalSizeBuckets = Math.ceil((optimalTo - optimalFrom) / bucketMs);
+        if (finalSizeBuckets < minBucketsThreshold) {
+            console.log('[calculateLoadInterval] Request too small, expanding to minimum');
+
+            // Расширяем симметрично до минимального размера
+            const needBuckets = minBucketsThreshold - finalSizeBuckets;
+            const needMs = needBuckets * bucketMs;
+            const halfNeedMs = Math.floor(needMs / 2);
+
+            optimalFrom = Math.max(
+                originalRange.fromMs,
+                Math.floor((optimalFrom - halfNeedMs) / bucketMs) * bucketMs
+            );
+
+            optimalTo = Math.min(
+                originalRange.toMs,
+                Math.ceil((optimalTo + needMs - halfNeedMs) / bucketMs) * bucketMs
+            );
+        }
+
+        console.log('[calculateLoadInterval] Final interval:', {
+            requested: {
+                from: new Date(requestedFrom).toISOString(),
+                to: new Date(requestedTo).toISOString(),
+                buckets: requestSizeBuckets
+            },
+            optimal: {
+                from: new Date(optimalFrom).toISOString(),
+                to: new Date(optimalTo).toISOString(),
+                buckets: Math.ceil((optimalTo - optimalFrom) / bucketMs)
+            },
+            expansion: (Math.ceil((optimalTo - optimalFrom) / bucketMs) / requestSizeBuckets).toFixed(2) + 'x'
+        });
+
+        return {
+            fromMs: optimalFrom,
+            toMs: optimalTo
+        };
+    }
+
+    /**
+     * Расширение до границ графика если близко
+     */
+    private static expandToGraphBoundaries(params: {
+        readonly from: number;
+        readonly to: number;
+        readonly originalRange: OriginalRange;
+        readonly bucketMs: BucketsMs;
+        readonly requestSizeBuckets: number;
+        readonly minBucketsThreshold: number;
+        readonly proximityThreshold: number;
+    }): { from: number; to: number } {
+        const {
+            from,
+            to,
+            originalRange,
+            bucketMs,
+            minBucketsThreshold,
+            proximityThreshold
+        } = params;
+
+        let expandedFrom = from;
+        let expandedTo = to;
+
+        const requestSizeMs = to - from;
+
+        // Левая граница
+        const distanceToStart = from - originalRange.fromMs;
+        const distanceToStartBuckets = Math.floor(distanceToStart / bucketMs);
+        const relativeDistanceStart = requestSizeMs > 0 ? distanceToStart / requestSizeMs : 0;
+
+        if (
+            distanceToStartBuckets <= minBucketsThreshold ||
+            relativeDistanceStart <= proximityThreshold
+        ) {
+            expandedFrom = Math.floor(originalRange.fromMs / bucketMs) * bucketMs;
+            console.log('[expandToGraphBoundaries] Extended to graph start:', {
+                distanceBuckets: distanceToStartBuckets,
+                relativeDistance: (relativeDistanceStart * 100).toFixed(1) + '%'
+            });
+        }
+
+        // Правая граница
+        const distanceToEnd = originalRange.toMs - to;
+        const distanceToEndBuckets = Math.floor(distanceToEnd / bucketMs);
+        const relativeDistanceEnd = requestSizeMs > 0 ? distanceToEnd / requestSizeMs : 0;
+
+        if (
+            distanceToEndBuckets <= minBucketsThreshold ||
+            relativeDistanceEnd <= proximityThreshold
+        ) {
+            expandedTo = Math.ceil(originalRange.toMs / bucketMs) * bucketMs;
+            console.log('[expandToGraphBoundaries] Extended to graph end:', {
+                distanceBuckets: distanceToEndBuckets,
+                relativeDistance: (relativeDistanceEnd * 100).toFixed(1) + '%'
+            });
+        }
+
+        return { from: expandedFrom, to: expandedTo };
+    }
+
+    /**
+     * Расширение до соседних тайлов если близко
+     */
+    private static expandToNeighborTiles(params: {
+        readonly tiles: readonly SeriesTile[];
+        readonly from: number;
+        readonly to: number;
+        readonly bucketMs: BucketsMs;
+        readonly requestSizeBuckets: number;
+        readonly minBucketsThreshold: number;
+        readonly proximityThreshold: number;
+    }): { from: number; to: number } {
+        const {
+            tiles,
+            from,
+            to,
+            bucketMs,
+            minBucketsThreshold,
+            proximityThreshold
+        } = params;
+
+        let expandedFrom = from;
+        let expandedTo = to;
+
+        const activeTiles = tiles
+            .filter(t => t.status === 'ready' || t.status === 'loading')
+            .sort((a, b) => a.coverageInterval.fromMs - b.coverageInterval.fromMs);
+
+        const requestSizeMs = to - from;
+
+        // Ищем ближайший тайл слева
+        const leftTiles = activeTiles.filter(t => t.coverageInterval.toMs <= from);
+        if (leftTiles.length > 0) {
+            const nearestLeft = leftTiles[leftTiles.length - 1]!;
+            const gap = from - nearestLeft.coverageInterval.toMs;
+            const gapBuckets = Math.floor(gap / bucketMs);
+            const relativeGap = requestSizeMs > 0 ? gap / requestSizeMs : 0;
+
+            if (
+                gapBuckets <= minBucketsThreshold ||
+                relativeGap <= proximityThreshold
+            ) {
+                expandedFrom = nearestLeft.coverageInterval.toMs;
+                console.log('[expandToNeighborTiles] Extended to left tile:', {
+                    gapBuckets,
+                    relativeGap: (relativeGap * 100).toFixed(1) + '%'
+                });
+            }
+        }
+
+        // Ищем ближайший тайл справа
+        const rightTiles = activeTiles.filter(t => t.coverageInterval.fromMs >= to);
+        if (rightTiles.length > 0) {
+            const nearestRight = rightTiles[0]!;
+            const gap = nearestRight.coverageInterval.fromMs - to;
+            const gapBuckets = Math.floor(gap / bucketMs);
+            const relativeGap = requestSizeMs > 0 ? gap / requestSizeMs : 0;
+
+            if (
+                gapBuckets <= minBucketsThreshold ||
+                relativeGap <= proximityThreshold
+            ) {
+                expandedTo = nearestRight.coverageInterval.fromMs;
+                console.log('[expandToNeighborTiles] Extended to right tile:', {
+                    gapBuckets,
+                    relativeGap: (relativeGap * 100).toFixed(1) + '%'
+                });
+            }
+        }
+
+        return { from: expandedFrom, to: expandedTo };
+    }
+
 }
+
+
+

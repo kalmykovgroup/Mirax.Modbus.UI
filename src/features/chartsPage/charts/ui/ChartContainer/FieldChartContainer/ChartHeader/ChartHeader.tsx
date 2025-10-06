@@ -4,8 +4,7 @@ import { useAppSelector } from '@/store/hooks';
 import type {
     BucketsMs,
     CoverageInterval,
-    FieldName,
-    TimeRange
+    FieldName, OriginalRange
 } from "@/features/chartsPage/charts/core/store/types/chart.types";
 import {
     selectFieldOriginalRange,
@@ -47,14 +46,10 @@ export type LevelInfo = {
     } | undefined;
 };
 
-type RangeMs = {
-    readonly from: number;
-    readonly to: number;
-};
 
 type HeaderData = {
     readonly levels: readonly LevelInfo[];
-    readonly originalRange: RangeMs | undefined;
+    readonly originalRange: OriginalRange | undefined;
     readonly currentBucketMs: BucketsMs | undefined;
     readonly isFieldLoading: boolean;
     readonly fieldError: string | undefined;
@@ -88,15 +83,6 @@ function formatBucketSize(ms: number): string {
     return `${seconds}с`;
 }
 
-/**
- * Конвертация TimeRange в RangeMs
- */
-function timeRangeToMs(range: TimeRange): RangeMs {
-    return {
-        from: range.from.getTime(),
-        to: range.to.getTime()
-    };
-}
 
 // ============================================
 // КОМПОНЕНТ
@@ -147,12 +133,10 @@ export const ChartHeader: React.FC<HeaderProps> = ({
             };
         }
 
-        // 3. Конвертируем originalRange в миллисекунды
-        const originalRangeMs = timeRangeToMs(originalRange);
 
         // 4. Проверка: корректен ли диапазон?
-        if (originalRangeMs.to <= originalRangeMs.from) {
-            console.error('[ChartHeader] Invalid originalRange:', originalRangeMs);
+        if (originalRange.toMs <= originalRange.fromMs) {
+            console.error('[ChartHeader] Invalid originalRange:', originalRange);
             return {
                 levels: [],
                 originalRange: undefined,
@@ -174,7 +158,7 @@ export const ChartHeader: React.FC<HeaderProps> = ({
             console.warn('[ChartHeader] No bucket levels found for:', fieldName);
             return {
                 levels: [],
-                originalRange: originalRangeMs,
+                originalRange: originalRange,
                 currentBucketMs: fieldView.currentBucketsMs,
                 isFieldLoading: fieldView.loadingState.active,
                 fieldError: fieldView.error,
@@ -211,13 +195,13 @@ export const ChartHeader: React.FC<HeaderProps> = ({
             const errorCoverage = errorTiles.map(t => t.coverageInterval);
 
             // Вычисляем статистику покрытия
-            const totalMs = originalRangeMs.to - originalRangeMs.from;
+            const totalMs = originalRange.toMs - originalRange.fromMs;
             const totalBins = Math.ceil(totalMs / bucketMs);
 
             let coveredMs = 0;
             coverage.forEach(interval => {
-                const start = Math.max(interval.fromMs, originalRangeMs.from);
-                const end = Math.min(interval.toMs, originalRangeMs.to);
+                const start = Math.max(interval.fromMs, originalRange.fromMs);
+                const end = Math.min(interval.toMs, originalRange.toMs);
                 if (end > start) {
                     coveredMs += (end - start);
                 }
@@ -253,7 +237,7 @@ export const ChartHeader: React.FC<HeaderProps> = ({
 
         return {
             levels,
-            originalRange: originalRangeMs,
+            originalRange: originalRange,
             currentBucketMs: fieldView.currentBucketsMs,
             isFieldLoading: fieldView.loadingState.active,
             fieldError: fieldView.error,

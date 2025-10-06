@@ -72,3 +72,13 @@
     color: #666;
     font-weight: 500;
 }
+
+.indicationContainer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 50;
+}

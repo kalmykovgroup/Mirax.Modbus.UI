@@ -92,13 +92,13 @@ export function StatsBadge({
                     <span className={styles.statLabel}>Общий диапазон:</span>
                     <span className={styles.rangeValue}>
                         {formatDateWithTimezone(
-                            originalRange.from,
+                            originalRange.fromMs,
                             timeSettings,
                             { hour: '2-digit', minute: '2-digit' }
                         )}
                         {' → '}
                         {formatDateWithTimezone(
-                            originalRange.to,
+                            originalRange.toMs,
                             timeSettings,
                             { hour: '2-digit', minute: '2-digit' }
                         )}

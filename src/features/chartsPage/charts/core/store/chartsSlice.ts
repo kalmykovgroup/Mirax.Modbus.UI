@@ -10,10 +10,9 @@ import type {
     BucketsMs,
     CoverageInterval,
     FieldName,
-    FieldView,
+    FieldView, OriginalRange,
     SeriesTile, TimeRange
 } from "@chartsPage/charts/core/store/types/chart.types.ts";
-import {TileManager} from "@chartsPage/charts/orchestration/services/TileManager.ts";
 
 
 export interface ChartsState {
@@ -50,161 +49,26 @@ const chartsSlice = createSlice({
 
         // ========== УПРАВЛЕНИЕ ТАЙЛАМИ ==========
 
-        smartReplaceTiles(
-            state,
-            action: PayloadAction<{
-                field: FieldName;
-                bucketMs: BucketsMs;
-                operation: 'prepareLoading' | 'processResponse' | 'initialize';
-                interval?: CoverageInterval;
-                bins?: SeriesBinDto[];
-                requestId?: string;
-            }>
-        ) {
-            const { field, bucketMs, operation, interval, bins, requestId } = action.payload;
-            const view = state.view[field];
-
-            if (!view) return;
-
-            // Получаем текущие тайлы
-            const currentTiles = view.seriesLevel[bucketMs] ?? [];
-
-            // Создаём TileManager
-            const originalRange = view.originalRange
-                ? { fromMs: view.originalRange.from.getTime(), toMs: view.originalRange.to.getTime() }
-                : { fromMs: Date.now(), toMs: Date.now() + 86400000 };
-
-            const manager = new TileManager(bucketMs, originalRange);
-            manager.setTiles(currentTiles);
-
-            // Выполняем операцию
-            switch (operation) {
-                case 'initialize':
-                    manager.initialize();
-                    break;
-                case 'prepareLoading':
-                    if (interval && requestId) {
-                        manager.prepareLoading(interval, requestId);
-                    }
-                    break;
-                case 'processResponse':
-                    if (interval && bins) {
-                        manager.processResponse(interval, bins);
-                    }
-                    break;
-            }
-
-            // Сохраняем обновлённые тайлы
-            view.seriesLevel[bucketMs] = manager.getTiles() as SeriesTile[];
-        },
-
             // Сохраняем обновлённые тайлы
 
-
-       /* replaceTiles(
-            state,
-            action: PayloadAction<{
-                field: FieldName;
-                bucketMs: BucketsMs;
-                tiles: SeriesTile[];
-            }>
-        ) {
-            const view = state.view[action.payload.field];
-            if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
-                return;
-            }
-
-            view.seriesLevel[action.payload.bucketMs] = action.payload.tiles;
-        },
-
-         addTile(
+        IniTopTile(
             state,
             action: PayloadAction<{
                 field: FieldName;
                 bucketMs: BucketsMs;
                 tile: SeriesTile;
             }>
-        ) {
-            const view = state.view[action.payload.field];
+        ){
+            const { field, bucketMs, tile } = action.payload;
+            const view = state.view[field];
             if (!view) {
-                console.error(`[addTile] View not found for field: ${action.payload.field}`);
+                console.error(`[replaceTiles] View not found for field: ${field}`);
                 return;
             }
 
-            if (!view.seriesLevel[action.payload.bucketMs]) {
-                view.seriesLevel[action.payload.bucketMs] = [];
-            }
-
-            // ПРОСТО ДОБАВЛЯЕМ - вся логика мержа в DataProcessingService
-            view.seriesLevel[action.payload.bucketMs]!.push(action.payload.tile);
-
-            console.log('[addTile] Tile added:', {
-                field: action.payload.field,
-                bucketMs: action.payload.bucketMs,
-                totalTiles: view.seriesLevel[action.payload.bucketMs]!.length
-            });
+            view.seriesLevel[bucketMs]?.push(tile);
         },
 
-        updateTileStatus(
-            state,
-            action: PayloadAction<{
-                field: FieldName;
-                bucketMs: BucketsMs;
-                interval: CoverageInterval;
-                status: 'loading' | 'ready' | 'error';
-                error?: string | undefined;
-            }>
-        ) {
-            const view = state.view[action.payload.field];
-
-            if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
-                return;
-            }
-
-            const tiles = view.seriesLevel[action.payload.bucketMs];
-            if (!tiles) return;
-
-            const tile = tiles.find(t =>
-                t.coverageInterval.fromMs === action.payload.interval.fromMs &&
-                t.coverageInterval.toMs === action.payload.interval.toMs
-            );
-
-            if (tile) {
-                tile.status = action.payload.status;
-                tile.error = action.payload.error;
-            }
-        },
-
-        setTileError(
-            state,
-            action: PayloadAction<{
-                field: FieldName;
-                bucketMs: BucketsMs;
-                interval: CoverageInterval;
-                error: string;
-            }>
-        ) {
-            const view = state.view[action.payload.field];
-            if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
-                return;
-            }
-
-            const tiles = view.seriesLevel[action.payload.bucketMs];
-            if (!tiles) return;
-
-            const tile = tiles.find(t =>
-                t.coverageInterval.fromMs === action.payload.interval.fromMs &&
-                t.coverageInterval.toMs === action.payload.interval.toMs
-            );
-
-            if (tile) {
-                tile.status = 'error';
-                tile.error = action.payload.error;
-            }
-        },*/
 
         // ========== УПРАВЛЕНИЕ VIEW ==========
 
@@ -214,7 +78,7 @@ const chartsSlice = createSlice({
                 field: FieldName;
                 px: number;
                 currentRange: TimeRange;
-                originalRange: TimeRange;
+                originalRange: OriginalRange;
                 currentBucketsMs: BucketsMs;
                 seriesLevels: readonly BucketsMs[];
                 error?: string | undefined;
@@ -674,10 +538,7 @@ export const {
     setResolvedCharReqTemplate,
 
     // Управление тайлами
-    replaceTiles,
-    addTile,
-    updateTileStatus,
-    setTileError,
+    IniTopTile,
 
     // Управление view
     initialDataView,

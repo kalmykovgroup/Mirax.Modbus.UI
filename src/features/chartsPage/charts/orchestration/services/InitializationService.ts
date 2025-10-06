@@ -2,11 +2,11 @@
 import type { Dispatch } from '@reduxjs/toolkit';
 import type {
     BucketsMs,
-    CoverageInterval,
+    CoverageInterval, OriginalRange,
     SeriesTile,
     TimeRange
 } from '@chartsPage/charts/core/store/types/chart.types';
-import {initialDataView, replaceTiles} from '@chartsPage/charts/core/store/chartsSlice';
+import {initialDataView, IniTopTile} from '@chartsPage/charts/core/store/chartsSlice';
 import type {MultiSeriesResponse} from "@chartsPage/charts/core/dtos/responses/MultiSeriesResponse.ts";
 import type {SeriesBinDto} from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
 
@@ -29,13 +29,13 @@ export class InitializationService {
             const bucketLevels = this.buildBucketLevels(s.bucketMs, niceMilliseconds);
 
             // 2. Определить currentRange (один для всех полей)
-            const currentRange = this.determineCurrentRange(s.from, s.to, response);
+            const currentRange: TimeRange = this.determineCurrentRange(s.from, s.to, response);
 
             dispatch(initialDataView({
                 field: s.field.name,
                 px: px,
                 currentRange: currentRange,
-                originalRange: currentRange,
+                originalRange: { fromMs: currentRange.from.getTime(), toMs: currentRange.to.getTime() } as OriginalRange,
                 currentBucketsMs: s.bucketMs,
                 seriesLevels: bucketLevels
             }));
@@ -48,12 +48,12 @@ export class InitializationService {
             );
 
             const convertedBins = this.convertBins(s.bins);
-            const tile = this.createReadyTile(snappedInterval, convertedBins);
+            const tile: SeriesTile = this.createReadyTile(snappedInterval, convertedBins);
 
-            dispatch(replaceTiles({
+            dispatch(IniTopTile({
                 field: s.field.name,
                 bucketMs: s.bucketMs,
-                tiles: [tile]
+                tile: tile
             }));
         });
     }

@@ -1,51 +1,53 @@
 // orchestration/requests/RequestManager.ts
 
-import type {AppDispatch, RootState} from '@/store/store';
+import type { AppDispatch, RootState } from '@/store/store';
 import { fetchMultiSeriesData } from '../thunks/dataThunks';
 import { LoadingType } from '@chartsPage/charts/core/store/types/loading.types';
-import {
-    type ActiveRequest,
-    type RequestKey,
-    type RequestMetrics,
-    RequestPriority,
-    RequestReason
-} from "@chartsPage/charts/core/store/types/request.types";
+import { batchUpdateTiles } from '@chartsPage/charts/core/store/chartsSlice';
 import type {
-    BucketsMs, CoverageInterval,
+    BucketsMs,
+    CoverageInterval,
     FieldName
 } from "@chartsPage/charts/core/store/types/chart.types";
 import { DataProcessingService } from "@chartsPage/charts/orchestration/services/DataProcessingService";
 import type { GetMultiSeriesRequest } from "@chartsPage/charts/core/dtos/requests/GetMultiSeriesRequest";
-
-// ============================================
-// УТИЛИТЫ
-// ============================================
+import type { RequestMetrics } from "@chartsPage/charts/core/store/types/request.types.ts";
+import { selectFieldView } from "@chartsPage/charts/core/store/selectors/base.selectors";
+import type { FieldDto } from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
 
 function generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
-// ============================================
-// КЛАСС
-// ============================================
+//   ИСПРАВЛЕНО: Храним selectedFields из template
+interface ActiveRequestInfo {
+    readonly requestId: string;
+    readonly abortController: AbortController;
+    readonly promise: Promise<void>;
+    readonly startTime: number;
+    readonly selectedFields: readonly FieldDto[]; // ← Из request.template.selectedFields
+    readonly bucketMs: BucketsMs;
+    readonly requestedInterval: CoverageInterval;
+}
 
 export class RequestManager {
     private readonly dispatch: AppDispatch;
     private readonly getState: () => RootState;
 
-    private activeRequests: Map<RequestKey, ActiveRequest>;
-    private requestHistory: Map<RequestKey, number>;
+    private activeRequests: Map<string, ActiveRequestInfo>;
+    private requestHistory: Map<string, number>;
     private readonly metrics: RequestMetrics;
-    private isDisposed: boolean;
 
     private readonly REQUEST_TIMEOUT_MS = 30000;
     private readonly MAX_CONCURRENT_REQUESTS = 6;
+    private isDisposed: boolean;
 
     constructor(dispatch: AppDispatch, getState: () => RootState) {
         this.dispatch = dispatch;
         this.getState = getState;
         this.activeRequests = new Map();
         this.requestHistory = new Map();
+        this.isDisposed = false;
 
         this.metrics = {
             totalRequests: 0,
@@ -54,12 +56,10 @@ export class RequestManager {
             cancelledRequests: 0,
             averageLoadTime: 0
         };
-
-        this.isDisposed = false;
     }
 
     /**
-     * Главный метод - получает только базовые параметры от UI
+     * Главный метод загрузки
      */
     async loadVisibleRange(
         fieldName: FieldName,
@@ -69,11 +69,11 @@ export class RequestManager {
         px: number
     ): Promise<void> {
         if (this.isDisposed) {
-            console.warn('[RequestManager] Manager is disposed');
+            console.warn('[RequestManager] Disposed');
             return;
         }
 
-        const requestOrFalse = DataProcessingService.analyzeLoadNeeds(
+        const request = DataProcessingService.analyzeLoadNeeds(
             fieldName,
             from,
             to,
@@ -82,66 +82,74 @@ export class RequestManager {
             this.getState
         );
 
-        if (requestOrFalse === false) {
+        if (request === false) {
             console.log('[RequestManager] No load needed');
             return;
         }
 
-        // Подготовка loading tiles
         const requestId = generateId();
-        const requestedInterval = {
-            fromMs: requestOrFalse.from!.getTime(),
-            toMs: requestOrFalse.to!.getTime()
+        const requestedInterval: CoverageInterval = {
+            fromMs: request.from!.getTime(),
+            toMs: request.to!.getTime()
         };
 
-        DataProcessingService.prepareLoadingTiles({
-            field: fieldName,
+        //   Берём поля из request.template.selectedFields
+        const fields = request.template.selectedFields.map(f => f.name);
+
+        const loadingUpdates = DataProcessingService.prepareLoadingTiles({
+            fields,
             bucketMs: bucketsMs,
             loadingInterval: requestedInterval,
             requestId,
-            dispatch: this.dispatch,
             getState: this.getState
         });
 
-        // Выполнение запроса
+        if (loadingUpdates.length > 0) {
+            this.dispatch(batchUpdateTiles(loadingUpdates));
+        }
+
         await this.executeRequest(
-            requestOrFalse,
-            fieldName,
+            request, // ← Передаём весь request
             bucketsMs,
-            requestedInterval
+            requestedInterval,
+            requestId
         );
     }
+
     /**
-     * Выполнить запрос
+     *   ИСПРАВЛЕНО: executeRequest принимает request целиком
      */
     private async executeRequest(
         request: GetMultiSeriesRequest,
-        fieldName: FieldName,
         bucketMs: BucketsMs,
-        requestedInterval: CoverageInterval
+        requestedInterval: CoverageInterval,
+        requestId: string
     ): Promise<void> {
+        //   Ключ по первому полю из request.template.selectedFields
+        const primaryField = request.template.selectedFields[0]?.name;
+        if (!primaryField) {
+            console.error('[RequestManager] No fields in request');
+            return;
+        }
+
         const requestKey = this.buildRequestKey(
-            fieldName,
+            primaryField,
             bucketMs,
             request.from!,
             request.to!
         );
 
-        // Проверка дубликатов
-        const existing = this.activeRequests.get(requestKey);
-        if (existing) {
-            console.log('[RequestManager] Request already active');
-            return existing.promise;
-        }
-
-        // Проверка debounce
-        const lastTime = this.requestHistory.get(requestKey);
-        if (lastTime && Date.now() - lastTime < 1000) {
-            console.log('[RequestManager] Request debounced');
+        if (this.activeRequests.has(requestKey)) {
+            console.log('[RequestManager] Duplicate request');
             return;
         }
 
-        // Ждём слот если очередь полная
+        const lastTime = this.requestHistory.get(requestKey);
+        if (lastTime && Date.now() - lastTime < 1000) {
+            console.log('[RequestManager] Debounced');
+            return;
+        }
+
         while (this.activeRequests.size >= this.MAX_CONCURRENT_REQUESTS && !this.isDisposed) {
             await new Promise(resolve => setTimeout(resolve, 100));
         }
@@ -149,84 +157,75 @@ export class RequestManager {
         if (this.isDisposed) return;
 
         const abortController = new AbortController();
-        const requestId = generateId();
         const startTime = Date.now();
 
-        const promise = this.performHttpRequest(request, abortController, requestId, requestedInterval)
+        const promise = this.performHttpRequest(
+            request,
+            abortController,
+            requestId,
+            requestedInterval
+        )
             .then(() => {
-                if (this.isDisposed) return;
-
                 this.requestHistory.set(requestKey, Date.now());
                 this.metrics.successfulRequests++;
                 this.updateAverageLoadTime(Date.now() - startTime);
             })
             .catch((error: unknown) => {
-                if (this.isDisposed) return;
+                const isAborted =
+                    (error instanceof Error && error.name === 'AbortError') ||
+                    abortController.signal.aborted;
 
-                if (error instanceof Error && error.name === 'AbortError') {
+                if (isAborted) {
                     this.metrics.cancelledRequests++;
+                    console.log('[RequestManager] Request cancelled:', requestKey);
                 } else {
                     this.metrics.failedRequests++;
                     console.error('[RequestManager] Request failed:', error);
+                    throw error;
                 }
-                throw error;
             })
             .finally(() => {
                 this.activeRequests.delete(requestKey);
             });
 
-        const activeRequest: ActiveRequest = {
-            config: {
-                field: fieldName,
-                bucketMs,
-                interval: {
-                    fromMs: request.from!.getTime(),
-                    toMs: request.to!.getTime()
-                },
-                priority: RequestPriority.Normal,
-                reason: RequestReason.Zoom,
-                px: request.px
-            },
+        //   Сохраняем selectedFields из request.template
+        this.activeRequests.set(requestKey, {
             requestId,
             abortController,
+            promise,
             startTime,
-            promise
-        };
+            selectedFields: request.template.selectedFields, // ← Из template
+            bucketMs,
+            requestedInterval
+        });
 
-        this.activeRequests.set(requestKey, activeRequest);
         this.metrics.totalRequests++;
 
         await promise;
     }
 
     /**
-     * Выполнить HTTP запрос через thunk
+     * HTTP запрос через thunk
      */
     private async performHttpRequest(
         request: GetMultiSeriesRequest,
         abortController: AbortController,
         requestId: string,
-        requestedInterval: CoverageInterval // ДОБАВЛЕНО
+        requestedInterval: CoverageInterval
     ): Promise<void> {
-        console.log('[RequestManager] Performing HTTP request:', {
+        console.log('[RequestManager] HTTP request:', {
             requestId,
+            fields: request.template.selectedFields.map(f => f.name),
             from: request.from?.toISOString(),
-            to: request.to?.toISOString(),
-            bucketMs: request.bucketMs
+            to: request.to?.toISOString()
         });
 
         const timeoutId = setTimeout(() => {
-            console.warn('[RequestManager] Request timeout');
+            console.warn('[RequestManager] Timeout');
             abortController.abort();
         }, this.REQUEST_TIMEOUT_MS);
 
         try {
-            const field = request.template.selectedFields[0];
-            if (!field) {
-                throw new Error('[RequestManager] No field in request');
-            }
-
-            // HTTP запрос через thunk
             const result = await this.dispatch(
                 fetchMultiSeriesData({
                     request,
@@ -239,38 +238,20 @@ export class RequestManager {
             clearTimeout(timeoutId);
 
             if (result.wasAborted) {
-                const error = new Error('Request aborted');
+                const error = new Error('Aborted');
                 error.name = 'AbortError';
                 throw error;
             }
 
-            // ✅ ДОБАВЛЕНО: Обработка ответа от сервера
-            const state = this.getState();
+            DataProcessingService.processServerResponse({
+                response: result.response,
+                bucketMs: request.bucketMs!,
+                requestedInterval,
+                dispatch: this.dispatch,
+                getState: this.getState
+            });
 
-            // Обрабатываем все поля из ответа
-            for (const selectedField of request.template.selectedFields) {
-                const fieldView = state.charts.view[selectedField.name];
-
-                if (!fieldView || !request.bucketMs) {
-                    console.warn('[RequestManager] Missing view for field:', selectedField.name);
-                    continue;
-                }
-
-                const tiles = fieldView.seriesLevel[request.bucketMs] ?? [];
-
-                DataProcessingService.processServerResponse({
-                    response: result.response,
-                    bucketMs: request.bucketMs,
-                    requestedInterval: requestedInterval,
-                    tiles: tiles,
-                    field: selectedField.name,
-                    dispatch: this.dispatch
-                });
-
-                console.log('[RequestManager] Processed response for field:', selectedField.name);
-            }
-
-            console.log('[RequestManager] Request completed:', requestId);
+            console.log('[RequestManager] Complete:', requestId);
 
         } catch (error: unknown) {
             clearTimeout(timeoutId);
@@ -279,73 +260,220 @@ export class RequestManager {
     }
 
     /**
-     * Отменить все запросы для поля
+     *   ИСПРАВЛЕНО: Проверяем request.selectedFields
      */
     cancelFieldRequests(fieldName: FieldName): void {
-        let count = 0;
+        let cancelled = 0;
+        const tilesToRemove: Array<{
+            field: FieldName;
+            bucketMs: BucketsMs;
+            requestId: string;
+        }> = [];
 
         for (const [key, request] of this.activeRequests.entries()) {
-            if (request.config.field === fieldName) {
-                console.log('[RequestManager] Cancelling request:', key);
+            //   Проверяем если fieldName есть в request.selectedFields
+            const hasField = request.selectedFields.some(f => f.name === fieldName);
+
+            if (hasField) {
                 request.abortController.abort();
+
+                //   Собираем loading тайлы для ВСЕХ полей из request.selectedFields
+                for (const field of request.selectedFields) {
+                    tilesToRemove.push({
+                        field: field.name,
+                        bucketMs: request.bucketMs,
+                        requestId: request.requestId
+                    });
+                }
+
                 this.activeRequests.delete(key);
-                count++;
+                cancelled++;
             }
         }
 
-        this.metrics.cancelledRequests += count;
+        if (cancelled > 0) {
+            this.metrics.cancelledRequests += cancelled;
+            this.removeLoadingTiles(tilesToRemove);
+
+            console.log('[RequestManager] Cancelled requests:', {
+                triggerField: fieldName,
+                requestsCancelled: cancelled,
+                affectedFields: [...new Set(tilesToRemove.map(t => t.field))]
+            });
+        }
     }
 
     /**
-     * Отменить запросы кроме указанного bucket
+     *   Удаление loading тайлов
+     */
+    private removeLoadingTiles(
+        requests: Array<{
+            field: FieldName;
+            bucketMs: BucketsMs;
+            requestId: string;
+        }>
+    ): void {
+        if (requests.length === 0) return;
+
+        const state = this.getState();
+        const updates: Array<{
+            field: FieldName;
+            bucketMs: BucketsMs;
+            tiles: any[];
+        }> = [];
+
+        // Группируем по field + bucketMs
+        const grouped = new Map<string, Set<string>>();
+
+        for (const req of requests) {
+            const key = `${req.field}:${req.bucketMs}`;
+            const requestIds = grouped.get(key) ?? new Set();
+            requestIds.add(req.requestId);
+            grouped.set(key, requestIds);
+        }
+
+        for (const [key, requestIds] of grouped.entries()) {
+            const [fieldName, bucketMsStr] = key.split(':');
+            if (!fieldName || !bucketMsStr) continue;
+
+            const bucketMs = Number(bucketMsStr);
+            const fieldView = selectFieldView(state, fieldName);
+            if (!fieldView) continue;
+
+            const tiles = fieldView.seriesLevel[bucketMs];
+            if (!tiles) continue;
+
+            // Фильтруем loading тайлы с этими requestId
+            const filteredTiles = tiles.filter(
+                t => !(t.status === 'loading' && t.requestId && requestIds.has(t.requestId))
+            );
+
+            if (filteredTiles.length !== tiles.length) {
+                updates.push({
+                    field: fieldName,
+                    bucketMs,
+                    tiles: filteredTiles
+                });
+
+                console.log('[removeLoadingTiles] Removed loading tiles:', {
+                    field: fieldName,
+                    bucketMs,
+                    requestIds: Array.from(requestIds),
+                    removedCount: tiles.length - filteredTiles.length
+                });
+            }
+        }
+
+        if (updates.length > 0) {
+            this.dispatch(batchUpdateTiles(updates));
+        }
+    }
+
+    /**
+     *   Отмена запросов кроме указанного bucket
      */
     cancelFieldRequestsExceptBucket(fieldName: FieldName, keepBucket: BucketsMs): void {
-        let count = 0;
+        let cancelled = 0;
+        const tilesToRemove: Array<{
+            field: FieldName;
+            bucketMs: BucketsMs;
+            requestId: string;
+        }> = [];
 
         for (const [key, request] of this.activeRequests.entries()) {
-            if (request.config.field === fieldName && request.config.bucketMs !== keepBucket) {
-                console.log('[RequestManager] Cancelling old bucket request:', key);
+            const hasField = request.selectedFields.some(f => f.name === fieldName);
+
+            if (hasField && request.bucketMs !== keepBucket) {
                 request.abortController.abort();
+
+                for (const field of request.selectedFields) {
+                    tilesToRemove.push({
+                        field: field.name,
+                        bucketMs: request.bucketMs,
+                        requestId: request.requestId
+                    });
+                }
+
                 this.activeRequests.delete(key);
-                count++;
+                cancelled++;
             }
         }
 
-        this.metrics.cancelledRequests += count;
+        if (cancelled > 0) {
+            this.metrics.cancelledRequests += cancelled;
+            this.removeLoadingTiles(tilesToRemove);
+
+            console.log('[RequestManager] Cancelled old bucket requests:', {
+                field: fieldName,
+                keepBucket,
+                requestsCancelled: cancelled
+            });
+        }
     }
 
     /**
-     * Получить метрики
+     * Очистка старой истории
+     */
+    clearOldHistory(maxAge: number = 60000): void {
+        if (this.isDisposed) return;
+
+        const now = Date.now();
+        let cleared = 0;
+
+        for (const [key, timestamp] of this.requestHistory.entries()) {
+            if (now - timestamp > maxAge) {
+                this.requestHistory.delete(key);
+                cleared++;
+            }
+        }
+
+        if (cleared > 0) {
+            console.log('[RequestManager] Cleared old history:', {
+                cleared,
+                remaining: this.requestHistory.size
+            });
+        }
+    }
+
+    /**
+     * Получение метрик
      */
     getMetrics(): Readonly<RequestMetrics> {
         return { ...this.metrics };
     }
 
     /**
-     * Очистить историю
-     */
-    clearOldHistory(maxAge: number = 60000): void {
-        const now = Date.now();
-        for (const [key, timestamp] of this.requestHistory.entries()) {
-            if (now - timestamp > maxAge) {
-                this.requestHistory.delete(key);
-            }
-        }
-    }
-
-    /**
-     * Освободить ресурсы
+     * Очистка ресурсов
      */
     dispose(): void {
         if (this.isDisposed) return;
 
-        console.log('[RequestManager] Disposing...');
+        console.log('[RequestManager] Disposing...', {
+            activeRequests: this.activeRequests.size,
+            historySize: this.requestHistory.size
+        });
+
         this.isDisposed = true;
+
+        const allTilesToRemove: Array<{
+            field: FieldName;
+            bucketMs: BucketsMs;
+            requestId: string;
+        }> = [];
 
         for (const request of this.activeRequests.values()) {
             request.abortController.abort();
+
+            for (const field of request.selectedFields) {
+                allTilesToRemove.push({
+                    field: field.name,
+                    bucketMs: request.bucketMs,
+                    requestId: request.requestId
+                });
+            }
         }
 
+        this.removeLoadingTiles(allTilesToRemove);
         this.activeRequests.clear();
         this.requestHistory.clear();
     }
@@ -354,7 +482,12 @@ export class RequestManager {
     // ПРИВАТНЫЕ УТИЛИТЫ
     // ============================================
 
-    private buildRequestKey(field: FieldName, bucketMs: BucketsMs, from: Date, to: Date): RequestKey {
+    private buildRequestKey(
+        field: FieldName,
+        bucketMs: BucketsMs,
+        from: Date,
+        to: Date
+    ): string {
         return `${field}:${bucketMs}:${from.getTime()}:${to.getTime()}`;
     }
 

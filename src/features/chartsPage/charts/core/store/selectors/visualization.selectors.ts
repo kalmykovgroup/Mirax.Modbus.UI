@@ -5,13 +5,19 @@ import { selectOptimalData } from './dataProxy.selectors';
 import {
     selectAllViews,
     selectFieldCurrentBucketMs,
-    selectFieldCurrentRange,
+    selectFieldCurrentRange, selectFieldView,
     selectSyncEnabled,
     selectSyncFields
 } from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 import { selectLoadingMetrics } from "@chartsPage/charts/core/store/selectors/orchestration.selectors.ts";
 import type { SeriesBinDto } from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
-import type { BucketsMs, DataQuality, FieldName } from "@chartsPage/charts/core/store/types/chart.types.ts";
+import type {
+    BucketsMs,
+    CoverageInterval,
+    DataQuality,
+    FieldName, GapsInfo
+} from "@chartsPage/charts/core/store/types/chart.types.ts";
+import {TileSystemCore} from "@chartsPage/charts/core/store/tile-system/TileSystemCore.ts";
 
 // ============================================
 // ТИПЫ
@@ -20,9 +26,9 @@ import type { BucketsMs, DataQuality, FieldName } from "@chartsPage/charts/core/
 export type EChartsPoint = readonly [number, number];
 
 export interface ChartRenderData {
-    readonly avgPoints: readonly EChartsPoint[];
-    readonly minPoints: readonly EChartsPoint[];
-    readonly maxPoints: readonly EChartsPoint[];
+     avgPoints: EChartsPoint[];
+     minPoints: EChartsPoint[];
+     maxPoints: EChartsPoint[];
     readonly bucketMs: BucketsMs | undefined;
     readonly quality: DataQuality;
     readonly isEmpty: boolean;
@@ -42,9 +48,9 @@ export interface ChartStats {
 // ============================================
 
 interface PointsCache {
-    readonly avg: readonly EChartsPoint[];
-    readonly min: readonly EChartsPoint[];
-    readonly max: readonly EChartsPoint[];
+    readonly avg:  EChartsPoint[];
+    readonly min:  EChartsPoint[];
+    readonly max:  EChartsPoint[];
 }
 
 const pointsCache = new WeakMap<readonly SeriesBinDto[], PointsCache>();
@@ -68,7 +74,8 @@ function convertBinsToPoints(bins: readonly SeriesBinDto[]): PointsCache {
     for (const bin of bins) {
         const time = bin.t.getTime();
 
-        //  Включаем ВСЕ bins, даже с null
+        // ✅ Включаем ВСЕ bins, даже с null
+        // ECharts прервет линию на null значениях если connectNulls: false
         avg.push([time, bin.avg ?? null as any]);
         min.push([time, bin.min ?? bin.avg ?? null as any]);
         max.push([time, bin.max ?? bin.avg ?? null as any]);
@@ -79,35 +86,23 @@ function convertBinsToPoints(bins: readonly SeriesBinDto[]): PointsCache {
     }
 
     if (nullCount > 0) {
-        console.log('[convertBinsToPoints] Bins with null avg:', {
+        console.log('[convertBinsToPoints] Bins with null avg (gaps):', {
             total: bins.length,
-            nulls: nullCount
+            nulls: nullCount,
+            dataPoints: bins.length - nullCount
         });
     }
 
     const result: PointsCache = {
-        avg: Object.freeze(avg) as readonly EChartsPoint[],
-        min: Object.freeze(min) as readonly EChartsPoint[],
-        max: Object.freeze(max) as readonly EChartsPoint[]
+        avg: Object.freeze(avg) as EChartsPoint[],
+        min: Object.freeze(min) as EChartsPoint[],
+        max: Object.freeze(max) as EChartsPoint[]
     };
 
     pointsCache.set(bins, result);
     return result;
-
-    // ❌ ЗАКОММЕНТИРОВАНО: фильтрация null
-    // for (const bin of bins) {
-    //     if (bin.avg == null) continue;  // ← Пропускали bins с null
-    //
-    //     const time = bin.t.getTime();
-    //     avg.push([time, bin.avg]);
-    //     min.push([time, bin.min ?? bin.avg]);
-    //     max.push([time, bin.max ?? bin.avg]);
-    // }
 }
-
-// ============================================
 // СЕЛЕКТОРЫ
-// ============================================
 
 export const selectChartRenderData = createSelector(
     [
@@ -223,3 +218,67 @@ function binarySearchEnd(points: readonly EChartsPoint[], targetMs: number): num
 
     return result;
 }
+
+
+export const selectFieldGaps = createSelector(
+    [
+        (state: RootState, fieldName: FieldName) => selectFieldView(state, fieldName),
+        (state: RootState, fieldName: FieldName) => selectFieldCurrentBucketMs(state, fieldName),
+        (state: RootState, fieldName: FieldName) => selectFieldCurrentRange(state, fieldName)
+    ],
+    (fieldView, currentBucketMs, currentRange): GapsInfo => {
+        if (!fieldView || !currentBucketMs || !currentRange || !fieldView.originalRange) {
+            return { dataGaps: [], loadingGaps: [] };
+        }
+
+        const tiles = fieldView.seriesLevel[currentBucketMs] ?? [];
+
+        const targetInterval: CoverageInterval = {
+            fromMs: currentRange.from.getTime(),
+            toMs: currentRange.to.getTime()
+        };
+
+        // Находим все gaps
+        const gapsResult = TileSystemCore.findGaps(
+            fieldView.originalRange,
+            tiles,
+            targetInterval
+        );
+
+        console.log('[selectFieldGaps] Calculated gaps:', {
+            field: fieldView,
+            bucket: currentBucketMs,
+            totalGaps: gapsResult.gaps.length,
+            coverage: gapsResult.coverage.toFixed(1) + '%',
+            gaps: gapsResult.gaps.map(g => ({
+                from: new Date(g.fromMs).toISOString(),
+                to: new Date(g.toMs).toISOString(),
+                sizeMs: g.toMs - g.fromMs
+            }))
+        });
+
+        // Разделяем gaps на "данные отсутствуют" и "загружаются"
+        const dataGaps: CoverageInterval[] = [];
+        const loadingGaps: CoverageInterval[] = [];
+
+        for (const gap of gapsResult.gaps) {
+            // Проверяем есть ли loading тайлы в этом gap
+            const hasLoadingTile = tiles.some(t =>
+                t.status === 'loading' &&
+                t.coverageInterval.fromMs <= gap.fromMs &&
+                t.coverageInterval.toMs >= gap.toMs
+            );
+
+            if (hasLoadingTile) {
+                loadingGaps.push(gap);
+            } else {
+                dataGaps.push(gap);
+            }
+        }
+
+        return {
+            dataGaps: Object.freeze(dataGaps),
+            loadingGaps: Object.freeze(loadingGaps)
+        };
+    }
+);

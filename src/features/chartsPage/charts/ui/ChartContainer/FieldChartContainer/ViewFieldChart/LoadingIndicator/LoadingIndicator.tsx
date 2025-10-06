@@ -1,22 +1,19 @@
 // LoadingIndicator.tsx
 
-import type { LoadingState } from "@chartsPage/ui/CharContainer/types.ts";
 import React from "react";
 import styles from "./LoadingIndicator.module.css";
+import type {ChartStats} from "@chartsPage/charts/core/store/selectors/visualization.selectors.ts";
 
 export type LoadingIndicatorPosition = 'aboveAxis' | 'belowAxis' | 'top';
 
 interface LoadingIndicatorProps {
-    state: LoadingState;
-    position?: LoadingIndicatorPosition;
+    chartFieldStatus: ChartStats;
+    position: string;
 }
 
-const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
-                                                               state,
-                                                               position = 'aboveAxis' // По умолчанию над осью X
-                                                           }) => {
+const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({chartFieldStatus, position}) => {
     // Показываем индикатор только когда идет загрузка
-    if (!state.active) return null;
+    if (!chartFieldStatus.isLoading) return null;
 
     // Выбираем класс в зависимости от позиции
     const containerClass = position === 'belowAxis'
@@ -27,11 +24,11 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
 
     return (
         <div className={containerClass}>
-            {state.progress > 0 ? (
+            {chartFieldStatus.loadingProgress > 0 ? (
                 // Если есть прогресс - показываем его
                 <div
                     className={styles.progressBar}
-                    style={{ width: `${state.progress}%` }}
+                    style={{ width: `${chartFieldStatus.loadingProgress}%` }}
                 />
             ) : (
                 // Если прогресса нет - показываем неопределенную анимацию

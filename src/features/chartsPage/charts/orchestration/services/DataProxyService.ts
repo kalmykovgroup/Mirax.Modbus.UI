@@ -4,9 +4,10 @@ import type {
     SeriesTile,
     CoverageResult,
     BucketsMs,
-    Gap, DataQuality
+    Gap, DataQuality, OriginalRange
 } from '@chartsPage/charts/core/store/types/chart.types';
 import type {SeriesBinDto} from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
+import {TileSystemCore} from "@chartsPage/charts/core/store/tile-system/TileSystemCore.ts";
 
 export interface OptimalDataResult {
     readonly data: readonly SeriesBinDto[];
@@ -18,71 +19,114 @@ export interface OptimalDataResult {
 }
 
 export class DataProxyService {
+
     /**
-     * Вычислить покрытие тайлов для диапазона
+     * ✅ РЕФАКТОРИНГ: Используем TileSystemCore.findGaps
      */
     static calculateCoverage(
         tiles: readonly SeriesTile[],
         targetFromMs: number,
         targetToMs: number
     ): CoverageResult {
-        const readyTiles = tiles.filter(t => t.status === 'ready');
+        const originalRange: OriginalRange = {
+            fromMs: targetFromMs,
+            toMs: targetToMs
+        };
 
-        if (readyTiles.length === 0) {
-            return {
-                coverage: 0,
-                gaps: [{ from: targetFromMs, to: targetToMs }],
-                coveredRanges: []
-            };
-        }
-
-        const sorted = [...readyTiles].sort(
-            (a, b) => a.coverageInterval.fromMs - b.coverageInterval.fromMs
-        );
-
-        const coveredRanges: Array<{ from: number; to: number }> = [];
-        const gaps: Gap[] = [];
-        let currentCovered = targetFromMs;
-
-        for (const tile of sorted) {
-            const tileFrom = Math.max(tile.coverageInterval.fromMs, targetFromMs);
-            const tileTo = Math.min(tile.coverageInterval.toMs, targetToMs);
-
-            if (tileTo <= tileFrom || tileFrom >= targetToMs) {
-                continue;
-            }
-
-            if (tileFrom > currentCovered) {
-                gaps.push({ from: currentCovered, to: tileFrom });
-            }
-
-            coveredRanges.push({ from: tileFrom, to: tileTo });
-            currentCovered = Math.max(currentCovered, tileTo);
-        }
-
-        if (currentCovered < targetToMs) {
-            gaps.push({ from: currentCovered, to: targetToMs });
-        }
-
-        const totalRangeMs = targetToMs - targetFromMs;
-        const coveredMs = coveredRanges.reduce(
-            (sum, range) => sum + (range.to - range.from),
-            0
+        const gapsResult = TileSystemCore.findGaps(
+            originalRange,
+            tiles,
+            { fromMs: targetFromMs, toMs: targetToMs }
         );
 
         return {
-            coverage: totalRangeMs > 0 ? (coveredMs / totalRangeMs) * 100 : 0,
-            gaps,
-            coveredRanges
+            coverage: gapsResult.coverage,
+            gaps: gapsResult.gaps.map(g => ({ from: g.fromMs, to: g.toMs })),
+            coveredRanges: [] // TileSystemCore не возвращает coveredRanges, но они нам не нужны
         };
     }
 
     /**
-     *  ИСПРАВЛЕНО: Убрана дедупликация
+     * ✅ НОВЫЙ МЕТОД: Вставить null значения в места gaps
      *
-     * Объединить bins из тайлов БЕЗ дедупликации.
-     * Если сервер вернул дубликаты — это проблема сервера или логики загрузки,
-     * но НЕ задача клиента их фильтровать.
+     * Это заставит ECharts прерывать линию в незагруженных областях
+     */
+    static insertNullsForGaps(
+        bins: readonly SeriesBinDto[],
+        gaps: readonly Gap[],
+        bucketMs: BucketsMs
+    ): readonly SeriesBinDto[] {
+        if (bins.length === 0 || gaps.length === 0) {
+            return bins;
+        }
+
+        const result: SeriesBinDto[] = [];
+        let binIndex = 0;
+
+        console.log('[insertNullsForGaps] Inserting nulls:', {
+            binsCount: bins.length,
+            gapsCount: gaps.length,
+            bucketMs
+        });
+
+        // Сортируем gaps по времени
+        const sortedGaps = [...gaps].sort((a, b) => a.from - b.to);
+
+        for (const gap of sortedGaps) {
+            // Добавляем все bins до начала gap
+            while (binIndex < bins.length) {
+                const bin = bins[binIndex]!;
+                const binTime = bin.t.getTime();
+
+                if (binTime >= gap.from) {
+                    break;
+                }
+
+                result.push(bin);
+                binIndex++;
+            }
+
+            // ✅ Вставляем null-bin в начале gap
+            result.push({
+                t: new Date(gap.from),
+                avg: null as any,
+                min: null as any,
+                max: null as any,
+                count: 0
+            });
+
+            // ✅ Вставляем null-bin в конце gap
+            result.push({
+                t: new Date(gap.to),
+                avg: null as any,
+                min: null as any,
+                max: null as any,
+                count: 0
+            });
+
+            console.log('[insertNullsForGaps] Added null for gap:', {
+                from: new Date(gap.from).toISOString(),
+                to: new Date(gap.to).toISOString()
+            });
+        }
+
+        // Добавляем оставшиеся bins после всех gaps
+        while (binIndex < bins.length) {
+            result.push(bins[binIndex]!);
+            binIndex++;
+        }
+
+        console.log('[insertNullsForGaps] Result:', {
+            originalBins: bins.length,
+            resultBins: result.length,
+            nullsAdded: result.length - bins.length
+        });
+
+        return result;
+    }
+
+    /**
+     * Объединить bins из тайлов БЕЗ дедупликации
      */
     static mergeBins(tiles: readonly SeriesTile[]): readonly SeriesBinDto[] {
         const allBins: SeriesBinDto[] = [];
@@ -98,62 +142,205 @@ export class DataProxyService {
 
         console.log('[DataProxyService.mergeBins] Merged bins from tiles:', {
             tilesCount: tiles.filter(t => t.status === 'ready').length,
-            totalBins: allBins.length
+            totalBins: allBins.length,
+            range: allBins.length > 0 ? {
+                from: new Date(allBins[0]!.t).toISOString(),
+                to: new Date(allBins[allBins.length - 1]!.t).toISOString()
+            } : null
         });
 
         return allBins;
-
-        // ❌ ЗАКОММЕНТИРОВАНО: дедупликация
-        // const deduped: SeriesBinDto[] = [];
-        // let lastTime = -1;
-        //
-        // for (const bin of allBins) {
-        //     const time = bin.t.getTime();
-        //     if (time !== lastTime) {
-        //         deduped.push(bin);
-        //         lastTime = time;
-        //     }
-        // }
-        //
-        // return deduped;
     }
 
     /**
-     *  ОСТАВЛЕНО: Фильтрация по range нужна для селекторов
+     * ✅ РЕФАКТОРИНГ: Используем TileSystemCore для всех вычислений
      *
-     * Но добавлено логирование для диагностики
+     * Возвращает ВСЕ bins с текущего bucket уровня + вставленные null для gaps.
      */
-    static filterBinsByRange(
-        bins: readonly SeriesBinDto[],
-        fromMs: number,
-        toMs: number
-    ): readonly SeriesBinDto[] {
-        const filtered = bins.filter(bin => {
-            const t = bin.t.getTime();
-            return t >= fromMs && t <= toMs;
-        });
+    static selectOptimalData(params: {
+        readonly targetBucketMs: BucketsMs;
+        readonly targetFromMs: number;
+        readonly targetToMs: number;
+        readonly originalRange: OriginalRange;
+        readonly seriesLevels: Record<BucketsMs, SeriesTile[]>;
+        readonly availableBuckets: readonly BucketsMs[];
+    }): OptimalDataResult {
+        const { targetBucketMs, targetFromMs, targetToMs, originalRange, seriesLevels, availableBuckets } = params;
 
-        const filteredOut = bins.length - filtered.length;
-        if (filteredOut > 0) {
-            console.log('[DataProxyService.filterBinsByRange] Filtered out bins outside range:', {
-                total: bins.length,
-                kept: filtered.length,
-                removed: filteredOut,
-                range: {
-                    from: new Date(fromMs).toISOString(),
-                    to: new Date(toMs).toISOString()
-                }
+        // Пробуем текущий bucket
+        const currentTiles = seriesLevels[targetBucketMs];
+        if (currentTiles && currentTiles.length > 0) {
+            // ✅ Используем TileSystemCore.findGaps для видимой области
+            const visibleGapsResult = TileSystemCore.findGaps(
+                originalRange,
+                currentTiles,
+                { fromMs: targetFromMs, toMs: targetToMs }
+            );
+
+            // ✅ Получаем ВСЕ bins с текущего уровня
+            const allBins = this.mergeBins(currentTiles);
+
+            // ✅ Используем TileSystemCore.findGaps для ВСЕГО диапазона данных
+            // Находим минимальный и максимальный диапазон среди тайлов
+            const readyTiles = currentTiles.filter(t => t.status === 'ready');
+
+            let dataRangeFrom = Number.MAX_VALUE;
+            let dataRangeTo = Number.MIN_VALUE;
+
+            for (const tile of readyTiles) {
+                dataRangeFrom = Math.min(dataRangeFrom, tile.coverageInterval.fromMs);
+                dataRangeTo = Math.max(dataRangeTo, tile.coverageInterval.toMs);
+            }
+
+            // ✅ Находим gaps между ВСЕМИ загруженными тайлами (не только в видимой области)
+            const allDataGapsResult = dataRangeFrom < dataRangeTo
+                ? TileSystemCore.findGaps(
+                    originalRange,
+                    currentTiles,
+                    { fromMs: dataRangeFrom, toMs: dataRangeTo }
+                )
+                : { gaps: [], coverage: 0, hasFull: false };
+
+            console.log('[selectOptimalData] Current bucket analysis:', {
+                bucket: targetBucketMs,
+                visibleRange: {
+                    from: new Date(targetFromMs).toISOString(),
+                    to: new Date(targetToMs).toISOString()
+                },
+                visibleCoverage: visibleGapsResult.coverage.toFixed(1) + '%',
+                visibleGaps: visibleGapsResult.gaps.length,
+                dataRange: dataRangeFrom < dataRangeTo ? {
+                    from: new Date(dataRangeFrom).toISOString(),
+                    to: new Date(dataRangeTo).toISOString()
+                } : null,
+                allDataGaps: allDataGapsResult.gaps.length,
+                allTiles: currentTiles.length,
+                readyTiles: readyTiles.length,
+                totalBins: allBins.length
             });
+
+            if (allBins.length > 0) {
+                // ✅ Вставляем null значения в места gaps между тайлами
+                const gapsForNulls = allDataGapsResult.gaps.map(g => ({
+                    from: g.fromMs,
+                    to: g.toMs
+                }));
+
+                const binsWithNulls = this.insertNullsForGaps(
+                    allBins,
+                    gapsForNulls,
+                    targetBucketMs
+                );
+
+                // ✅ Возвращаем gaps для видимой области (для красных зон)
+                const visibleGaps = visibleGapsResult.gaps.map(g => ({
+                    from: g.fromMs,
+                    to: g.toMs
+                }));
+
+                return {
+                    data: binsWithNulls,
+                    quality: 'exact',
+                    coverage: visibleGapsResult.coverage,
+                    sourceBucketMs: targetBucketMs,
+                    isStale: false,
+                    gaps: visibleGaps
+                };
+            }
         }
 
-        return filtered;
+        // Ищем fallback bucket
+        const sortedBuckets = [...availableBuckets].sort((a, b) => {
+            const diffA = Math.abs(a - targetBucketMs);
+            const diffB = Math.abs(b - targetBucketMs);
+            return diffA - diffB;
+        });
+
+        for (const bucketMs of sortedBuckets) {
+            if (bucketMs === targetBucketMs) continue;
+
+            const tiles = seriesLevels[bucketMs];
+            if (!tiles || tiles.length === 0) continue;
+
+            // ✅ Используем TileSystemCore.findGaps
+            const coverageResult = TileSystemCore.findGaps(
+                originalRange,
+                tiles,
+                { fromMs: targetFromMs, toMs: targetToMs }
+            );
+
+            console.log('[selectOptimalData] Checking fallback bucket:', {
+                bucket: bucketMs,
+                coverage: coverageResult.coverage.toFixed(1) + '%',
+                gaps: coverageResult.gaps.length
+            });
+
+            if (coverageResult.coverage >= 80) {
+                const allBins = this.mergeBins(tiles);
+                const readyTiles = tiles.filter(t => t.status === 'ready');
+
+                // Находим диапазон данных
+                let dataRangeFrom = Number.MAX_VALUE;
+                let dataRangeTo = Number.MIN_VALUE;
+
+                for (const tile of readyTiles) {
+                    dataRangeFrom = Math.min(dataRangeFrom, tile.coverageInterval.fromMs);
+                    dataRangeTo = Math.max(dataRangeTo, tile.coverageInterval.toMs);
+                }
+
+                const allDataGapsResult = dataRangeFrom < dataRangeTo
+                    ? TileSystemCore.findGaps(
+                        originalRange,
+                        tiles,
+                        { fromMs: dataRangeFrom, toMs: dataRangeTo }
+                    )
+                    : { gaps: [], coverage: 0, hasFull: false };
+
+                const gapsForNulls = allDataGapsResult.gaps.map(g => ({
+                    from: g.fromMs,
+                    to: g.toMs
+                }));
+
+                const binsWithNulls = this.insertNullsForGaps(allBins, gapsForNulls, bucketMs);
+                const quality: DataQuality = bucketMs < targetBucketMs ? 'upsampled' : 'downsampled';
+
+                const visibleGaps = coverageResult.gaps.map(g => ({
+                    from: g.fromMs,
+                    to: g.toMs
+                }));
+
+                return {
+                    data: binsWithNulls,
+                    quality,
+                    coverage: coverageResult.coverage,
+                    sourceBucketMs: bucketMs,
+                    isStale: true,
+                    gaps: visibleGaps
+                };
+            }
+        }
+
+        // Нет данных
+        return {
+            data: [],
+            quality: 'none',
+            coverage: 0,
+            sourceBucketMs: undefined,
+            isStale: false,
+            gaps: [{ from: targetFromMs, to: targetToMs }]
+        };
     }
 
+    /**
+     * ⚠️ DEPRECATED
+     */
     static selectOptimalDataWithoutRange(params: {
         targetBucketMs: BucketsMs;
         seriesLevels: Record<BucketsMs, SeriesTile[]>;
         availableBuckets: readonly BucketsMs[];
     }): OptimalDataResult {
+        console.warn('[selectOptimalDataWithoutRange] DEPRECATED: Use selectOptimalData instead');
+
         const { targetBucketMs, seriesLevels, availableBuckets } = params;
 
         const currentTiles = seriesLevels[targetBucketMs];
@@ -212,6 +399,9 @@ export class DataProxyService {
         };
     }
 
+    /**
+     * ✅ РЕФАКТОРИНГ: Используем TileSystemCore.getStats
+     */
     private static calculateTilesCoverage(tiles: readonly SeriesTile[]): number {
         const readyTiles = tiles.filter(t => t.status === 'ready');
         if (readyTiles.length === 0) return 0;
@@ -226,12 +416,12 @@ export class DataProxyService {
 
         if (minMs >= maxMs) return 0;
 
-        return this.calculateCoverage(readyTiles, minMs, maxMs).coverage;
+        const originalRange: OriginalRange = { fromMs: minMs, toMs: maxMs };
+        const gapsResult = TileSystemCore.findGaps(originalRange, tiles);
+
+        return gapsResult.coverage;
     }
 
-    /**
-     *  ИСПРАВЛЕНО: Убрана дедупликация
-     */
     private static mergeTileBins(tiles: readonly SeriesTile[]): readonly SeriesBinDto[] {
         const allBins: SeriesBinDto[] = [];
 
@@ -241,93 +431,8 @@ export class DataProxyService {
             }
         }
 
-        // Только сортировка
         allBins.sort((a, b) => a.t.getTime() - b.t.getTime());
 
         return allBins;
-
-        // ❌ ЗАКОММЕНТИРОВАНО: дедупликация
-        // const deduped: SeriesBinDto[] = [];
-        // let lastTime = -1;
-        //
-        // for (const bin of allBins) {
-        //     const time = bin.t.getTime();
-        //     if (time !== lastTime) {
-        //         deduped.push(bin);
-        //         lastTime = time;
-        //     }
-        // }
-        //
-        // return deduped;
-    }
-
-    static selectOptimalData(params: {
-        readonly targetBucketMs: BucketsMs;
-        readonly targetFromMs: number;
-        readonly targetToMs: number;
-        readonly seriesLevels: Record<BucketsMs, SeriesTile[]>;
-        readonly availableBuckets: readonly BucketsMs[];
-    }): OptimalDataResult {
-        const { targetBucketMs, targetFromMs, targetToMs, seriesLevels, availableBuckets } = params;
-
-        const targetTiles = seriesLevels[targetBucketMs];
-        if (targetTiles && targetTiles.length > 0) {
-            const coverage = this.calculateCoverage(targetTiles, targetFromMs, targetToMs);
-
-            if (coverage.coverage >= 95) {
-                const bins = this.mergeBins(targetTiles);
-                const filtered = this.filterBinsByRange(bins, targetFromMs, targetToMs);
-
-                return {
-                    data: filtered,
-                    quality: 'exact',
-                    coverage: coverage.coverage,
-                    sourceBucketMs: targetBucketMs,
-                    isStale: false,
-                    gaps: coverage.gaps
-                };
-            }
-        }
-
-        const sortedByDistance = [...availableBuckets].sort((a, b) => {
-            const diffA = Math.abs(a - targetBucketMs);
-            const diffB = Math.abs(b - targetBucketMs);
-            return diffA - diffB;
-        });
-
-        for (const bucketMs of sortedByDistance) {
-            if (bucketMs === targetBucketMs) continue;
-
-            const tiles = seriesLevels[bucketMs];
-            if (!tiles || tiles.length === 0) continue;
-
-            const coverage = this.calculateCoverage(tiles, targetFromMs, targetToMs);
-
-            if (coverage.coverage >= 80) {
-                const bins = this.mergeBins(tiles);
-                const filtered = this.filterBinsByRange(bins, targetFromMs, targetToMs);
-
-                const quality: DataQuality =
-                    bucketMs < targetBucketMs ? 'upsampled' : 'downsampled';
-
-                return {
-                    data: filtered,
-                    quality,
-                    coverage: coverage.coverage,
-                    sourceBucketMs: bucketMs,
-                    isStale: true,
-                    gaps: coverage.gaps
-                };
-            }
-        }
-
-        return {
-            data: [],
-            quality: 'none',
-            coverage: 0,
-            sourceBucketMs: undefined,
-            isStale: false,
-            gaps: []
-        };
     }
 }
