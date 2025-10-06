@@ -22,6 +22,7 @@ import {chartsTemplatesReducer} from "@chartsPage/template/store/chartsTemplates
 import {chartReqTemplatesApi} from "@chartsPage/template/shared//api/chartReqTemplatesApi.ts";
 import {chartsApi} from "@chartsPage/charts/core/api/chartsApi.ts";
 // ВАЖНО: никаких самодельных _persist, только реальные редьюсеры
+import { tileSystemReducer } from '@chartsPage/charts/core/store/tile-system/tile-system.slice';
 
 export const rootReducer = combineReducers({
     // Persisted slices
@@ -31,6 +32,8 @@ export const rootReducer = combineReducers({
     scenario: scenarioReducer,
     workflow: workflowReducer,
     chartsSettings: chartsSettingsReducer,
+
+    tileSystem: tileSystemReducer,
 
     // In-memory
     charts: chartsReducer,

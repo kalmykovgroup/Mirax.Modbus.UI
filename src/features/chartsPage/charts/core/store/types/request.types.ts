@@ -1,6 +1,6 @@
-// orchestration/types/request.types.ts
 
-import type { BucketsMs, CoverageInterval, FieldName } from '@chartsPage/charts/core/store/types/loading.types';
+// @ts-ignore
+import type {BucketsMs, CoverageInterval, FieldName} from "@chartsPage/charts/core/store/types/chart.types.ts";
 
 // @ts-ignore
 export enum RequestPriority {

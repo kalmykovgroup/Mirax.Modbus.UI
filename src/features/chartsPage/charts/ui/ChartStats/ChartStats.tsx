@@ -1,3 +1,4 @@
+/*
 // components/chart/ChartStats/ChartStats.tsx
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store/store';
@@ -158,4 +159,4 @@ function formatBucketMs(ms: number): string {
     if (hours >= 1) return `${hours.toFixed(0)}h`;
     if (minutes >= 1) return `${minutes.toFixed(0)}m`;
     return `${seconds.toFixed(0)}s`;
-}
+}*/

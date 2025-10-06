@@ -2,14 +2,15 @@ import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axio
 import { AxiosHeaders } from 'axios';
 import toast from 'react-hot-toast';
 import {resetAuthState} from "@login/store/authSlice.ts";
+import type {AppDispatch} from "@/store/store.ts";
 
 // Локальная переменная для хранения store
-let appStore: any = null;
+let appStore: { dispatch: AppDispatch } | null = null;
 
 /**
  * Передача store в интерцепторы после его инициализации
  */
-export const setStoreForInterceptors = (store: any) => {
+export const setStoreForInterceptors = (store: { dispatch: AppDispatch }): void => {
     appStore = store;
 };
 

@@ -15,21 +15,12 @@ import {FieldChartContainer} from "@chartsPage/charts/ui/ChartContainer/FieldCha
 
 const MIN_CONTAINER_WIDTH = 640;
 
-// ============================================
-// ТИПЫ
-// ============================================
-
-interface ChartContainerProps {
-    readonly height?: string | undefined;
-}
 
 // ============================================
 // КОМПОНЕНТ
 // ============================================
 
-export function ChartContainer({
-                                   height = '400px'
-                               }: ChartContainerProps) {
+export function ChartContainer() {
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
 
@@ -53,7 +44,6 @@ export function ChartContainer({
                 setContainerWidth(prev => {
                     // Обновляем только если ширина действительно изменилась
                     if (prev !== normalizedWidth) {
-                        console.log('[ChartContainer] Width measured:', normalizedWidth);
                         return normalizedWidth;
                     }
                     return prev;
@@ -73,7 +63,6 @@ export function ChartContainer({
 
                     setContainerWidth(prev => {
                         if (prev !== normalizedWidth) {
-                            console.log('[ChartContainer] Width resized:', normalizedWidth);
                             return normalizedWidth;
                         }
                         return prev;
@@ -124,7 +113,7 @@ export function ChartContainer({
     // Состояние: инициализация
     if (isInitializing) {
         return (
-            <div ref={containerRef} className={styles.container}>
+            <div className={styles.container}>
                 <div className={styles.loading}>
                     <div className={styles.spinner} />
                     <p>Инициализация графиков...</p>
@@ -136,7 +125,7 @@ export function ChartContainer({
     // Состояние: ошибка инициализации
     if (error) {
         return (
-            <div ref={containerRef} className={styles.container}>
+            <div className={styles.container}>
                 <div className={styles.error}>
                     <p>Ошибка инициализации: {error}</p>
                     <button
@@ -154,7 +143,7 @@ export function ChartContainer({
     // Состояние: не инициализирован (не должно происходить, но для типобезопасности)
     if (!isInitialized) {
         return (
-            <div ref={containerRef} className={styles.container}>
+            <div className={styles.container}>
                 <div className={styles.empty}>
                     <p>Графики не инициализированы</p>
                     <button
@@ -181,11 +170,11 @@ export function ChartContainer({
 
             <div className={styles.chartsGrid}>
                 {template.selectedFields.map(field => (
-                    <FieldChartContainer
-                        key={field.name}
-                        fieldName={field.name}
-                        height={height}
-                    />
+                        <FieldChartContainer
+                            key={field.name}
+                            fieldName={field.name}
+                            width={containerWidth}
+                        />
                 ))}
             </div>
         </div>

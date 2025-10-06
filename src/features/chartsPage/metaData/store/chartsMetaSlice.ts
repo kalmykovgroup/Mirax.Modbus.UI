@@ -51,7 +51,7 @@ export const fetchDatabases = createAsyncThunk<
 >(
     'chartsMeta/fetchDatabases',
     async (args, { getState, dispatch }) => {
-        console.log("fetchDatabases")
+
         const force = !!(args && (args as any).force);
         const stChartsMeta = getState().chartsMeta;
 
@@ -243,7 +243,6 @@ const chartsMetaSlice = createSlice({
 
         },
         setDatabasesLoaded(state, action: PayloadAction<boolean>) {
-            console.log("setDatabasesLoaded", action.payload);
             state.databasesLoaded = action.payload
         },
 

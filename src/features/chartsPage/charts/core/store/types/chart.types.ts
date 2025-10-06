@@ -11,7 +11,7 @@ export type TimeRangeBounds = { from: Date | undefined; to: Date | undefined };
 export interface SeriesTile {
     coverageInterval: CoverageInterval;
     bins: SeriesBinDto[];
-    status: 'ready' | 'loading' | 'error';
+    status: 'ready' | 'loading' | 'error' | 'empty';
     error?: string | undefined;
     requestId?: string | undefined;
     loadedAt?: number | undefined;

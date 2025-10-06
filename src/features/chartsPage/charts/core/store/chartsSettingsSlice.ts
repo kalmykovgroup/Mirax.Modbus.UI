@@ -74,15 +74,15 @@ const initialState: ChartsSettingsState = {
 };
 
 export function calculateBucket(
-    from: Date,
-    to: Date,
+    from: number,
+    to: number,
     widthPx: number,
     enableWeeklyMultiples: boolean = false,
     maxWeeksMultiple: number = MAX_WEEKS_MULTIPLE
 ): number {
 
     // 1. Вычисляем span в миллисекундах
-    const spanMs = Math.max(1, to.getTime() - from.getTime());
+    const spanMs = Math.max(1, to - from);
 
     // 2. Целевое количество точек
     const targetPoints = Math.max(

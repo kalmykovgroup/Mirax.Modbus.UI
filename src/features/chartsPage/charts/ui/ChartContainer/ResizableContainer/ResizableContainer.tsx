@@ -192,6 +192,7 @@ export const ResizableContainer: React.FC<ResizableContainerProps> = ({
                 onMouseDown={handleMouseDown}
             >
                 <div className={styles.resizeGrip}>
+                    <SyncGroupControl groupId={groupId} />
                     <span></span>
                     <span></span>
                     <span></span>
@@ -235,14 +236,12 @@ export const SyncGroupControl: React.FC<{ groupId: string }> = ({ groupId }) => 
 
     return (
         <div className={styles.groupControl}>
-            <span className={styles.groupLabel}>Группа: {groupId}</span>
             <button
                 onClick={toggleGroupSync}
                 className={`${styles.groupSyncButton} ${isEnabled ? styles.active : ''}`}
             >
-                {isEnabled ? '🔗 Синхронизация включена' : '🔓 Синхронизация выключена'}
+                {isEnabled ? '🔗' : '🔓'}
             </button>
-            <span className={styles.groupHeight}>Высота: {groupHeight}px</span>
         </div>
     );
 };

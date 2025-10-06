@@ -39,9 +39,7 @@ class App extends Component {
                         <ConfirmProvider>
                             <AppRouter/>
                             <AnimatedGradientDark />
-
                             <AppToaster/>
-
                             <LoadingOverlay />
                         </ConfirmProvider>
                     </DeviceProvider>

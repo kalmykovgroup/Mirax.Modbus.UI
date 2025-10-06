@@ -1,12 +1,13 @@
 // chartsBaseQuery.ts
 import type { BaseQueryFn } from '@reduxjs/toolkit/query/react'
 import type { AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios'
-import type { ApiError } from '@shared/api/base/halpers/ApiError.ts'
-import { fail } from '@shared/api/base/halpers/fail.ts'
-import { ok } from '@shared/api/base/halpers/ok.ts'
-import { isApiResponse } from '@shared/api/base/halpers/isApiResponse.ts'
 import { decPending, incPending } from '@/store/uiSlice.ts'
 import { chartsClient } from '@chartsPage/baseApi/chartsClient.ts'
+import type {ApiResponse} from "@shared/contracts/Dtos/RemoteDtos/CommonDtos/ApiResponse.ts";
+import type {ApiError} from "@shared/api/base/helpers/ApiError.ts";
+import {isApiResponse} from "@shared/api/base/helpers/isApiResponse.ts";
+import {fail} from "@shared/api/base/helpers/fail.ts";
+import {ok} from "@shared/api/base/helpers/ok.ts";
 
 export type AxiosChartsBaseQueryArgs = {
     url: string
@@ -62,11 +63,12 @@ export const axiosChartsBaseQuery =
             if (lockUi) api.dispatch(incPending())
 
             try {
-                // 1) Заголовки
-                const reqHeaders: AxiosRequestConfig['headers'] = { ...(headers as any) }
+                //Строгая типизация заголовков
+                const reqHeaders = { ...(headers ?? {}) } as Record<string, string>;
 
-                if (data !== undefined && !(reqHeaders && (reqHeaders as any)['Content-Type'])) {
-                    (reqHeaders as any)['Content-Type'] = 'application/json'
+                // Проставляем Content-Type только если есть body
+                if (data !== undefined && !reqHeaders['Content-Type']) {
+                    reqHeaders['Content-Type'] = 'application/json';
                 }
 
                 // 2) Конфигурация
@@ -81,7 +83,7 @@ export const axiosChartsBaseQuery =
                 }
 
                 // 3) Запрос
-                const res: AxiosResponse<unknown> = await chartsClient.request<unknown>(cfg)
+                const res: AxiosResponse<ApiResponse> = await chartsClient.request<ApiResponse>(cfg)
                 let payload = res.data
 
                 // 4) Парсинг дат

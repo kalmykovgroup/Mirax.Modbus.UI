@@ -1,21 +1,28 @@
-// store/selectors/visualization.selectors.ts
+// visualization.selectors.ts
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/store/store';
-import type { FieldName, BucketsMs, DataQuality } from '@chartsPage/charts/core/store/types/loading.types';
 import { selectOptimalData } from './dataProxy.selectors';
 import {
     selectAllViews,
     selectFieldCurrentBucketMs,
+    selectFieldCurrentRange,
     selectSyncEnabled,
     selectSyncFields
 } from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 import { selectLoadingMetrics } from "@chartsPage/charts/core/store/selectors/orchestration.selectors.ts";
 import type { SeriesBinDto } from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
+import type { BucketsMs, DataQuality, FieldName } from "@chartsPage/charts/core/store/types/chart.types.ts";
+
+// ============================================
+// ТИПЫ
+// ============================================
 
 export type EChartsPoint = readonly [number, number];
 
 export interface ChartRenderData {
-    readonly points: readonly EChartsPoint[];
+    readonly avgPoints: readonly EChartsPoint[];
+    readonly minPoints: readonly EChartsPoint[];
+    readonly maxPoints: readonly EChartsPoint[];
     readonly bucketMs: BucketsMs | undefined;
     readonly quality: DataQuality;
     readonly isEmpty: boolean;
@@ -30,35 +37,72 @@ export interface ChartStats {
     readonly loadingProgress: number;
 }
 
-function binToEChartsPoint(bin: SeriesBinDto): EChartsPoint | null {
-    if (bin.avg === undefined || bin.avg === null) return null;
-    return [bin.t.getTime(), bin.avg];
+// ============================================
+// КЕШ
+// ============================================
+
+interface PointsCache {
+    readonly avg: readonly EChartsPoint[];
+    readonly min: readonly EChartsPoint[];
+    readonly max: readonly EChartsPoint[];
 }
 
-// ============================================
-// ✅ WEAKMAP КЕШ
-// ============================================
+const pointsCache = new WeakMap<readonly SeriesBinDto[], PointsCache>();
 
-const pointsCache = new WeakMap<readonly SeriesBinDto[], readonly EChartsPoint[]>();
-
-function convertBinsToPoints(bins: readonly SeriesBinDto[]): readonly EChartsPoint[] {
+/**
+ *  ИСПРАВЛЕНО: Убрана фильтрация bin.avg == null
+ *
+ * Теперь включаем ВСЕ bins, даже с null значениями.
+ * ECharts сам обработает null как gap в линии.
+ */
+function convertBinsToPoints(bins: readonly SeriesBinDto[]): PointsCache {
     const cached = pointsCache.get(bins);
-    if (cached) {
-        return cached;
-    }
+    if (cached) return cached;
 
-    const points: EChartsPoint[] = [];
+    const avg: EChartsPoint[] = [];
+    const min: EChartsPoint[] = [];
+    const max: EChartsPoint[] = [];
+
+    let nullCount = 0;
+
     for (const bin of bins) {
-        const point = binToEChartsPoint(bin);
-        if (point) {
-            points.push(point);
+        const time = bin.t.getTime();
+
+        //  Включаем ВСЕ bins, даже с null
+        avg.push([time, bin.avg ?? null as any]);
+        min.push([time, bin.min ?? bin.avg ?? null as any]);
+        max.push([time, bin.max ?? bin.avg ?? null as any]);
+
+        if (bin.avg == null) {
+            nullCount++;
         }
     }
 
-    const frozenPoints = Object.freeze(points) as readonly EChartsPoint[];
-    pointsCache.set(bins, frozenPoints);
+    if (nullCount > 0) {
+        console.log('[convertBinsToPoints] Bins with null avg:', {
+            total: bins.length,
+            nulls: nullCount
+        });
+    }
 
-    return frozenPoints;
+    const result: PointsCache = {
+        avg: Object.freeze(avg) as readonly EChartsPoint[],
+        min: Object.freeze(min) as readonly EChartsPoint[],
+        max: Object.freeze(max) as readonly EChartsPoint[]
+    };
+
+    pointsCache.set(bins, result);
+    return result;
+
+    // ❌ ЗАКОММЕНТИРОВАНО: фильтрация null
+    // for (const bin of bins) {
+    //     if (bin.avg == null) continue;  // ← Пропускали bins с null
+    //
+    //     const time = bin.t.getTime();
+    //     avg.push([time, bin.avg]);
+    //     min.push([time, bin.min ?? bin.avg]);
+    //     max.push([time, bin.max ?? bin.avg]);
+    // }
 }
 
 // ============================================
@@ -71,14 +115,15 @@ export const selectChartRenderData = createSelector(
         (state: RootState, fieldName: FieldName) => selectFieldCurrentBucketMs(state, fieldName)
     ],
     (optimalData, bucketMs): ChartRenderData => {
-        // ✅ Используем кеш: если bins не изменились — та же ссылка на points
         const points = convertBinsToPoints(optimalData.data);
 
         return {
-            points,
+            avgPoints: points.avg,
+            minPoints: points.min,
+            maxPoints: points.max,
             bucketMs,
             quality: optimalData.quality,
-            isEmpty: points.length === 0
+            isEmpty: points.avg.length === 0
         };
     }
 );
@@ -112,3 +157,69 @@ export const selectSyncedChartsData = createSelector(
         }));
     }
 );
+
+export const selectVisiblePointsCount = createSelector(
+    [
+        (state: RootState, fieldName: FieldName) => selectChartRenderData(state, fieldName),
+        (state: RootState, fieldName: FieldName) => selectFieldCurrentRange(state, fieldName)
+    ],
+    (chartData, currentRange): number => {
+        if (!currentRange || chartData.avgPoints.length === 0) {
+            return chartData.avgPoints.length;
+        }
+
+        const fromMs = currentRange.from.getTime();
+        const toMs = currentRange.to.getTime();
+
+        const startIdx = binarySearchStart(chartData.avgPoints, fromMs);
+        const endIdx = binarySearchEnd(chartData.avgPoints, toMs);
+
+        return Math.max(0, endIdx - startIdx + 1);
+    }
+);
+
+// ============================================
+// УТИЛИТЫ
+// ============================================
+
+function binarySearchStart(points: readonly EChartsPoint[], targetMs: number): number {
+    let left = 0;
+    let right = points.length - 1;
+    let result = 0;
+
+    while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+        const point = points[mid];
+        if (!point) break;
+
+        if (point[0] < targetMs) {
+            left = mid + 1;
+        } else {
+            result = mid;
+            right = mid - 1;
+        }
+    }
+
+    return result;
+}
+
+function binarySearchEnd(points: readonly EChartsPoint[], targetMs: number): number {
+    let left = 0;
+    let right = points.length - 1;
+    let result = points.length - 1;
+
+    while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+        const point = points[mid];
+        if (!point) break;
+
+        if (point[0] <= targetMs) {
+            result = mid;
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+
+    return result;
+}

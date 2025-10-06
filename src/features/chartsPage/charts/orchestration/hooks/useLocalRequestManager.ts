@@ -7,7 +7,7 @@ import type { RootState } from '@/store/store';
 import {RequestManager} from "@chartsPage/charts/orchestration/requests/RequestManager.ts";
 
 /**
- * ✅ ЛОКАЛЬНЫЙ ХУК: создаёт отдельный RequestManager для компонента
+ *  ЛОКАЛЬНЫЙ ХУК: создаёт отдельный RequestManager для компонента
  *
  * Используйте только если нужна изоляция (разные стратегии prefetch).
  * В большинстве случаев используйте useRequestManager() из Context.

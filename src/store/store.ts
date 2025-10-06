@@ -12,11 +12,8 @@ import {chartReqTemplatesApi} from "@chartsPage/template/shared//api/chartReqTem
 import {metadataApi} from "@chartsPage/metaData/shared/api/metadataApi.ts";
 import {chartsApi} from "@chartsPage/charts/core/api/chartsApi.ts";
 
-// НЕ используем types из других файлов, чтобы не создать цикл
-type ReduxStore = ReturnType<typeof configureStore>;
 
-function createAppStore(): ReduxStore {
-    return configureStore({
+export const store = configureStore({
         reducer: rootReducer,
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({
@@ -119,9 +116,8 @@ function createAppStore(): ReduxStore {
             },
         },
     });
-}
 
-export const store = createAppStore();
+
 export const persistor = persistStore(store);
 
 /**
@@ -130,5 +126,7 @@ export const persistor = persistStore(store);
  * В остальных файлах импортируйте их ТОЛЬКО как type-импорт:
  *   import type { RootState, AppDispatch } from '@/store/store';
  */
-export type RootState = ReturnType<typeof rootReducer>;
+
+// КРИТИЧЕСКИ ВАЖНО: экспортируем типы ПОСЛЕ создания store
+export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

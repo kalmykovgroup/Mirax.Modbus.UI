@@ -59,7 +59,7 @@ export class InitializationService {
     }
 
     /**
-     * ✅ ИСПРАВЛЕНО: Убрана избыточная сортировка
+     *  ИСПРАВЛЕНО: Убрана избыточная сортировка
      *
      * Построить список bucket-уровней от top вниз.
      * niceMilliseconds УЖЕ отсортирован по возрастанию в chartsSettingsSlice,

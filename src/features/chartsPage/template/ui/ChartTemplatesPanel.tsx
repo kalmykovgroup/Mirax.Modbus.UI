@@ -42,7 +42,6 @@ export default function ChartTemplatesPanel({ onExecuteDone, className }: {
 
     useEffect(() => {
        if(databasesLoaded && !chartReqTemplatesLoaded){
-            console.log("fetchChartReqTemplates")
             dispatch(fetchChartReqTemplates({ force: false }))
         }
 

@@ -4,11 +4,9 @@ import type {
     SeriesTile,
     CoverageResult,
     BucketsMs,
-    Gap
+    Gap, DataQuality
 } from '@chartsPage/charts/core/store/types/chart.types';
 import type {SeriesBinDto} from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
-
-export type DataQuality = 'exact' | 'upsampled' | 'downsampled' | 'none';
 
 export interface OptimalDataResult {
     readonly data: readonly SeriesBinDto[];
@@ -19,9 +17,6 @@ export interface OptimalDataResult {
     readonly gaps: readonly Gap[];
 }
 
-/**
- * DataProxyService — чистая бизнес-логика работы с данными
- */
 export class DataProxyService {
     /**
      * Вычислить покрытие тайлов для диапазона
@@ -83,7 +78,11 @@ export class DataProxyService {
     }
 
     /**
-     * Объединить bins из тайлов
+     *  ИСПРАВЛЕНО: Убрана дедупликация
+     *
+     * Объединить bins из тайлов БЕЗ дедупликации.
+     * Если сервер вернул дубликаты — это проблема сервера или логики загрузки,
+     * но НЕ задача клиента их фильтровать.
      */
     static mergeBins(tiles: readonly SeriesTile[]): readonly SeriesBinDto[] {
         const allBins: SeriesBinDto[] = [];
@@ -94,34 +93,60 @@ export class DataProxyService {
             }
         }
 
+        // Только сортировка, БЕЗ дедупликации
         allBins.sort((a, b) => a.t.getTime() - b.t.getTime());
 
-        const deduped: SeriesBinDto[] = [];
-        let lastTime = -1;
+        console.log('[DataProxyService.mergeBins] Merged bins from tiles:', {
+            tilesCount: tiles.filter(t => t.status === 'ready').length,
+            totalBins: allBins.length
+        });
 
-        for (const bin of allBins) {
-            const time = bin.t.getTime();
-            if (time !== lastTime) {
-                deduped.push(bin);
-                lastTime = time;
-            }
-        }
+        return allBins;
 
-        return deduped;
+        // ❌ ЗАКОММЕНТИРОВАНО: дедупликация
+        // const deduped: SeriesBinDto[] = [];
+        // let lastTime = -1;
+        //
+        // for (const bin of allBins) {
+        //     const time = bin.t.getTime();
+        //     if (time !== lastTime) {
+        //         deduped.push(bin);
+        //         lastTime = time;
+        //     }
+        // }
+        //
+        // return deduped;
     }
 
     /**
-     * Фильтровать bins
+     *  ОСТАВЛЕНО: Фильтрация по range нужна для селекторов
+     *
+     * Но добавлено логирование для диагностики
      */
     static filterBinsByRange(
         bins: readonly SeriesBinDto[],
         fromMs: number,
         toMs: number
     ): readonly SeriesBinDto[] {
-        return bins.filter(bin => {
+        const filtered = bins.filter(bin => {
             const t = bin.t.getTime();
             return t >= fromMs && t <= toMs;
         });
+
+        const filteredOut = bins.length - filtered.length;
+        if (filteredOut > 0) {
+            console.log('[DataProxyService.filterBinsByRange] Filtered out bins outside range:', {
+                total: bins.length,
+                kept: filtered.length,
+                removed: filteredOut,
+                range: {
+                    from: new Date(fromMs).toISOString(),
+                    to: new Date(toMs).toISOString()
+                }
+            });
+        }
+
+        return filtered;
     }
 
     static selectOptimalDataWithoutRange(params: {
@@ -131,12 +156,9 @@ export class DataProxyService {
     }): OptimalDataResult {
         const { targetBucketMs, seriesLevels, availableBuckets } = params;
 
-        // 1. Проверяем текущий уровень (exact match)
         const currentTiles = seriesLevels[targetBucketMs];
         if (currentTiles && currentTiles.length > 0) {
             const allBins = this.mergeTileBins(currentTiles);
-
-            // Вычисляем coverage по всему диапазону данных
             const coverage = this.calculateTilesCoverage(currentTiles);
 
             if (coverage >= 95) {
@@ -151,7 +173,6 @@ export class DataProxyService {
             }
         }
 
-        // 2. Ищем fallback в соседних уровнях
         const sortedBuckets = [...availableBuckets].sort((a, b) => {
             const diffA = Math.abs(a - targetBucketMs);
             const diffB = Math.abs(b - targetBucketMs);
@@ -181,7 +202,6 @@ export class DataProxyService {
             }
         }
 
-        // 3. Нет подходящих данных
         return {
             data: [],
             quality: 'none',
@@ -192,14 +212,10 @@ export class DataProxyService {
         };
     }
 
-    /**
-     * Вычислить общий coverage тайлов (без привязки к конкретному range)
-     */
     private static calculateTilesCoverage(tiles: readonly SeriesTile[]): number {
         const readyTiles = tiles.filter(t => t.status === 'ready');
         if (readyTiles.length === 0) return 0;
 
-        // Находим общий диапазон
         let minMs = Number.MAX_VALUE;
         let maxMs = Number.MIN_VALUE;
 
@@ -210,12 +226,11 @@ export class DataProxyService {
 
         if (minMs >= maxMs) return 0;
 
-        // Вычисляем покрытие относительно общего диапазона
         return this.calculateCoverage(readyTiles, minMs, maxMs).coverage;
     }
 
     /**
-     * Объединить bins из тайлов (без фильтрации)
+     *  ИСПРАВЛЕНО: Убрана дедупликация
      */
     private static mergeTileBins(tiles: readonly SeriesTile[]): readonly SeriesBinDto[] {
         const allBins: SeriesBinDto[] = [];
@@ -226,26 +241,26 @@ export class DataProxyService {
             }
         }
 
-        // Сортировка + дедупликация
+        // Только сортировка
         allBins.sort((a, b) => a.t.getTime() - b.t.getTime());
 
-        const deduped: SeriesBinDto[] = [];
-        let lastTime = -1;
+        return allBins;
 
-        for (const bin of allBins) {
-            const time = bin.t.getTime();
-            if (time !== lastTime) {
-                deduped.push(bin);
-                lastTime = time;
-            }
-        }
-
-        return deduped;
+        // ❌ ЗАКОММЕНТИРОВАНО: дедупликация
+        // const deduped: SeriesBinDto[] = [];
+        // let lastTime = -1;
+        //
+        // for (const bin of allBins) {
+        //     const time = bin.t.getTime();
+        //     if (time !== lastTime) {
+        //         deduped.push(bin);
+        //         lastTime = time;
+        //     }
+        // }
+        //
+        // return deduped;
     }
 
-    /**
-     * Выбрать оптимальные данные
-     */
     static selectOptimalData(params: {
         readonly targetBucketMs: BucketsMs;
         readonly targetFromMs: number;
@@ -274,7 +289,6 @@ export class DataProxyService {
             }
         }
 
-        // Fallback
         const sortedByDistance = [...availableBuckets].sort((a, b) => {
             const diffA = Math.abs(a - targetBucketMs);
             const diffB = Math.abs(b - targetBucketMs);

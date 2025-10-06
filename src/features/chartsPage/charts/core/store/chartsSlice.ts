@@ -2,16 +2,18 @@
 
 import {createSlice, type PayloadAction} from '@reduxjs/toolkit';
 import {type LoadingState, LoadingType} from '@chartsPage/charts/core/store/types/loading.types';
+
+import type {FieldDto} from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
+import type {ResolvedCharReqTemplate} from "@chartsPage/template/shared//dtos/ResolvedCharReqTemplate.ts";
+import type {SeriesBinDto} from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
 import type {
     BucketsMs,
     CoverageInterval,
     FieldName,
     FieldView,
     SeriesTile, TimeRange
-} from "@chartsPage/charts/core/store/types/loading.types.ts";
-import type {FieldDto} from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
-import type {ResolvedCharReqTemplate} from "@chartsPage/template/shared//dtos/ResolvedCharReqTemplate.ts";
-import type {SeriesBinDto} from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
+} from "@chartsPage/charts/core/store/types/chart.types.ts";
+import {TileManager} from "@chartsPage/charts/orchestration/services/TileManager.ts";
 
 
 export interface ChartsState {
@@ -48,7 +50,58 @@ const chartsSlice = createSlice({
 
         // ========== УПРАВЛЕНИЕ ТАЙЛАМИ ==========
 
-        replaceTiles(
+        smartReplaceTiles(
+            state,
+            action: PayloadAction<{
+                field: FieldName;
+                bucketMs: BucketsMs;
+                operation: 'prepareLoading' | 'processResponse' | 'initialize';
+                interval?: CoverageInterval;
+                bins?: SeriesBinDto[];
+                requestId?: string;
+            }>
+        ) {
+            const { field, bucketMs, operation, interval, bins, requestId } = action.payload;
+            const view = state.view[field];
+
+            if (!view) return;
+
+            // Получаем текущие тайлы
+            const currentTiles = view.seriesLevel[bucketMs] ?? [];
+
+            // Создаём TileManager
+            const originalRange = view.originalRange
+                ? { fromMs: view.originalRange.from.getTime(), toMs: view.originalRange.to.getTime() }
+                : { fromMs: Date.now(), toMs: Date.now() + 86400000 };
+
+            const manager = new TileManager(bucketMs, originalRange);
+            manager.setTiles(currentTiles);
+
+            // Выполняем операцию
+            switch (operation) {
+                case 'initialize':
+                    manager.initialize();
+                    break;
+                case 'prepareLoading':
+                    if (interval && requestId) {
+                        manager.prepareLoading(interval, requestId);
+                    }
+                    break;
+                case 'processResponse':
+                    if (interval && bins) {
+                        manager.processResponse(interval, bins);
+                    }
+                    break;
+            }
+
+            // Сохраняем обновлённые тайлы
+            view.seriesLevel[bucketMs] = manager.getTiles() as SeriesTile[];
+        },
+
+            // Сохраняем обновлённые тайлы
+
+
+       /* replaceTiles(
             state,
             action: PayloadAction<{
                 field: FieldName;
@@ -65,7 +118,7 @@ const chartsSlice = createSlice({
             view.seriesLevel[action.payload.bucketMs] = action.payload.tiles;
         },
 
-        addTile(
+         addTile(
             state,
             action: PayloadAction<{
                 field: FieldName;
@@ -75,7 +128,7 @@ const chartsSlice = createSlice({
         ) {
             const view = state.view[action.payload.field];
             if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
+                console.error(`[addTile] View not found for field: ${action.payload.field}`);
                 return;
             }
 
@@ -83,7 +136,14 @@ const chartsSlice = createSlice({
                 view.seriesLevel[action.payload.bucketMs] = [];
             }
 
-            view.seriesLevel[action.payload.bucketMs]!.push(action.payload.tile)
+            // ПРОСТО ДОБАВЛЯЕМ - вся логика мержа в DataProcessingService
+            view.seriesLevel[action.payload.bucketMs]!.push(action.payload.tile);
+
+            console.log('[addTile] Tile added:', {
+                field: action.payload.field,
+                bucketMs: action.payload.bucketMs,
+                totalTiles: view.seriesLevel[action.payload.bucketMs]!.length
+            });
         },
 
         updateTileStatus(
@@ -144,7 +204,7 @@ const chartsSlice = createSlice({
                 tile.status = 'error';
                 tile.error = action.payload.error;
             }
-        },
+        },*/
 
         // ========== УПРАВЛЕНИЕ VIEW ==========
 
@@ -268,14 +328,11 @@ const chartsSlice = createSlice({
                 bucketMs: BucketsMs;
             }>
         ) {
-            const view = state.view[action.payload.field];
-            if (!view) {
+            if (!state.view[action.payload.field]) {
                 console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
                 return;
             }
-
-            view.currentBucketsMs = action.payload.bucketMs;
-
+            state.view[action.payload.field]!.currentBucketsMs = action.payload.bucketMs;
         },
 
         // ========== УПРАВЛЕНИЕ ЗАГРУЗКОЙ ==========

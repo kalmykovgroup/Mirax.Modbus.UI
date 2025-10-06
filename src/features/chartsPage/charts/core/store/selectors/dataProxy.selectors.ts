@@ -1,7 +1,6 @@
 // store/selectors/dataProxy.selectors.ts
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/store/store';
-import type { FieldName, BucketsMs, CoverageResult } from '@chartsPage/charts/core/store/types/loading.types';
 import {
     selectAvailableBuckets,
     selectFieldCurrentBucketMs,
@@ -10,9 +9,10 @@ import {
     selectTilesByBucket
 } from './base.selectors';
 import { DataProxyService, type OptimalDataResult } from '@chartsPage/charts/orchestration/services/DataProxyService';
+import type {BucketsMs, CoverageResult, FieldName} from "@chartsPage/charts/core/store/types/chart.types.ts";
 
 /**
- * ✅ Покрытие текущего диапазона — используется только RequestManager
+ *  Покрытие текущего диапазона — используется только RequestManager
  */
 export const selectCurrentCoverage = createSelector(
     [
@@ -38,7 +38,7 @@ export const selectCurrentCoverage = createSelector(
 );
 
 /**
- * ✅ Coverage для конкретного bucket — для prefetch
+ *  Coverage для конкретного bucket — для prefetch
  */
 export const selectBucketCoverageForRange = createSelector(
     [
@@ -53,7 +53,7 @@ export const selectBucketCoverageForRange = createSelector(
 );
 
 /**
- * ✅ ИСПРАВЛЕНО: НЕ зависит от currentRange
+ *  ИСПРАВЛЕНО: НЕ зависит от currentRange
  *
  * Возвращает ВСЕ bins из оптимального bucket-уровня.
  * Фильтрация по видимому диапазону — задача ECharts.
@@ -76,7 +76,7 @@ export const selectOptimalData = createSelector(
             };
         }
 
-        // ✅ Используем весь диапазон из tiles (без фильтрации)
+        //  Используем весь диапазон из tiles (без фильтрации)
         return DataProxyService.selectOptimalDataWithoutRange({
             targetBucketMs: currentBucketMs,
             seriesLevels,

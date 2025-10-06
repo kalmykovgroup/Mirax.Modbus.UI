@@ -1,4 +1,4 @@
-import type {ApiError} from "@shared/api/base/baseQuery.ts";
+import type {ApiError} from "@shared/api/base/helpers/ApiError.ts";
 
 export const fail = (args: { status?: number| undefined; data: unknown }) => {
     const { status, data } = args;

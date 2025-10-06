@@ -1,13 +1,7 @@
 
-export interface ApiResponse<T> {
+export interface ApiResponse<T = unknown> {
     success: boolean;
-    errorMessage?: string | null;
-    data?: T | null | undefined;
-}
-
-export interface ApiResponse<T = object> {
-    success: boolean;
-    errorMessage?: string | null;
+    errorMessage?: string | null | undefined;
     data?: T | null | undefined;
 }
 

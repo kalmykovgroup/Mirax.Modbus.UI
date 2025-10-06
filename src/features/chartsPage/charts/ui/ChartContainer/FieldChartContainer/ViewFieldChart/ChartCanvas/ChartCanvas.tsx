@@ -1,5 +1,5 @@
 // components/chart/ChartCanvas/ChartCanvas.tsx
-// ✅ ZERO лишних рендеров при zoom
+// ZERO лишних рендеров при zoom
 
 import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts';
@@ -9,15 +9,12 @@ interface ChartCanvasProps {
     readonly options: EChartsOption;
     readonly totalPoints: number;
     readonly onZoomEnd?: ((range: { from: number; to: number }) => void) | undefined;
-    readonly height?: string | undefined;
     readonly loading?: boolean | undefined;
 }
 
-export function ChartCanvas({
-                                options,
+export function ChartCanvas({   options,
                                 totalPoints,
                                 onZoomEnd,
-                                height = '400px',
                                 loading = false
                             }: ChartCanvasProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -131,7 +128,7 @@ export function ChartCanvas({
     return (
         <div
             ref={containerRef}
-            style={{ width: '100%', height }}
+            style={{ width: '100%', height: '100%', flex: 1 }}
         />
     );
 }

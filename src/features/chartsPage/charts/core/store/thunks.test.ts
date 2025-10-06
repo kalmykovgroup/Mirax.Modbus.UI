@@ -235,7 +235,7 @@ export const testInitializeMultipleLevels = createAsyncThunk<
                     }],
                 }));
 
-                console.log(`  ✅ Чанк ${j + 1}: ${bins.length} бинов (плотность ${(fillRate * 100).toFixed(0)}%)`);
+                console.log(`   Чанк ${j + 1}: ${bins.length} бинов (плотность ${(fillRate * 100).toFixed(0)}%)`);
 
                 dispatch(finishLoading({
                     field: fieldName,
@@ -315,7 +315,7 @@ export const testIncrementalLoad = createAsyncThunk<
 
     for (const gap of gaps) {
         if (currentPercent >= targetCoverage) {
-            console.log(`✅ Достигнуто покрытие ${currentPercent.toFixed(1)}%`);
+            console.log(` Достигнуто покрытие ${currentPercent.toFixed(1)}%`);
             break;
         }
 
@@ -390,7 +390,7 @@ export const testIncrementalLoad = createAsyncThunk<
         currentCoverageMs += (gap.toMs - gap.fromMs);
         currentPercent = (currentCoverageMs / domainSpan) * 100;
 
-        console.log(`  ✅ Загружено ${bins.length} бинов (плотность ${(fillRate * 100).toFixed(0)}%), покрытие: ${currentPercent.toFixed(1)}%`);
+        console.log(`   Загружено ${bins.length} бинов (плотность ${(fillRate * 100).toFixed(0)}%), покрытие: ${currentPercent.toFixed(1)}%`);
     }
 
     console.log('\n✨ TEST: Инкрементальная загрузка завершена');
@@ -494,7 +494,7 @@ export const testSwitchLevel = createAsyncThunk<
             success: true
         }));
 
-        console.log(`✅ Загружено ${bins.length} бинов для нового уровня`);
+        console.log(` Загружено ${bins.length} бинов для нового уровня`);
     } else {
         const readyTiles = targetTiles.filter(t => t.status === 'ready').length;
         const errorTiles = targetTiles.filter(t => t.status === 'error').length;
@@ -599,7 +599,7 @@ export const testPanNavigation = createAsyncThunk<
                 success: true
             }));
 
-            console.log(`  ✅ Загружено ${bins.length} бинов`);
+            console.log(`   Загружено ${bins.length} бинов`);
         }
     }
 
@@ -669,7 +669,7 @@ export const testPanNavigation = createAsyncThunk<
                     success: true
                 }));
 
-                console.log(`  ✅ Загружено ${bins.length} бинов`);
+                console.log(`   Загружено ${bins.length} бинов`);
             }
         }
     }
@@ -749,7 +749,7 @@ export const testLoadingErrors = createAsyncThunk<
                     status: 'ready' as const,
                 }],
             }));
-            console.log(`  ✅ Успешно загружено`);
+            console.log(`   Успешно загружено`);
 
         } else if (scenario.status === 'error') {
             dispatch(upsertTiles({
@@ -925,6 +925,6 @@ export const runFullTestSuite = createAsyncThunk<
     await dispatch(testLoadingErrors({ fieldName })).unwrap();
 
     console.log('\n=====================================');
-    console.log('✅ ТЕСТОВЫЙ НАБОР ЗАВЕРШЕН');
+    console.log(' ТЕСТОВЫЙ НАБОР ЗАВЕРШЕН');
     console.log('Проверьте Header для просмотра результатов');
 });*/

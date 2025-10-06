@@ -1,0 +1,171 @@
+/* TimelineCoverageBar.module.css */
+
+/* ============================================
+   ОСНОВНОЙ КОНТЕЙНЕР
+   ============================================ */
+
+.wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+/* ============================================
+   ПРОГРЕСС-БАР
+   ============================================ */
+
+.progress {
+    position: relative;
+    flex: 1;
+    height: 100%;
+    min-height: 20px;
+    border-radius: 4px;
+    overflow: visible; /* ← ВАЖНО: чтобы границы сегментов были видны */
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Контейнер с анимацией */
+.container {
+    transition: background-color 0.3s ease;
+}
+
+/* Контейнер без анимации */
+.containerNoAnimation {
+    transition: none;
+}
+
+/* ============================================
+   СЕГМЕНТЫ — ГЛАВНОЕ ИЗМЕНЕНИЕ
+   ============================================ */
+
+.segment {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transition: all 0.3s ease;
+    /*  ВОССТАНОВЛЕНО: видимая граница между сегментами */
+    border-left: 1px solid rgba(255, 255, 255, 0.3);
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.segmentNoAnimation {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transition: none;
+    /*  ВОССТАНОВЛЕНО: видимая граница между сегментами */
+    border-left: 1px solid rgba(255, 255, 255, 0.3);
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Покрытый сегмент */
+.segmentCovered {
+    z-index: 2;
+    opacity: 0.95; /* ← Чуть более непрозрачный */
+}
+
+.segmentCovered:hover {
+    opacity: 1;
+    transform: scaleY(1.05); /* ← Небольшое увеличение при hover */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+}
+
+/* Загружаемый сегмент */
+.segmentLoading {
+    z-index: 1;
+    opacity: 0.7;
+    animation: pulse 1.5s ease-in-out infinite;
+    /*  ВОССТАНОВЛЕНО: полосатый паттерн для loading */
+    background-image: linear-gradient(
+            45deg,
+            rgba(255, 255, 255, 0.15) 25%,
+            transparent 25%,
+            transparent 50%,
+            rgba(255, 255, 255, 0.15) 50%,
+            rgba(255, 255, 255, 0.15) 75%,
+            transparent 75%,
+            transparent
+    );
+    background-size: 20px 20px;
+}
+
+.segmentLoading:hover {
+    opacity: 0.85;
+    transform: scaleY(1.05);
+    z-index: 9;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.7;
+    }
+    50% {
+        opacity: 0.85;
+    }
+}
+
+/* ============================================
+   ПРОЦЕНТ ПОКРЫТИЯ
+   ============================================ */
+
+.coveragePercent {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    min-width: 40px;
+    text-align: right;
+    white-space: nowrap;
+    font-family: 'Monaco', 'Courier New', monospace;
+}
+
+/* ============================================
+   АДАПТИВНОСТЬ
+   ============================================ */
+
+@media (max-width: 768px) {
+    .wrapper {
+        gap: 6px;
+    }
+
+    .progress {
+        min-height: 18px;
+    }
+
+    .coveragePercent {
+        font-size: 10px;
+        min-width: 36px;
+    }
+
+    .segment,
+    .segmentNoAnimation {
+        border-left-width: 0.5px;
+        border-right-width: 0.5px;
+    }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+.segment:focus-visible,
+.segmentNoAnimation:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+    z-index: 20;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .container,
+    .segment {
+        transition: none;
+    }
+
+    .segmentLoading {
+        animation: none;
+        background-image: none;
+    }
+}

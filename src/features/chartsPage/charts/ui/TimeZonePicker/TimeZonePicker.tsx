@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import type {TimeSettings} from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
+import classNames from "classnames";
+import s from "./TimeZonePicker.module.css"
 
 type Props = {
     value: TimeSettings;
@@ -108,7 +110,7 @@ const TimeZonePicker: React.FC<Props> = ({
     };
 
     return (
-        <div className={className} style={{ display: 'flex', gap: 12, alignItems: 'center', ...(style || {}) }}>
+        <div className={classNames(className, s.timeZomePickerContainer)} style={{ display: 'flex', gap: 12, alignItems: 'center', ...(style || {}) }}>
             <label style={{ display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer' }}>
                 <input
                     type="checkbox"
@@ -154,16 +156,7 @@ const TimeZonePicker: React.FC<Props> = ({
                 })}
             </select>
 
-            <span style={{
-                opacity: 0.7,
-                fontSize: 12,
-                color: '#666'
-            }}>
-                {value.useTimeZone && value.timeZone === 'UTC'
-                    ? '✓ Используется UTC время'
-                    : '(в запрос уходит UTC ISO)'
-                }
-            </span>
+
         </div>
     );
 };

@@ -32,8 +32,8 @@ export const retryConfig: IAxiosRetryConfig = {
         // 3) Статусы 5xx и 429
         const status = error.response.status;
         if (status === 429) return true;
-        if (status >= 500 && status <= 599) return true;
+        return status >= 500 && status <= 599;
 
-        return false;
+
     },
 };

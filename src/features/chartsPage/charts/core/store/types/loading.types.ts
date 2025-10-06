@@ -1,9 +1,9 @@
 // core/types/loading.types.ts
 
-import type {BucketsMs} from "@chartsPage/charts/core/store/types/loading.types.ts";
-import type {GetMultiSeriesRequest} from "@chartsPage/charts/shared/dtos/requests/GetMultiSeriesRequest.ts";
 import type {FieldDto} from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
-import type {MultiSeriesResponse} from "@chartsPage/charts/shared/dtos/responses/MultiSeriesResponse.ts";
+import type {MultiSeriesResponse} from "@chartsPage/charts/core/dtos/responses/MultiSeriesResponse.ts";
+import type {BucketsMs} from "@chartsPage/charts/core/store/types/chart.types.ts";
+import type {GetMultiSeriesRequest} from "@chartsPage/charts/core/dtos/requests/GetMultiSeriesRequest.ts";
 
 export interface LoadingState {
     active: boolean;

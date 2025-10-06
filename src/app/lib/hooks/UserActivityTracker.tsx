@@ -18,7 +18,7 @@ export const UserActivityTracker = () => {
         // Создаём debounced версию функции updateActivity
         const debouncedUpdate = debounce(() => {
             dispatch(updateLastActive());
-        }, 1000); // Диспатчим не чаще, чем раз в 1000 мс
+        }, 1000000); // Диспатчим не чаще, чем раз в 1000 мс
 
         const events = ['mousemove', 'keydown', 'click', 'scroll'];
         events.forEach((event) => window.addEventListener(event, debouncedUpdate));

@@ -1,0 +1,90 @@
+/* StatsBadge.module.css */
+
+.statsBadge {
+    display: flex;
+    gap: 16px;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 6px;
+    font-size: 13px;
+    align-items: center;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.stat {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.statLabel {
+    color: #555;
+    font-weight: 500;
+}
+
+
+
+.rangeValue {
+    font-family: 'Courier New', monospace;
+    background: rgba(255, 255, 255, 0.6);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 15px;
+    color: black;
+}
+
+.qualityBadge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.qualityBadge[data-quality="exact"] {
+    background: #d4edda;
+    color: #155724;
+}
+
+.qualityBadge[data-quality="upsampled"],
+.qualityBadge[data-quality="downsampled"] {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.qualityBadge[data-quality="none"] {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+    font-size: 16px;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.range{
+    display: flex;
+    flex-direction: column;
+}
+
+.range{
+    display: grid;
+    grid-template-columns: max-content 1fr; /* ширина 1-й колонки = по самому длинному */
+    column-gap: 16px;
+    row-gap: 2px;
+}
+
+/* строки не создают собственную сетку, а отдают детей общему grid */
+.range .stat{
+    display: contents;
+}
+
+/* первый и второй блоки каждой строки встанут в 1 и 2 колонку общей сетки */
+.range .stat > :first-child { grid-column: 1; }
+.range .stat > :nth-child(2) { grid-column: 2; }

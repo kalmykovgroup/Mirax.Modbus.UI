@@ -3,7 +3,7 @@ import {useContext} from "react";
 import {RequestManagerContext} from "@chartsPage/charts/orchestration/requests/RequestManagerContext.tsx";
 
 /**
- * ✅ ОСНОВНОЙ ХУК: получить глобальный RequestManager из Context
+ *  ОСНОВНОЙ ХУК: получить глобальный RequestManager из Context
  *
  * Использование:
  * ```tsx

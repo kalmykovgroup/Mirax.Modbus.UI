@@ -2,17 +2,17 @@
 
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/store/store';
-import type {
-    FieldName,
-    BucketsMs,
-    FieldView,
-    SeriesTile,
-    TimeRange
-} from '@chartsPage/charts/core/store/types/loading.types';
 import type { LoadingState } from '@chartsPage/charts/core/store/types/loading.types';
 import { LoadingType } from '@chartsPage/charts/core/store/types/loading.types';
 import type {ResolvedCharReqTemplate} from "@chartsPage/template/shared//dtos/ResolvedCharReqTemplate.ts";
 import type {FieldDto} from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
+import type {
+    BucketsMs,
+    FieldName,
+    FieldView,
+    SeriesTile,
+    TimeRange
+} from "@chartsPage/charts/core/store/types/chart.types.ts";
 
 // ============================================
 // КОНСТАНТЫ ДЛЯ DEFAULT ЗНАЧЕНИЙ
@@ -127,7 +127,7 @@ export const selectTilesByBucket = (
 };
 
 /**
- * ✅ ИСПРАВЛЕНО: Убрана избыточная сортировка
+ *  ИСПРАВЛЕНО: Убрана избыточная сортировка
  *
  * Мемоизированный селектор доступных bucket-уровней.
  * Object.keys() возвращает строки в порядке вставки (insertion order),

@@ -2,13 +2,13 @@
 
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/store/store';
-import type { FieldName, BucketsMs, Gap } from '@chartsPage/charts/core/store/types/loading.types';
 import type { LoadingState } from '@chartsPage/charts/core/store/types/loading.types';
 
 import {
     selectFieldLoadingState,
     selectFieldSeriesLevels,
 } from './base.selectors';
+import type {BucketsMs, FieldName, Gap} from "@chartsPage/charts/core/store/types/chart.types.ts";
 
 // ============================================
 // ТИПЫ

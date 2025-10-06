@@ -2,12 +2,11 @@
 
 import type {EChartsOption, LineSeriesOption} from 'echarts';
 import {formatTimeByBucket} from './utils';
-import type {SeriesBinDto} from "@chartsPage/template/shared/contracts/chart/Dtos/SeriesBinDto.ts";
 import {
     createTooltipFormatter
 } from "@chartsPage/ui/CharContainer/ChartCollection/FieldChart/ViewFieldChart/ChartTooltip/tooltipBuilder.ts";
+import type {SeriesBinDto} from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
 
-import type { ScaleDataValue, LabelFormatterParams } from 'echarts/types/dist/shared';
 
 
 interface ChartOptionParams {

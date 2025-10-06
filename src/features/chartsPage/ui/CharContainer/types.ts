@@ -1,4 +1,4 @@
-import type {FieldDto} from "@chartsPage/template/shared/contracts/metadata/Dtos/FieldDto.ts";
+import type {FieldDto} from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
 
 export interface ChartEvent {
     type: ChartEventType;
