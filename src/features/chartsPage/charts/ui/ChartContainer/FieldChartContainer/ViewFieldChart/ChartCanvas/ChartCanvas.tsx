@@ -63,7 +63,7 @@ export function ChartCanvas({   options,
                         to: dataZoom.endValue
                     });
                 }
-            }, 500); // 500ms debounce для загрузки
+            }, 100); // 500ms debounce для загрузки
         };
 
         chart.on('dataZoom', handleDataZoom);
@@ -91,16 +91,11 @@ export function ChartCanvas({   options,
         const chart = chartRef.current;
         if (!chart) return;
 
-        // ✅ Всегда обновляем при изменении options (useMemo гарантирует что options меняется только при реальных изменениях данных)
+        //    Всегда обновляем при изменении options (useMemo гарантирует что options меняется только при реальных изменениях данных)
         chart.setOption(options, {
             notMerge: false,  // Мержим с существующими опциями
-            lazyUpdate: false, // ✅ ИСПРАВЛЕНО: Немедленное обновление
+            lazyUpdate: false, //    ИСПРАВЛЕНО: Немедленное обновление
             silent: false
-        });
-
-        console.log('[ChartCanvas] Options updated', {
-            seriesCount: (options.series as any[])?.length,
-            totalPoints
         });
 
     }, [options, totalPoints]);

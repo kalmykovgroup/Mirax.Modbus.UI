@@ -116,7 +116,6 @@ export default function ChartTemplatesPanel({ onExecuteDone, className }: {
 
             <div className={styles.header}>
                 <div style={{ fontWeight: 600 }}>Шаблоны</div>
-
             </div>
 
             <TemplatesList

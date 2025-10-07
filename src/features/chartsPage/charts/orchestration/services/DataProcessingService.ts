@@ -131,14 +131,6 @@ export class DataProcessingService {
             const existingTiles = fieldView.seriesLevel[bucketMs] ?? [];
             const convertedBins = this.convertAndFilterBins(bins, requestedInterval);
 
-            console.log('[processFieldSeries] Processing:', {
-                field: fieldName,
-                bucketMs,
-                existingTiles: existingTiles.length,
-                binsReceived: bins.length,
-                binsConverted: convertedBins.length
-            });
-
             const newTile: SeriesTile = {
                 coverageInterval: requestedInterval,
                 bins: convertedBins,
@@ -219,14 +211,6 @@ export class DataProcessingService {
                     }
                 }
             );
-
-            console.log('[processFieldSeries] Tile system result:', {
-                field: fieldName,
-                wasAdded: addResult.wasAdded,
-                wasMerged: addResult.wasMerged,
-                totalTiles: addResult.tiles.length,
-                readyTiles: addResult.tiles.filter(t => t.status === 'ready').length
-            });
 
             return {
                 field: fieldName,
@@ -359,52 +343,29 @@ export class DataProcessingService {
         const alignedFrom = Math.floor(from / bucketMs) * bucketMs;
         const alignedTo = Math.ceil(to / bucketMs) * bucketMs;
 
-        console.log('[analyzeLoadNeeds] Request:', {
-            field: fieldName,
-            bucketMs,
-            requested: {
-                from: new Date(alignedFrom).toISOString(),
-                to: new Date(alignedTo).toISOString()
-            },
-            existingTiles: tiles.map(t => ({
-                status: t.status,
-                from: new Date(t.coverageInterval.fromMs).toISOString(),
-                to: new Date(t.coverageInterval.toMs).toISOString(),
-                bins: t.bins.length
-            }))
-        });
 
-        // НАХОДИМ ФАКТИЧЕСКИЕ ПРОБЕЛЫ
+       // КРИТИЧНО: Проверяем gaps СРАЗУ, до всех остальных проверок
         const gapsResult = TileSystemCore.findGaps(
             fieldView.originalRange,
             tiles,
             { fromMs: alignedFrom, toMs: alignedTo }
         );
 
-        console.log('[analyzeLoadNeeds] Gaps analysis:', {
-            coverage: gapsResult.coverage.toFixed(1) + '%',
-            hasFull: gapsResult.hasFull,
-            gapsCount: gapsResult.gaps.length,
-            gaps: gapsResult.gaps.map(g => ({
-                from: new Date(g.fromMs).toISOString(),
-                to: new Date(g.toMs).toISOString(),
-                sizeMs: g.toMs - g.fromMs
-            }))
-        });
-
-        // Если полное покрытие - не грузим
+        // Ранний выход: полное покрытие
         if (gapsResult.hasFull || gapsResult.gaps.length === 0) {
-            console.log('[analyzeLoadNeeds] No gaps to load');
             return false;
         }
 
-        // Проверяем loading тайлы в gaps
-        const hasLoadingInGaps = gapsResult.gaps.some(gap =>
-            this.checkLoadingCoverage(tiles, gap.fromMs, gap.toMs)
-        );
+     //    Проверяем loading tiles в gaps
+        const hasLoadingInGaps = gapsResult.gaps.some(gap => {
+            return tiles.some(t =>
+                t.status === 'loading' &&
+                t.coverageInterval.fromMs <= gap.fromMs &&
+                t.coverageInterval.toMs >= gap.toMs
+            );
+        });
 
         if (hasLoadingInGaps) {
-            console.log('[analyzeLoadNeeds] Already loading gaps');
             return false;
         }
 
@@ -620,20 +581,7 @@ export class DataProcessingService {
         };
     }
 
-    /**
-     * Проверка loading покрытия
-     */
-    private static checkLoadingCoverage(
-        tiles: readonly SeriesTile[],
-        from: number,
-        to: number
-    ): boolean {
-        return tiles.some(t =>
-            t.status === 'loading' &&
-            t.coverageInterval.fromMs <= from &&
-            t.coverageInterval.toMs >= to
-        );
-    }
+
 
     /**
      * Конвертация и фильтрация bins
@@ -794,7 +742,12 @@ export class DataProcessingService {
         }
 
         // 4. Проверяем наличие loading тайлов покрывающих запрос
-        const hasLoadingCoverage = this.checkLoadingCoverage(tiles, alignedFrom, alignedTo);
+       const hasLoadingCoverage = tiles.some(t =>
+            t.status === 'loading' &&
+            t.coverageInterval.fromMs <= alignedFrom &&
+            t.coverageInterval.toMs >= alignedTo
+        );
+
         if (hasLoadingCoverage) {
             console.log('[calculateLoadInterval] Already loading this range');
             return null;

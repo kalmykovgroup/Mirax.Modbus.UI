@@ -25,15 +25,6 @@
 
 
 
-.rangeValue {
-    font-family: 'Courier New', monospace;
-    background: rgba(255, 255, 255, 0.6);
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 15px;
-    color: black;
-}
-
 .qualityBadge {
     padding: 2px 8px;
     border-radius: 12px;

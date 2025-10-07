@@ -23,12 +23,12 @@ import {TileSystemCore} from "@chartsPage/charts/core/store/tile-system/TileSyst
 // ТИПЫ
 // ============================================
 
-export type EChartsPoint = readonly [number, number];
+export type EChartsPoint = readonly [number, number, number];
 
 export interface ChartRenderData {
-     avgPoints: EChartsPoint[];
-     minPoints: EChartsPoint[];
-     maxPoints: EChartsPoint[];
+     avgPoints: EChartsPoint[];// [time, value, count]
+     minPoints: EChartsPoint[];// [time, value, count]
+     maxPoints: EChartsPoint[];// [time, value, count]
     readonly bucketMs: BucketsMs | undefined;
     readonly quality: DataQuality;
     readonly isEmpty: boolean;
@@ -74,11 +74,12 @@ function convertBinsToPoints(bins: readonly SeriesBinDto[]): PointsCache {
     for (const bin of bins) {
         const time = bin.t.getTime();
 
-        // ✅ Включаем ВСЕ bins, даже с null
+        //    Включаем ВСЕ bins, даже с null
         // ECharts прервет линию на null значениях если connectNulls: false
-        avg.push([time, bin.avg ?? null as any]);
-        min.push([time, bin.min ?? bin.avg ?? null as any]);
-        max.push([time, bin.max ?? bin.avg ?? null as any]);
+        // Каждая точка хранит свой bin.count
+        avg.push([time, bin.avg ?? null as any, bin.count]);
+        min.push([time, bin.min ?? bin.avg ?? null as any, bin.count]);
+        max.push([time, bin.max ?? bin.avg ?? null as any, bin.count]);
 
         if (bin.avg == null) {
             nullCount++;
@@ -89,14 +90,13 @@ function convertBinsToPoints(bins: readonly SeriesBinDto[]): PointsCache {
         console.log('[convertBinsToPoints] Bins with null avg (gaps):', {
             total: bins.length,
             nulls: nullCount,
-            dataPoints: bins.length - nullCount
         });
     }
 
     const result: PointsCache = {
         avg: Object.freeze(avg) as EChartsPoint[],
         min: Object.freeze(min) as EChartsPoint[],
-        max: Object.freeze(max) as EChartsPoint[]
+        max: Object.freeze(max) as EChartsPoint[],
     };
 
     pointsCache.set(bins, result);
@@ -244,18 +244,7 @@ export const selectFieldGaps = createSelector(
             tiles,
             targetInterval
         );
-
-        console.log('[selectFieldGaps] Calculated gaps:', {
-            field: fieldView,
-            bucket: currentBucketMs,
-            totalGaps: gapsResult.gaps.length,
-            coverage: gapsResult.coverage.toFixed(1) + '%',
-            gaps: gapsResult.gaps.map(g => ({
-                from: new Date(g.fromMs).toISOString(),
-                to: new Date(g.toMs).toISOString(),
-                sizeMs: g.toMs - g.fromMs
-            }))
-        });
+ 
 
         // Разделяем gaps на "данные отсутствуют" и "загружаются"
         const dataGaps: CoverageInterval[] = [];

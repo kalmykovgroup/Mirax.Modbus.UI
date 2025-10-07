@@ -21,7 +21,7 @@ export interface OptimalDataResult {
 export class DataProxyService {
 
     /**
-     * ✅ РЕФАКТОРИНГ: Используем TileSystemCore.findGaps
+     *    РЕФАКТОРИНГ: Используем TileSystemCore.findGaps
      */
     static calculateCoverage(
         tiles: readonly SeriesTile[],
@@ -47,7 +47,7 @@ export class DataProxyService {
     }
 
     /**
-     * ✅ НОВЫЙ МЕТОД: Вставить null значения в места gaps
+     *    НОВЫЙ МЕТОД: Вставить null значения в места gaps
      *
      * Это заставит ECharts прерывать линию в незагруженных областях
      */
@@ -86,7 +86,7 @@ export class DataProxyService {
                 binIndex++;
             }
 
-            // ✅ Вставляем null-bin в начале gap
+            //    Вставляем null-bin в начале gap
             result.push({
                 t: new Date(gap.from),
                 avg: null as any,
@@ -95,7 +95,7 @@ export class DataProxyService {
                 count: 0
             });
 
-            // ✅ Вставляем null-bin в конце gap
+            //    Вставляем null-bin в конце gap
             result.push({
                 t: new Date(gap.to),
                 avg: null as any,
@@ -140,20 +140,11 @@ export class DataProxyService {
         // Только сортировка, БЕЗ дедупликации
         allBins.sort((a, b) => a.t.getTime() - b.t.getTime());
 
-        console.log('[DataProxyService.mergeBins] Merged bins from tiles:', {
-            tilesCount: tiles.filter(t => t.status === 'ready').length,
-            totalBins: allBins.length,
-            range: allBins.length > 0 ? {
-                from: new Date(allBins[0]!.t).toISOString(),
-                to: new Date(allBins[allBins.length - 1]!.t).toISOString()
-            } : null
-        });
-
         return allBins;
     }
 
     /**
-     * ✅ РЕФАКТОРИНГ: Используем TileSystemCore для всех вычислений
+     *    РЕФАКТОРИНГ: Используем TileSystemCore для всех вычислений
      *
      * Возвращает ВСЕ bins с текущего bucket уровня + вставленные null для gaps.
      */
@@ -170,17 +161,17 @@ export class DataProxyService {
         // Пробуем текущий bucket
         const currentTiles = seriesLevels[targetBucketMs];
         if (currentTiles && currentTiles.length > 0) {
-            // ✅ Используем TileSystemCore.findGaps для видимой области
+            //    Используем TileSystemCore.findGaps для видимой области
             const visibleGapsResult = TileSystemCore.findGaps(
                 originalRange,
                 currentTiles,
                 { fromMs: targetFromMs, toMs: targetToMs }
             );
 
-            // ✅ Получаем ВСЕ bins с текущего уровня
+            //    Получаем ВСЕ bins с текущего уровня
             const allBins = this.mergeBins(currentTiles);
 
-            // ✅ Используем TileSystemCore.findGaps для ВСЕГО диапазона данных
+            //    Используем TileSystemCore.findGaps для ВСЕГО диапазона данных
             // Находим минимальный и максимальный диапазон среди тайлов
             const readyTiles = currentTiles.filter(t => t.status === 'ready');
 
@@ -192,7 +183,7 @@ export class DataProxyService {
                 dataRangeTo = Math.max(dataRangeTo, tile.coverageInterval.toMs);
             }
 
-            // ✅ Находим gaps между ВСЕМИ загруженными тайлами (не только в видимой области)
+            //  Находим gaps между ВСЕМИ загруженными тайлами (не только в видимой области)
             const allDataGapsResult = dataRangeFrom < dataRangeTo
                 ? TileSystemCore.findGaps(
                     originalRange,
@@ -201,26 +192,10 @@ export class DataProxyService {
                 )
                 : { gaps: [], coverage: 0, hasFull: false };
 
-            console.log('[selectOptimalData] Current bucket analysis:', {
-                bucket: targetBucketMs,
-                visibleRange: {
-                    from: new Date(targetFromMs).toISOString(),
-                    to: new Date(targetToMs).toISOString()
-                },
-                visibleCoverage: visibleGapsResult.coverage.toFixed(1) + '%',
-                visibleGaps: visibleGapsResult.gaps.length,
-                dataRange: dataRangeFrom < dataRangeTo ? {
-                    from: new Date(dataRangeFrom).toISOString(),
-                    to: new Date(dataRangeTo).toISOString()
-                } : null,
-                allDataGaps: allDataGapsResult.gaps.length,
-                allTiles: currentTiles.length,
-                readyTiles: readyTiles.length,
-                totalBins: allBins.length
-            });
+          
 
             if (allBins.length > 0) {
-                // ✅ Вставляем null значения в места gaps между тайлами
+                //  Вставляем null значения в места gaps между тайлами
                 const gapsForNulls = allDataGapsResult.gaps.map(g => ({
                     from: g.fromMs,
                     to: g.toMs
@@ -232,7 +207,7 @@ export class DataProxyService {
                     targetBucketMs
                 );
 
-                // ✅ Возвращаем gaps для видимой области (для красных зон)
+                //  Возвращаем gaps для видимой области (для красных зон)
                 const visibleGaps = visibleGapsResult.gaps.map(g => ({
                     from: g.fromMs,
                     to: g.toMs
@@ -262,7 +237,7 @@ export class DataProxyService {
             const tiles = seriesLevels[bucketMs];
             if (!tiles || tiles.length === 0) continue;
 
-            // ✅ Используем TileSystemCore.findGaps
+            //  Используем TileSystemCore.findGaps
             const coverageResult = TileSystemCore.findGaps(
                 originalRange,
                 tiles,
@@ -400,7 +375,7 @@ export class DataProxyService {
     }
 
     /**
-     * ✅ РЕФАКТОРИНГ: Используем TileSystemCore.getStats
+     *    РЕФАКТОРИНГ: Используем TileSystemCore.getStats
      */
     private static calculateTilesCoverage(tiles: readonly SeriesTile[]): number {
         const readyTiles = tiles.filter(t => t.status === 'ready');

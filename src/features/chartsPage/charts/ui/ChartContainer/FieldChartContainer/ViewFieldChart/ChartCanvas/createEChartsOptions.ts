@@ -6,16 +6,56 @@ import type {GapsInfo, OriginalRange} from "@chartsPage/charts/core/store/types/
 import type {TimeSettings} from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
 import type {EChartsOption, LineSeriesOption, MarkAreaComponentOption} from "echarts";
 import {formatDateWithTimezone} from "@chartsPage/charts/ui/TimeZonePicker/timezoneUtils.ts";
+import type {
+    YAxisRange
+} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/useYAxisRange.ts";
 
-export function createOptions(
-    avgPoints: EChartsPoint[],
-    minPoints: EChartsPoint[],
-    maxPoints: EChartsPoint[],
-    fieldName: string,
-    originalRange: OriginalRange | undefined,
-    timeSettings: TimeSettings,
-    gapsInfo?: GapsInfo | undefined
-): EChartsOption {
+
+interface AnimationConfig {
+    readonly enabled: boolean;
+    readonly duration: number;
+    readonly easing: string;
+    readonly staggerPoints: boolean; // Последовательная анимация точек
+    readonly updateDuration: number; // Для zoom/pan
+}
+
+const DEFAULT_ANIMATION_CONFIG: AnimationConfig = {
+    enabled: false, // По умолчанию выключено для производительности
+    duration: 800,
+    easing: 'cubicOut',
+    staggerPoints: true,
+    updateDuration: 200
+};
+
+export interface CreateOptionsParams {
+     avgPoints: EChartsPoint[];
+     minPoints: EChartsPoint[];
+     maxPoints: EChartsPoint[];
+    readonly fieldName: string;
+    readonly originalRange: OriginalRange | undefined;
+    readonly timeSettings: TimeSettings;
+    readonly gapsInfo?: GapsInfo | undefined;
+    readonly isZoomOnMouseWheelKeyCtrl?: boolean | undefined;
+    readonly isEmphasis?: boolean | undefined;
+    readonly animationConfig?: AnimationConfig | undefined;
+    readonly customYAxisRange?: YAxisRange | undefined;
+}
+
+export function createOptions(params: CreateOptionsParams): EChartsOption {
+    const {
+        avgPoints,
+        minPoints,
+        maxPoints,
+        fieldName,
+        originalRange,
+        timeSettings,
+        gapsInfo,
+        isZoomOnMouseWheelKeyCtrl = true,
+        isEmphasis = false,
+        animationConfig = DEFAULT_ANIMATION_CONFIG,
+        customYAxisRange
+    } = params;
+
     if (avgPoints.length === 0) {
         return {
             title: { text: fieldName, left: 'center' },
@@ -28,6 +68,8 @@ export function createOptions(
     const xAxisMin = originalRange?.fromMs;
     const xAxisMax = originalRange?.toMs;
     const symbolSize = avgPoints.length < 50 ? 6 : 4;
+
+    const shouldAnimate = animationConfig.enabled && avgPoints.length < 2000;
 
     // Вычисляем min/max ТОЛЬКО из avg точек
     let globalMin = Number.POSITIVE_INFINITY;
@@ -49,8 +91,10 @@ export function createOptions(
 
     const range = globalMax - globalMin;
     const padding = range * 0.05;
-    const yMin = globalMin - padding;
-    const yMax = globalMax + padding;
+
+    // Применяем пользовательские значения если есть
+    const yMin = customYAxisRange?.min ?? globalMin - padding;
+    const yMax = customYAxisRange?.max ?? globalMax + padding;
 
     const series: LineSeriesOption[] = [];
 
@@ -61,6 +105,7 @@ export function createOptions(
             type: 'line',
             data: minPoints,
             lineStyle: { opacity: 0 },
+            stack: 'confidence',
             symbol: 'none',
             areaStyle: {
                 color: 'rgba(74, 144, 226, 0.15)',
@@ -76,6 +121,7 @@ export function createOptions(
             type: 'line',
             data: maxPoints,
             lineStyle: { opacity: 0 },
+            stack: 'confidence',
             symbol: 'none',
             z: 0,
             silent: true,
@@ -104,7 +150,7 @@ export function createOptions(
                 borderWidth: 1
             },
             emphasis: {
-                focus: 'series',
+                focus: isEmphasis ? 'series': 'none',
                 lineStyle: { width: 2 },
                 itemStyle: {
                     borderWidth: 2,
@@ -139,7 +185,7 @@ export function createOptions(
                 borderWidth: 1
             },
             emphasis: {
-                focus: 'series',
+                focus: isEmphasis ? 'series': 'none',
                 lineStyle: { width: 2 },
                 itemStyle: {
                     borderWidth: 2,
@@ -176,7 +222,7 @@ export function createOptions(
             borderWidth: 2
         },
         emphasis: {
-            focus: 'series',
+            focus: isEmphasis ? 'series' : 'none',
             lineStyle: { width: 3.5 },
             itemStyle: {
                 borderWidth: 3,
@@ -185,8 +231,37 @@ export function createOptions(
             }
         },
         connectNulls: false,
-        markArea, // markArea
-        animation: false,
+        markArea,
+
+        // ============ НАСТРОЙКИ АНИМАЦИИ ============
+
+        // Настройки анимации
+        animation: shouldAnimate,
+
+        // При первом рендере - плавное появление
+        animationDuration: shouldAnimate
+            ? (animationConfig.staggerPoints
+                ? (idx: number) => {
+                    // Волна слева направо с ускорением
+                    const progress = idx / Math.max(1, avgPoints.length - 1);
+                    return progress * animationConfig.duration;
+                }
+                : animationConfig.duration)
+            : 0,
+
+        animationEasing: animationConfig.easing,
+
+        animationDelay: shouldAnimate && animationConfig.staggerPoints
+            ? (idx: number) => idx * 2 // 2мс между точками
+            : 0,
+
+        // При zoom/pan - быстрое обновление
+        animationDurationUpdate: shouldAnimate
+            ? animationConfig.updateDuration
+            : 0,
+        animationEasingUpdate: 'cubicInOut',
+        animationDelayUpdate: 0, // Без задержки при обновлении
+
         z: 3
     } as LineSeriesOption);
 
@@ -218,6 +293,8 @@ export function createOptions(
                 );
 
                 if (visibleParams.length === 0) return '';
+
+
 
                 const avgSeries = visibleParams.find((p: any) => p.seriesName === fieldName);
                 const minSeries = visibleParams.find((p: any) => p.seriesName === `${fieldName} (min)`);
@@ -255,6 +332,9 @@ export function createOptions(
                 const minValue = minSeries?.value?.[1];
                 const maxValue = maxSeries?.value?.[1];
 
+                const count = avgSeries.value[2] ?? 0;
+
+
                 const avg = avgValue != null && Number.isFinite(avgValue)
                     ? avgValue.toFixed(2)
                     : 'N/A';
@@ -271,9 +351,29 @@ export function createOptions(
             <div style="color: #4A90E2; margin: 3px 0; font-size: 11px;">● Среднее: <b>${avg}</b></div>
             <div style="color: #82ca9d; margin: 3px 0; font-size: 11px;">▼ Минимум: ${min}</div>
             <div style="color: #ff6b6b; margin: 3px 0; font-size: 11px;">▲ Максимум: ${max}</div>
+            <div style="color: #000000; margin: 3px 0; font-size: 11px;">Кол-во точек в ведре: ${count}</div> 
         </div>
     `;
             }
+        },
+
+        toolbox: {
+            feature: {
+                dataZoom: {
+                    yAxisIndex: 'none',
+                    title: {
+                        zoom: 'Выделить область',
+                        back: 'Сбросить масштаб'
+                    }
+                },
+                restore: { title: 'Восстановить' },
+                saveAsImage: {
+                    pixelRatio: 2,
+                    title: 'Сохранить как изображение'
+                }
+            },
+            right: 10,
+            top: 10
         },
 
         legend: {
@@ -348,12 +448,24 @@ export function createOptions(
         },
 
         dataZoom: [
+            // X: Ctrl + колесо — зум по времени
             {
                 type: 'inside',
                 xAxisIndex: 0,
+                zoomOnMouseWheel: isZoomOnMouseWheelKeyCtrl ? 'ctrl' as const : true,
+                moveOnMouseWheel: false,
                 minValueSpan: 60000,
                 filterMode: 'none',
                 zoomLock: false,
+            },
+            // Y: Shift + колесо — «растяжка» по вертикали
+            {
+                type: 'inside' as const,
+                yAxisIndex: 0,
+                filterMode: 'none' as const,
+                zoomOnMouseWheel: 'shift' as const,
+                moveOnMouseWheel: false,
+                throttle: 100,
             },
             {
                 type: 'slider',

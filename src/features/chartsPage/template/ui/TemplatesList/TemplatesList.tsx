@@ -78,10 +78,7 @@ export default function TemplatesList({
                             </div>
 
 
-
-
-
-                            <button
+                              <button
                                     className={`${styles.btnExec} ${styles.btnExecRun}`}
                                     onClick={() => { onExecute(t) }} title="Выполнить" >
                                     Выполнить

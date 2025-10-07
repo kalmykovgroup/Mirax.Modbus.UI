@@ -5,7 +5,8 @@ import type { LevelInfo } from "@chartsPage/charts/ui/ChartContainer/FieldChartC
 import {
     TimelineCoverageBar
 } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ChartHeader/TimelineCoverageBar/TimelineCoverageBar.tsx";
-import type {OriginalRange} from "@chartsPage/charts/core/store/types/chart.types.ts";
+import type {FieldName, OriginalRange} from "@chartsPage/charts/core/store/types/chart.types.ts";
+import {useRequestManager} from "@chartsPage/charts/orchestration/hooks/useRequestManager.ts";
 
 // ============================================
 // ТИПЫ
@@ -14,6 +15,8 @@ import type {OriginalRange} from "@chartsPage/charts/core/store/types/chart.type
 
 type LevelRowProps = {
     readonly level: LevelInfo;
+    readonly fieldName: FieldName;
+    readonly width: number;
     readonly originalRange: OriginalRange;
     readonly showDetails?: boolean | undefined;
 };
@@ -24,9 +27,13 @@ type LevelRowProps = {
 
 export const LevelRow: React.FC<LevelRowProps> = ({
                                                       level,
+                                                      fieldName,
+                                                      width,
                                                       originalRange,
                                                       showDetails = true
                                                   }) => {
+    const requestManager = useRequestManager();
+
     // Проверяем наличие ошибок на этом уровне
     const hasErrors = level.errorCoverage.length > 0;
     const hasLoadingTiles = level.loadingCoverage.length > 0;
@@ -41,6 +48,10 @@ export const LevelRow: React.FC<LevelRowProps> = ({
         ? `${styles.label} ${styles.labelCurrent}`
         : `${styles.label} ${styles.labelDefault}`;
 
+    const fullLoad = () => {
+        void requestManager.loadVisibleRange(fieldName, originalRange.fromMs, originalRange.toMs, level.bucketMs, width);
+    }
+
     // Определяем цвета для визуализации
     const coverageColor = level.isCurrent ? '#3b82f6' : '#10b981';
     const loadingColor = '#fbbf24';
@@ -50,6 +61,8 @@ export const LevelRow: React.FC<LevelRowProps> = ({
 
     return (
         <div className={rowClassName}>
+
+            <button onClick={fullLoad}>load {level.bucketMs}</button>
             {/*  Колонка 1: ВСЕГДА рендерится */}
             <div className={labelClassName}>
                 {level.isCurrent && (

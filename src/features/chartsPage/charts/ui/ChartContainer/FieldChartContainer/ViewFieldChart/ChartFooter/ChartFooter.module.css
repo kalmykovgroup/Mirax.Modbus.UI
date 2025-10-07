@@ -3,4 +3,25 @@
     height: 20px;
     display: flex;
     justify-content: space-between;
+
+    font-family: 'Courier New', monospace;
+    background: rgba(255, 255, 255, 0.6);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 15px;
+    color: black;
 }
+
+.stat {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.statLabel {
+    color: #555;
+    font-weight: 500;
+}
+
+
+

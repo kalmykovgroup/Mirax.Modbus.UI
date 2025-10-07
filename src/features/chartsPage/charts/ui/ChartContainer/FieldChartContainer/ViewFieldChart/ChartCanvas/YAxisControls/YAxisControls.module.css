@@ -1,0 +1,457 @@
+/* YAxisControls.module.css */
+
+.container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    z-index: 100;
+}
+
+/* Toggle Button */
+.toggleButton {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.toggleButton:hover {
+    border-color: rgba(70, 130, 180, 0.4);
+    background: rgba(70, 130, 180, 0.05);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.toggleButton.active {
+    border-color: rgba(70, 130, 180, 0.5);
+    background: rgba(70, 130, 180, 0.1);
+    box-shadow: 0 0 0 3px rgba(70, 130, 180, 0.1);
+}
+
+.icon {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.buttonText {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+}
+
+.deviationBadge {
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.deviationBadge.low {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4CAF50;
+}
+
+.deviationBadge.medium {
+    background: rgba(255, 152, 0, 0.15);
+    color: #FF9800;
+}
+
+.deviationBadge.high {
+    background: rgba(244, 67, 54, 0.15);
+    color: #F44336;
+}
+
+/* Panel */
+.panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 380px;
+    padding: 20px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.06);
+}
+
+.title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    letter-spacing: -0.3px;
+}
+
+.headerButtons {
+    display: flex;
+    gap: 8px;
+}
+
+.iconButton {
+    padding: 6px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.iconButton:hover {
+    border-color: #4A90E2;
+    background: rgba(74, 144, 226, 0.05);
+    transform: scale(1.05);
+}
+
+.resetButton {
+    padding: 6px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    background: white;
+    color: #666;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.resetButton:hover {
+    border-color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.05);
+    color: #ff6b6b;
+    transform: scale(1.05);
+}
+
+/* Quick Actions */
+.quickActions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+}
+
+.quickButton {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.quickButton.expand {
+    color: #4A90E2;
+}
+
+.quickButton.expand:hover {
+    border-color: #4A90E2;
+    background: rgba(74, 144, 226, 0.08);
+    transform: scale(1.05);
+}
+
+.quickButton.shrink {
+    color: #FF9800;
+}
+
+.quickButton.shrink:hover {
+    border-color: #FF9800;
+    background: rgba(255, 152, 0, 0.08);
+    transform: scale(1.05);
+}
+
+/* Section */
+.section {
+    margin-bottom: 20px;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+}
+
+.section:last-of-type {
+    margin-bottom: 0;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+}
+
+.value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #4A90E2;
+    font-family: 'Monaco', 'Consolas', monospace;
+    background: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: help;
+}
+
+/* Slider */
+.sliderContainer {
+    margin-bottom: 12px;
+}
+
+.slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(
+            to right,
+            rgba(255, 107, 107, 0.2) 0%,
+            rgba(74, 144, 226, 0.3) 50%,
+            rgba(76, 175, 80, 0.2) 100%
+    );
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #4A90E2;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: #4A90E2;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.sliderLabels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 10px;
+    color: #999;
+    font-weight: 500;
+}
+
+/* Preset Buttons */
+.presetButtons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.presetButton {
+    flex: 0 0 calc(25% - 5px);
+    padding: 7px 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.presetButton.increase {
+    color: #4CAF50;
+}
+
+.presetButton.increase:hover {
+    border-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.08);
+    transform: scale(1.05);
+}
+
+.presetButton.decrease {
+    color: #ff6b6b;
+}
+
+.presetButton.decrease:hover {
+    border-color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.08);
+    transform: scale(1.05);
+}
+
+.presetButton.mild {
+    color: #4A90E2;
+}
+
+.presetButton.mild:hover {
+    border-color: #4A90E2;
+    background: rgba(74, 144, 226, 0.08);
+    transform: scale(1.05);
+}
+
+/* Manual Input */
+.manualInput {
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+}
+
+.inputGroup {
+    margin-bottom: 12px;
+}
+
+.inputLabel {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+}
+
+.numberInput {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 5px;
+    font-size: 13px;
+    font-family: 'Monaco', 'Consolas', monospace;
+    transition: all 0.2s ease;
+}
+
+.numberInput:focus {
+    outline: none;
+    border-color: #4A90E2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.manualButtons {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.cancelButton,
+.applyButton {
+    flex: 1;
+    padding: 8px 16px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.cancelButton {
+    background: white;
+    color: #666;
+}
+
+.cancelButton:hover {
+    border-color: #999;
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.applyButton {
+    background: #4A90E2;
+    color: white;
+    border-color: #4A90E2;
+}
+
+.applyButton:hover {
+    background: #3a7bc8;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Info */
+.info {
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(74, 144, 226, 0.05);
+    border: 1px solid rgba(74, 144, 226, 0.15);
+    border-radius: 6px;
+}
+
+.infoRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 12px;
+}
+
+.infoRow:not(:last-child) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+}
+
+.infoLabel {
+    color: #666;
+    font-weight: 500;
+}
+
+.infoValue {
+    font-family: 'Monaco', 'Consolas', monospace;
+    color: #333;
+    font-weight: 600;
+}
+
+.deviation {
+    font-size: 11px;
+    color: #4A90E2;
+}

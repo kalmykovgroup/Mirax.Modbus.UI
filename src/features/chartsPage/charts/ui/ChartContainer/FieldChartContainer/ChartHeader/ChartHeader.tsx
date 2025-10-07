@@ -20,6 +20,7 @@ import { LevelRow } from "@chartsPage/charts/ui/ChartContainer/FieldChartContain
 // ============================================
 
 export type HeaderProps = {
+    readonly width: number;
     readonly fieldName: FieldName;
     readonly title?: string | undefined;
     readonly showDetails?: boolean | undefined;
@@ -89,6 +90,7 @@ function formatBucketSize(ms: number): string {
 // ============================================
 
 export const ChartHeader: React.FC<HeaderProps> = ({
+                                                       width,
                                                        fieldName,
                                                        title,
                                                        showDetails = true
@@ -324,6 +326,8 @@ export const ChartHeader: React.FC<HeaderProps> = ({
                             <LevelRow
                                 key={level.bucketMs}
                                 level={level}
+                                fieldName={fieldName}
+                                width={width}
                                 originalRange={headerData.originalRange!}
                                 showDetails={showDetails}
                             />

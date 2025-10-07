@@ -1,16 +1,12 @@
-
-import {useRef, useCallback, useEffect, useState} from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { useAppDispatch } from '@/store/hooks';
-import {useRequestManager} from "@chartsPage/charts/orchestration/hooks/useRequestManager.ts";
-import {setViewBucket, setViewRange, updateView} from "@chartsPage/charts/core/store/chartsSlice.ts";
-import {ViewFieldChart} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ViewFieldChart.tsx";
-import {calculateBucket} from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
-import {useSelector} from "react-redux";
-import type {RootState} from "@/store/store.ts";
-import {selectFieldCurrentBucketMs} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
-import { ResizableContainer } from "../ResizableContainer/ResizableContainer";
-
-const GROUP_ID = "ChartContainer";
+import { useRequestManager } from "@chartsPage/charts/orchestration/hooks/useRequestManager.ts";
+import { setViewBucket, setViewRange, updateView } from "@chartsPage/charts/core/store/chartsSlice.ts";
+import { ViewFieldChart } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ViewFieldChart.tsx";
+import { calculateBucket } from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
+import {batch, useSelector} from "react-redux";
+import type { RootState } from "@/store/store.ts";
+import { selectFieldCurrentBucketMs } from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 
 
 
@@ -20,12 +16,7 @@ interface FieldChartContainerProps {
 }
 
 /**
- * Контейнер графика с логикой загрузки через RequestManager
- *
- * Ответственность:
- * - Обработка zoom/pan от ECharts
- * - Отслеживание resize контейнера
- * - Делегирование загрузки в RequestManager
+ *    ОПТИМИЗАЦИЯ: Мгновенное обновление визуального диапазона + debounce для загрузки
  */
 export function FieldChartContainer({
                                         fieldName,
@@ -35,36 +26,38 @@ export function FieldChartContainer({
     const dispatch = useAppDispatch();
     const requestManager = useRequestManager();
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const [containerHeight, setContainerHeight] = useState<number>(1000);
-    const currentBucket = useSelector((state: RootState) => selectFieldCurrentBucketMs(state, fieldName) )
+    const loadDebounceRef = useRef<NodeJS.Timeout | null>(null); //    Отдельный debounce для загрузки
 
-    // Ref всегда хранит актуальный bucket
+    const currentBucket = useSelector((state: RootState) => selectFieldCurrentBucketMs(state, fieldName));
+
     const currentBucketRef = useRef(currentBucket);
 
-    // Обновляем ref при каждом изменении currentBucket (НЕ вызывая ререндер)
     useEffect(() => {
         currentBucketRef.current = currentBucket;
     }, [currentBucket]);
+
     /**
-     * Обработка zoom/pan от ECharts
+     *    КРИТИЧНО: Разделены обновление UI и загрузка данных
+     * 1. UI обновляется сразу (batch)
+     * 2. Загрузка с debounce 250ms
      */
-        // FieldChartContainer.tsx - исправленный handleOnZoomEnd
-
     const handleOnZoomEnd = useCallback((range: { from: number; to: number }) => {
-            const newRange = {
-                from: new Date(range.from),
-                to: new Date(range.to)
-            };
+        const newRange = {
+            from: new Date(range.from),
+            to: new Date(range.to)
+        };
 
+        const newBucket = calculateBucket(
+            range.from,
+            range.to,
+            width
+        );
+
+        const oldBucket = currentBucketRef.current;
+
+        //    Батчим все Redux updates для мгновенного обновления UI
+        batch(() => {
             dispatch(setViewRange({ field: fieldName, range: newRange }));
-
-            const newBucket = calculateBucket(
-                range.from,
-                range.to,
-                width
-            );
-
-            const oldBucket = currentBucketRef.current;
 
             if (oldBucket !== newBucket) {
                 console.log('[FieldChartContainer] Bucket changed:', {
@@ -73,32 +66,29 @@ export function FieldChartContainer({
                     field: fieldName
                 });
 
-                // ВАЖНО: отменяем запросы ВСЕХ bucket для этого поля
+                // Отменяем запросы ВСЕХ bucket для этого поля
                 requestManager.cancelFieldRequests(fieldName);
 
                 // Обновляем bucket
                 dispatch(setViewBucket({ field: fieldName, bucketMs: newBucket }));
             }
+        });
 
-            // Загружаем данные только если нужно
+        //    Debounce для загрузки данных (если нужно)
+        if (loadDebounceRef.current) {
+            clearTimeout(loadDebounceRef.current);
+        }
+
+        loadDebounceRef.current = setTimeout(() => {
             void requestManager.loadVisibleRange(fieldName, range.from, range.to, newBucket, width);
+        }, 250); //    Загружаем с задержкой только если нужно
 
-        }, [dispatch, fieldName, width, requestManager]);
+    }, [dispatch, fieldName, width, requestManager]);
 
-
-
-    /**
-     * Retry при ошибке
-     */
     const handleRetry = useCallback(() => {
-        console.log("Попытка handleRetry в FieldChartContainer")
-        /*requestManager.cancelFieldRequests(fieldName);
-        void requestManager.loadVisibleRange(fieldName);*/
-    }, [requestManager, fieldName]);
+        console.log("Попытка handleRetry в FieldChartContainer");
+    }, []);
 
-    /**
-     * Отслеживание resize контейнера
-     */
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
@@ -120,30 +110,20 @@ export function FieldChartContainer({
             if (debounceTimerRef.current) {
                 clearTimeout(debounceTimerRef.current);
             }
+            if (loadDebounceRef.current) {
+                clearTimeout(loadDebounceRef.current);
+            }
         };
     }, [dispatch, fieldName]);
 
-
-    console.log("Пересобрали")
-
     return (
-        <ResizableContainer
-            key={fieldName}
-            groupId={GROUP_ID}
-            defaultHeight={containerHeight}
-            minHeight={300}
-            maxHeight={2000}
-            onHeightChange={setContainerHeight}
-        >
-            <div style={{width: '100%', height: '100%', position: 'relative', display: 'flex'}} ref={containerRef}>
-                <ViewFieldChart
-                    fieldName={fieldName}
-                    onZoomEnd={handleOnZoomEnd}
-                    onRetry={handleRetry}
-                    height={containerHeight}
-                />
-            </div>
-        </ResizableContainer>
-
+        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }} ref={containerRef}>
+            <ViewFieldChart
+                width={width}
+                fieldName={fieldName}
+                onZoomEnd={handleOnZoomEnd}
+                onRetry={handleRetry}
+            />
+        </div>
     );
 }

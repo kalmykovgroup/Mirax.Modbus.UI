@@ -14,7 +14,7 @@ import type {BucketsMs, CoverageResult, FieldName} from "@chartsPage/charts/core
 import {TileSystemCore} from "@chartsPage/charts/core/store/tile-system/TileSystemCore.ts";
 
 /**
- *  ✅ РЕФАКТОРИНГ: Используем TileSystemCore напрямую
+ *     РЕФАКТОРИНГ: Используем TileSystemCore напрямую
  */
 export const selectCurrentCoverage = createSelector(
     [
@@ -32,7 +32,7 @@ export const selectCurrentCoverage = createSelector(
             return { coverage: 0, gaps: [], coveredRanges: [] };
         }
 
-        // ✅ Используем TileSystemCore напрямую
+        //    Используем TileSystemCore напрямую
         const gapsResult = TileSystemCore.findGaps(
             originalRange,
             tiles,
@@ -48,7 +48,7 @@ export const selectCurrentCoverage = createSelector(
 );
 
 /**
- *  ✅ РЕФАКТОРИНГ: Используем TileSystemCore
+ *     РЕФАКТОРИНГ: Используем TileSystemCore
  */
 export const selectBucketCoverageForRange = createSelector(
     [
@@ -78,7 +78,7 @@ export const selectBucketCoverageForRange = createSelector(
 );
 
 /**
- *  ✅ ИСПРАВЛЕНО: Передаем originalRange в DataProxyService
+ *     ИСПРАВЛЕНО: Передаем originalRange в DataProxyService
  */
 export const selectOptimalData = createSelector(
     [
@@ -100,7 +100,7 @@ export const selectOptimalData = createSelector(
             };
         }
 
-        // ✅ Передаем originalRange в DataProxyService
+        //    Передаем originalRange в DataProxyService
         return DataProxyService.selectOptimalData({
             targetBucketMs: currentBucketMs,
             targetFromMs: currentRange.from.getTime(),

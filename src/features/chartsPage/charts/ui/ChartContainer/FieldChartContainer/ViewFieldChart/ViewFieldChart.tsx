@@ -2,7 +2,7 @@
 //  Рендерится только при изменении points/stats из Redux
 
 import { useSelector } from 'react-redux';
-import { useCallback, useMemo, memo } from 'react';
+import {useCallback, useMemo, memo, useState} from 'react';
 import type { RootState } from '@/store/store';
 import {
     type ChartStats,
@@ -13,9 +13,7 @@ import styles from './ViewFieldChart.module.css';
 import {selectFieldOriginalRange} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 
 import {selectTimeSettings} from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
-import {
-    createOptions
-} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/createEChartsOptions.ts";
+
 import {
     ChartCanvas
 } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/ChartCanvas.tsx";
@@ -29,75 +27,139 @@ import {ChartHeader} from "@chartsPage/charts/ui/ChartContainer/FieldChartContai
 import LoadingIndicator
     from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/LoadingIndicator/LoadingIndicator.tsx";
 
+import CollapsibleSection from "@chartsPage/components/Collapse/CollapsibleSection.tsx";
+import {ResizableContainer} from "@chartsPage/charts/ui/ChartContainer/ResizableContainer/ResizableContainer.tsx";
+import {
+    createOptions
+} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/createEChartsOptions.ts";
+import {
+    useYAxisRange
+} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/useYAxisRange.ts";
+import {
+    YAxisControls
+} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/YAxisControls.tsx";
+
+const GROUP_ID = "ChartContainer";
+
 interface ViewFieldChartProps {
     readonly fieldName: string;
     readonly onZoomEnd?: ((range: { from: number; to: number }) => void) | undefined;
     readonly onRetry?: (() => void) | undefined;
-    readonly height: number;
+    readonly width: number;
 }
 
 // memo: не рендерим если props не изменились
 export const ViewFieldChart = memo(function ViewFieldChart({
                                                                fieldName,
                                                                onZoomEnd,
-                                                               height = 400
+                                                               width
                                                            }: ViewFieldChartProps) {
     const chartData = useSelector((state: RootState) => selectChartRenderData(state, fieldName));
     const chartFieldStatus: ChartStats = useSelector((state: RootState) => selectChartStats(state, fieldName));
     const gapsInfo = useSelector((state: RootState) => selectFieldGaps(state, fieldName));
     const originalRange = useSelector((state: RootState) => selectFieldOriginalRange(state, fieldName));
     const timeSettings = useSelector((state: RootState) => selectTimeSettings(state));
-
+    const [containerHeight, setContainerHeight] = useState<number>(600);
     //Стабильный callback (не меняется между рендерами)
     const handleZoomEnd = useCallback((range: { from: number; to: number }) => {
         onZoomEnd?.(range);
     }, [onZoomEnd]);
 
 
+    // Вычисляем оптимальный диапазон для yAxis
+    const { optimalYMin, optimalYMax } = useMemo(() => {
+        let min = Number.POSITIVE_INFINITY;
+        let max = Number.NEGATIVE_INFINITY;
+
+        for (const point of chartData.avgPoints) {
+            const value = point[1];
+            if (Number.isFinite(value)) {
+                if (value < min) min = value;
+                if (value > max) max = value;
+            }
+        }
+
+        if (min === max) {
+            const base = min !== 0 ? Math.abs(min) * 0.1 : 1;
+            min -= base;
+            max += base;
+        }
+
+        const range = max - min;
+        const padding = range * 0.05;
+
+        return {
+            optimalYMin: min - padding,
+            optimalYMax: max + padding
+        };
+    }, [chartData.avgPoints]);
+
+    // Хук для управления диапазоном оси Y
+    const yAxisControl = useYAxisRange(optimalYMin, optimalYMax);
+
+
     const options = useMemo(() =>
-            createOptions(
-                chartData.avgPoints,
-                chartData.minPoints,
-                chartData.maxPoints,
+            createOptions({
+                avgPoints: chartData.avgPoints,
+                minPoints: chartData.minPoints,
+                maxPoints: chartData.maxPoints,
                 fieldName,
                 originalRange,
                 timeSettings,
-                gapsInfo
-            ),
+                gapsInfo,
+                customYAxisRange: yAxisControl.isCustom ? yAxisControl.currentRange : undefined
+                // isZoomOnMouseWheelKeyCtrl, isEmphasis, animationConfig используют значения по умолчанию
+            }),
         [chartData.avgPoints, chartData.minPoints, chartData.maxPoints, fieldName, originalRange, timeSettings, gapsInfo]
     );
 
-    console.log("Update ViewFieldChart")
-
     return (
-        <div className={styles.viewFieldChartContainer} style={{height: height}}>
-            <ChartHeader fieldName={fieldName}/>
-            <div className={styles.header}>
-                <h3 className={styles.title}>{fieldName}</h3>
-                <StatsBadge
-                    totalPoints={chartData.avgPoints.length + chartData.minPoints.length  + chartData.maxPoints.length }
-                    coverage={chartFieldStatus.coverage}
-                    quality={chartData.quality}
-                    isLoading={chartFieldStatus.isLoading}
-                    fieldName={fieldName}
-                />
-            </div>
+        <>
+            <CollapsibleSection>
+                <ChartHeader fieldName={fieldName} width={width}/>
+            </CollapsibleSection>
 
-            <div className={styles.chartWrapper} >
-                <ChartCanvas
-                    options={options}
-                    totalPoints={chartData.avgPoints.length + chartData.minPoints.length  + chartData.maxPoints.length}
-                    onZoomEnd={handleZoomEnd}
-                />
+            <ResizableContainer
+                key={fieldName}
+                groupId={GROUP_ID}
+                defaultHeight={containerHeight}
+                minHeight={300}
+                maxHeight={2000}
+                onHeightChange={setContainerHeight}
+            >
+                <div className={styles.viewFieldChartContainer} style={{height: containerHeight}}>
 
-            </div>
-            <div className={styles.indicationContainer}>
-                <LoadingIndicator chartFieldStatus={chartFieldStatus} position={"aboveAxis"} />
-            </div>
+                    <div className={styles.header}>
+                        <h3 className={styles.title}>{fieldName}</h3>
+                        <StatsBadge
+                            totalPoints={chartData.avgPoints.length + chartData.minPoints.length  + chartData.maxPoints.length }
+                            coverage={chartFieldStatus.coverage}
+                            quality={chartData.quality}
+                            isLoading={chartFieldStatus.isLoading}
+                            fieldName={fieldName}
+                        />
+                        <YAxisControls control={yAxisControl} />
+                    </div>
+
+                    <div className={styles.chartWrapper}>
+                        <ChartCanvas
+                            options={options}
+                            totalPoints={chartData.avgPoints.length + chartData.minPoints.length  + chartData.maxPoints.length}
+                            onZoomEnd={handleZoomEnd}
+                        />
+
+                    </div>
+                    <div className={styles.indicationContainer}>
+                        <LoadingIndicator chartFieldStatus={chartFieldStatus} position={"aboveAxis"} />
+                    </div>
 
 
-            <ChartFooter fieldName={fieldName}/>
-        </div>
+                    <ChartFooter fieldName={fieldName}/>
+                </div>
+
+            </ResizableContainer>
+        </>
+
     );
 });
 

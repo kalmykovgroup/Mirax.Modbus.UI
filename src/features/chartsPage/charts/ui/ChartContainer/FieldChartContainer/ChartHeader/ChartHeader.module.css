@@ -74,7 +74,7 @@
 
 .levelsList {
     display: grid;
-    grid-template-columns: max-content max-content max-content 1fr;
+    grid-template-columns: repeat(4, max-content) 1fr;
     /* первая/вторая/третья — по самому длинному; последняя тянется */
     column-gap: 16px;
     row-gap: 8px;
