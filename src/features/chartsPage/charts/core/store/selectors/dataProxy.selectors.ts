@@ -36,12 +36,12 @@ export const selectCurrentCoverage = createSelector(
         const gapsResult = TileSystemCore.findGaps(
             originalRange,
             tiles,
-            { fromMs: currentRange.from.getTime(), toMs: currentRange.to.getTime() }
+            { fromMs: currentRange.fromMs, toMs: currentRange.toMs }
         );
 
         return {
             coverage: gapsResult.coverage,
-            gaps: gapsResult.gaps.map(g => ({ from: g.fromMs, to: g.toMs })),
+            gaps: gapsResult.gaps.map(g => ({ fromMs: g.fromMs, toMs: g.toMs })),
             coveredRanges: []
         };
     }
@@ -71,7 +71,7 @@ export const selectBucketCoverageForRange = createSelector(
 
         return {
             coverage: gapsResult.coverage,
-            gaps: gapsResult.gaps.map(g => ({ from: g.fromMs, to: g.toMs })),
+            gaps: gapsResult.gaps.map(g => ({ fromMs: g.fromMs, toMs: g.toMs })),
             coveredRanges: []
         };
     }
@@ -103,8 +103,8 @@ export const selectOptimalData = createSelector(
         //    Передаем originalRange в DataProxyService
         return DataProxyService.selectOptimalData({
             targetBucketMs: currentBucketMs,
-            targetFromMs: currentRange.from.getTime(),
-            targetToMs: currentRange.to.getTime(),
+            targetFromMs: currentRange.fromMs,
+            targetToMs: currentRange.toMs,
             originalRange,
             seriesLevels,
             availableBuckets

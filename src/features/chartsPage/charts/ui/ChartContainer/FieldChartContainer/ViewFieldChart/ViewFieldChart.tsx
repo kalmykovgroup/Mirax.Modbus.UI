@@ -38,12 +38,16 @@ import {
 import {
     YAxisControls
 } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/YAxisControls.tsx";
+import type {TimeRange} from "@chartsPage/charts/core/store/types/chart.types.ts";
+import {
+    SyncCheckbox
+} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncCheckbox/SyncCheckbox.tsx";
 
 const GROUP_ID = "ChartContainer";
 
 interface ViewFieldChartProps {
     readonly fieldName: string;
-    readonly onZoomEnd?: ((range: { from: number; to: number }) => void) | undefined;
+    readonly onZoomEnd?: ((range: TimeRange) => void) | undefined;
     readonly onRetry?: (() => void) | undefined;
     readonly width: number;
 }
@@ -61,7 +65,7 @@ export const ViewFieldChart = memo(function ViewFieldChart({
     const timeSettings = useSelector((state: RootState) => selectTimeSettings(state));
     const [containerHeight, setContainerHeight] = useState<number>(600);
     //Стабильный callback (не меняется между рендерами)
-    const handleZoomEnd = useCallback((range: { from: number; to: number }) => {
+    const handleZoomEnd = useCallback((range: TimeRange) => {
         onZoomEnd?.(range);
     }, [onZoomEnd]);
 
@@ -130,6 +134,11 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                 <div className={styles.viewFieldChartContainer} style={{height: containerHeight}}>
 
                     <div className={styles.header}>
+
+
+                       <SyncCheckbox fieldName={fieldName} />
+
+
                         <h3 className={styles.title}>{fieldName}</h3>
                         <StatsBadge
                             totalPoints={chartData.avgPoints.length + chartData.minPoints.length  + chartData.maxPoints.length }

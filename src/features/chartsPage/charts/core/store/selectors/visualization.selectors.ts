@@ -72,7 +72,7 @@ function convertBinsToPoints(bins: readonly SeriesBinDto[]): PointsCache {
     let nullCount = 0;
 
     for (const bin of bins) {
-        const time = bin.t.getTime();
+        const time = bin.t;
 
         //    Включаем ВСЕ bins, даже с null
         // ECharts прервет линию на null значениях если connectNulls: false
@@ -163,8 +163,8 @@ export const selectVisiblePointsCount = createSelector(
             return chartData.avgPoints.length;
         }
 
-        const fromMs = currentRange.from.getTime();
-        const toMs = currentRange.to.getTime();
+        const fromMs = currentRange.fromMs;
+        const toMs = currentRange.toMs;
 
         const startIdx = binarySearchStart(chartData.avgPoints, fromMs);
         const endIdx = binarySearchEnd(chartData.avgPoints, toMs);
@@ -234,8 +234,8 @@ export const selectFieldGaps = createSelector(
         const tiles = fieldView.seriesLevel[currentBucketMs] ?? [];
 
         const targetInterval: CoverageInterval = {
-            fromMs: currentRange.from.getTime(),
-            toMs: currentRange.to.getTime()
+            fromMs: currentRange.fromMs,
+            toMs: currentRange.toMs
         };
 
         // Находим все gaps

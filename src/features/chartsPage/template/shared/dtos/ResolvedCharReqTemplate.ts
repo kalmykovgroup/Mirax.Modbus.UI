@@ -11,8 +11,8 @@ export type ResolvedCharReqTemplate = {
     // настройки графиков
     readonly databaseId: Guid
 
-    readonly from: Date
-    readonly to: Date
+    readonly fromMs: number
+    readonly toMs: number
 
     readonly entity: EntityDto
     readonly timeField: FieldDto

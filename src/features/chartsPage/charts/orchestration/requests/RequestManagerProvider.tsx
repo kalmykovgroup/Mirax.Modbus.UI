@@ -24,7 +24,6 @@ export function RequestManagerProvider({ children }: RequestManagerProviderProps
             dispatch,
             () => store.getState()
         );
-        console.log('[RequestManagerProvider] Manager created');
     }
 
     // Cleanup при unmount приложения
@@ -33,7 +32,6 @@ export function RequestManagerProvider({ children }: RequestManagerProviderProps
 
         return () => {
             if (manager) {
-                console.log('[RequestManagerProvider] Disposing global manager');
                 manager.dispose();
             }
         };

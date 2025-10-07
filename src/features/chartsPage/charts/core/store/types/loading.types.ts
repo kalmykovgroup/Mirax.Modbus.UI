@@ -32,8 +32,8 @@ export interface InitResult {
 export interface SyncLoadRequest {
     readonly primaryField: FieldDto;
     bucketMs: BucketsMs;
-    readonly from: Date;
-    readonly to: Date;
+    readonly from: number;
+    readonly to: number;
     readonly px: number;
 }
 

@@ -1,4 +1,4 @@
 export type RawPointDto = {
-    time: Date;
+    time: number;
     value?: number | undefined;
 }

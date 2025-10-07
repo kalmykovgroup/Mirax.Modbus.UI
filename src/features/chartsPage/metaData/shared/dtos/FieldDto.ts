@@ -1,4 +1,4 @@
-import {SqlParamType} from "@chartsPage/ui/DataSourcePanel/types.ts";
+import type {SqlParamType} from "@chartsPage/template/shared/dtos/SqlParamType.ts";
 
 export type FieldDto = {
     name: string;

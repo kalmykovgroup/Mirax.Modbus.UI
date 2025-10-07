@@ -6,7 +6,6 @@ import type {TimeRangeBounds} from "@chartsPage/charts/core/store/types/chart.ty
 import {
     fromLocalInputValue,
     getTimezoneOffsetFromSettings,
-    toDate,
     toLocalInputValue
 } from "@chartsPage/charts/ui/TimeZonePicker/timezoneUtils.ts";
 
@@ -31,13 +30,11 @@ export const FromToFields: React.FC<FromToFieldsProps> = ({
         return getTimezoneOffsetFromSettings(timeSettings);
     }, [timeSettings]);
 
-    const fromStr = useMemo(() => toLocalInputValue(range.from, timeSettings), [range.from, timeSettings]);
-    const toStr = useMemo(() => toLocalInputValue(range.to, timeSettings), [range.to, timeSettings]);
+    const fromStr = useMemo(() => toLocalInputValue(range.fromMs, timeSettings), [range.fromMs, timeSettings]);
+    const toStr = useMemo(() => toLocalInputValue(range.toMs, timeSettings), [range.toMs, timeSettings]);
 
-    const fromDate = toDate(range.from);
-    const toDateV = toDate(range.to);
 
-    const hasRangeError = !!fromDate && !!toDateV && fromDate.getTime() >= toDateV.getTime();
+    const hasRangeError = !!range.fromMs && !!range.toMs && range.fromMs >= range.toMs;
 
     return (
         <div className={s.container}>
@@ -62,14 +59,14 @@ export const FromToFields: React.FC<FromToFieldsProps> = ({
                         type="datetime-local"
                         value={fromStr}
                         max={toStr || undefined}
-                        onChange={e => onChange({ from: fromLocalInputValue(e.target.value, timeSettings) })}
+                        onChange={e => onChange({ fromMs: fromLocalInputValue(e.target.value, timeSettings)?.getTime() })}
                         disabled={disabled}
                     />
                     <div className={s.helpers}>
                         <button
                             type="button"
                             className={s.helperBtn}
-                            onClick={() => onChange({ from: undefined })}
+                            onClick={() => onChange({ fromMs: undefined })}
                             disabled={disabled}
                         >
                             Clear
@@ -77,7 +74,7 @@ export const FromToFields: React.FC<FromToFieldsProps> = ({
                         <button
                             type="button"
                             className={s.helperBtn}
-                            onClick={() => onChange({ from: new Date() })}
+                            onClick={() => onChange({ fromMs: new Date().getTime() })}
                             disabled={disabled}
                         >
                             Now
@@ -97,14 +94,14 @@ export const FromToFields: React.FC<FromToFieldsProps> = ({
                         type="datetime-local"
                         value={toStr}
                         min={fromStr || undefined}
-                        onChange={e => onChange({ to: fromLocalInputValue(e.target.value, timeSettings) })}
+                        onChange={e => onChange({ toMs: fromLocalInputValue(e.target.value, timeSettings)?.getTime() })}
                         disabled={disabled}
                     />
                     <div className={s.helpers}>
                         <button
                             type="button"
                             className={s.helperBtn}
-                            onClick={() => onChange({ to: undefined })}
+                            onClick={() => onChange({ toMs: undefined })}
                             disabled={disabled}
                         >
                             Clear
@@ -112,7 +109,7 @@ export const FromToFields: React.FC<FromToFieldsProps> = ({
                         <button
                             type="button"
                             className={s.helperBtn}
-                            onClick={() => onChange({ to: new Date() })}
+                            onClick={() => onChange({ toMs: new Date().getTime() })}
                             disabled={disabled}
                         >
                             Now

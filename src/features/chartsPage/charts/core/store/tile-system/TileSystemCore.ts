@@ -174,7 +174,7 @@ export class TileSystemCore {
                         currentNewTile.status === 'ready') {
                         //   ИСПРАВЛЕНО: Фильтруем bins из обоих тайлов
                         const existingOverlapBins = existing.bins.filter(bin => {
-                            const t = bin.t.getTime();
+                            const t = bin.t;
                             return overlap.overlapFrom !== undefined &&
                                 overlap.overlapTo !== undefined &&
                                 t >= overlap.overlapFrom &&
@@ -182,7 +182,7 @@ export class TileSystemCore {
                         });
 
                         const newTileOverlapBins = currentNewTile.bins.filter(bin => {
-                            const t = bin.t.getTime();
+                            const t = bin.t;
                             return overlap.overlapFrom !== undefined &&
                                 overlap.overlapTo !== undefined &&
                                 t >= overlap.overlapFrom &&
@@ -194,7 +194,7 @@ export class TileSystemCore {
 
                             // Заменяем bins в newTile
                             const nonOverlapBins = currentNewTile.bins.filter(bin => {
-                                const t = bin.t.getTime();
+                                const t = bin.t;
                                 return !(overlap.overlapFrom !== undefined &&
                                     overlap.overlapTo !== undefined &&
                                     t >= overlap.overlapFrom &&
@@ -202,7 +202,7 @@ export class TileSystemCore {
                             });
 
                             const allBins = [...nonOverlapBins, ...mergedOverlapBins]
-                                .sort((a, b) => a.t.getTime() - b.t.getTime());
+                                .sort((a, b) => a.t - b.t);
 
                             currentNewTile = { ...currentNewTile, bins: allBins };
                         }
@@ -439,7 +439,7 @@ export class TileSystemCore {
         // Левая часть
         if (tile.coverageInterval.fromMs < excludeInterval.fromMs) {
             const leftBins = tile.status === 'ready'
-                ? tile.bins.filter(bin => bin.t.getTime() < excludeInterval.fromMs)
+                ? tile.bins.filter(bin => bin.t < excludeInterval.fromMs)
                 : [];
 
             // Для ready проверяем bins, для остальных создаём без bins
@@ -458,7 +458,7 @@ export class TileSystemCore {
         // Правая часть
         if (tile.coverageInterval.toMs > excludeInterval.toMs) {
             const rightBins = tile.status === 'ready'
-                ? tile.bins.filter(bin => bin.t.getTime() >= excludeInterval.toMs)
+                ? tile.bins.filter(bin => bin.t >= excludeInterval.toMs)
                 : [];
 
             if (tile.status !== 'ready' || rightBins.length > 0) {
@@ -522,16 +522,16 @@ export class TileSystemCore {
 
         // Добавляем bins1
         bins1.forEach(bin => {
-            map.set(bin.t.getTime(), bin);
+            map.set(bin.t, bin);
         });
 
         // Добавляем bins2 (перезаписываем дубликаты)
         bins2.forEach(bin => {
-            map.set(bin.t.getTime(), bin);
+            map.set(bin.t, bin);
         });
 
         // Сортируем по времени
-        return Array.from(map.values()).sort((a, b) => a.t.getTime() - b.t.getTime());
+        return Array.from(map.values()).sort((a, b) => a.t - b.t);
     }
 
     /**
@@ -572,7 +572,7 @@ export class TileSystemCore {
 
             const filteredBins = tile.status === 'ready'
                 ? tile.bins.filter(bin => {
-                    const t = bin.t.getTime();
+                    const t = bin.t;
                     return t >= keepFrom && t < keepTo;
                 })
                 : [];
@@ -597,7 +597,7 @@ export class TileSystemCore {
 
             const filteredBins = tile.status === 'ready'
                 ? tile.bins.filter(bin => {
-                    const t = bin.t.getTime();
+                    const t = bin.t;
                     return t >= keepFrom && t < keepTo;
                 })
                 : [];

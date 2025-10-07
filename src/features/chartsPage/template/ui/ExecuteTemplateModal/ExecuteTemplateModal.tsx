@@ -7,7 +7,7 @@ import styles from './ExecuteTemplateModal.module.css'
 } from '../templateResolve'
 import type {SqlParam} from "@chartsPage/template/shared/dtos/SqlParam.ts";
 import type {ChartReqTemplateDto} from "@chartsPage/template/shared/dtos/ChartReqTemplateDto.ts";
-import type {TimeRangeBounds} from "@chartsPage/charts/core/store/types/chart.types.ts";
+import type {TimeRange, TimeRangeBounds} from "@chartsPage/charts/core/store/types/chart.types.ts";
 import FromToFields from "@chartsPage/metaData/ui/FromToFields/FromToFields.tsx";
 
 
@@ -21,8 +21,7 @@ export default function ExecuteTemplateModal({
     onCancel: () => void
     onSubmit: (result: {
         values: Record<string, unknown>,
-        from: Date | undefined,
-        to: Date | undefined,
+        range: TimeRange
     }) => void
 }) {
     // --- ключи/параметры шаблона
@@ -47,15 +46,16 @@ export default function ExecuteTemplateModal({
 
     // --- ЛОКАЛЬНЫЙ ДИАПАЗОН from/to (НЕ мутируем template)
     const [range, setRange] = useState<TimeRangeBounds>({
-        from: template.from,
-        to: template.to,
+        fromMs: template.fromMs,
+        toMs: template.toMs,
     })
 
     // при смене шаблона — переинициализируем диапазон
     useEffect(() => {
+
         setRange({
-            from: template.from,
-            to: template.to,
+            fromMs: template.fromMs,
+            toMs: template.toMs
         })
     }, [template])
 
@@ -68,7 +68,8 @@ export default function ExecuteTemplateModal({
         const obj: Record<string, unknown> = {}
         for (const k of keys) obj[k] = values[k]
 
-        onSubmit({values: obj, from: range?.from, to: range?.to})
+
+        onSubmit({values: obj, range: range as TimeRange})
     }
 
     // закрытие по ESC + блокировка скролла

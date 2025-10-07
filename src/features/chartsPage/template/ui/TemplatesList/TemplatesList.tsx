@@ -27,8 +27,7 @@ export default function TemplatesList({
 
     const template: ChartReqTemplateDto | NewChartReqTemplate = useSelector(selectActiveTemplate)
     const {theme} = useTheme()
-
-
+ 
     return (
         <div className={styles.container} data-theme={theme}>
 

@@ -388,8 +388,8 @@ export function createOptions(params: CreateOptionsParams): EChartsOption {
 
         xAxis: {
             type: 'time',
-            min: xAxisMin,
-            max: xAxisMax,
+            min: xAxisMin!,
+            max: xAxisMax!,
             axisLabel: {
                 formatter: (value: number) => {
                     return formatDateWithTimezone(

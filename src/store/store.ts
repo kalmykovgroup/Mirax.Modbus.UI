@@ -11,6 +11,7 @@ import { stepApi } from '@/features/scenarioEditor/shared/api/stepApi';
 import {chartReqTemplatesApi} from "@chartsPage/template/shared//api/chartReqTemplatesApi.ts";
 import {metadataApi} from "@chartsPage/metaData/shared/api/metadataApi.ts";
 import {chartsApi} from "@chartsPage/charts/core/api/chartsApi.ts";
+import {cleanupOldCharts} from "@chartsPage/charts/core/store/chartsCleanup.ts";
 
 
 export const store = configureStore({
@@ -39,8 +40,8 @@ export const store = configureStore({
                     ],
                     ignoredPaths: [
                         'chartsTemplates.errors',
-                        'chartsTemplates.activeTemplate.from',
-                        'chartsTemplates.activeTemplate.to',
+                        'chartsTemplates.activeTemplate.fromMs',
+                        'chartsTemplates.activeTemplate.toMs',
                         // Игнорируем пути с большими массивами данных
                         'charts.view',
                     ],
@@ -117,6 +118,7 @@ export const store = configureStore({
         },
     });
 
+cleanupOldCharts().catch(console.error);
 
 export const persistor = persistStore(store);
 

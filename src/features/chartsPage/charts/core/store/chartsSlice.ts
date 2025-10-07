@@ -132,7 +132,8 @@ const chartsSlice = createSlice({
                     };
                     console.debug('[initialViews] Created view for:', field.name);
                 } else {
-                   console.error(`[replaceTiles] View not found for field: ${field.name}`);
+                    // View уже существует (восстановлен из persist)
+                    console.debug('[initialViews] View already exists (restored):', field.name);
                 }
             });
         },

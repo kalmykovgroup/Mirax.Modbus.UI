@@ -206,7 +206,7 @@ export const ResizableContainer: React.FC<ResizableContainerProps> = ({
 // Компонент управления группой
 export const SyncGroupControl: React.FC<{ groupId: string }> = ({ groupId }) => {
     const [isEnabled, setIsEnabled] = useState(false);
-    const [groupHeight, setGroupHeight] = useState(500);
+    const [_groupHeight, setGroupHeight] = useState(500);
 
     useEffect(() => {
         // Подписка на изменения высоты

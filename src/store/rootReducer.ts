@@ -14,14 +14,13 @@ import userReducer from '@/features/user/store/userSlice';
 import { scenarioReducer } from '@scenario/store/scenarioSlice';
 import { workflowReducer } from '@scenario/store/workflowSlice';
 import {uiReducer} from "@/store/uiSlice.ts";
-import {chartsReducer} from "@chartsPage/charts/core/store/chartsSlice.ts";
 import {chartsSettingsReducer} from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
 import {chartsMetaReducer} from "@chartsPage/metaData/store/chartsMetaSlice.ts";
 import {metadataApi} from "@chartsPage/metaData/shared/api/metadataApi.ts";
 import {chartsTemplatesReducer} from "@chartsPage/template/store/chartsTemplatesSlice.ts";
 import {chartReqTemplatesApi} from "@chartsPage/template/shared//api/chartReqTemplatesApi.ts";
 import {chartsApi} from "@chartsPage/charts/core/api/chartsApi.ts";
-
+import { persistedChartsReducer } from '@chartsPage/charts/core/store/chartsPersistConfig';
 export const rootReducer = combineReducers({
     // Persisted slices
     auth: authReducer,
@@ -31,9 +30,9 @@ export const rootReducer = combineReducers({
     workflow: workflowReducer,
     chartsSettings: chartsSettingsReducer,
 
+    charts: persistedChartsReducer,
 
     // In-memory
-    charts: chartsReducer,
     chartsMeta: chartsMetaReducer,
 
     ui: uiReducer,

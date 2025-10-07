@@ -1,4 +1,3 @@
-// src/store/slices/chartsTemplatesSlice.ts
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 import type {Guid} from "@app/lib/types/Guid.ts";
@@ -41,8 +40,8 @@ export type NewChartReqTemplate = {
 
 
     //Это исходный при старте графика
-    from?: Date | undefined
-    to?: Date | undefined
+    fromMs?: number | undefined
+    toMs?: number | undefined
 
     // настройки графиков
     databaseId? : Guid | undefined
@@ -265,6 +264,11 @@ const chartsTemplatesSlice = createSlice({
     initialState,
     reducers: {
         setActiveTemplate(state, action: PayloadAction<NewChartReqTemplate | ChartReqTemplateDto>) {
+            if(state.activeTemplate.id == action.payload.id){
+                console.warn("Шаблон уже активный")
+                console.log(action.payload)
+                return;
+            }
             state.activeTemplate = action.payload
         },
         setTemplateDatabase(state, action: PayloadAction<{itemId: Guid, database: DatabaseDto}>) {
@@ -358,11 +362,28 @@ const chartsTemplatesSlice = createSlice({
         setActiveTemplateDesc(state, action: PayloadAction<string>) {
             state.activeTemplate.description = action.payload
         },
-        setActiveTemplateFrom(state, action: PayloadAction<Date | undefined>) {
-            state.activeTemplate.from = action.payload
+        setActiveTemplateFrom(state, action: PayloadAction<Date | number | undefined>) {
+            if (action.payload === undefined) {
+                state.activeTemplate.fromMs = undefined;
+            } else if (action.payload instanceof Date) {
+                // Конвертируем Date в Unix timestamp (миллисекунды)
+                state.activeTemplate.fromMs = action.payload.getTime();
+            } else {
+                // Это уже number
+                state.activeTemplate.fromMs = action.payload;
+            }
         },
-        setActiveTemplateTo(state, action: PayloadAction<Date | undefined>) {
-            state.activeTemplate.to = action.payload
+
+        setActiveTemplateTo(state, action: PayloadAction<Date | number | undefined>) {
+            if (action.payload === undefined) {
+                state.activeTemplate.toMs = undefined;
+            } else if (action.payload instanceof Date) {
+                // Конвертируем Date в Unix timestamp (миллисекунды)
+                state.activeTemplate.toMs = action.payload.getTime();
+            } else {
+                // Это уже number
+                state.activeTemplate.toMs = action.payload;
+            }
         },
 
         // --- Выбор полей пользователем ---
@@ -405,8 +426,6 @@ export const {
     setActiveTemplateDb,
     setActiveTemplateTimeField,
     setActiveTemplateSelectedFields, toggleActiveTemplateSelectedField,
-    // Loading/Error
-    // Сбросы
     clearBoundActiveTemplate,
     resetActiveTemplateEntitiesAndFields,
     setActiveTemplateWhere,

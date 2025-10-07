@@ -1,5 +1,5 @@
 export type SeriesBinDto = {
-    t: Date;
+    t: number;
     min?: number | undefined;
     max?: number | undefined;
     avg?: number | undefined;

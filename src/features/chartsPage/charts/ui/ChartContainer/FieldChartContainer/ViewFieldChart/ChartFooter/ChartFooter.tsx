@@ -45,13 +45,13 @@ export const ChartFooter: React.FC<{fieldName: string}> = ({fieldName} ) => {
                     <span className={styles.statLabel}>Текущий диапазон:</span>
                     <span className={styles.rangeValue}>
                         {formatDateWithTimezone(
-                            currentRange.from,
+                            currentRange.fromMs,
                             timeSettings,
                             { hour: '2-digit', minute: '2-digit' }
                         )}
                         {' → '}
                         {formatDateWithTimezone(
-                            currentRange.to,
+                            currentRange.toMs,
                             timeSettings,
                             { hour: '2-digit', minute: '2-digit' }
                         )}

@@ -1,10 +1,10 @@
 // src/shared/baseApi/chartsApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react'
 import { API } from '@app/providers/endpoints.ts'
-import type {GetMultiSeriesRequest} from "@chartsPage/charts/shared/dtos/requests/GetMultiSeriesRequest.ts";
-import type {MultiSeriesResponse} from "@chartsPage/charts/data/dtos/responses/MultiSeriesResponse.ts";
 import type {RequestWithDb} from "@chartsPage/baseApi/types.ts";
 import {axiosChartsBaseQuery} from "@chartsPage/baseApi/chartsBaseQuery.ts";
+import type {MultiSeriesResponse} from "@chartsPage/charts/core/dtos/responses/MultiSeriesResponse.ts";
+import type {GetMultiSeriesRequest} from "@chartsPage/charts/core/dtos/requests/GetMultiSeriesRequest.ts";
 
 // ---- DTOs ----
 

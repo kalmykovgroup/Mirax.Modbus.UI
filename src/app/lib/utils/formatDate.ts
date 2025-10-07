@@ -1,5 +1,5 @@
-export function formatRuDateTime(d: Date): string {
-    if (isNaN(d.getTime())) return '—';
+export function formatRuDateTime(d: number): string {
+    if (isNaN(d)) return '—';
 
     const s = new Intl.DateTimeFormat('ru-RU', {
         weekday: 'short',

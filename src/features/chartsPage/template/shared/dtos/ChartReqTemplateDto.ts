@@ -1,5 +1,3 @@
-// src/shared/contracts/Dtos/Templates/ChartReqTemplateDto.ts
-
 
 import type {Guid} from "@app/lib/types/Guid.ts";
 import type {DatabaseDto} from "@chartsPage/metaData/shared/dtos/DatabaseDto.ts";
@@ -15,8 +13,8 @@ export type ChartReqTemplateDto = {
     description?: string | undefined
 
     //Это исходный при старте графика
-    from?: Date | undefined
-    to?: Date | undefined
+    fromMs?: number | undefined
+    toMs?: number | undefined
 
     // настройки графиков
     databaseId : Guid

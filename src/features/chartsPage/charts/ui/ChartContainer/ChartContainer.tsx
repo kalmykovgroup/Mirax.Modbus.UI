@@ -8,6 +8,9 @@ import { selectTemplate } from '@chartsPage/charts/core/store/selectors/base.sel
 import styles from './ChartContainer.module.css';
 import {useChartInitialization} from "@chartsPage/charts/orchestration/hooks/useChartInitialization.ts";
 import {FieldChartContainer} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/FieldChartContainer.tsx";
+import {
+    SyncButton
+} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton.tsx";
 
 // ============================================
 // КОНСТАНТЫ
@@ -166,6 +169,7 @@ export function ChartContainer() {
                 <div className={styles.info}>
                     {template.selectedFields.length} графиков
                 </div>
+                <SyncButton />
             </div>
 
             <div className={styles.chartsGrid}>

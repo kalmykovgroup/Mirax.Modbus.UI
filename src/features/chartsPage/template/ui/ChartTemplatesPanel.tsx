@@ -24,11 +24,10 @@ import {
 } from "@chartsPage/template/store/chartsTemplatesSlice.ts";
 import {selectDatabasesLoaded} from "@chartsPage/metaData/store/chartsMetaSlice.ts";
 import type {ChartReqTemplateDto} from "@chartsPage/template/shared//dtos/ChartReqTemplateDto.ts";
+import {setResolvedCharReqTemplate} from "@chartsPage/charts/core/store/chartsSlice.ts";
+import type {TimeRange} from "@chartsPage/charts/core/store/types/chart.types.ts";
 
-export default function ChartTemplatesPanel({ onExecuteDone, className }: {
-    onExecuteDone: (resolvedTpl: ResolvedCharReqTemplate) => void
-    className?: string | undefined
-}) {
+export default function ChartTemplatesPanel() {
 
 
     const dispatch = useAppDispatch();
@@ -52,7 +51,7 @@ export default function ChartTemplatesPanel({ onExecuteDone, className }: {
 
     const hasParams = useMemo(() => {
         if (!execTpl) return false
-        return extractAllKeysFromTemplate(execTpl).length > 0 || execTpl.from == undefined || execTpl.to == undefined
+        return extractAllKeysFromTemplate(execTpl).length > 0 || execTpl.fromMs == undefined || execTpl.toMs == undefined
     }, [execTpl])
 
 
@@ -75,8 +74,8 @@ export default function ChartTemplatesPanel({ onExecuteDone, className }: {
     const handleExecute = (tpl: ChartReqTemplateDto) => {
 
         // Если ключей нет — сразу вернуть «разрешённый» шаблон (без изменений)v
-        if (extractAllKeysFromTemplate(tpl).length == 0 && tpl.from != undefined && tpl.to != undefined) {
-            onExecuteDone({...tpl} as ResolvedCharReqTemplate)
+        if (extractAllKeysFromTemplate(tpl).length == 0 && tpl.fromMs != undefined && tpl.toMs != undefined) {
+            dispatch(setResolvedCharReqTemplate({template: {...tpl} as ResolvedCharReqTemplate}))
         } else {
             setExecTpl(tpl)
         }
@@ -86,8 +85,7 @@ export default function ChartTemplatesPanel({ onExecuteDone, className }: {
     const handleSubmitExec = (
         result: {
             values: Record<string, unknown>,
-            from: Date | undefined,
-            to: Date | undefined,
+            range: TimeRange
         }) => {
 
         if (!execTpl) return
@@ -99,10 +97,10 @@ export default function ChartTemplatesPanel({ onExecuteDone, className }: {
 
         const resolved = resolveTemplateForServer(execTpl, result.values)
 
-        resolved.from = result.from
-        resolved.to = result.to
+        resolved.fromMs = result.range.fromMs
+        resolved.toMs =  result.range.toMs
 
-        onExecuteDone({...resolved} as ResolvedCharReqTemplate)
+        dispatch(setResolvedCharReqTemplate({template: {...resolved} as ResolvedCharReqTemplate}))
         setExecTpl(null)
     }
 
@@ -112,7 +110,7 @@ export default function ChartTemplatesPanel({ onExecuteDone, className }: {
     }
 
     return (
-        <div className={`${styles.chartTemplatePanelContainer} ${className ?? ''}`} data-theme={theme}>
+        <div className={styles.chartTemplatePanelContainer} data-theme={theme}>
 
             <div className={styles.header}>
                 <div style={{ fontWeight: 600 }}>Шаблоны</div>

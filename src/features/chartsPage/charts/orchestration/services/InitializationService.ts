@@ -29,26 +29,24 @@ export class InitializationService {
             const bucketLevels = this.buildBucketLevels(s.bucketMs, niceMilliseconds);
 
             // 2. Определить currentRange (один для всех полей)
-            const currentRange: TimeRange = this.determineCurrentRange(s.from, s.to, response);
+            const currentRange: TimeRange = this.determineCurrentRange(s.fromMs, s.toMs, response);
 
             dispatch(initialDataView({
                 field: s.field.name,
                 px: px,
                 currentRange: currentRange,
-                originalRange: { fromMs: currentRange.from.getTime(), toMs: currentRange.to.getTime() } as OriginalRange,
+                originalRange: { fromMs: currentRange.fromMs, toMs: currentRange.toMs } as OriginalRange,
                 currentBucketsMs: s.bucketMs,
                 seriesLevels: bucketLevels
             }));
 
             // Создать tiles для каждой серии
             const snappedInterval = this.snapRange(
-                currentRange.from,
-                currentRange.to,
+                currentRange.fromMs,
+                currentRange.toMs,
                 s.bucketMs
             );
-
-            const convertedBins = this.convertBins(s.bins);
-            const tile: SeriesTile = this.createReadyTile(snappedInterval, convertedBins);
+            const tile: SeriesTile = this.createReadyTile(snappedInterval, s.bins);
 
             dispatch(IniTopTile({
                 field: s.field.name,
@@ -94,8 +92,8 @@ export class InitializationService {
      * Определить currentRange из запроса или из данных
      */
     private static determineCurrentRange(
-        requestFrom: Date | undefined,
-        requestTo: Date | undefined,
+        requestFrom: number | undefined,
+        requestTo: number | undefined,
         response: MultiSeriesResponse
     ): TimeRange {
         let from = requestFrom;
@@ -107,14 +105,13 @@ export class InitializationService {
 
             response.series.forEach(s => {
                 s.bins.forEach(bin => {
-                    const t = bin.t instanceof Date ? bin.t.getTime() : new Date(bin.t).getTime();
-                    if (t < minMs) {
-                        minMs = t;
+                    if (bin.t < minMs) {
+                        minMs = bin.t;
                     }
                 });
             });
 
-            from = minMs !== Number.MAX_VALUE ? new Date(minMs) : new Date();
+            from = minMs !== Number.MAX_VALUE ? minMs : new Date().getTime();
         }
 
         // Если to не задан - ищем максимум в данных
@@ -123,29 +120,28 @@ export class InitializationService {
 
             response.series.forEach(s => {
                 s.bins.forEach(bin => {
-                    const t = bin.t instanceof Date ? bin.t.getTime() : new Date(bin.t).getTime();
-                    if (t > maxMs) {
-                        maxMs = t;
+                    if (bin.t > maxMs) {
+                        maxMs = bin.t;
                     }
                 });
             });
 
-            to = maxMs !== Number.MIN_VALUE ? new Date(maxMs) : new Date();
+            to = maxMs !== Number.MIN_VALUE ? maxMs : new Date().getTime();
         }
 
-        return { from, to };
+        return {fromMs: from, toMs: to } as TimeRange;
     }
 
     /**
      * Снап диапазона к границам bucket
      */
     private static snapRange(
-        from: Date,
-        to: Date,
+        from: number,
+        to: number,
         bucketMs: BucketsMs
     ): CoverageInterval {
-        const fromMs = from.getTime();
-        const toMs = to.getTime();
+        const fromMs = from;
+        const toMs = to;
         const b = Math.max(1, bucketMs);
 
         const fromSnapped = Math.floor(fromMs / b) * b;
@@ -172,13 +168,5 @@ export class InitializationService {
         };
     }
 
-    /**
-     * Конвертировать bins (убедиться что t - Date)
-     */
-    private static convertBins(bins: readonly SeriesBinDto[]): readonly SeriesBinDto[] {
-        return bins.map(bin => ({
-            ...bin,
-            t: bin.t instanceof Date ? bin.t : new Date(bin.t)
-        }));
-    }
+
 }

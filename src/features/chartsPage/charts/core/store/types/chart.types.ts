@@ -9,13 +9,13 @@ export interface GapsInfo {
 
 export type FieldName = string;
 export type BucketsMs = number;
-export type TimeRange = { from: Date; to: Date };
+export type TimeRange = { fromMs: number; toMs: number };
 export interface OriginalRange {
     readonly fromMs: number;
     readonly toMs: number;
 }
 export type CoverageInterval = { fromMs: number; toMs: number };
-export type TimeRangeBounds = { from: Date | undefined; to: Date | undefined };
+export type TimeRangeBounds = { fromMs: number | undefined; toMs: number | undefined };
 
 export interface SeriesTile {
     coverageInterval: CoverageInterval;
@@ -50,8 +50,8 @@ export interface OptimalDataResult {
 }
 
 export interface Gap {
-    readonly from: number; // timestamp ms
-    readonly to: number;   // timestamp ms
+    readonly fromMs: number; // timestamp ms
+    readonly toMs: number;   // timestamp ms
 }
 
 export interface CoverageResult {

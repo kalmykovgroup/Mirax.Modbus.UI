@@ -2,9 +2,8 @@
 
 import type {
     SeriesTile,
-    CoverageResult,
     BucketsMs,
-    Gap, DataQuality, OriginalRange
+    Gap, DataQuality, OriginalRange, TimeRange
 } from '@chartsPage/charts/core/store/types/chart.types';
 import type {SeriesBinDto} from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
 import {TileSystemCore} from "@chartsPage/charts/core/store/tile-system/TileSystemCore.ts";
@@ -20,31 +19,6 @@ export interface OptimalDataResult {
 
 export class DataProxyService {
 
-    /**
-     *    РЕФАКТОРИНГ: Используем TileSystemCore.findGaps
-     */
-    static calculateCoverage(
-        tiles: readonly SeriesTile[],
-        targetFromMs: number,
-        targetToMs: number
-    ): CoverageResult {
-        const originalRange: OriginalRange = {
-            fromMs: targetFromMs,
-            toMs: targetToMs
-        };
-
-        const gapsResult = TileSystemCore.findGaps(
-            originalRange,
-            tiles,
-            { fromMs: targetFromMs, toMs: targetToMs }
-        );
-
-        return {
-            coverage: gapsResult.coverage,
-            gaps: gapsResult.gaps.map(g => ({ from: g.fromMs, to: g.toMs })),
-            coveredRanges: [] // TileSystemCore не возвращает coveredRanges, но они нам не нужны
-        };
-    }
 
     /**
      *    НОВЫЙ МЕТОД: Вставить null значения в места gaps
@@ -70,15 +44,15 @@ export class DataProxyService {
         });
 
         // Сортируем gaps по времени
-        const sortedGaps = [...gaps].sort((a, b) => a.from - b.to);
+        const sortedGaps = [...gaps].sort((a, b) => a.fromMs - b.toMs);
 
         for (const gap of sortedGaps) {
             // Добавляем все bins до начала gap
             while (binIndex < bins.length) {
                 const bin = bins[binIndex]!;
-                const binTime = bin.t.getTime();
+                const binTime = bin.t;
 
-                if (binTime >= gap.from) {
+                if (binTime >= gap.fromMs) {
                     break;
                 }
 
@@ -88,7 +62,7 @@ export class DataProxyService {
 
             //    Вставляем null-bin в начале gap
             result.push({
-                t: new Date(gap.from),
+                t: gap.fromMs,
                 avg: null as any,
                 min: null as any,
                 max: null as any,
@@ -97,7 +71,7 @@ export class DataProxyService {
 
             //    Вставляем null-bin в конце gap
             result.push({
-                t: new Date(gap.to),
+                t: gap.toMs,
                 avg: null as any,
                 min: null as any,
                 max: null as any,
@@ -105,8 +79,8 @@ export class DataProxyService {
             });
 
             console.log('[insertNullsForGaps] Added null for gap:', {
-                from: new Date(gap.from).toISOString(),
-                to: new Date(gap.to).toISOString()
+                from: new Date(gap.fromMs).toISOString(),
+                to: new Date(gap.toMs).toISOString()
             });
         }
 
@@ -138,7 +112,7 @@ export class DataProxyService {
         }
 
         // Только сортировка, БЕЗ дедупликации
-        allBins.sort((a, b) => a.t.getTime() - b.t.getTime());
+        allBins.sort((a, b) => a.t - b.t);
 
         return allBins;
     }
@@ -197,9 +171,9 @@ export class DataProxyService {
             if (allBins.length > 0) {
                 //  Вставляем null значения в места gaps между тайлами
                 const gapsForNulls = allDataGapsResult.gaps.map(g => ({
-                    from: g.fromMs,
-                    to: g.toMs
-                }));
+                    fromMs: g.fromMs,
+                    toMs: g.toMs
+                } as TimeRange));
 
                 const binsWithNulls = this.insertNullsForGaps(
                     allBins,
@@ -209,9 +183,9 @@ export class DataProxyService {
 
                 //  Возвращаем gaps для видимой области (для красных зон)
                 const visibleGaps = visibleGapsResult.gaps.map(g => ({
-                    from: g.fromMs,
-                    to: g.toMs
-                }));
+                    fromMs: g.fromMs,
+                    toMs: g.toMs
+                } as TimeRange));
 
                 return {
                     data: binsWithNulls,
@@ -244,11 +218,6 @@ export class DataProxyService {
                 { fromMs: targetFromMs, toMs: targetToMs }
             );
 
-            console.log('[selectOptimalData] Checking fallback bucket:', {
-                bucket: bucketMs,
-                coverage: coverageResult.coverage.toFixed(1) + '%',
-                gaps: coverageResult.gaps.length
-            });
 
             if (coverageResult.coverage >= 80) {
                 const allBins = this.mergeBins(tiles);
@@ -272,17 +241,17 @@ export class DataProxyService {
                     : { gaps: [], coverage: 0, hasFull: false };
 
                 const gapsForNulls = allDataGapsResult.gaps.map(g => ({
-                    from: g.fromMs,
-                    to: g.toMs
-                }));
+                    fromMs: g.fromMs,
+                    toMs: g.toMs
+                } as TimeRange));
 
                 const binsWithNulls = this.insertNullsForGaps(allBins, gapsForNulls, bucketMs);
                 const quality: DataQuality = bucketMs < targetBucketMs ? 'upsampled' : 'downsampled';
 
                 const visibleGaps = coverageResult.gaps.map(g => ({
-                    from: g.fromMs,
-                    to: g.toMs
-                }));
+                    fromMs: g.fromMs,
+                    toMs: g.toMs
+                } as TimeRange));
 
                 return {
                     data: binsWithNulls,
@@ -302,7 +271,7 @@ export class DataProxyService {
             coverage: 0,
             sourceBucketMs: undefined,
             isStale: false,
-            gaps: [{ from: targetFromMs, to: targetToMs }]
+            gaps: [{ fromMs: targetFromMs, toMs: targetToMs }]
         };
     }
 
@@ -406,7 +375,7 @@ export class DataProxyService {
             }
         }
 
-        allBins.sort((a, b) => a.t.getTime() - b.t.getTime());
+        allBins.sort((a, b) => a.t - b.t);
 
         return allBins;
     }

@@ -5,7 +5,7 @@ export const getApiBaseUrl = (): string =>
     import.meta.env.VITE_API_URL ?? window.location.origin;
 
 /** Таймаут HTTP-запросов (мс) */
-export const API_TIMEOUT = 15_000;
+export const API_TIMEOUT = 30_000;
 
 /** Кол-во повторов при временных ошибках */
 export const API_RETRY_COUNT = 3;

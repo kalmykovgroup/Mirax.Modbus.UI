@@ -45,14 +45,6 @@ export class DataProcessingService {
     static processServerResponse(params: ProcessServerResponseParams): void {
         const { response, bucketMs, requestedInterval, dispatch, getState } = params;
 
-        console.log('[processServerResponse] Processing response:', {
-            seriesCount: response.series.length,
-            bucketMs,
-            requestedInterval: {
-                from: new Date(requestedInterval.fromMs).toISOString(),
-                to: new Date(requestedInterval.toMs).toISOString()
-            }
-        });
 
         const results: ProcessFieldResult[] = [];
         const updates: Array<{
@@ -85,13 +77,6 @@ export class DataProcessingService {
             dispatch(batchUpdateTiles(updates));
         }
 
-        console.log('[processServerResponse] Complete:', {
-            totalFields: results.length,
-            successful: results.filter(r => r.success).length,
-            failed: results.filter(r => !r.success).length,
-            totalBins: results.reduce((sum, r) => sum + r.binsReceived, 0),
-            updatedFields: updates.map(u => u.field)
-        });
     }
 
 
@@ -153,15 +138,6 @@ export class DataProcessingService {
                             lostTile.coverageInterval.toMs === requestedInterval.toMs;
 
                         if (isSameInterval) {
-                            console.debug('[processFieldSeries] Data refresh (same interval):', {
-                                field: fieldName,
-                                interval: {
-                                    from: new Date(lostTile.coverageInterval.fromMs).toISOString(),
-                                    to: new Date(lostTile.coverageInterval.toMs).toISOString()
-                                },
-                                oldBins: lostTile.bins.length,
-                                newBins: convertedBins.length
-                            });
                             return;
                         }
 
@@ -304,13 +280,6 @@ export class DataProcessingService {
                 tiles: [...addResult.tiles]
             });
 
-            console.log('[prepareLoadingTiles] Prepared:', {
-                field: fieldName,
-                interval: {
-                    from: new Date(loadingInterval.fromMs).toISOString(),
-                    to: new Date(loadingInterval.toMs).toISOString()
-                }
-            });
         }
 
         return updates;
@@ -372,12 +341,6 @@ export class DataProcessingService {
         // БЕРЁМ ОБЪЕДИНЁННЫЙ GAP (или самый большой)
         const targetGap = this.selectTargetGap(gapsResult.gaps);
 
-        console.log('[analyzeLoadNeeds] Target gap:', {
-            from: new Date(targetGap.fromMs).toISOString(),
-            to: new Date(targetGap.toMs).toISOString(),
-            sizeMs: targetGap.toMs - targetGap.fromMs,
-            sizeBuckets: Math.ceil((targetGap.toMs - targetGap.fromMs) / bucketMs)
-        });
 
         // ТЕПЕРЬ расширяем gap если близко к границам/тайлам
         const optimizedInterval = this.optimizeGapInterval({
@@ -389,14 +352,6 @@ export class DataProcessingService {
             proximityThreshold: 0.2
         });
 
-        console.log('[analyzeLoadNeeds] Optimized interval:', {
-            from: new Date(optimizedInterval.fromMs).toISOString(),
-            to: new Date(optimizedInterval.toMs).toISOString(),
-            expansion: (
-                Math.ceil((optimizedInterval.toMs - optimizedInterval.fromMs) / bucketMs) /
-                Math.ceil((targetGap.toMs - targetGap.fromMs) / bucketMs)
-            ).toFixed(2) + 'x'
-        });
 
         // Формируем запрос
         const template = state.charts.template;
@@ -417,8 +372,8 @@ export class DataProcessingService {
             template: {...template,
                 selectedFields: selected
             },
-            from: new Date(optimizedInterval.fromMs),
-            to: new Date(optimizedInterval.toMs),
+            fromMs: optimizedInterval.fromMs,
+            toMs: optimizedInterval.toMs,
             px,
             bucketMs
         };
@@ -501,7 +456,6 @@ export class DataProcessingService {
             relDistStart <= proximityThreshold
         ) {
             optimalFrom = Math.floor(originalRange.fromMs / bucketMs) * bucketMs;
-            console.log('[optimizeGapInterval] Extended to graph start');
         }
 
         const distToEnd = originalRange.toMs - gap.toMs;
@@ -513,7 +467,6 @@ export class DataProcessingService {
             relDistEnd <= proximityThreshold
         ) {
             optimalTo = Math.ceil(originalRange.toMs / bucketMs) * bucketMs;
-            console.log('[optimizeGapInterval] Extended to graph end');
         }
 
         // Расширяем до соседних тайлов если близко
@@ -548,10 +501,6 @@ export class DataProcessingService {
 
             if (gapBuckets <= minBucketsThreshold || relGap <= proximityThreshold) {
                 optimalTo = nearestRight.coverageInterval.fromMs;
-                console.log('[optimizeGapInterval] Extended to right tile:', {
-                    gapBuckets,
-                    relGap: (relGap * 100).toFixed(1) + '%'
-                });
             }
         }
 
@@ -572,7 +521,6 @@ export class DataProcessingService {
                 Math.ceil((optimalTo + needMs - halfNeedMs) / bucketMs) * bucketMs
             );
 
-            console.log('[optimizeGapInterval] Expanded to minimum size');
         }
 
         return {
@@ -603,24 +551,14 @@ export class DataProcessingService {
                 continue;
             }
 
-            let time: Date;
-            if (bin.t instanceof Date) {
-                time = bin.t;
-            } else if (typeof bin.t === 'string' || typeof bin.t === 'number') {
-                time = new Date(bin.t);
-            } else {
+
+
+            if (isNaN(bin.t)) {
                 skipped++;
                 continue;
             }
 
-            if (isNaN(time.getTime())) {
-                skipped++;
-                continue;
-            }
-
-            const timeMs = time.getTime();
-
-            if (timeMs < interval.fromMs || timeMs >= interval.toMs) {
+            if (bin.t < interval.fromMs || bin.t >= interval.toMs) {
                 skipped++;
                 continue;
             }
@@ -635,7 +573,7 @@ export class DataProcessingService {
             }
 
             const convertedBin: SeriesBinDto = {
-                t: time,
+                t: bin.t,
                 avg: hasAvg ? Number(bin.avg) : undefined,
                 min: hasMin ? Number(bin.min) : undefined,
                 max: hasMax ? Number(bin.max) : undefined,
@@ -655,7 +593,7 @@ export class DataProcessingService {
             });
         }
 
-        converted.sort((a, b) => a.t.getTime() - b.t.getTime());
+        converted.sort((a, b) => a.t - b.t);
         return converted;
     }
 

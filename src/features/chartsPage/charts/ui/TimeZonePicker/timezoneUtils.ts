@@ -71,7 +71,7 @@ export function formatDateWithTimezone(
     const dt = toDate(date as any);
 
     // Проверка на валидность даты
-    if (!dt || isNaN(dt.getTime())) {
+    if (!dt || isNaN(dt.getTime())){
 
         console.warn('[formatDateWithTimezone] Invalid date:', date);
         return '';
@@ -95,41 +95,6 @@ export function formatDateWithTimezone(
         console.error('[formatDateWithTimezone] Error formatting date:', error, { date: dt, settings });
         return '';
     }
-}
-
-/**
- * Преобразует дату для отправки на сервер в UTC
- */
-export function prepareDateForRequest(
-    date: Date,
-    settings: TimeSettings
-): Date {
-    // Если преобразование выключено или зона UTC - возвращаем как есть
-    if (!settings.useTimeZone || settings.timeZone === 'UTC') {
-        return date;
-    }
-
-    // Получаем компоненты даты в локальной временной зоне браузера
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const day = date.getDate();
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const seconds = date.getSeconds();
-    const ms = date.getMilliseconds();
-
-    // Интерпретируем эти компоненты как время в целевой временной зоне
-    // и получаем соответствующее UTC время
-    const targetDate = new Date(
-        new Date(Date.UTC(year, month, day, hours, minutes, seconds, ms))
-            .toLocaleString('en-US', { timeZone: settings.timeZone })
-    );
-
-    // Вычисляем разницу между оригинальной датой и целевой
-    const offset = date.getTime() - targetDate.getTime();
-
-    // Применяем смещение для получения корректного UTC
-    return new Date(date.getTime() + offset);
 }
 
 /**

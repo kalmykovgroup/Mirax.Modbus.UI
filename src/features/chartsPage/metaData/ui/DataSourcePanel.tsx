@@ -6,6 +6,7 @@ import {useAppDispatch} from "@/store/hooks.ts";
 
 import styles from "./DataSourcePanel.module.css"
 import {
+    type NewChartReqTemplate,
     selectActiveTemplate,
     setActiveTemplateFrom,
     setActiveTemplateTo
@@ -18,11 +19,13 @@ import {FieldsSection} from "@chartsPage/metaData/ui/FieldsSection/FieldsSection
 import {FiltersAndSqlPanel} from "@chartsPage/metaData/ui/SqlAndFiltersSection/FiltersAndSqlPanel.tsx";
 import {TemplateMetaSection} from "@chartsPage/metaData/ui/TemplateMetaSection/TemplateMetaSection.tsx";
 import {FooterActions} from "@chartsPage/metaData/ui/FooterActions/FooterActions.tsx";
+import type {ChartReqTemplateDto} from "@chartsPage/template/shared/dtos/ChartReqTemplateDto.ts";
+import type {TimeRangeBounds} from "@chartsPage/charts/core/store/types/chart.types.ts";
 
 export function DataSourcePanel({className}: {className? : string | undefined}) {
     const dispatch = useAppDispatch();
 
-    const selectTemp = useSelector(selectActiveTemplate);
+    const selectTemp: ChartReqTemplateDto | NewChartReqTemplate = useSelector(selectActiveTemplate);
 
     return (
         <div className={`${className} ${styles.container}`} >
@@ -35,10 +38,10 @@ export function DataSourcePanel({className}: {className? : string | undefined}) 
             <TimeFieldSection />
 
             <FromToFields
-                range={{from: selectTemp.from, to: selectTemp.to}}
-                onChange={(date) => {
-                    if ('from' in date) dispatch(setActiveTemplateFrom(date.from));
-                    if ('to'   in date) dispatch(setActiveTemplateTo(date.to));
+                range={{fromMs: selectTemp.fromMs, toMs: selectTemp.toMs}}
+                onChange={(date: Partial<TimeRangeBounds>) => {
+                    if ('fromMs' in date) dispatch(setActiveTemplateFrom(date.fromMs));
+                    if ('toMs'   in date) dispatch(setActiveTemplateTo(date.toMs));
                 }}
             />
             <FieldsSection />

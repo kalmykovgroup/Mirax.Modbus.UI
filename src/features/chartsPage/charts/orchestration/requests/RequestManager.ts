@@ -93,14 +93,10 @@ export class RequestManager {
             );
 
             if (quickCheck.hasFull || quickCheck.coverage >= 99.9) {
-                console.log('[RequestManager]    Full coverage, instant display');
+                console.log('[RequestManager]    Full coverage, instant display quickCheck.coverage >= 99.9');
                 return;
             }
 
-            console.log('[RequestManager] Partial coverage:', {
-                coverage: quickCheck.coverage.toFixed(1) + '%',
-                gaps: quickCheck.gaps.length
-            });
         }
 
         const request = DataProcessingService.analyzeLoadNeeds(
@@ -119,8 +115,8 @@ export class RequestManager {
 
         const requestId = generateId();
         const requestedInterval: CoverageInterval = {
-            fromMs: request.from!.getTime(),
-            toMs: request.to!.getTime()
+            fromMs: request.fromMs!,
+            toMs: request.toMs!
         };
 
         const fields = request.template.selectedFields.map(f => f.name);
@@ -164,8 +160,8 @@ export class RequestManager {
         const requestKey = this.buildRequestKey(
             primaryField,
             bucketMs,
-            request.from!,
-            request.to!
+            request.fromMs!,
+            request.toMs!
         );
 
         if (this.activeRequests.has(requestKey)) {
@@ -239,15 +235,9 @@ export class RequestManager {
     private async performHttpRequest(
         request: GetMultiSeriesRequest,
         abortController: AbortController,
-        requestId: string,
+        _requestId: string,
         requestedInterval: CoverageInterval
     ): Promise<void> {
-        console.log('[RequestManager] HTTP request:', {
-            requestId,
-            fields: request.template.selectedFields.map(f => f.name),
-            from: request.from?.toISOString(),
-            to: request.to?.toISOString()
-        });
 
         const timeoutId = setTimeout(() => {
             console.warn('[RequestManager] Timeout');
@@ -280,7 +270,6 @@ export class RequestManager {
                 getState: this.getState
             });
 
-            console.log('[RequestManager] Complete:', requestId);
 
         } catch (error: unknown) {
             clearTimeout(timeoutId);
@@ -514,10 +503,10 @@ export class RequestManager {
     private buildRequestKey(
         field: FieldName,
         bucketMs: BucketsMs,
-        from: Date,
-        to: Date
+        from: number,
+        to: number
     ): string {
-        return `${field}:${bucketMs}:${from.getTime()}:${to.getTime()}`;
+        return `${field}:${bucketMs}:${from}:${to}`;
     }
 
     private updateAverageLoadTime(loadTime: number): void {

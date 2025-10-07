@@ -44,7 +44,7 @@ export const fetchSyncedFieldsData = createAsyncThunk<
                     request: {
                         template: state.charts.template!,
                         from,
-                        to,
+                        toMs: to,
                         px
                     },
                     fields: [primaryField],
@@ -99,7 +99,7 @@ export const fetchSyncedFieldsData = createAsyncThunk<
                         selectedFields: fieldsToLoad
                     },
                     from,
-                    to,
+                    toMs: to,
                     px
                 },
                 fields: fieldsToLoad,

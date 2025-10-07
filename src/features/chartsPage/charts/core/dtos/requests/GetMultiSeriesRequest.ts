@@ -3,8 +3,8 @@ import type {ResolvedCharReqTemplate} from "@chartsPage/template/shared//dtos/Re
 
 export type GetMultiSeriesRequest = {
     template: ResolvedCharReqTemplate;
-    from?: Date | undefined;
-    to?: Date | undefined;
+    fromMs?: number | undefined;
+    toMs?: number | undefined;
     px: number;
     bucketMs?: number | undefined;
 }
