@@ -218,7 +218,7 @@ export function ChartCanvas({
         };
     }, [currentRange]);
 
-    console.log("Обновили canvas")
+    console.log('[ChartCanvas] Обновление options');
 
     // ============================================
     // LOADING STATE

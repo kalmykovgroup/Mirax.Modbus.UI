@@ -161,7 +161,6 @@ export function ChartContainer() {
         );
     }
 
-    console.log("Обновили ChartContainer")
 
     // Основной контент: список графиков
     return (

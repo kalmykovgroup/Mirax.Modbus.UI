@@ -45,8 +45,10 @@ export class DataProcessingService {
     static processServerResponse(params: ProcessServerResponseParams): void {
         const { response, bucketMs, requestedInterval, dispatch, getState } = params;
 
+        console.log('[DataProcessingService] 🔄 Processing response, fields:',
+            response.series.map(s => s.field.name)
+        );
 
-        const results: ProcessFieldResult[] = [];
         const updates: Array<{
             field: FieldName;
             bucketMs: BucketsMs;
@@ -61,9 +63,6 @@ export class DataProcessingService {
                 requestedInterval,
                 getState
             });
-
-            results.push(result);
-
             if (result.success && result.newTiles) {
                 updates.push({
                     field: series.field.name,
@@ -74,6 +73,7 @@ export class DataProcessingService {
         }
 
         if (updates.length > 0) {
+            console.log('[DataProcessingService] 📦 batchUpdateTiles, updates:', updates.length);
             dispatch(batchUpdateTiles(updates));
         }
 

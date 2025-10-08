@@ -71,7 +71,7 @@ export const ViewFieldChart = memo(function ViewFieldChart({
 
 
     // Вычисляем оптимальный диапазон для yAxis
-    const { optimalYMin, optimalYMax } = useMemo(() => {
+    const optimalYRange = useMemo(() => {
         let min = Number.POSITIVE_INFINITY;
         let max = Number.NEGATIVE_INFINITY;
 
@@ -93,13 +93,19 @@ export const ViewFieldChart = memo(function ViewFieldChart({
         const padding = range * 0.05;
 
         return {
-            optimalYMin: min - padding,
-            optimalYMax: max + padding
+            min: min - padding,
+            max: max + padding
         };
     }, [chartData.avgPoints]);
 
-    // Хук для управления диапазоном оси Y
-    const yAxisControl = useYAxisRange(optimalYMin, optimalYMax);
+// ✅ Хук вызываем напрямую, НЕ в useMemo
+    const yAxisControl = useYAxisRange(optimalYRange.min, optimalYRange.max);
+
+// ✅ Мемоизируем только customYAxisRange для options
+    const customYAxisRange = useMemo(
+        () => yAxisControl.isCustom ? yAxisControl.currentRange : undefined,
+        [yAxisControl.isCustom, yAxisControl.currentRange.min, yAxisControl.currentRange.max]
+    );
 
 
     const options = useMemo(() =>
@@ -111,13 +117,19 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                 originalRange,
                 timeSettings,
                 gapsInfo,
-                customYAxisRange: yAxisControl.isCustom ? yAxisControl.currentRange : undefined
-                // isZoomOnMouseWheelKeyCtrl, isEmphasis, animationConfig используют значения по умолчанию
+                customYAxisRange // ✅ Стабильная зависимость
             }),
-        [chartData.avgPoints, chartData.minPoints, chartData.maxPoints, fieldName, originalRange, timeSettings, gapsInfo]
+        [
+            chartData.avgPoints,
+            chartData.minPoints,
+            chartData.maxPoints,
+            fieldName,
+            originalRange,
+            timeSettings,
+            gapsInfo,
+            customYAxisRange // ✅ Изменяется только при ручной настройке
+        ]
     );
-
-    console.log("Обновили ViewFieldChart")
 
     return (
         <>

@@ -1,5 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import {batch, useSelector} from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
 import { useRequestManager } from "@chartsPage/charts/orchestration/hooks/useRequestManager.ts";
 import { setViewBucket, setViewRange, updateView } from "@chartsPage/charts/core/store/chartsSlice.ts";
@@ -67,15 +67,15 @@ export function FieldChartContainer({
      * 2. После отпускания кнопки мыши при пане (с debounce 100ms)
      * 3. Программно при синхронизации с других графиков
      */
-    const handleOnZoomEnd = useCallback((range: TimeRange, fromSync = false) => {
 
-        // Если это обновление от синхронизации - не обрабатываем
+    const handleOnZoomEnd = useCallback((range: TimeRange, fromSync = false) => {
+        console.log('[FieldChartContainer] Обновили FieldChartContainer');
+
         if (isSyncUpdateRef.current) {
             console.log('[FieldChartContainer] Пропускаем - обновление от синхронизации');
             return;
         }
 
-        // Защита от дублирующих событий
         const isDuplicate = lastRangeRef.current
             && lastRangeRef.current.fromMs === range.fromMs
             && lastRangeRef.current.toMs === range.toMs;
@@ -90,63 +90,59 @@ export function FieldChartContainer({
         const newBucket = calculateBucket(range.fromMs, range.toMs, width);
         const oldBucket = currentBucketRef.current;
 
-        // Проверяем, включена ли синхронизация и текущее поле в списке
         const shouldSync = syncEnabledRef.current && syncFieldsRef.current.some(f => f.name === fieldName);
 
-
-        // Обновляем текущее поле
-        dispatch(setViewRange({
-            field: fieldName,
-            range: {
-                fromMs: range.fromMs,
-                toMs: range.toMs
-            }
-        }));
-
-        if (oldBucket !== newBucket) {
-            requestManager.cancelFieldRequests(fieldName);
-
-            dispatch(setViewBucket({
+        // ✅ КРИТИЧНО: Батчим все dispatch в один ре-рендер
+        batch(() => {
+            // Обновляем текущее поле
+            dispatch(setViewRange({
                 field: fieldName,
-                bucketMs: newBucket
-            }));
-        }
-
-        // СИНХРОНИЗАЦИЯ: Обновляем остальные синхронизированные поля
-        if (shouldSync && !fromSync) {
-            // Устанавливаем флаг чтобы избежать циклов
-            isSyncUpdateRef.current = true;
-
-            // Обновляем range для всех остальных синхронизированных полей
-            syncFieldsRef.current.forEach(field => {
-                if (field.name !== fieldName) {
-                    dispatch(setViewRange({
-                        field: field.name,
-                        range: {
-                            fromMs: range.fromMs,
-                            toMs: range.toMs
-                        }
-                    }));
-
-                    // Загружаем данные для синхронизированного поля
-                    const syncBucket = calculateBucket(range.fromMs, range.toMs, width);
-                    void requestManager.loadVisibleRange(
-                        field.name,
-                        range.fromMs,
-                        range.toMs,
-                        syncBucket,
-                        width
-                    );
+                range: {
+                    fromMs: range.fromMs,
+                    toMs: range.toMs
                 }
-            });
+            }));
 
-            // Сбрасываем флаг после небольшой задержки
-            setTimeout(() => {
-                isSyncUpdateRef.current = false;
-            }, 200);
-        }
+            if (oldBucket !== newBucket) {
+                requestManager.cancelFieldRequests(fieldName);
 
-        // Загружаем данные для текущего поля с debounce
+                dispatch(setViewBucket({
+                    field: fieldName,
+                    bucketMs: newBucket
+                }));
+            }
+
+            // СИНХРОНИЗАЦИЯ: Обновляем другие графики
+            if (shouldSync) {
+                isSyncUpdateRef.current = true;
+
+                syncFieldsRef.current.forEach(field => {
+                    if (field.name !== fieldName) {
+                        dispatch(setViewRange({
+                            field: field.name,
+                            range: {
+                                fromMs: range.fromMs,
+                                toMs: range.toMs
+                            }
+                        }));
+
+                        const syncBucket = calculateBucket(range.fromMs, range.toMs, width);
+                        if (syncBucket !== currentBucketRef.current) {
+                            dispatch(setViewBucket({
+                                field: field.name,
+                                bucketMs: syncBucket
+                            }));
+                        }
+                    }
+                });
+
+                setTimeout(() => {
+                    isSyncUpdateRef.current = false;
+                }, 100);
+            }
+        });
+
+        // Дозагрузка данных ПОСЛЕ батчинга
         if (loadDebounceRef.current) {
             clearTimeout(loadDebounceRef.current);
         }
@@ -161,7 +157,8 @@ export function FieldChartContainer({
             );
         }, 150);
 
-    }, [dispatch, fieldName, width, requestManager, syncEnabledRef, syncFieldsRef]);
+    }, [dispatch, fieldName, width, requestManager]);
+
 
     const handleRetry = useCallback(() => {
         console.log('[FieldChartContainer] Попытка handleRetry');
@@ -191,7 +188,6 @@ export function FieldChartContainer({
         };
     }, [dispatch, fieldName]);
 
-    console.log("Обновили FieldChartContainer")
 
     return (
         <div

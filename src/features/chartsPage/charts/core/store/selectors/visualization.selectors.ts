@@ -231,7 +231,8 @@ export const selectFieldGaps = createSelector(
     ],
     (fieldView, currentBucketMs, currentRange): GapsInfo => {
         if (!fieldView || !currentBucketMs || !currentRange || !fieldView.originalRange) {
-            return { dataGaps: [], loadingGaps: [] };
+            // ✅ КРИТИЧНО: Возвращаем константу, НЕ новый объект
+            return EMPTY_GAPS_INFO;
         }
 
         const tiles = fieldView.seriesLevel[currentBucketMs] ?? [];
@@ -241,20 +242,16 @@ export const selectFieldGaps = createSelector(
             toMs: currentRange.toMs
         };
 
-        // Находим все gaps
         const gapsResult = TileSystemCore.findGaps(
             fieldView.originalRange,
             tiles,
             targetInterval
         );
- 
 
-        // Разделяем gaps на "данные отсутствуют" и "загружаются"
         const dataGaps: CoverageInterval[] = [];
         const loadingGaps: CoverageInterval[] = [];
 
         for (const gap of gapsResult.gaps) {
-            // Проверяем есть ли loading тайлы в этом gap
             const hasLoadingTile = tiles.some(t =>
                 t.status === 'loading' &&
                 t.coverageInterval.fromMs <= gap.fromMs &&
@@ -268,9 +265,20 @@ export const selectFieldGaps = createSelector(
             }
         }
 
+        // ✅ КРИТИЧНО: Возвращаем константу если пусто
+        if (dataGaps.length === 0 && loadingGaps.length === 0) {
+            return EMPTY_GAPS_INFO;
+        }
+
         return {
             dataGaps: Object.freeze(dataGaps),
             loadingGaps: Object.freeze(loadingGaps)
         };
     }
 );
+
+// ✅ Константа для пустого состояния
+const EMPTY_GAPS_INFO: GapsInfo = Object.freeze({
+    dataGaps: Object.freeze([]),
+    loadingGaps: Object.freeze([])
+});
