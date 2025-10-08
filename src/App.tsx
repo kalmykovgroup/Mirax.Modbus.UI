@@ -8,7 +8,6 @@ import {DeviceProvider} from "@app/lib/hooks/device/DeviceProvider.tsx";
 import {ThemeProvider} from "@app/providers/theme/ThemeProvider.tsx";
 import LoadingOverlay from "@ui/components/LoadingOverlay/LoadingOverlay.tsx";
 import { ConfirmProvider } from "./ui/components/ConfirmProvider/ConfirmProvider";
-import AnimatedGradientDark from "@ui/assets/AnimatedGradientDark/AnimatedGradientDark.tsx";
 import {AppToaster} from "@ui/components/AppToaster/AppToaster.tsx";
 
 
@@ -38,7 +37,6 @@ class App extends Component {
                     <DeviceProvider>
                         <ConfirmProvider>
                             <AppRouter/>
-                            <AnimatedGradientDark />
                             <AppToaster/>
                             <LoadingOverlay />
                         </ConfirmProvider>

@@ -24,6 +24,8 @@ export class InitializationService {
     static processInitResponse(params: ProcessInitResponseParams): void {
         const { px, response, dispatch, niceMilliseconds } = params;
 
+        console.log("Ответ при инициализации", response);
+
         response.series.forEach(s => {
             // 1. Построить список bucket-уровней ОТ TOP ВНИЗ
             const bucketLevels = this.buildBucketLevels(s.bucketMs, niceMilliseconds);

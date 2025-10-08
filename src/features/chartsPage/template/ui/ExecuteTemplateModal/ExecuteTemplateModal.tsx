@@ -7,7 +7,7 @@ import styles from './ExecuteTemplateModal.module.css'
 } from '../templateResolve'
 import type {SqlParam} from "@chartsPage/template/shared/dtos/SqlParam.ts";
 import type {ChartReqTemplateDto} from "@chartsPage/template/shared/dtos/ChartReqTemplateDto.ts";
-import type {TimeRange, TimeRangeBounds} from "@chartsPage/charts/core/store/types/chart.types.ts";
+import type {TimeRangeBounds} from "@chartsPage/charts/core/store/types/chart.types.ts";
 import FromToFields from "@chartsPage/metaData/ui/FromToFields/FromToFields.tsx";
 
 
@@ -21,7 +21,7 @@ export default function ExecuteTemplateModal({
     onCancel: () => void
     onSubmit: (result: {
         values: Record<string, unknown>,
-        range: TimeRange
+        range: TimeRangeBounds
     }) => void
 }) {
     // --- ключи/параметры шаблона
@@ -46,16 +46,16 @@ export default function ExecuteTemplateModal({
 
     // --- ЛОКАЛЬНЫЙ ДИАПАЗОН from/to (НЕ мутируем template)
     const [range, setRange] = useState<TimeRangeBounds>({
-        fromMs: template.fromMs,
-        toMs: template.toMs,
+        fromMs: template.originalFromMs,
+        toMs: template.originalToMs,
     })
 
     // при смене шаблона — переинициализируем диапазон
     useEffect(() => {
 
         setRange({
-            fromMs: template.fromMs,
-            toMs: template.toMs
+            fromMs: template.originalFromMs,
+            toMs: template.originalToMs
         })
     }, [template])
 
@@ -69,7 +69,7 @@ export default function ExecuteTemplateModal({
         for (const k of keys) obj[k] = values[k]
 
 
-        onSubmit({values: obj, range: range as TimeRange})
+        onSubmit({values: obj, range: range as TimeRangeBounds})
     }
 
     // закрытие по ESC + блокировка скролла
@@ -96,7 +96,7 @@ export default function ExecuteTemplateModal({
                 <div className={styles.modalBody}>
                     <FromToFields
                         range={range}
-                        onChange={(date) => setRange(prev => ({ ...prev, ...date }))}
+                        onChange={(date) => setRange((date))}
                     />
 
                     {keys.map(k => {

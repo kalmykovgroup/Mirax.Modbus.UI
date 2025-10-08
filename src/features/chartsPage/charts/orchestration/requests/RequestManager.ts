@@ -113,10 +113,15 @@ export class RequestManager {
             return;
         }
 
+        if(request.template.resolvedFromMs == undefined || request.template.resolvedToMs == undefined) {
+            console.log('[RequestManager] Ошибка, диапазон не задан');
+            return;
+        }
+
         const requestId = generateId();
         const requestedInterval: CoverageInterval = {
-            fromMs: request.fromMs!,
-            toMs: request.toMs!
+            fromMs: request.template.resolvedFromMs,
+            toMs: request.template.resolvedToMs
         };
 
         const fields = request.template.selectedFields.map(f => f.name);
@@ -157,11 +162,16 @@ export class RequestManager {
             return;
         }
 
+        if(request.template.resolvedFromMs == undefined || request.template.resolvedToMs == undefined) {
+            console.log('[RequestManager, executeRequest] Ошибка, диапазон не задан');
+            return;
+        }
+
         const requestKey = this.buildRequestKey(
             primaryField,
             bucketMs,
-            request.fromMs!,
-            request.toMs!
+            request.template.resolvedFromMs,
+            request.template.resolvedToMs
         );
 
         if (this.activeRequests.has(requestKey)) {

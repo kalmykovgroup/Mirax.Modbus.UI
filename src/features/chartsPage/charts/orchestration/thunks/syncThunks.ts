@@ -1,3 +1,4 @@
+/*
 // store/thunks/syncThunks.ts
 // THUNK СИНХРОНИЗАЦИИ: координация загрузки для синхронизированных полей
 
@@ -15,14 +16,14 @@ import type {FieldDto} from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
 // SYNC THUNK
 // ============================================
 
-/**
+/!**
  * Синхронизация загрузки для нескольких полей
  * - Определяет какие поля нужно загрузить
  * - Вызывает fetchMultiSeriesData с группой полей
  * - Возвращает результат синхронизации
  *
  * Логика определения необходимости загрузки - в SyncCoordinationService
- */
+ *!/
 export const fetchSyncedFieldsData = createAsyncThunk<
     SyncLoadResult,
     SyncLoadRequest,
@@ -30,7 +31,7 @@ export const fetchSyncedFieldsData = createAsyncThunk<
 >(
     'charts/fetchSyncedFieldsData',
     async (
-        { primaryField, /*bucketMs*/ from, to, px },
+        { primaryField, /!*bucketMs*!/ from, to, px },
         { dispatch, getState, rejectWithValue }
     ) => {
         const state = getState();
@@ -117,4 +118,4 @@ export const fetchSyncedFieldsData = createAsyncThunk<
             skippedFields: uninitializedFields
         };
     }
-);
+);*/

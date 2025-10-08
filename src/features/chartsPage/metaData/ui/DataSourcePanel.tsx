@@ -7,9 +7,7 @@ import {useAppDispatch} from "@/store/hooks.ts";
 import styles from "./DataSourcePanel.module.css"
 import {
     type NewChartReqTemplate,
-    selectActiveTemplate,
-    setActiveTemplateFrom,
-    setActiveTemplateTo
+    selectActiveTemplate, setActiveTemplateRange,
 } from "@chartsPage/template/store/chartsTemplatesSlice.ts";
 import {DatabaseSection} from "@chartsPage/metaData/ui/DatabaseSection/DatabaseSection.tsx";
 import {EntitySection} from "@chartsPage/metaData/ui/EntitySection/EntitySection.tsx";
@@ -38,11 +36,8 @@ export function DataSourcePanel({className}: {className? : string | undefined}) 
             <TimeFieldSection />
 
             <FromToFields
-                range={{fromMs: selectTemp.fromMs, toMs: selectTemp.toMs}}
-                onChange={(date: Partial<TimeRangeBounds>) => {
-                    if ('fromMs' in date) dispatch(setActiveTemplateFrom(date.fromMs));
-                    if ('toMs'   in date) dispatch(setActiveTemplateTo(date.toMs));
-                }}
+                range={{fromMs: selectTemp.originalFromMs, toMs: selectTemp.originalToMs}}
+                onChange={(range: TimeRangeBounds) => dispatch(setActiveTemplateRange(range))}
             />
             <FieldsSection />
 

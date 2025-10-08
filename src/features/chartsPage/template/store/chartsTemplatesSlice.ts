@@ -19,6 +19,7 @@ import type {
 import type {
     UpdateChartReqTemplateRequest
 } from "@chartsPage/template/shared//dtos/requests/UpdateChartReqTemplateRequest.ts";
+import type {TimeRangeBounds} from "@chartsPage/charts/core/store/types/chart.types.ts";
 
 // ==== общий helper для единообразного закрытия ====
 function safeUnsubscribe(sub: any) {
@@ -40,8 +41,8 @@ export type NewChartReqTemplate = {
 
 
     //Это исходный при старте графика
-    fromMs?: number | undefined
-    toMs?: number | undefined
+    originalFromMs?: number | undefined
+    originalToMs?: number | undefined
 
     // настройки графиков
     databaseId? : Guid | undefined
@@ -362,27 +363,13 @@ const chartsTemplatesSlice = createSlice({
         setActiveTemplateDesc(state, action: PayloadAction<string>) {
             state.activeTemplate.description = action.payload
         },
-        setActiveTemplateFrom(state, action: PayloadAction<Date | number | undefined>) {
-            if (action.payload === undefined) {
-                state.activeTemplate.fromMs = undefined;
-            } else if (action.payload instanceof Date) {
-                // Конвертируем Date в Unix timestamp (миллисекунды)
-                state.activeTemplate.fromMs = action.payload.getTime();
-            } else {
-                // Это уже number
-                state.activeTemplate.fromMs = action.payload;
-            }
-        },
+        setActiveTemplateRange(state, action: PayloadAction<TimeRangeBounds>) {
 
-        setActiveTemplateTo(state, action: PayloadAction<Date | number | undefined>) {
-            if (action.payload === undefined) {
-                state.activeTemplate.toMs = undefined;
-            } else if (action.payload instanceof Date) {
-                // Конвертируем Date в Unix timestamp (миллисекунды)
-                state.activeTemplate.toMs = action.payload.getTime();
-            } else {
-                // Это уже number
-                state.activeTemplate.toMs = action.payload;
+            if(state.activeTemplate.originalFromMs != action.payload.fromMs){
+                state.activeTemplate.originalFromMs = action.payload.fromMs;
+            }
+            if(state.activeTemplate.originalToMs != action.payload.toMs){
+                state.activeTemplate.originalToMs = action.payload.toMs;
             }
         },
 
@@ -391,10 +378,21 @@ const chartsTemplatesSlice = createSlice({
             state.activeTemplate.selectedFields = action.payload
         },
         toggleActiveTemplateSelectedField(state, action: PayloadAction<FieldDto>) {
-            const field = action.payload
-            const set = new Set(state.activeTemplate.selectedFields)
-            set.has(field) ? set.delete(field) : set.add(field)
-            state.activeTemplate.selectedFields = Array.from(set)
+            const field = action.payload;
+            const currentFields = state.activeTemplate.selectedFields ?? [];
+
+            // Ищем индекс по name (уникальный идентификатор)
+            const existingIndex = currentFields.findIndex(f => f.name === field.name);
+
+            if (existingIndex >= 0) {
+                // Поле уже выбрано — убираем
+                state.activeTemplate.selectedFields = currentFields.filter(
+                    (_, idx) => idx !== existingIndex
+                );
+            } else {
+                // Поля нет — добавляем
+                state.activeTemplate.selectedFields = [...currentFields, field];
+            }
         },
 
         // --- Сбросы зависимостей ---
@@ -434,8 +432,7 @@ export const {
     clearAllTemplateData,
     setActiveTemplateName,
     setActiveTemplateDesc,
-    setActiveTemplateFrom,
-    setActiveTemplateTo,
+    setActiveTemplateRange,
     resetActiveTemplateOnLoad
 } = chartsTemplatesSlice.actions
 

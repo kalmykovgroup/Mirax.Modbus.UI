@@ -12,6 +12,9 @@ export type CreateChartReqTemplateRequest = {
     name: string
     description?: string | undefined
 
+    originalFromMs?: number | undefined
+    originalToMs?: number | undefined
+
     // настройки графиков
     databaseId: Guid
     entity: EntityDto

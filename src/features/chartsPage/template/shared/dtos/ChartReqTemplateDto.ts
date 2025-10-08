@@ -13,8 +13,8 @@ export type ChartReqTemplateDto = {
     description?: string | undefined
 
     //Это исходный при старте графика
-    fromMs?: number | undefined
-    toMs?: number | undefined
+    originalFromMs?: number | undefined
+    originalToMs?: number | undefined
 
     // настройки графиков
     databaseId : Guid

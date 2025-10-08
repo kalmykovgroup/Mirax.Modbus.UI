@@ -11,7 +11,7 @@ import {
 
 interface FromToFieldsProps {
     range: TimeRangeBounds;
-    onChange: (date: Partial<TimeRangeBounds>) => void;
+    onChange: (range: TimeRangeBounds) => void;
     labelFrom?: string;
     labelTo?: string;
     disabled?: boolean;
@@ -59,14 +59,14 @@ export const FromToFields: React.FC<FromToFieldsProps> = ({
                         type="datetime-local"
                         value={fromStr}
                         max={toStr || undefined}
-                        onChange={e => onChange({ fromMs: fromLocalInputValue(e.target.value, timeSettings)?.getTime() })}
+                        onChange={e => onChange({ fromMs: fromLocalInputValue(e.target.value, timeSettings)?.getTime(), toMs:range.toMs })}
                         disabled={disabled}
                     />
                     <div className={s.helpers}>
                         <button
                             type="button"
                             className={s.helperBtn}
-                            onClick={() => onChange({ fromMs: undefined })}
+                            onClick={() => onChange({ fromMs: undefined, toMs:range.toMs })}
                             disabled={disabled}
                         >
                             Clear
@@ -74,7 +74,7 @@ export const FromToFields: React.FC<FromToFieldsProps> = ({
                         <button
                             type="button"
                             className={s.helperBtn}
-                            onClick={() => onChange({ fromMs: new Date().getTime() })}
+                            onClick={() => onChange({ fromMs: new Date().getTime(), toMs:range.toMs })}
                             disabled={disabled}
                         >
                             Now
@@ -94,14 +94,14 @@ export const FromToFields: React.FC<FromToFieldsProps> = ({
                         type="datetime-local"
                         value={toStr}
                         min={fromStr || undefined}
-                        onChange={e => onChange({ toMs: fromLocalInputValue(e.target.value, timeSettings)?.getTime() })}
+                        onChange={e => onChange({ toMs: fromLocalInputValue(e.target.value, timeSettings)?.getTime(), fromMs:range.fromMs  })}
                         disabled={disabled}
                     />
                     <div className={s.helpers}>
                         <button
                             type="button"
                             className={s.helperBtn}
-                            onClick={() => onChange({ toMs: undefined })}
+                            onClick={() => onChange({ toMs: undefined, fromMs:range.fromMs  })}
                             disabled={disabled}
                         >
                             Clear
@@ -109,7 +109,7 @@ export const FromToFields: React.FC<FromToFieldsProps> = ({
                         <button
                             type="button"
                             className={s.helperBtn}
-                            onClick={() => onChange({ toMs: new Date().getTime() })}
+                            onClick={() => onChange({ toMs: new Date().getTime(), fromMs:range.fromMs  })}
                             disabled={disabled}
                         >
                             Now

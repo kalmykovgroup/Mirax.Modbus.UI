@@ -7,6 +7,7 @@
     place-items: center;
     z-index: 1000;
     padding: 20px;
+    color: white;
 }
 
 .modal {

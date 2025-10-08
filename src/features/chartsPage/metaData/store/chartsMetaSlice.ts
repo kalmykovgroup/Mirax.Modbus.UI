@@ -32,6 +32,7 @@ export type ChartsMetaState = {
 
 }
 
+
 const initialState: ChartsMetaState = {
     databases: [],
     loading: { databases: false, entities: false, fields: false },
@@ -39,8 +40,8 @@ const initialState: ChartsMetaState = {
 
     databasesLoaded: false,
     getDatabasesById: {} as Record<Guid, DatabaseDto>,
-}
 
+}
 
 
 /* ======================== БАЗЫ ДАННЫХ ======================== */

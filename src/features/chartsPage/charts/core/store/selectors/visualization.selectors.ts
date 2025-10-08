@@ -61,7 +61,7 @@ const pointsCache = new WeakMap<readonly SeriesBinDto[], PointsCache>();
  * Теперь включаем ВСЕ bins, даже с null значениями.
  * ECharts сам обработает null как gap в линии.
  */
-function convertBinsToPoints(bins: readonly SeriesBinDto[]): PointsCache {
+function convertBinsToPoints(bins: readonly SeriesBinDto[], fieldName: string): PointsCache {
     const cached = pointsCache.get(bins);
     if (cached) return cached;
 
@@ -88,8 +88,10 @@ function convertBinsToPoints(bins: readonly SeriesBinDto[]): PointsCache {
 
     if (nullCount > 0) {
         console.log('[convertBinsToPoints] Bins with null avg (gaps):', {
+            fieldName: fieldName,
             total: bins.length,
             nulls: nullCount,
+            bins: bins
         });
     }
 
@@ -107,10 +109,11 @@ function convertBinsToPoints(bins: readonly SeriesBinDto[]): PointsCache {
 export const selectChartRenderData = createSelector(
     [
         (state: RootState, fieldName: FieldName) => selectOptimalData(state, fieldName),
-        (state: RootState, fieldName: FieldName) => selectFieldCurrentBucketMs(state, fieldName)
+        (state: RootState, fieldName: FieldName) => selectFieldCurrentBucketMs(state, fieldName),
+        (_state: RootState, fieldName: FieldName) => fieldName
     ],
-    (optimalData, bucketMs): ChartRenderData => {
-        const points = convertBinsToPoints(optimalData.data);
+    (optimalData, bucketMs, fieldName): ChartRenderData => {
+        const points = convertBinsToPoints(optimalData.data, fieldName);
 
         return {
             avgPoints: points.avg,

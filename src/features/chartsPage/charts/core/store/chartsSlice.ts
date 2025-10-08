@@ -41,10 +41,10 @@ const chartsSlice = createSlice({
 
         setResolvedCharReqTemplate(
             state,
-            action: PayloadAction<{ template: ResolvedCharReqTemplate }>
+            action: PayloadAction<ResolvedCharReqTemplate>
         ) {
-            // @ts-ignore
-            state.template = action.payload.template;
+            state.template = action.payload;
+            console.log("Реализовали шаблон", state.template)
         },
 
         // ========== УПРАВЛЕНИЕ ТАЙЛАМИ ==========

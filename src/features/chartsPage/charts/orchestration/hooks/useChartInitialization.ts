@@ -126,8 +126,6 @@ export function useChartInitialization(
             const response: MultiSeriesResponse = await dispatch(
                 fetchMultiSeriesInit({
                     template,
-                    fromMs: template.fromMs,
-                    toMs: template.toMs,
                     px: params.px
                 } as GetMultiSeriesRequest)
             ).unwrap();

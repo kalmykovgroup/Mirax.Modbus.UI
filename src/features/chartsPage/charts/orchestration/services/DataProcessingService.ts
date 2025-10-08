@@ -370,10 +370,10 @@ export class DataProcessingService {
 
         return {
             template: {...template,
-                selectedFields: selected
+                selectedFields: selected,
+                resolvedFromMs: optimizedInterval.fromMs,
+                resolvedToMs: optimizedInterval.toMs,
             },
-            fromMs: optimizedInterval.fromMs,
-            toMs: optimizedInterval.toMs,
             px,
             bucketMs
         };

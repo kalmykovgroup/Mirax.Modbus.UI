@@ -25,7 +25,7 @@ import {
 import {selectDatabasesLoaded} from "@chartsPage/metaData/store/chartsMetaSlice.ts";
 import type {ChartReqTemplateDto} from "@chartsPage/template/shared//dtos/ChartReqTemplateDto.ts";
 import {setResolvedCharReqTemplate} from "@chartsPage/charts/core/store/chartsSlice.ts";
-import type {TimeRange} from "@chartsPage/charts/core/store/types/chart.types.ts";
+import type {TimeRangeBounds} from "@chartsPage/charts/core/store/types/chart.types.ts";
 
 export default function ChartTemplatesPanel() {
 
@@ -51,10 +51,11 @@ export default function ChartTemplatesPanel() {
 
     const hasParams = useMemo(() => {
         if (!execTpl) return false
-        return extractAllKeysFromTemplate(execTpl).length > 0 || execTpl.fromMs == undefined || execTpl.toMs == undefined
+        return extractAllKeysFromTemplate(execTpl).length > 0 || execTpl.originalFromMs == undefined || execTpl.originalToMs == undefined
     }, [execTpl])
 
 
+        //Пользователь нажал "Удалить шаблон"
     const handleDelete = async (id: string) => {
 
         const ok = await confirm({
@@ -71,21 +72,23 @@ export default function ChartTemplatesPanel() {
 
     }
 
+    //Этот метод вызывается когда пользователь нажал выполнить шаблон, тут мы проверяем нужно ли заполнять данными или нет
     const handleExecute = (tpl: ChartReqTemplateDto) => {
 
         // Если ключей нет — сразу вернуть «разрешённый» шаблон (без изменений)v
-        if (extractAllKeysFromTemplate(tpl).length == 0 && tpl.fromMs != undefined && tpl.toMs != undefined) {
-            dispatch(setResolvedCharReqTemplate({template: {...tpl} as ResolvedCharReqTemplate}))
-        } else {
+        if (extractAllKeysFromTemplate(tpl).length == 0 && tpl.originalFromMs != undefined && tpl.originalToMs != undefined) {
+            dispatch(setResolvedCharReqTemplate(tpl as ResolvedCharReqTemplate))
+        } else { //Значит требуется заполнить данными, это вызовет модальное окно
             setExecTpl(tpl)
         }
     }
 
 
+    //Этот метод вызывается когда пользователь нажал выполнить шаблон, заполнил данными, так как требовалось и нажал ок
     const handleSubmitExec = (
         result: {
             values: Record<string, unknown>,
-            range: TimeRange
+            range: TimeRangeBounds
         }) => {
 
         if (!execTpl) return
@@ -96,14 +99,13 @@ export default function ChartTemplatesPanel() {
         }
 
         const resolved = resolveTemplateForServer(execTpl, result.values)
-
-        resolved.fromMs = result.range.fromMs
-        resolved.toMs =  result.range.toMs
-
-        dispatch(setResolvedCharReqTemplate({template: {...resolved} as ResolvedCharReqTemplate}))
+        resolved.originalFromMs = result.range.fromMs
+        resolved.originalToMs = result.range.toMs
+        dispatch(setResolvedCharReqTemplate(resolved as ResolvedCharReqTemplate))
         setExecTpl(null)
     }
 
+    //Это не доработанный метод, который должен показать в модальном окне как устроен шаблон.
     const onExecuteShow = (template: ChartReqTemplateDto) => {
         alert("show template " + template.name)
         console.log(template)
