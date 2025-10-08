@@ -191,6 +191,8 @@ export function FieldChartContainer({
         };
     }, [dispatch, fieldName]);
 
+    console.log("Обновили FieldChartContainer")
+
     return (
         <div
             style={{

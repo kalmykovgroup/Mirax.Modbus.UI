@@ -117,6 +117,8 @@ export const ViewFieldChart = memo(function ViewFieldChart({
         [chartData.avgPoints, chartData.minPoints, chartData.maxPoints, fieldName, originalRange, timeSettings, gapsInfo]
     );
 
+    console.log("Обновили ViewFieldChart")
+
     return (
         <>
             <CollapsibleSection>

@@ -98,9 +98,10 @@ export default function ChartTemplatesPanel() {
             alert(errors[0])
         }
 
-        const resolved = resolveTemplateForServer(execTpl, result.values)
-        resolved.originalFromMs = result.range.fromMs
-        resolved.originalToMs = result.range.toMs
+        const tmpl: ChartReqTemplateDto = resolveTemplateForServer(execTpl, result.values)
+
+        const resolved = {...tmpl,resolvedFromMs: result.range.fromMs, resolvedToMs: result.range.toMs} as ResolvedCharReqTemplate
+
         dispatch(setResolvedCharReqTemplate(resolved as ResolvedCharReqTemplate))
         setExecTpl(null)
     }

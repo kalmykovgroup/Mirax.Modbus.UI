@@ -176,7 +176,7 @@ export function ChartCanvas({
             silent: false
         });
 
-    }, [options, totalPoints]);
+    }, [options]);
 
     // ============================================
     // ПРОГРАММНОЕ ОБНОВЛЕНИЕ ДИАПАЗОНА (для синхронизации)
@@ -217,6 +217,8 @@ export function ChartCanvas({
             clearTimeout(timer);
         };
     }, [currentRange]);
+
+    console.log("Обновили canvas")
 
     // ============================================
     // LOADING STATE

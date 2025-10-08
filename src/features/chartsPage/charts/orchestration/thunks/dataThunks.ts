@@ -65,6 +65,11 @@ export const fetchMultiSeriesData = createAsyncThunk<
             }
         };
 
+        const from = new Date(modifiedRequest.template.resolvedFromMs!)
+        const to = new Date(modifiedRequest.template.resolvedToMs!)
+
+        console.log("Запрос на до загрузку", from, to, modifiedRequest)
+
         const subscription = dispatch(
             chartsApi.endpoints.getMultiSeries.initiate(
                 withDb<GetMultiSeriesRequest>(

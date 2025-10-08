@@ -161,6 +161,8 @@ export function ChartContainer() {
         );
     }
 
+    console.log("Обновили ChartContainer")
+
     // Основной контент: список графиков
     return (
         <div ref={containerRef} className={styles.container}>
