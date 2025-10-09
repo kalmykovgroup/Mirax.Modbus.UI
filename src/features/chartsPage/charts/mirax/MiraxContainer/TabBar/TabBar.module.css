@@ -1,0 +1,61 @@
+/* TabBar.module.css */
+.container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #fafafa;
+    border-bottom: 1px solid #e0e0e0;
+    min-height: 48px;
+}
+
+.tabs {
+    flex: 1;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.tabs::-webkit-scrollbar {
+    height: 4px;
+}
+
+.tabs::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 2px;
+}
+
+.tabs::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+.closeAllButton {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #666;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.closeAllButton:hover {
+    background: #f5f5f5;
+    border-color: #d32f2f;
+    color: #d32f2f;
+}
+
+.placeholder {
+    padding: 12px 16px;
+    color: #999;
+    font-size: 14px;
+    text-align: center;
+}

@@ -21,6 +21,9 @@ import {chartsTemplatesReducer} from "@chartsPage/template/store/chartsTemplates
 import {chartReqTemplatesApi} from "@chartsPage/template/shared//api/chartReqTemplatesApi.ts";
 import {chartsApi} from "@chartsPage/charts/core/api/chartsApi.ts";
 import { persistedChartsReducer } from '@chartsPage/charts/core/store/chartsPersistConfig';
+import {miraxApi} from "@chartsPage/charts/mirax/miraxApi.ts";
+
+import miraxReducer from '@chartsPage/charts/mirax/miraxSlice';
 export const rootReducer = combineReducers({
     // Persisted slices
     auth: authReducer,
@@ -36,6 +39,8 @@ export const rootReducer = combineReducers({
     chartsMeta: chartsMetaReducer,
 
     ui: uiReducer,
+    //Mirax
+    mirax: miraxReducer,
 
     // RTK Query
     [authApi.reducerPath]: authApi.reducer,
@@ -47,4 +52,7 @@ export const rootReducer = combineReducers({
     [chartsApi.reducerPath]: chartsApi.reducer,
     [chartReqTemplatesApi.reducerPath]: chartReqTemplatesApi.reducer,
     [metadataApi.reducerPath]: metadataApi.reducer,
+
+    //Mirax
+    [miraxApi.reducerPath]: miraxApi.reducer,
 });

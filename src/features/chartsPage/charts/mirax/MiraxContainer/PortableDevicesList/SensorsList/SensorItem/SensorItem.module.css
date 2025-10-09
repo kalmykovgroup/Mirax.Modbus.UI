@@ -1,0 +1,35 @@
+/* SensorItem.module.css */
+.item {
+    list-style: none;
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+}
+
+.content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.gas {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.channel {
+    font-size: 13px;
+    color: #666;
+}
+
+.modification {
+    font-size: 12px;
+    padding: 2px 8px;
+    background: #e3f2fd;
+    border-radius: 4px;
+    color: #1976d2;
+}
