@@ -10,6 +10,7 @@ import {
     selectHasSensorTabs,
 } from '@chartsPage/charts/mirax/miraxSlice';
 import { TechnicalRunsPanel } from './TechnicalRunsPanel/TechnicalRunsPanel';
+import { TabBar } from './TabBar/TabBar'; // ← ДОБАВИТЬ ЭТОТ ИМПОРТ
 import type { Guid } from '@app/lib/types/Guid';
 import {DevicesPanel} from "@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/DevicesPanel/DevicesPanel.tsx";
 import {
@@ -44,16 +45,26 @@ export function MiraxContainer({ dbId }: Props): JSX.Element {
 
     return (
         <div className={styles.container}>
-            {/* Верхняя секция: испытания + устройства */}
+            {/* Верхняя секция: испытания + вкладки + устройства */}
             <div className={styles.topSection}>
                 <TechnicalRunsPanel />
-                {activeTabId ? (
-                    <DevicesPanel technicalRunId={activeTabId} />
-                ) : (
-                    <div className={styles.noSelectionPanel}>
-                        <div className={styles.placeholder}>Выберите испытание из списка слева</div>
+
+                {/* ДОБАВИТЬ ЭТУ СЕКЦИЮ */}
+                <div className={styles.rightSection}>
+                    {/* Вкладки испытаний */}
+                    <TabBar />
+
+                    {/* Устройства активной вкладки */}
+                    <div className={styles.devicesContainer}>
+                        {activeTabId ? (
+                            <DevicesPanel technicalRunId={activeTabId} />
+                        ) : (
+                            <div className={styles.noSelectionPanel}>
+                                <div className={styles.placeholder}>Нет активной вкладки</div>
+                            </div>
+                        )}
                     </div>
-                )}
+                </div>
             </div>
 
             {/* Нижняя секция: вкладки сенсоров и графики */}
