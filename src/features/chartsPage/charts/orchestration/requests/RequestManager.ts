@@ -14,7 +14,7 @@ import type { GetMultiSeriesRequest } from "@chartsPage/charts/core/dtos/request
 import type { RequestMetrics } from "@chartsPage/charts/core/store/types/request.types.ts";
 import { selectFieldView } from "@chartsPage/charts/core/store/selectors/base.selectors";
 import type { FieldDto } from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
-import {TileSystemCore} from "@chartsPage/charts/core/store/tile-system/TileSystemCore.ts";
+import {toLocalInputValue} from "@chartsPage/charts/ui/TimeZonePicker/timezoneUtils.ts";
 
 function generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -76,28 +76,9 @@ export class RequestManager {
             console.warn('[RequestManager] Disposed');
             return;
         }
+        const timeSettings = this.getState().chartsSettings.timeSettings
 
-        // РАННЯЯ ПРОВЕРКА COVERAGE - до вызова analyzeLoadNeeds
-        const state = this.getState();
-        const fieldView = selectFieldView(state, fieldName);
-
-        if (fieldView && fieldView.originalRange) {
-            const tiles = fieldView.seriesLevel[bucketsMs] ?? [];
-            const alignedFrom = Math.floor(from / bucketsMs) * bucketsMs;
-            const alignedTo = Math.ceil(to / bucketsMs) * bucketsMs;
-
-            const quickCheck = TileSystemCore.findGaps(
-                fieldView.originalRange,
-                tiles,
-                { fromMs: alignedFrom, toMs: alignedTo }
-            );
-
-            if (quickCheck.hasFull || quickCheck.coverage >= 99.9) {
-                console.log('[RequestManager]    Full coverage, instant display quickCheck.coverage >= 99.9');
-                return;
-            }
-
-        }
+        console.log("[loadVisibleRange] запрашиваемый диапазон", toLocalInputValue(from, timeSettings), toLocalInputValue(to, timeSettings))
 
         const request = DataProcessingService.analyzeLoadNeeds(
             fieldName,
@@ -117,6 +98,9 @@ export class RequestManager {
             console.log('[RequestManager] Ошибка, диапазон не задан');
             return;
         }
+
+        console.log("[loadVisibleRange] округленный диапазон", toLocalInputValue(request.template.resolvedFromMs, timeSettings), toLocalInputValue(request.template.resolvedToMs, timeSettings))
+
 
         const requestId = generateId();
         const requestedInterval: CoverageInterval = {

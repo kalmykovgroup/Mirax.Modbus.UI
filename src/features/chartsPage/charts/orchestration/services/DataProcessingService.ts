@@ -285,7 +285,6 @@ export class DataProcessingService {
         return updates;
     }
 
-    // ... остальные методы (analyzeLoadNeeds, calculateLoadInterval, и т.д.) остаются без изменений
 
     /**
      * Анализ необходимости загрузки
@@ -455,7 +454,9 @@ export class DataProcessingService {
             distToStartBuckets <= minBucketsThreshold ||
             relDistStart <= proximityThreshold
         ) {
-            optimalFrom = Math.floor(originalRange.fromMs / bucketMs) * bucketMs;
+            //Округляем, НО не выходим за пределы originalRange
+            const roundedFrom = Math.floor(originalRange.fromMs / bucketMs) * bucketMs;
+            optimalFrom = Math.max(roundedFrom, originalRange.fromMs);
         }
 
         const distToEnd = originalRange.toMs - gap.toMs;
@@ -466,7 +467,9 @@ export class DataProcessingService {
             distToEndBuckets <= minBucketsThreshold ||
             relDistEnd <= proximityThreshold
         ) {
-            optimalTo = Math.ceil(originalRange.toMs / bucketMs) * bucketMs;
+            //Округляем, НО не выходим за пределы originalRange
+            const roundedTo = Math.ceil(originalRange.toMs / bucketMs) * bucketMs;
+            optimalTo = Math.min(roundedTo, originalRange.toMs);
         }
 
         // Расширяем до соседних тайлов если близко

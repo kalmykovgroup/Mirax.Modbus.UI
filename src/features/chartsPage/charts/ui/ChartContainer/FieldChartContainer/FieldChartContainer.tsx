@@ -68,8 +68,7 @@ export function FieldChartContainer({
      * 3. Программно при синхронизации с других графиков
      */
 
-    const handleOnZoomEnd = useCallback((range: TimeRange, fromSync = false) => {
-        console.log('[FieldChartContainer] Обновили FieldChartContainer');
+    const handleOnZoomEnd = useCallback((range: TimeRange) => {
 
         if (isSyncUpdateRef.current) {
             console.log('[FieldChartContainer] Пропускаем - обновление от синхронизации');
@@ -88,6 +87,8 @@ export function FieldChartContainer({
         lastRangeRef.current = range;
 
         const newBucket = calculateBucket(range.fromMs, range.toMs, width);
+
+
         const oldBucket = currentBucketRef.current;
 
         const shouldSync = syncEnabledRef.current && syncFieldsRef.current.some(f => f.name === fieldName);

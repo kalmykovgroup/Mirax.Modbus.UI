@@ -11,7 +11,7 @@ import type {
     FieldName,
     FieldView, OriginalRange,
     SeriesTile,
-    TimeRange, TimeRangeBounds
+    TimeRange
 } from "@chartsPage/charts/core/store/types/chart.types.ts";
 
 // ============================================
@@ -38,8 +38,7 @@ export const selectTemplate = (state: RootState): ResolvedCharReqTemplate | unde
 export const selectIsDataLoaded = (state: RootState): boolean =>
     state.charts.isDataLoaded;
 
-export const selectOriginalRange = (state: RootState): TimeRangeBounds =>
-    state.charts.originalRange;
+
 
 export const selectSyncEnabled = (state: RootState): boolean =>
     state.charts.syncEnabled;
