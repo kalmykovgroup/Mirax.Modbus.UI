@@ -1,8 +1,11 @@
 // src/features/mirax/store/miraxSlice.ts
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { RootState } from '@app/store/store';
+import type { LoadingState } from './types/miraxThunk.types';
 import type { Guid } from '@app/lib/types/Guid';
-import type {MiraxLoadingState} from "@chartsPage/charts/mirax/miraxThunk.types.ts";
-import type {RootState} from "@/store/store.ts";
+import type { TechnicalRunDto } from '@chartsPage/charts/mirax/contracts/TechnicalRunDto';
+import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto';
+import type { SensorDto } from '@chartsPage/charts/mirax/contracts/SensorDto';
 
 /**
  * Вкладка испытания
@@ -13,14 +16,12 @@ export interface TechnicalRunTab {
 }
 
 /**
- * Вкладка сенсора
+ * Вкладка сенсора с полными объектами
  */
 export interface SensorTab {
-    readonly technicalRunId: Guid;
-    readonly factoryNumber: string;
-    readonly gas: string;
-    readonly channelNumber: number;
-    readonly modification: string | undefined;
+    readonly technicalRun: TechnicalRunDto;
+    readonly device: PortableDeviceDto;
+    readonly sensor: SensorDto;
 }
 
 /**
@@ -43,22 +44,16 @@ export interface MiraxState {
     readonly databaseId: Guid | undefined;
     readonly openTabs: readonly TechnicalRunTab[];
     readonly activeTabId: Guid | undefined;
-
-    /**
-     * Вкладки сенсоров для каждого испытания
-     * Ключ: technicalRunId
-     */
     readonly sensorTabs: Record<Guid, SensorTabsState>;
-
     readonly selectedDeviceFactoryNumber: string | undefined;
     readonly expandedTechnicalRunIds: readonly Guid[];
     readonly expandedDeviceFactoryNumbers: readonly string[];
-    readonly technicalRunsLoading: MiraxLoadingState;
-    readonly devicesLoading: Record<string, MiraxLoadingState>;
-    readonly sensorsLoading: Record<string, MiraxLoadingState>;
+    readonly technicalRunsLoading: LoadingState;
+    readonly devicesLoading: Record<string, LoadingState>;
+    readonly sensorsLoading: Record<string, LoadingState>;
 }
 
-const initialLoadingState: MiraxLoadingState = {
+const initialLoadingState: LoadingState = {
     isLoading: false,
     progress: 0,
     error: undefined,
@@ -80,13 +75,8 @@ const initialState: MiraxState = {
 /**
  * Создать ключ для вкладки сенсора
  */
-function createSensorTabKey(
-    technicalRunId: Guid,
-    factoryNumber: string,
-    gas: string,
-    channelNumber: number
-): SensorTabKey {
-    return `${technicalRunId}-${factoryNumber}-${gas}-${channelNumber}`;
+function createSensorTabKey(sensorTab: SensorTab): SensorTabKey {
+    return `${sensorTab.technicalRun.id}-${sensorTab.device.factoryNumber}-${sensorTab.sensor.gas}-${sensorTab.sensor.channelNumber}`;
 }
 
 export const miraxSlice = createSlice({
@@ -128,7 +118,6 @@ export const miraxSlice = createSlice({
             } else {
                 state.openTabs = [...state.openTabs, { id, name }];
                 state.activeTabId = id;
-                // Инициализируем состояние вкладок сенсоров для этого испытания
                 state.sensorTabs[id] = {
                     openTabs: [],
                     activeTabKey: undefined,
@@ -153,7 +142,6 @@ export const miraxSlice = createSlice({
                 }
             }
 
-            // Удаляем все вкладки сенсоров для этого испытания
             delete state.sensorTabs[tabId];
             delete state.devicesLoading[tabId];
 
@@ -178,18 +166,16 @@ export const miraxSlice = createSlice({
         },
 
         /**
-         * Открыть вкладку сенсора
+         * Открыть вкладку сенсора с полными объектами
          */
         openSensorTab: (state, action: PayloadAction<SensorTab>) => {
-            const sensor = action.payload;
-            const { technicalRunId } = sensor;
+            const sensorTab = action.payload;
+            const technicalRunId = sensorTab.technicalRun.id;
 
-            // Проверяем, что испытание открыто
             if (!state.openTabs.some((tab) => tab.id === technicalRunId)) {
                 return;
             }
 
-            // Инициализируем состояние вкладок сенсоров если нужно
             if (!(technicalRunId in state.sensorTabs)) {
                 state.sensorTabs[technicalRunId] = {
                     openTabs: [],
@@ -198,38 +184,25 @@ export const miraxSlice = createSlice({
             }
 
             const sensorTabsState = state.sensorTabs[technicalRunId]!;
-            const tabKey = createSensorTabKey(
-                technicalRunId,
-                sensor.factoryNumber,
-                sensor.gas,
-                sensor.channelNumber
-            );
+            const tabKey = createSensorTabKey(sensorTab);
 
-            // Проверяем, есть ли уже такая вкладка
             const existingTab = sensorTabsState.openTabs.find(
-                (tab) =>
-                    createSensorTabKey(tab.technicalRunId, tab.factoryNumber, tab.gas, tab.channelNumber) ===
-                    tabKey
+                (tab) => createSensorTabKey(tab) === tabKey
             );
 
             if (existingTab) {
-                // Вкладка уже открыта, просто активируем
                 state.sensorTabs[technicalRunId] = {
                     ...sensorTabsState,
                     activeTabKey: tabKey,
                 };
             } else {
-                // Создаём новую вкладку
                 state.sensorTabs[technicalRunId] = {
-                    openTabs: [...sensorTabsState.openTabs, sensor],
+                    openTabs: [...sensorTabsState.openTabs, sensorTab],
                     activeTabKey: tabKey,
                 };
             }
         },
 
-        /**
-         * Закрыть вкладку сенсора
-         */
         closeSensorTab: (
             state,
             action: PayloadAction<{ readonly technicalRunId: Guid; readonly tabKey: SensorTabKey }>
@@ -240,33 +213,23 @@ export const miraxSlice = createSlice({
 
             const sensorTabsState = state.sensorTabs[technicalRunId]!;
             const tabIndex = sensorTabsState.openTabs.findIndex(
-                (tab) =>
-                    createSensorTabKey(tab.technicalRunId, tab.factoryNumber, tab.gas, tab.channelNumber) ===
-                    tabKey
+                (tab) => createSensorTabKey(tab) === tabKey
             );
 
             if (tabIndex === -1) return;
 
             const newOpenTabs = sensorTabsState.openTabs.filter(
-                (tab) =>
-                    createSensorTabKey(tab.technicalRunId, tab.factoryNumber, tab.gas, tab.channelNumber) !==
-                    tabKey
+                (tab) => createSensorTabKey(tab) !== tabKey
             );
 
             let newActiveTabKey = sensorTabsState.activeTabKey;
 
-            // Если закрыли активную вкладку, активируем другую
             if (sensorTabsState.activeTabKey === tabKey) {
                 if (newOpenTabs.length > 0) {
                     const newActiveIndex = Math.max(0, tabIndex - 1);
                     const newActiveTab = newOpenTabs[newActiveIndex];
                     if (newActiveTab) {
-                        newActiveTabKey = createSensorTabKey(
-                            newActiveTab.technicalRunId,
-                            newActiveTab.factoryNumber,
-                            newActiveTab.gas,
-                            newActiveTab.channelNumber
-                        );
+                        newActiveTabKey = createSensorTabKey(newActiveTab);
                     } else {
                         newActiveTabKey = undefined;
                     }
@@ -281,9 +244,6 @@ export const miraxSlice = createSlice({
             };
         },
 
-        /**
-         * Активировать вкладку сенсора
-         */
         setActiveSensorTab: (
             state,
             action: PayloadAction<{ readonly technicalRunId: Guid; readonly tabKey: SensorTabKey }>
@@ -294,11 +254,8 @@ export const miraxSlice = createSlice({
 
             const sensorTabsState = state.sensorTabs[technicalRunId]!;
 
-            // Проверяем, что такая вкладка существует
             const tabExists = sensorTabsState.openTabs.some(
-                (tab) =>
-                    createSensorTabKey(tab.technicalRunId, tab.factoryNumber, tab.gas, tab.channelNumber) ===
-                    tabKey
+                (tab) => createSensorTabKey(tab) === tabKey
             );
 
             if (tabExists) {
@@ -309,9 +266,6 @@ export const miraxSlice = createSlice({
             }
         },
 
-        /**
-         * Закрыть все вкладки сенсоров для испытания
-         */
         closeAllSensorTabs: (state, action: PayloadAction<Guid>) => {
             const technicalRunId = action.payload;
 
@@ -599,11 +553,8 @@ export const selectHasOpenTabs = (state: RootState): boolean =>
     state.mirax.openTabs.length > 0;
 
 export const selectIsTabOpen = (state: RootState, tabId: Guid): boolean =>
-    state.mirax.openTabs.some((tab: { id: string; }) => tab.id === tabId);
+    state.mirax.openTabs.some((tab) => tab.id === tabId);
 
-/**
- * Получить состояние вкладок сенсоров для испытания
- */
 export const selectSensorTabsState = (
     state: RootState,
     technicalRunId: Guid
@@ -616,9 +567,6 @@ export const selectSensorTabsState = (
     );
 };
 
-/**
- * Получить открытые вкладки сенсоров для испытания
- */
 export const selectOpenSensorTabs = (
     state: RootState,
     technicalRunId: Guid
@@ -626,9 +574,6 @@ export const selectOpenSensorTabs = (
     return selectSensorTabsState(state, technicalRunId).openTabs;
 };
 
-/**
- * Получить активную вкладку сенсора для испытания
- */
 export const selectActiveSensorTabKey = (
     state: RootState,
     technicalRunId: Guid
@@ -636,9 +581,6 @@ export const selectActiveSensorTabKey = (
     return selectSensorTabsState(state, technicalRunId).activeTabKey;
 };
 
-/**
- * Получить активную вкладку сенсора для испытания
- */
 export const selectActiveSensorTab = (
     state: RootState,
     technicalRunId: Guid
@@ -647,15 +589,10 @@ export const selectActiveSensorTab = (
     if (!sensorTabsState.activeTabKey) return undefined;
 
     return sensorTabsState.openTabs.find(
-        (tab) =>
-            `${tab.technicalRunId}-${tab.factoryNumber}-${tab.gas}-${tab.channelNumber}` ===
-            sensorTabsState.activeTabKey
+        (tab) => createSensorTabKey(tab) === sensorTabsState.activeTabKey
     );
 };
 
-/**
- * Проверить, есть ли открытые вкладки сенсоров для испытания
- */
 export const selectHasSensorTabs = (state: RootState, technicalRunId: Guid): boolean => {
     return selectSensorTabsState(state, technicalRunId).openTabs.length > 0;
 };
@@ -663,13 +600,8 @@ export const selectHasSensorTabs = (state: RootState, technicalRunId: Guid): boo
 /**
  * Создать ключ для вкладки сенсора (экспортируемая версия)
  */
-export function getSensorTabKey(
-    technicalRunId: Guid,
-    factoryNumber: string,
-    gas: string,
-    channelNumber: number
-): SensorTabKey {
-    return `${technicalRunId}-${factoryNumber}-${gas}-${channelNumber}`;
+export function getSensorTabKey(sensorTab: SensorTab): SensorTabKey {
+    return createSensorTabKey(sensorTab);
 }
 
 export const selectSelectedDeviceFactoryNumber = (state: RootState): string | undefined =>
@@ -690,10 +622,10 @@ export const selectIsTechnicalRunExpanded = (state: RootState, technicalRunId: G
 export const selectIsDeviceExpanded = (state: RootState, factoryNumber: string): boolean =>
     state.mirax.expandedDeviceFactoryNumbers.includes(factoryNumber);
 
-export const selectTechnicalRunsLoading = (state: RootState): MiraxLoadingState =>
+export const selectTechnicalRunsLoading = (state: RootState): LoadingState =>
     state.mirax.technicalRunsLoading;
 
-export const selectDevicesLoading = (state: RootState, technicalRunId: Guid): MiraxLoadingState =>
+export const selectDevicesLoading = (state: RootState, technicalRunId: Guid): LoadingState =>
     state.mirax.devicesLoading[technicalRunId] ?? {
         isLoading: false,
         progress: 0,
@@ -704,7 +636,7 @@ export const selectSensorsLoading = (
     state: RootState,
     technicalRunId: Guid,
     factoryNumber: string
-): MiraxLoadingState => {
+): LoadingState => {
     const key = `${technicalRunId}-${factoryNumber}`;
     return (
         state.mirax.sensorsLoading[key] ?? {

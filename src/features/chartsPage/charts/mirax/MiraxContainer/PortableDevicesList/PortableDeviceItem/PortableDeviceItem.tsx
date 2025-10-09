@@ -14,13 +14,14 @@ import {
 } from '@chartsPage/charts/mirax/miraxSlice';
 import { fetchSensors } from '@chartsPage/charts/mirax/miraxThunks';
 import { useGetSensorsQuery } from '@chartsPage/charts/mirax/miraxApi';
+import type { Guid } from '@app/lib/types/Guid';
 import {getDeviceDisplayName, shouldShowCopyId} from "@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers.ts";
 import {CopyButton} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/CopyButton/CopyButton.tsx";
 import {SensorsList} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/SensorsList/SensorsList.tsx";
 
 interface Props {
     readonly device: PortableDeviceDto;
-    readonly technicalRunId: string;
+    readonly technicalRunId: Guid;
 }
 
 export function PortableDeviceItem({ device, technicalRunId }: Props): JSX.Element {
@@ -109,7 +110,11 @@ export function PortableDeviceItem({ device, technicalRunId }: Props): JSX.Eleme
                     {isLoading ? (
                         <div className={styles.loading}>Загрузка сенсоров...</div>
                     ) : sensors.length > 0 ? (
-                        <SensorsList sensors={sensors} />
+                        <SensorsList
+                            sensors={sensors}
+                            technicalRunId={technicalRunId}
+                            factoryNumber={factoryNumber}
+                        />
                     ) : (
                         <div className={styles.empty}>Нет сенсоров</div>
                     )}

@@ -9,6 +9,7 @@ import {
     selectTechnicalRunsError,
     selectTechnicalRunsLoading,
     openTechnicalRunTab,
+    selectActiveTabId,
 } from '@chartsPage/charts/mirax/miraxSlice';
 import { useGetTechnicalRunsQuery } from '@chartsPage/charts/mirax/miraxApi';
 import { fetchTechnicalRuns } from '@chartsPage/charts/mirax/miraxThunks';
@@ -16,6 +17,7 @@ import { LoadingProgress } from '@chartsPage/charts/mirax/MiraxContainer/Portabl
 import { ErrorMessage } from '@chartsPage/charts/mirax/MiraxContainer/ErrorMessage/ErrorMessage';
 import { SearchInput } from '@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/SearchInput/SearchInput';
 import type { TechnicalRunDto } from '@chartsPage/charts/mirax/contracts/TechnicalRunDto';
+import classNames from 'classnames';
 import {formatTechnicalRunDate} from "@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers.ts";
 
 export function TechnicalRunsPanel(): JSX.Element {
@@ -24,6 +26,7 @@ export function TechnicalRunsPanel(): JSX.Element {
     const loadingState = useAppSelector(selectTechnicalRunsLoading);
     const isLoading = useAppSelector(selectIsTechnicalRunsLoading);
     const error = useAppSelector(selectTechnicalRunsError);
+    const activeTabId = useAppSelector(selectActiveTabId);
 
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -120,7 +123,11 @@ export function TechnicalRunsPanel(): JSX.Element {
                 ) : (
                     <ul className={styles.items}>
                         {filteredRuns.map((run) => (
-                            <li key={run.id} className={styles.item} onClick={() => handleRunClick(run)}>
+                            <li
+                                key={run.id}
+                                className={classNames(styles.item, activeTabId === run.id && styles.itemActive)}
+                                onClick={() => handleRunClick(run)}
+                            >
                                 <div className={styles.itemContent}>
                                     <h3 className={styles.itemName}>{run.name ?? 'Без названия'}</h3>
                                     <div className={styles.itemDates}>

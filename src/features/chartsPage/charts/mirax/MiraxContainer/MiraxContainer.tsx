@@ -3,11 +3,18 @@ import { useEffect, type JSX } from 'react';
 
 import styles from './MiraxContainer.module.css';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { setDatabaseId, selectDatabaseId, selectActiveTabId } from '@chartsPage/charts/mirax/miraxSlice';
+import {
+    setDatabaseId,
+    selectDatabaseId,
+    selectActiveTabId,
+    selectHasSensorTabs,
+} from '@chartsPage/charts/mirax/miraxSlice';
+import { TechnicalRunsPanel } from './TechnicalRunsPanel/TechnicalRunsPanel';
 import type { Guid } from '@app/lib/types/Guid';
-import {TechnicalRunsPanel} from "@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsPanel/TechnicalRunsPanel.tsx";
-import {TabContent} from "@chartsPage/charts/mirax/MiraxContainer/TabContent/TabContent.tsx";
-import {TabBar} from "@chartsPage/charts/mirax/MiraxContainer/TabBar/TabBar.tsx";
+import {DevicesPanel} from "@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/DevicesPanel/DevicesPanel.tsx";
+import {
+    SensorTabsSection
+} from "@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/DevicesPanel/SensorTabsSection/SensorTabsSection.tsx";
 
 interface Props {
     readonly dbId: Guid;
@@ -17,6 +24,9 @@ export function MiraxContainer({ dbId }: Props): JSX.Element {
     const dispatch = useAppDispatch();
     const currentDbId = useAppSelector(selectDatabaseId);
     const activeTabId = useAppSelector(selectActiveTabId);
+    const hasSensorTabs = useAppSelector((state) =>
+        activeTabId ? selectHasSensorTabs(state, activeTabId) : false
+    );
 
     useEffect(() => {
         if (currentDbId !== dbId) {
@@ -26,7 +36,7 @@ export function MiraxContainer({ dbId }: Props): JSX.Element {
 
     if (currentDbId === undefined) {
         return (
-            <div className={styles.container}>
+            <div className={styles.emptyContainer}>
                 <div className={styles.placeholder}>База данных не выбрана</div>
             </div>
         );
@@ -34,20 +44,20 @@ export function MiraxContainer({ dbId }: Props): JSX.Element {
 
     return (
         <div className={styles.container}>
-            <div className={styles.leftPanel}>
+            {/* Верхняя секция: испытания + устройства */}
+            <div className={styles.topSection}>
                 <TechnicalRunsPanel />
+                {activeTabId ? (
+                    <DevicesPanel technicalRunId={activeTabId} />
+                ) : (
+                    <div className={styles.noSelectionPanel}>
+                        <div className={styles.placeholder}>Выберите испытание из списка слева</div>
+                    </div>
+                )}
             </div>
 
-            <div className={styles.rightPanel}>
-                <TabBar />
-                <div className={styles.tabContentWrapper}>
-                    {activeTabId ? (
-                        <TabContent technicalRunId={activeTabId} />
-                    ) : (
-                        <div className={styles.placeholder}>Нет активной вкладки</div>
-                    )}
-                </div>
-            </div>
+            {/* Нижняя секция: вкладки сенсоров и графики */}
+            {hasSensorTabs && activeTabId && <SensorTabsSection technicalRunId={activeTabId} />}
         </div>
     );
 }

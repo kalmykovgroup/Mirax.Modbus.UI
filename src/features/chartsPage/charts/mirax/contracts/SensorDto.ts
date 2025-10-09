@@ -7,5 +7,5 @@ export interface SensorDto {
     readonly id: Guid;
     readonly gas: string;
     readonly channelNumber: number;
-    readonly modification: string | null;
+    readonly modification: string | undefined;
 }

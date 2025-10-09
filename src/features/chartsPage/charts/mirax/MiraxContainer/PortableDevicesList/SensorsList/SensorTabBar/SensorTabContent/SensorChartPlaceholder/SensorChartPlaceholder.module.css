@@ -1,0 +1,110 @@
+/* SensorChartPlaceholder.module.css */
+.container {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.placeholder {
+    padding: 80px 40px;
+    text-align: center;
+    border: 2px dashed #e0e0e0;
+    border-radius: 12px;
+    background: #fafafa;
+    margin-bottom: 40px;
+}
+
+.icon {
+    font-size: 72px;
+    margin-bottom: 20px;
+}
+
+.title {
+    margin: 0 0 12px 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+}
+
+.description {
+    margin: 0;
+    font-size: 16px;
+    color: #999;
+}
+
+.debugInfo {
+    padding: 32px;
+    background: #f5f5f5;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+}
+
+.debugTitle {
+    margin: 0 0 24px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.debugSection {
+    margin-bottom: 32px;
+}
+
+.debugSection:last-of-type {
+    margin-bottom: 24px;
+}
+
+.debugSubtitle {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1976d2;
+}
+
+.debugList {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px 20px;
+    margin: 0;
+    padding: 16px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.debugList dt {
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+}
+
+.debugList dd {
+    margin: 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.code {
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 13px;
+    padding: 3px 8px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    color: #d32f2f;
+}
+
+.note {
+    padding: 16px 20px;
+    background: #e3f2fd;
+    border-radius: 8px;
+    border-left: 4px solid #1976d2;
+    font-size: 14px;
+    color: #333;
+    line-height: 1.6;
+}
+
+.note strong {
+    color: #1976d2;
+}

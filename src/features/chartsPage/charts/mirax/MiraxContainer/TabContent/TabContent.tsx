@@ -3,12 +3,22 @@ import { useState, useMemo, useCallback, type JSX } from 'react';
 
 import styles from './TabContent.module.css';
 import { useAppSelector } from '@/store/hooks';
-import { selectDatabaseId } from '@chartsPage/charts/mirax/miraxSlice';
+import {
+    selectDatabaseId,
+    selectActiveSensorTab,
+    selectHasSensorTabs,
+} from '@chartsPage/charts/mirax/miraxSlice';
 import { useGetPortableDevicesQuery } from '@chartsPage/charts/mirax/miraxApi';
 import { SearchInput } from '@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/SearchInput/SearchInput';
 import { PortableDevicesList } from '@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDevicesList';
 import type { Guid } from '@app/lib/types/Guid';
 import {sortDevicesByFactoryNumber} from "@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers.ts";
+import {
+    SensorTabBar
+} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/SensorsList/SensorTabBar/SensorTabBar.tsx";
+import {
+    SensorTabContent
+} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/SensorsList/SensorTabBar/SensorTabContent/SensorTabContent.tsx";
 
 interface Props {
     readonly technicalRunId: Guid;
@@ -16,6 +26,9 @@ interface Props {
 
 export function TabContent({ technicalRunId }: Props): JSX.Element {
     const databaseId = useAppSelector(selectDatabaseId);
+    const activeSensorTab = useAppSelector((state) => selectActiveSensorTab(state, technicalRunId));
+    const hasSensorTabs = useAppSelector((state) => selectHasSensorTabs(state, technicalRunId));
+
     const [deviceSearchQuery, setDeviceSearchQuery] = useState('');
 
     const { data: devices = [], isLoading } = useGetPortableDevicesQuery(
@@ -65,33 +78,50 @@ export function TabContent({ technicalRunId }: Props): JSX.Element {
 
     return (
         <div className={styles.container}>
-            {devices.length > 0 && (
-                <div className={styles.searchContainer}>
-                    <SearchInput
-                        value={deviceSearchQuery}
-                        onChange={handleDeviceSearchChange}
-                        onClear={handleDeviceSearchClear}
-                        placeholder="Поиск устройства..."
-                    />
-                    <span className={styles.deviceCount}>
-            {deviceSearchQuery.trim()
-                ? `${filteredDevices.length} из ${devices.length}`
-                : `${devices.length}`}
-          </span>
+            {/* Верхняя часть: список устройств */}
+            <div className={styles.devicesSection}>
+                {devices.length > 0 && (
+                    <div className={styles.searchContainer}>
+                        <SearchInput
+                            value={deviceSearchQuery}
+                            onChange={handleDeviceSearchChange}
+                            onClear={handleDeviceSearchClear}
+                            placeholder="Поиск устройства..."
+                        />
+                        <span className={styles.deviceCount}>
+              {deviceSearchQuery.trim()
+                  ? `${filteredDevices.length} из ${devices.length}`
+                  : `${devices.length}`}
+            </span>
+                    </div>
+                )}
+
+                <div className={styles.devicesContent}>
+                    {devices.length === 0 ? (
+                        <div className={styles.placeholder}>Нет устройств</div>
+                    ) : showNoResults ? (
+                        <div className={styles.placeholder}>
+                            Ничего не найдено по запросу "{deviceSearchQuery}"
+                        </div>
+                    ) : (
+                        <PortableDevicesList devices={filteredDevices} technicalRunId={technicalRunId} />
+                    )}
+                </div>
+            </div>
+
+            {/* Нижняя часть: вкладки и графики сенсоров */}
+            {hasSensorTabs && (
+                <div className={styles.sensorSection}>
+                    <SensorTabBar technicalRunId={technicalRunId} />
+                    <div className={styles.sensorContent}>
+                        {activeSensorTab ? (
+                            <SensorTabContent sensorTab={activeSensorTab} />
+                        ) : (
+                            <div className={styles.placeholder}>Нет активной вкладки сенсора</div>
+                        )}
+                    </div>
                 </div>
             )}
-
-            <div className={styles.content}>
-                {devices.length === 0 ? (
-                    <div className={styles.placeholder}>Нет устройств</div>
-                ) : showNoResults ? (
-                    <div className={styles.placeholder}>
-                        Ничего не найдено по запросу "{deviceSearchQuery}"
-                    </div>
-                ) : (
-                    <PortableDevicesList devices={filteredDevices} technicalRunId={technicalRunId} />
-                )}
-            </div>
         </div>
     );
 }
