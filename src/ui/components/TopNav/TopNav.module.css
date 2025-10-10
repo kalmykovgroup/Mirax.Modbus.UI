@@ -39,14 +39,14 @@
     text-decoration: none;
     font-weight: 500;
     line-height: 1;
-    color: #b0d1ea;                /* светлый текст на синем фоне */
+    color: #35a6ff;                /* светлый текст на синем фоне */
     background: transparent;
     transition: background 0.15s ease, transform 0.02s ease;
 }
 
 .link:hover {
     background: rgba(255, 255, 255, 0.08);
-    color: #247abe;
+    color: #0062aa;
 }
 
 .link:active {
@@ -60,6 +60,6 @@
 
 /* Активный пункт меню — зелёный */
 .active {
-    background: #247abe;          /* зелёный фон */
+    background: #35a6ff;          /* зелёный фон */
     color: white;                /* тёмно-зелёный текст для контраста */
 }

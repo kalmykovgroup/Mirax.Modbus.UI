@@ -368,6 +368,7 @@ SensorsLoadResult,
                 );
 
                 return { data: response, wasAborted: false };
+
             } catch (error: any) {
                 // Обработка отмены
                 if (error.name === 'AbortError' || signal?.aborted) {

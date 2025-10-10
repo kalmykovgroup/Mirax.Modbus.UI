@@ -85,9 +85,7 @@ export const miraxApi = createApi({
 
 export const {
     useGetTechnicalRunsQuery,
-    useLazyGetTechnicalRunsQuery,
     useGetPortableDevicesQuery,
-    useLazyGetPortableDevicesQuery,
     useGetSensorsQuery,
     useLazyGetSensorsQuery,
 } = miraxApi;

@@ -1,11 +1,12 @@
 // src/features/chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/PortableDeviceItem.tsx
-// ОТЛАДОЧНАЯ ВЕРСИЯ - после проверки удалить console.log
-import { useCallback, useRef, useMemo, useEffect, type JSX } from 'react';
+import React, { useCallback, useRef, useMemo, useEffect, type JSX } from 'react';
 import classNames from 'classnames';
 
 import styles from './PortableDeviceItem.module.css';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto';
+import type { TechnicalRunDto } from '@chartsPage/charts/mirax/contracts/TechnicalRunDto';
+import type { SensorDto } from '@chartsPage/charts/mirax/contracts/SensorDto';
 import {
     selectDevice,
     toggleDeviceExpanded,
@@ -14,7 +15,7 @@ import {
     selectDatabaseId,
 } from '@chartsPage/charts/mirax/miraxSlice';
 import { fetchSensors } from '@chartsPage/charts/mirax/miraxThunks';
-import { useGetSensorsQuery } from '@chartsPage/charts/mirax/miraxApi';
+import { useGetSensorsQuery, useGetTechnicalRunsQuery } from '@chartsPage/charts/mirax/miraxApi';
 import type { Guid } from '@app/lib/types/Guid';
 import { getDeviceDisplayName, shouldShowCopyId } from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers';
 import { CopyButton } from '@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/CopyButton/CopyButton';
@@ -26,6 +27,19 @@ interface Props {
     readonly isFirst: boolean;
 }
 
+/**
+ * Метод для вывода данных испытания, устройства и сенсоров в консоль
+ */
+async function logDeviceData(
+    technicalRun: TechnicalRunDto | undefined,
+    device: PortableDeviceDto,
+    sensors: readonly SensorDto[]
+): Promise<void> {
+    console.log('TechnicalRunDto:', technicalRun);
+    console.log('PortableDeviceDto:', device);
+    console.log('SensorDto[]:', sensors);
+}
+
 export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): JSX.Element {
     const dispatch = useAppDispatch();
     const databaseId = useAppSelector(selectDatabaseId);
@@ -34,27 +48,38 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
     const isSelected = useAppSelector(selectSelectedDeviceFactoryNumber) === factoryNumber;
     const abortControllerRef = useRef<AbortController | undefined>(undefined);
     const firstLoadTriggeredRef = useRef(false);
+    const sensorsLoadedRef = useRef(false);
 
     const showCopyButton = shouldShowCopyId(device);
 
-    // Для первого устройства загружаем сенсоры всегда, для остальных — только при раскрытии
-    const shouldLoadSensors = isFirst || isExpanded;
+    // Получаем данные испытания из кеша
+    const { data: technicalRuns = [] } = useGetTechnicalRunsQuery(
+        { dbId: databaseId!, body: undefined },
+        { skip: databaseId === undefined }
+    );
 
+    const currentTechnicalRun = useMemo((): TechnicalRunDto | undefined => {
+        return technicalRuns.find((run) => run.id === technicalRunId);
+    }, [technicalRuns, technicalRunId]);
+
+    // Читаем сенсоры из RTK Query кеша
+    // skip: false если (первое ИЛИ раскрыто ИЛИ уже загружали)
     const { data: sensors = [], isLoading } = useGetSensorsQuery(
         {
             dbId: databaseId!,
             body: { technicalRunId, factoryNumber },
         },
         {
-            skip: !shouldLoadSensors || databaseId === undefined || !factoryNumber,
+            skip: databaseId === undefined || !factoryNumber || (!isFirst && !isExpanded && !sensorsLoadedRef.current),
         }
     );
 
-    // Явная загрузка сенсоров для первого устройства при монтировании
+    // Автозагрузка сенсоров ТОЛЬКО для первого устройства через thunk
     useEffect(() => {
-        // Проверяем все условия для загрузки
+        // ВАЖНО: проверяем isFirst в зависимостях, чтобы не срабатывало для остальных
+        if (!isFirst) return;
+
         const shouldTriggerLoad =
-            isFirst &&
             !firstLoadTriggeredRef.current &&
             databaseId !== undefined &&
             factoryNumber !== '' &&
@@ -62,10 +87,10 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
             !isLoading;
 
         if (shouldTriggerLoad) {
-            console.log('[PortableDeviceItem] Запускаем автозагрузку для первого устройства:', factoryNumber);
             firstLoadTriggeredRef.current = true;
 
             const controller = new AbortController();
+            abortControllerRef.current = controller;
 
             dispatch(
                 fetchSensors({
@@ -74,18 +99,9 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
                     factoryNumber,
                     signal: controller.signal,
                 })
-            )
-                .then(() => {
-                    console.log('[PortableDeviceItem] Автозагрузка успешна:', factoryNumber);
-                })
-                .catch((error) => {
-                    if (error.name !== 'AbortError') {
-                        console.error('[PortableDeviceItem] Ошибка автозагрузки:', error);
-                    }
-                });
-
-            controller.abort();
-
+            ).then(() => {
+                sensorsLoadedRef.current = true;
+            });
         }
     }, [isFirst, databaseId, technicalRunId, factoryNumber, sensors.length, isLoading, dispatch]);
 
@@ -114,7 +130,8 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
 
             dispatch(toggleDeviceExpanded(factoryNumber));
 
-            if (!isExpanded && databaseId !== undefined) {
+            // Загружаем сенсоры только если раскрываем И их ещё нет
+            if (!isExpanded && sensors.length === 0 && databaseId !== undefined) {
                 abortControllerRef.current?.abort();
                 abortControllerRef.current = new AbortController();
 
@@ -127,12 +144,49 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
                             signal: abortControllerRef.current.signal,
                         })
                     ).unwrap();
+
+                    sensorsLoadedRef.current = true;
+                } catch (error) {
+                    if (error && typeof error === 'object' && 'name' in error && error.name !== 'AbortError') {
+                        console.error('Ошибка загрузки сенсоров:', error);
+                    }
+                }
+            }
+        },
+        [dispatch, factoryNumber, isExpanded, sensors.length, databaseId, technicalRunId]
+    );
+
+    /**
+     * Обработчик кнопки для вывода данных в консоль и построения графика
+     */
+    const handleBuildChart = useCallback(
+        async (e: React.MouseEvent) => {
+            e.stopPropagation();
+
+            let actualSensors = sensors;
+
+            // Догружаем сенсоры только если их нет в кеше
+            if (sensors.length === 0 && databaseId !== undefined && factoryNumber) {
+                try {
+                    const result = await dispatch(
+                        fetchSensors({
+                            databaseId,
+                            technicalRunId,
+                            factoryNumber,
+                            signal: new AbortController().signal,
+                        })
+                    ).unwrap();
+
+                    actualSensors = result.data;
+                    sensorsLoadedRef.current = true; // Устанавливаем флаг, чтобы useGetSensorsQuery подхватил данные
                 } catch (error) {
                     console.error('Ошибка загрузки сенсоров:', error);
                 }
             }
+
+            await logDeviceData(currentTechnicalRun, device, actualSensors);
         },
-        [dispatch, factoryNumber, isExpanded, databaseId, technicalRunId]
+        [currentTechnicalRun, device, sensors, databaseId, factoryNumber, technicalRunId, dispatch]
     );
 
     return (
@@ -161,7 +215,6 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
                             <span className={styles.factoryNumber}>№{device.factoryNumber}</span>
                         )}
 
-                        {/* Показываем газы ВСЕГДА когда они загружены */}
                         {!isLoading && uniqueGases.length > 0 && (
                             <div className={styles.gasesContainer}>
                                 {uniqueGases.map((gas) => (
@@ -171,6 +224,16 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
                                 ))}
                             </div>
                         )}
+
+                        {/* Кнопка построения графика */}
+                        <button
+                            className={styles.chartButton}
+                            onClick={handleBuildChart}
+                            title="Построить график"
+                            type="button"
+                        >
+                            📈 График
+                        </button>
                     </div>
                 </div>
             </div>

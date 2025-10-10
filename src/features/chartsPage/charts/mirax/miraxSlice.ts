@@ -1,5 +1,5 @@
 // src/features/mirax/store/miraxSlice.ts
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import {createSelector, createSlice, type PayloadAction} from '@reduxjs/toolkit';
 import type { Guid } from '@app/lib/types/Guid';
 import type { TechnicalRunDto } from '@chartsPage/charts/mirax/contracts/TechnicalRunDto';
 import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto';
@@ -622,30 +622,55 @@ export const selectIsTechnicalRunExpanded = (state: RootState, technicalRunId: G
 export const selectIsDeviceExpanded = (state: RootState, factoryNumber: string): boolean =>
     state.mirax.expandedDeviceFactoryNumbers.includes(factoryNumber);
 
+export const selectMiraxState = (state: RootState): MiraxState => state.mirax;
+
+/**
+ * Выбранное (активное) испытание ID
+ * Используется в TechnicalRunItem для определения, выбрано ли текущее испытание
+ */
+export const selectSelectedTechnicalRunId = (state: RootState): Guid | undefined =>
+    state.mirax.activeTabId;
+
+/**
+ * Проверка, является ли испытание выбранным
+ * Альтернативный селектор (если нужен)
+ */
+export const selectTechnicalRun = (state: RootState, technicalRunId: Guid): boolean =>
+    state.mirax.activeTabId === technicalRunId;
+
+export default miraxSlice.reducer;
+
+
+// Заменить существующие селекторы на мемоизированные:
+
+const initialLoadingStateConst: MiraxLoadingState = {
+    isLoading: false,
+    progress: 0,
+    error: undefined,
+};
+
 export const selectTechnicalRunsLoading = (state: RootState): MiraxLoadingState =>
     state.mirax.technicalRunsLoading;
 
-export const selectDevicesLoading = (state: RootState, technicalRunId: Guid): MiraxLoadingState =>
-    state.mirax.devicesLoading[technicalRunId] ?? {
-        isLoading: false,
-        progress: 0,
-        error: undefined,
-    };
+// Мемоизированный селектор для devicesLoading
+export const selectDevicesLoading = createSelector(
+    [
+        (state: RootState) => state.mirax.devicesLoading,
+        (_state: RootState, technicalRunId: Guid) => technicalRunId,
+    ],
+    (devicesLoading, technicalRunId) =>
+        devicesLoading[technicalRunId] ?? initialLoadingStateConst
+);
 
-export const selectSensorsLoading = (
-    state: RootState,
-    technicalRunId: Guid,
-    factoryNumber: string
-): MiraxLoadingState => {
-    const key = `${technicalRunId}-${factoryNumber}`;
-    return (
-        state.mirax.sensorsLoading[key] ?? {
-            isLoading: false,
-            progress: 0,
-            error: undefined,
-        }
-    );
-};
+// Мемоизированный селектор для sensorsLoading
+export const selectSensorsLoading = createSelector(
+    [
+        (state: RootState) => state.mirax.sensorsLoading,
+        (_state: RootState, technicalRunId: Guid, factoryNumber: string) =>
+            `${technicalRunId}-${factoryNumber}`,
+    ],
+    (sensorsLoading, key) => sensorsLoading[key] ?? initialLoadingStateConst
+);
 
 export const selectIsTechnicalRunsLoading = (state: RootState): boolean =>
     state.mirax.technicalRunsLoading.isLoading;
@@ -676,21 +701,3 @@ export const selectSensorsError = (
     const key = `${technicalRunId}-${factoryNumber}`;
     return state.mirax.sensorsLoading[key]?.error;
 };
-
-export const selectMiraxState = (state: RootState): MiraxState => state.mirax;
-
-/**
- * Выбранное (активное) испытание ID
- * Используется в TechnicalRunItem для определения, выбрано ли текущее испытание
- */
-export const selectSelectedTechnicalRunId = (state: RootState): Guid | undefined =>
-    state.mirax.activeTabId;
-
-/**
- * Проверка, является ли испытание выбранным
- * Альтернативный селектор (если нужен)
- */
-export const selectTechnicalRun = (state: RootState, technicalRunId: Guid): boolean =>
-    state.mirax.activeTabId === technicalRunId;
-
-export default miraxSlice.reducer;

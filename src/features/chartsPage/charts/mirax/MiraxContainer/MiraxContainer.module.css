@@ -9,7 +9,7 @@
 .topSection {
     display: flex;
     height: 50vh;
-    min-height: 600px;
+    min-height: 800px;
     flex-shrink: 0;
     border-bottom: 2px solid #e0e0e0;
 }

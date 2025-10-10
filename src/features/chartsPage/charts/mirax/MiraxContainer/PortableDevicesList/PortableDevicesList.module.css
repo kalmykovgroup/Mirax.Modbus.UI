@@ -1,5 +1,19 @@
-/* PortableDevicesList.module.css */
+/* src/features/chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDevicesList.module.css */
+
+/* Список устройств */
 .list {
     margin: 0;
     padding: 0;
+}
+
+/* Пустое состояние */
+.emptyState {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    padding: 24px;
+    color: #999;
+    font-size: 14px;
+    text-align: center;
 }
