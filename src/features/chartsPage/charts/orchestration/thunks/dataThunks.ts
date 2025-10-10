@@ -30,14 +30,16 @@ import {withDb} from "@chartsPage/baseApi/types.ts";
  */
 export const fetchMultiSeriesData = createAsyncThunk<
     DataLoadResult,
-    DataLoadRequest,
+    {data: DataLoadRequest, tabId: string},
     { state: RootState }
 >(
     'charts/fetchMultiSeriesData',
     async (
-        { request, fields, loadingType, signal, onProgress },
+        { data, tabId  },
         { dispatch, rejectWithValue }
     ) => {
+   const  {request, fields, loadingType, signal, onProgress} = data
+
         if (!request.template?.databaseId) {
             return rejectWithValue('Missing template or databaseId');
         }
@@ -50,6 +52,7 @@ export const fetchMultiSeriesData = createAsyncThunk<
         // Стартуем загрузку для всех полей
         fields.forEach(field => {
             dispatch(startLoading({
+                tabId: tabId,
                 field: field.name,
                 type: loadingType,
                 message: 'Загрузка данных...'
@@ -92,6 +95,7 @@ export const fetchMultiSeriesData = createAsyncThunk<
 
                         fields.forEach(field => {
                             dispatch(updateLoadingProgress({
+                                tabId,
                                 field: field.name,
                                 progress: currentProgress,
                                 message: `Загрузка: ${currentProgress}%`
@@ -112,9 +116,10 @@ export const fetchMultiSeriesData = createAsyncThunk<
             if (signal?.aborted) {
                 fields.forEach(field => {
                     dispatch(finishLoading({
+                        tabId,
                         field: field.name,
                         success: false,
-                        error: undefined
+                        message: undefined
                     }));
                 });
                 return { response, wasAborted: true };
@@ -127,12 +132,16 @@ export const fetchMultiSeriesData = createAsyncThunk<
 
             fields.forEach(field => {
                 dispatch(updateLoadingProgress({
+                    tabId,
                     field: field.name,
-                    progress: 100
+                    progress: 100,
+                    message: undefined
                 }));
                 dispatch(finishLoading({
+                    tabId,
                     field: field.name,
-                    success: true
+                    success: true,
+                    message: undefined
                 }));
             });
 
@@ -143,9 +152,10 @@ export const fetchMultiSeriesData = createAsyncThunk<
             if (error.name === 'AbortError' || signal?.aborted) {
                 fields.forEach(field => {
                     dispatch(finishLoading({
+                        tabId,
                         field: field.name,
                         success: false,
-                        error: undefined
+                        message: undefined
                     }));
                 });
 
@@ -160,13 +170,15 @@ export const fetchMultiSeriesData = createAsyncThunk<
 
             fields.forEach(field => {
                 dispatch(setFieldError({
+                    tabId,
                     fieldName: field.name,
-                    error: errorMessage
+                    errorMessage: errorMessage
                 }));
                 dispatch(finishLoading({
+                    tabId,
                     field: field.name,
                     success: false,
-                    error: errorMessage
+                    message: errorMessage
                 }));
             });
 

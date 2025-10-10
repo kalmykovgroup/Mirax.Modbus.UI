@@ -6,8 +6,8 @@ import styles from './DeviceSortDropdown.module.css';
 import type {
     DeviceSortType,
     DeviceSortOption,
-} from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers';
-import { DEVICE_SORT_OPTIONS } from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers';
+} from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers.ts';
+import { DEVICE_SORT_OPTIONS } from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers.ts';
 
 interface Props {
     readonly value: DeviceSortType;

@@ -7,15 +7,12 @@ import {
     setDatabaseId,
     selectDatabaseId,
     selectActiveTabId,
-    selectHasSensorTabs,
 } from '@chartsPage/charts/mirax/miraxSlice';
 import { TechnicalRunsPanel } from './TechnicalRunsPanel/TechnicalRunsPanel';
-import { TabBar } from './TabBar/TabBar'; // ← ДОБАВИТЬ ЭТОТ ИМПОРТ
+import { TabBar } from './TabBar/TabBar';
 import type { Guid } from '@app/lib/types/Guid';
-import {DevicesPanel} from "@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/DevicesPanel/DevicesPanel.tsx";
-import {
-    SensorTabsSection
-} from "@chartsPage/charts/mirax/MiraxContainer/SensorTabsSection/SensorTabsSection.tsx";
+import {DevicesPanel} from "@chartsPage/charts/mirax/MiraxContainer/DevicesPanel/DevicesPanel.tsx";
+
 
 interface Props {
     readonly dbId: Guid;
@@ -25,9 +22,6 @@ export function MiraxContainer({ dbId }: Props): JSX.Element {
     const dispatch = useAppDispatch();
     const currentDbId = useAppSelector(selectDatabaseId);
     const activeTabId = useAppSelector(selectActiveTabId);
-    const hasSensorTabs = useAppSelector((state) =>
-        activeTabId ? selectHasSensorTabs(state, activeTabId) : false
-    );
 
     useEffect(() => {
         if (currentDbId !== dbId) {
@@ -66,9 +60,6 @@ export function MiraxContainer({ dbId }: Props): JSX.Element {
                     </div>
                 </div>
             </div>
-
-            {/* Нижняя секция: вкладки сенсоров и графики */}
-            {hasSensorTabs && activeTabId && <SensorTabsSection technicalRunId={activeTabId} />}
         </div>
     );
 }

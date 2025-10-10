@@ -1,4 +1,4 @@
-// src/features/chartsPage/charts/mirax/MiraxContainer/TechnicalRunsPanel/TechnicalRunsPanel.tsx
+
 import { useMemo, useState, useCallback, type JSX } from 'react';
 import classNames from 'classnames';
 
@@ -36,7 +36,7 @@ export function TechnicalRunsPanel(): JSX.Element {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [sortType, setSortType] = useState<TechnicalRunSortTypeValue>(
-        TechnicalRunSortType.DATE_END_DESC // ← Изменено на DATE_END_DESC
+        TechnicalRunSortType.DATE_END_DESC
     );
 
     const { data: technicalRuns = [] } = useGetTechnicalRunsQuery(

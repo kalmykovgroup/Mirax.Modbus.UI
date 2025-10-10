@@ -1,40 +1,44 @@
-// src/features/mirax/components/PortableDevicesList/PortableDeviceItem/PortableDeviceItem.tsx
-import { useCallback, useRef, type JSX } from 'react';
+// src/features/chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/PortableDeviceItem.tsx
+// ОТЛАДОЧНАЯ ВЕРСИЯ - после проверки удалить console.log
+import { useCallback, useRef, useMemo, useEffect, type JSX } from 'react';
 import classNames from 'classnames';
 
 import styles from './PortableDeviceItem.module.css';
-import { useAppDispatch, useAppSelector } from '@/store/hooks.ts';
-import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto.ts';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto';
 import {
     selectDevice,
     toggleDeviceExpanded,
     selectIsDeviceExpanded,
     selectSelectedDeviceFactoryNumber,
     selectDatabaseId,
-} from '@chartsPage/charts/mirax/miraxSlice.ts';
-import { fetchSensors } from '@chartsPage/charts/mirax/miraxThunks.ts';
-import { useGetSensorsQuery } from '@chartsPage/charts/mirax/miraxApi.ts';
-import type { Guid } from '@app/lib/types/Guid.ts';
-import {getDeviceDisplayName, shouldShowCopyId} from "@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers.ts";
-import {CopyButton} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/CopyButton/CopyButton.tsx";
-import {
-    SensorsList
-} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/SensorsList/SensorsList.tsx";
+} from '@chartsPage/charts/mirax/miraxSlice';
+import { fetchSensors } from '@chartsPage/charts/mirax/miraxThunks';
+import { useGetSensorsQuery } from '@chartsPage/charts/mirax/miraxApi';
+import type { Guid } from '@app/lib/types/Guid';
+import { getDeviceDisplayName, shouldShowCopyId } from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers';
+import { CopyButton } from '@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/CopyButton/CopyButton';
+import { SensorsList } from '@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/SensorsList/SensorsList';
 
 interface Props {
     readonly device: PortableDeviceDto;
     readonly technicalRunId: Guid;
+    readonly isFirst: boolean;
 }
 
-export function PortableDeviceItem({ device, technicalRunId }: Props): JSX.Element {
+export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): JSX.Element {
     const dispatch = useAppDispatch();
     const databaseId = useAppSelector(selectDatabaseId);
     const factoryNumber = device.factoryNumber ?? '';
     const isExpanded = useAppSelector((state) => selectIsDeviceExpanded(state, factoryNumber));
     const isSelected = useAppSelector(selectSelectedDeviceFactoryNumber) === factoryNumber;
     const abortControllerRef = useRef<AbortController | undefined>(undefined);
+    const firstLoadTriggeredRef = useRef(false);
 
     const showCopyButton = shouldShowCopyId(device);
+
+    // Для первого устройства загружаем сенсоры всегда, для остальных — только при раскрытии
+    const shouldLoadSensors = isFirst || isExpanded;
 
     const { data: sensors = [], isLoading } = useGetSensorsQuery(
         {
@@ -42,9 +46,59 @@ export function PortableDeviceItem({ device, technicalRunId }: Props): JSX.Eleme
             body: { technicalRunId, factoryNumber },
         },
         {
-            skip: !isExpanded || databaseId === undefined || !factoryNumber,
+            skip: !shouldLoadSensors || databaseId === undefined || !factoryNumber,
         }
     );
+
+    // Явная загрузка сенсоров для первого устройства при монтировании
+    useEffect(() => {
+        // Проверяем все условия для загрузки
+        const shouldTriggerLoad =
+            isFirst &&
+            !firstLoadTriggeredRef.current &&
+            databaseId !== undefined &&
+            factoryNumber !== '' &&
+            sensors.length === 0 &&
+            !isLoading;
+
+        if (shouldTriggerLoad) {
+            console.log('[PortableDeviceItem] Запускаем автозагрузку для первого устройства:', factoryNumber);
+            firstLoadTriggeredRef.current = true;
+
+            const controller = new AbortController();
+
+            dispatch(
+                fetchSensors({
+                    databaseId,
+                    technicalRunId,
+                    factoryNumber,
+                    signal: controller.signal,
+                })
+            )
+                .then(() => {
+                    console.log('[PortableDeviceItem] Автозагрузка успешна:', factoryNumber);
+                })
+                .catch((error) => {
+                    if (error.name !== 'AbortError') {
+                        console.error('[PortableDeviceItem] Ошибка автозагрузки:', error);
+                    }
+                });
+
+            controller.abort();
+
+        }
+    }, [isFirst, databaseId, technicalRunId, factoryNumber, sensors.length, isLoading, dispatch]);
+
+    // Собираем уникальные газы из сенсоров
+    const uniqueGases = useMemo(() => {
+        const gasSet = new Set<string>();
+        for (const sensor of sensors) {
+            if (sensor.gas) {
+                gasSet.add(sensor.gas);
+            }
+        }
+        return Array.from(gasSet).sort();
+    }, [sensors]);
 
     const handleSelect = useCallback(() => {
         if (factoryNumber) {
@@ -101,9 +155,23 @@ export function PortableDeviceItem({ device, technicalRunId }: Props): JSX.Eleme
                             <CopyButton text={device.id} label="Копировать ID устройства" />
                         )}
                     </div>
-                    {device.factoryNumber && (
-                        <span className={styles.factoryNumber}>№{device.factoryNumber}</span>
-                    )}
+
+                    <div className={styles.metaRow}>
+                        {device.factoryNumber && (
+                            <span className={styles.factoryNumber}>№{device.factoryNumber}</span>
+                        )}
+
+                        {/* Показываем газы ВСЕГДА когда они загружены */}
+                        {!isLoading && uniqueGases.length > 0 && (
+                            <div className={styles.gasesContainer}>
+                                {uniqueGases.map((gas) => (
+                                    <span key={gas} className={styles.gasBadge}>
+                                        {gas}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -112,11 +180,7 @@ export function PortableDeviceItem({ device, technicalRunId }: Props): JSX.Eleme
                     {isLoading ? (
                         <div className={styles.loading}>Загрузка сенсоров...</div>
                     ) : sensors.length > 0 ? (
-                        <SensorsList
-                            sensors={sensors}
-                            technicalRunId={technicalRunId}
-                            factoryNumber={factoryNumber}
-                        />
+                        <SensorsList sensors={sensors} />
                     ) : (
                         <div className={styles.empty}>Нет сенсоров</div>
                     )}

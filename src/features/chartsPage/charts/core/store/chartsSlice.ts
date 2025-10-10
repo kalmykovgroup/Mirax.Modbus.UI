@@ -372,9 +372,10 @@ const chartsSlice = createSlice({
                 tabId: Guid; // ← ДОБАВИЛИ
                 field: FieldName;
                 type: LoadingType;
+                message: string | undefined;
             }>
         ) {
-            const { tabId, field, type } = action.payload;
+            const { tabId, field, type, message } = action.payload;
 
             const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
             if (!tab) return;
@@ -386,7 +387,8 @@ const chartsSlice = createSlice({
                     type,
                     progress: 0,
                     startTime: Date.now(),
-                };
+                    message
+                } as LoadingState;
                 view.error = undefined;
             }
         },
@@ -397,9 +399,10 @@ const chartsSlice = createSlice({
                 tabId: Guid;
                 field: FieldName;
                 progress: number;
+                message: string | undefined;
             }>
         ) {
-            const { tabId, field, progress } = action.payload;
+            const { tabId, field, progress, message } = action.payload;
 
             const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
             if (!tab) return;
@@ -407,6 +410,7 @@ const chartsSlice = createSlice({
             const view = tab.view[field]; // ← ИЗМЕНИЛИ
             if (view && view.loadingState.active) {
                 view.loadingState.progress = progress;
+                view.loadingState.message = message;
             }
         },
 
@@ -450,10 +454,10 @@ const chartsSlice = createSlice({
                 tabId: Guid;
                 field: FieldName;
                 success: boolean;
-                errorMessage: string | undefined;
+                message: string | undefined;
             }>
         ) {
-            const { tabId, field, success, errorMessage } = action.payload;
+            const { tabId, field, success, message } = action.payload;
 
             const tab = state.byTab[tabId];
             if (!tab) return;
@@ -465,7 +469,7 @@ const chartsSlice = createSlice({
                     type: LoadingType.Initial,
                     progress: success ? 100 : 0,
                     startTime: 0,
-                    message: errorMessage
+                    message: message
                 };
             }
         },

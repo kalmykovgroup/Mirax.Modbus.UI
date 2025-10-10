@@ -15,8 +15,9 @@ interface Props {
 export function PortableDevicesList({ devices, technicalRunId }: Props): JSX.Element {
     return (
         <ul className={styles.list}>
-            {devices.map((device) => (
+            {devices.map((device, index) => (
                 <PortableDeviceItem
+                    isFirst={index == 0}
                     key={device.id}
                     device={device}
                     technicalRunId={technicalRunId}

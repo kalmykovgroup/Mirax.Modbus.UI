@@ -2,17 +2,17 @@
 import { useState, useMemo, useCallback, type JSX } from 'react';
 
 import styles from './DevicesPanel.module.css';
-import { useAppSelector } from '@/store/hooks';
-import { selectDatabaseId } from '@chartsPage/charts/mirax/miraxSlice';
-import { useGetPortableDevicesQuery } from '@chartsPage/charts/mirax/miraxApi';
-import { DeviceSortDropdown } from '@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/DevicesPanel/DeviceSortDropdown/DeviceSortDropdown';
-import { PortableDevicesList } from '@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDevicesList';
-import type { Guid } from '@app/lib/types/Guid';
+import { useAppSelector } from '@/store/hooks.ts';
+import { selectDatabaseId } from '@chartsPage/charts/mirax/miraxSlice.ts';
+import { useGetPortableDevicesQuery } from '@chartsPage/charts/mirax/miraxApi.ts';
+import { DeviceSortDropdown } from '@chartsPage/charts/mirax/MiraxContainer/DevicesPanel/DeviceSortDropdown/DeviceSortDropdown.tsx';
+import { PortableDevicesList } from '@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDevicesList.tsx';
+import type { Guid } from '@app/lib/types/Guid.ts';
 import {
     sortDevices,
     DeviceSortType,
     type DeviceSortType as DeviceSortTypeValue,
-} from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers';
+} from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers.ts';
 import {SearchInput} from "@chartsPage/charts/mirax/MiraxContainer/SearchInput/SearchInput.tsx";
 
 interface Props {

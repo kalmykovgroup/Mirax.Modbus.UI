@@ -16,6 +16,10 @@ import {
     startTechnicalRunsLoading, updateDevicesProgress, updateSensorsProgress,
     updateTechnicalRunsProgress
 } from "@chartsPage/charts/mirax/miraxSlice.ts";
+import {notify} from "@app/lib/notify.ts";
+import type {TechnicalRunDto} from "@chartsPage/charts/mirax/contracts/TechnicalRunDto.ts";
+import type {PortableDeviceDto} from "@chartsPage/charts/mirax/contracts/PortableDeviceDto.ts";
+import type {SensorDto} from "@chartsPage/charts/mirax/contracts/SensorDto.ts";
 
 
 /**
@@ -57,7 +61,22 @@ TechnicalRunsLoadResult,
                     }, 100);
                 }
 
-                const response = await subscription.unwrap();
+                const response = await notify.run(
+                    subscription.unwrap(),
+                    {
+                        loading: { text: 'Загрузка испытаний...' },
+                        success: {
+                            text: 'Испытания загружены',
+                            toastOptions: { duration: 700 }
+                        },
+                        error:{
+                            toastOptions: { duration: 3000 }
+                        }
+                        // error НЕ указываем - baseQuery показал ошибку
+                    },
+                    { id: 'fetch-technical-runs' }
+                ) as TechnicalRunDto[]
+
 
                 // Завершаем прогресс
                 if (progressInterval) {
@@ -160,7 +179,23 @@ PortableDevicesLoadResult,
                     }, 100);
                 }
 
-                const response = await subscription.unwrap();
+                const response = await notify.run(
+                    subscription.unwrap(),
+                    {
+                        loading: { text: 'Загрузка списка устройств...' },
+                        success: {
+                            text: 'Устройства загружены',
+                            toastOptions: { duration: 700 }
+                        },
+                        error:{
+                            toastOptions: { duration: 3000 }
+                        }
+                        // error НЕ указываем - baseQuery показал ошибку
+                    },
+                    { id: 'fetch-portable-devices' }
+                ) as PortableDeviceDto[]
+
+
 
                 // Завершаем прогресс
                 if (progressInterval) {
@@ -277,7 +312,22 @@ SensorsLoadResult,
                     }, 100);
                 }
 
-                const response = await subscription.unwrap();
+                const response = await notify.run(
+                    subscription.unwrap(),
+                    {
+                        loading: { text: 'Загрузка сенсоров...' },
+                        success: {
+                            text: 'Сенсоры загружены',
+                            toastOptions: { duration: 700 }
+                        },
+                        error:{
+                            toastOptions: { duration: 3000 }
+                        }
+                    },
+                    { id: 'fetch-sensors' }
+                ) as SensorDto[]
+
+
 
                 // Завершаем прогресс
                 if (progressInterval) {

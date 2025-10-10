@@ -1,11 +1,11 @@
 // src/features/mirax/store/miraxSlice.ts
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { RootState } from '@app/store/store';
-import type { LoadingState } from './types/miraxThunk.types';
 import type { Guid } from '@app/lib/types/Guid';
 import type { TechnicalRunDto } from '@chartsPage/charts/mirax/contracts/TechnicalRunDto';
 import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto';
 import type { SensorDto } from '@chartsPage/charts/mirax/contracts/SensorDto';
+import type {MiraxLoadingState} from "@chartsPage/charts/mirax/miraxThunk.types.ts";
+import type {RootState} from "@/store/store.ts";
 
 /**
  * Вкладка испытания
@@ -48,12 +48,12 @@ export interface MiraxState {
     readonly selectedDeviceFactoryNumber: string | undefined;
     readonly expandedTechnicalRunIds: readonly Guid[];
     readonly expandedDeviceFactoryNumbers: readonly string[];
-    readonly technicalRunsLoading: LoadingState;
-    readonly devicesLoading: Record<string, LoadingState>;
-    readonly sensorsLoading: Record<string, LoadingState>;
+    readonly technicalRunsLoading: MiraxLoadingState;
+    readonly devicesLoading: Record<string, MiraxLoadingState>;
+    readonly sensorsLoading: Record<string, MiraxLoadingState>;
 }
 
-const initialLoadingState: LoadingState = {
+const initialLoadingState: MiraxLoadingState = {
     isLoading: false,
     progress: 0,
     error: undefined,
@@ -622,10 +622,10 @@ export const selectIsTechnicalRunExpanded = (state: RootState, technicalRunId: G
 export const selectIsDeviceExpanded = (state: RootState, factoryNumber: string): boolean =>
     state.mirax.expandedDeviceFactoryNumbers.includes(factoryNumber);
 
-export const selectTechnicalRunsLoading = (state: RootState): LoadingState =>
+export const selectTechnicalRunsLoading = (state: RootState): MiraxLoadingState =>
     state.mirax.technicalRunsLoading;
 
-export const selectDevicesLoading = (state: RootState, technicalRunId: Guid): LoadingState =>
+export const selectDevicesLoading = (state: RootState, technicalRunId: Guid): MiraxLoadingState =>
     state.mirax.devicesLoading[technicalRunId] ?? {
         isLoading: false,
         progress: 0,
@@ -636,7 +636,7 @@ export const selectSensorsLoading = (
     state: RootState,
     technicalRunId: Guid,
     factoryNumber: string
-): LoadingState => {
+): MiraxLoadingState => {
     const key = `${technicalRunId}-${factoryNumber}`;
     return (
         state.mirax.sensorsLoading[key] ?? {
@@ -678,5 +678,19 @@ export const selectSensorsError = (
 };
 
 export const selectMiraxState = (state: RootState): MiraxState => state.mirax;
+
+/**
+ * Выбранное (активное) испытание ID
+ * Используется в TechnicalRunItem для определения, выбрано ли текущее испытание
+ */
+export const selectSelectedTechnicalRunId = (state: RootState): Guid | undefined =>
+    state.mirax.activeTabId;
+
+/**
+ * Проверка, является ли испытание выбранным
+ * Альтернативный селектор (если нужен)
+ */
+export const selectTechnicalRun = (state: RootState, technicalRunId: Guid): boolean =>
+    state.mirax.activeTabId === technicalRunId;
 
 export default miraxSlice.reducer;

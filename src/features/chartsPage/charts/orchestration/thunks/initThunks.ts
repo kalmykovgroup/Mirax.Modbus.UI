@@ -105,7 +105,7 @@ export const fetchMultiSeriesInit = createAsyncThunk<
                     tabId: request.tabId,
                     field: field.name,
                     success: false,
-                    errorMessage: errorMessage
+                    message: errorMessage
                 }));
             });
 
