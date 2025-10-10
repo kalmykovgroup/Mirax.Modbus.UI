@@ -1,3 +1,5 @@
+/* src/features/chartsPage/ChartsPage.module.css */
+
 .chartPageContainer {
     display: flex;
     flex-direction: column;
@@ -6,4 +8,24 @@
     gap: 12px;
     padding: 12px;
     background: #f5f5f5;
+}
+
+.chartsContainer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.chartTabContent {
+    width: 100%;
+}
+
+.emptyState {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    color: #999;
+    font-size: 16px;
+    text-align: center;
 }

@@ -49,7 +49,7 @@ export const fetchMultiSeriesInit = createAsyncThunk<
             tabId: request.tabId,
             fields: request.data.template.selectedFields,
             type: LoadingType.Initial,
-            message: 'Инициализация графика...'
+            messageError: 'Инициализация графика...'
         }));
 
         try {
@@ -77,8 +77,7 @@ export const fetchMultiSeriesInit = createAsyncThunk<
             dispatch(finishLoadings({
                 tabId: request.tabId,
                 fields: request.data.template.selectedFields,
-                success: true,
-                error: undefined
+                success: true
             }));
 
             dispatch(setIsDataLoaded({isLoaded: true, tabId: request.tabId}));

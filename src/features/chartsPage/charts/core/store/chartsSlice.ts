@@ -338,9 +338,10 @@ const chartsSlice = createSlice({
                 tabId: Guid;
                 fields: readonly FieldDto[];
                 type: LoadingType;
+                messageError: string;
             }>
         ) {
-            const { tabId, fields, type } = action.payload;
+            const { tabId, fields, type, messageError} = action.payload;
 
             const tab = state.byTab[tabId];
             if (!tab) {
@@ -359,6 +360,7 @@ const chartsSlice = createSlice({
                     type,
                     progress: 0,
                     startTime: Date.now(),
+                    message: messageError
                 };
                 view.error = undefined;
             });
@@ -413,9 +415,11 @@ const chartsSlice = createSlice({
             action: PayloadAction<{
                 tabId: Guid;
                 fields: readonly FieldDto[];
+                success: boolean;
+                messageError?: string | undefined;
             }>
         ) {
-            const { tabId, fields } = action.payload;
+            const { tabId, fields, success, messageError } = action.payload;
 
             const tab = state.byTab[tabId];
             if (!tab) {
@@ -434,14 +438,16 @@ const chartsSlice = createSlice({
                     type: LoadingType.Initial,
                     progress: 100,
                     startTime: 0,
-                };
+                    message: messageError,
+                    success: success
+                } as LoadingState;
             });
         },
 
         finishLoading(
             state,
             action: PayloadAction<{
-                tabId: Guid;  
+                tabId: Guid;
                 field: FieldName;
                 success: boolean;
                 errorMessage: string | undefined;
