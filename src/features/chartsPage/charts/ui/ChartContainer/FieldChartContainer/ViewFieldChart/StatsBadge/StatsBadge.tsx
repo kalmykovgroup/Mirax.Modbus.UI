@@ -12,8 +12,10 @@ import { selectTimeSettings, setTimeSettings } from "@chartsPage/charts/core/sto
 import TimeZonePicker from "@chartsPage/charts/ui/TimeZonePicker/TimeZonePicker.tsx";
 import styles from "./StatsBadge.module.css";
 import classNames from "classnames";
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 interface StatsBadgeProps {
+    readonly tabId: Guid;
     readonly totalPoints: number;
     readonly coverage: number;
     readonly quality: string;
@@ -22,6 +24,7 @@ interface StatsBadgeProps {
 }
 
 export function StatsBadge({
+                               tabId,
                                totalPoints,
                                coverage,
                                quality,
@@ -31,13 +34,13 @@ export function StatsBadge({
     const dispatch = useAppDispatch();
     const timeSettings = useSelector((state: RootState) => selectTimeSettings(state));
     const currentBucketMs = useSelector((state: RootState) =>
-        selectFieldCurrentBucketMs(state, fieldName)
+        selectFieldCurrentBucketMs(state, tabId, fieldName)
     );
 
 
     //  ИСПРАВЛЕНО: получаем реальное количество видимых точек из селектора
     const visiblePoints = useSelector((state: RootState) =>
-        selectVisiblePointsCount(state, fieldName)
+        selectVisiblePointsCount(state, tabId, fieldName)
     );
 
     const coverageColor = coverage >= 95 ? 'green' : coverage >= 80 ? 'orange' : 'red';

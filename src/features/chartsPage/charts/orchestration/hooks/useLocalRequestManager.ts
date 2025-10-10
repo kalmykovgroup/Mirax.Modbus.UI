@@ -1,10 +1,10 @@
 // orchestration/hooks/useLocalRequestManager.ts
 
-import { useEffect, useRef } from 'react';
+/*import { useEffect, useRef } from 'react';
 import { useStore } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
 import type { RootState } from '@/store/store';
-import {RequestManager} from "@chartsPage/charts/orchestration/requests/RequestManager.ts";
+import {RequestManager} from "@chartsPage/charts/orchestration/requests/RequestManager.ts";*/
 
 /**
  *  ЛОКАЛЬНЫЙ ХУК: создаёт отдельный RequestManager для компонента
@@ -18,6 +18,7 @@ import {RequestManager} from "@chartsPage/charts/orchestration/requests/RequestM
  * manager.setPrefetchStrategy({ enabled: false });
  * ```
  */
+/*
 export function useLocalRequestManager(): RequestManager {
     const dispatch = useAppDispatch();
     const store = useStore<RootState>();
@@ -58,4 +59,4 @@ export function useLocalRequestManager(): RequestManager {
     }, []);
 
     return managerRef.current;
-}
+}*/

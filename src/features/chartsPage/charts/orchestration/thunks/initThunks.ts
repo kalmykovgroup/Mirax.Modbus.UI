@@ -17,6 +17,7 @@ import {LoadingType} from "@chartsPage/charts/core/store/types/loading.types.ts"
 import type {GetMultiSeriesRequest} from "@chartsPage/charts/core/dtos/requests/GetMultiSeriesRequest.ts";
 import type {MultiSeriesResponse} from "@chartsPage/charts/core/dtos/responses/MultiSeriesResponse.ts";
 import {chartsApi} from "@chartsPage/charts/core/api/chartsApi.ts";
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 
 /**
@@ -29,23 +30,24 @@ import {chartsApi} from "@chartsPage/charts/core/api/chartsApi.ts";
  */
 export const fetchMultiSeriesInit = createAsyncThunk<
     MultiSeriesResponse | any,
-    GetMultiSeriesRequest,
+    {data: GetMultiSeriesRequest, tabId: Guid},
     { state: RootState }
 >(
     'charts/fetchMultiSeriesInit',
     async (request, { dispatch, rejectWithValue }) => {
-        if (!request.template?.databaseId) {
+        if (!request.data.template?.databaseId) {
             return rejectWithValue('Missing template or databaseId');
         }
 
         const subscription = dispatch(
             chartsApi.endpoints.getMultiSeries.initiate(
-                withDb<GetMultiSeriesRequest>(request, request.template.databaseId)
+                withDb<GetMultiSeriesRequest>(request.data, request.data.template.databaseId)
             )
         );
 
         dispatch(startLoadingFields({
-            fields: request.template.selectedFields,
+            tabId: request.tabId,
+            fields: request.data.template.selectedFields,
             type: LoadingType.Initial,
             message: 'Инициализация графика...'
         }));
@@ -73,12 +75,13 @@ export const fetchMultiSeriesInit = createAsyncThunk<
 
             // Успешная загрузка
             dispatch(finishLoadings({
-                fields: request.template.selectedFields,
+                tabId: request.tabId,
+                fields: request.data.template.selectedFields,
                 success: true,
                 error: undefined
             }));
 
-            dispatch(setIsDataLoaded(true));
+            dispatch(setIsDataLoaded({isLoaded: true, tabId: request.tabId}));
 
             return result;
 
@@ -93,15 +96,17 @@ export const fetchMultiSeriesInit = createAsyncThunk<
                 serverData: error?.data
             })
 
-            request.template.selectedFields.forEach(field => {
+            request.data.template.selectedFields.forEach(field => {
                 dispatch(setFieldError({
+                    tabId: request.tabId,
                     fieldName: field.name,
-                    error: errorMessage
+                    errorMessage: errorMessage
                 }));
                 dispatch(finishLoading({
+                    tabId: request.tabId,
                     field: field.name,
                     success: false,
-                    error: errorMessage
+                    errorMessage: errorMessage
                 }));
             });
 

@@ -42,10 +42,12 @@ import type {TimeRange} from "@chartsPage/charts/core/store/types/chart.types.ts
 import {
     SyncCheckbox
 } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncCheckbox/SyncCheckbox.tsx";
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 const GROUP_ID = "ChartContainer";
 
 interface ViewFieldChartProps {
+    readonly tabId: Guid;
     readonly fieldName: string;
     readonly onZoomEnd?: ((range: TimeRange) => void) | undefined;
     readonly onRetry?: (() => void) | undefined;
@@ -54,14 +56,18 @@ interface ViewFieldChartProps {
 
 // memo: не рендерим если props не изменились
 export const ViewFieldChart = memo(function ViewFieldChart({
+                                                               tabId,
                                                                fieldName,
                                                                onZoomEnd,
                                                                width
                                                            }: ViewFieldChartProps) {
-    const chartData = useSelector((state: RootState) => selectChartRenderData(state, fieldName));
-    const chartFieldStatus: ChartStats = useSelector((state: RootState) => selectChartStats(state, fieldName));
-    const gapsInfo = useSelector((state: RootState) => selectFieldGaps(state, fieldName));
-    const originalRange = useSelector((state: RootState) => selectFieldOriginalRange(state, fieldName));
+
+
+
+    const chartData = useSelector((state: RootState) => selectChartRenderData(state, tabId, fieldName));
+    const chartFieldStatus: ChartStats = useSelector((state: RootState) => selectChartStats(state, tabId, fieldName));
+    const gapsInfo = useSelector((state: RootState) => selectFieldGaps(state, tabId, fieldName));
+    const originalRange = useSelector((state: RootState) => selectFieldOriginalRange(state, tabId, fieldName));
     const timeSettings = useSelector((state: RootState) => selectTimeSettings(state));
     const [containerHeight, setContainerHeight] = useState<number>(600);
     //Стабильный callback (не меняется между рендерами)
@@ -134,7 +140,7 @@ export const ViewFieldChart = memo(function ViewFieldChart({
     return (
         <>
             <CollapsibleSection>
-                <ChartHeader fieldName={fieldName} width={width}/>
+                <ChartHeader fieldName={fieldName} width={width} tabId={tabId}/>
             </CollapsibleSection>
 
             <ResizableContainer
@@ -150,11 +156,12 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                     <div className={styles.header}>
 
 
-                       <SyncCheckbox fieldName={fieldName} />
+                       <SyncCheckbox fieldName={fieldName} tabId={tabId} />
 
 
                         <h3 className={styles.title}>{fieldName}</h3>
                         <StatsBadge
+                            tabId={tabId}
                             totalPoints={chartData.avgPoints.length + chartData.minPoints.length  + chartData.maxPoints.length }
                             coverage={chartFieldStatus.coverage}
                             quality={chartData.quality}
@@ -177,7 +184,7 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                     </div>
 
 
-                    <ChartFooter fieldName={fieldName}/>
+                    <ChartFooter fieldName={fieldName} tabId={tabId}/>
                 </div>
 
             </ResizableContainer>

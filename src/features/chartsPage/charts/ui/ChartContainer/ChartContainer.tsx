@@ -11,6 +11,7 @@ import {FieldChartContainer} from "@chartsPage/charts/ui/ChartContainer/FieldCha
 import {
     SyncButton
 } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton.tsx";
+import {useRequestManager} from "@chartsPage/charts/orchestration/hooks/useRequestManager.ts";
 
 // ============================================
 // КОНСТАНТЫ
@@ -27,7 +28,10 @@ export function ChartContainer() {
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
 
-    const template = useSelector((state: RootState) => selectTemplate(state));
+    const manager = useRequestManager(); // Получаем менеджер из Context
+    const tabId = manager.getTabId(); // Менеджер знает свой tabId
+
+    const template = useSelector((state: RootState) => selectTemplate(state, tabId));
 
     /**
      * Измерение ширины контейнера
@@ -87,6 +91,7 @@ export function ChartContainer() {
      * Запустится автоматически после измерения ширины
      */
     const { isInitializing, isInitialized, error, reinitialize } = useChartInitialization({
+        tabId: tabId,
         px: containerWidth
     });
 
@@ -170,12 +175,13 @@ export function ChartContainer() {
                 <div className={styles.info}>
                     {template.selectedFields.length} графиков
                 </div>
-                <SyncButton />
+                <SyncButton tabId={tabId} />
             </div>
 
             <div className={styles.chartsGrid}>
                 {template.selectedFields.map(field => (
                         <FieldChartContainer
+                            tabId={tabId}
                             key={field.name}
                             fieldName={field.name}
                             width={containerWidth}

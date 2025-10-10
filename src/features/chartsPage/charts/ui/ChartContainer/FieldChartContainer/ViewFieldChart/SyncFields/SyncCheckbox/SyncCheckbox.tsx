@@ -1,22 +1,37 @@
 // @chartsPage/charts/ui/ChartContainer/FieldChartContainer/ChartHeader/SyncCheckbox/SyncCheckbox.tsx
 
-import { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
 import { addSyncField, removeSyncField } from '@chartsPage/charts/core/store/chartsSlice';
 import type { RootState } from '@/store/store';
 import styles from './SyncCheckbox.module.css';
+import type {Guid} from "@app/lib/types/Guid.ts";
+import {
+    selectSyncEnabled,
+    selectSyncFields,
+    selectTemplate
+} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 
 interface SyncCheckboxProps {
+    readonly tabId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
     readonly fieldName: string;
 }
 
-export function SyncCheckbox({ fieldName }: SyncCheckboxProps) {
+export function SyncCheckbox({ fieldName, tabId }: SyncCheckboxProps) {
     const dispatch = useAppDispatch();
 
-    const syncEnabled = useSelector((state: RootState) => state.charts.syncEnabled);
-    const syncFields = useSelector((state: RootState) => state.charts.syncFields);
-    const template = useSelector((state: RootState) => state.charts.template);
+    const syncEnabled = useSelector((state: RootState) =>
+        selectSyncEnabled(state, tabId)
+    );
+
+    const syncFields = useSelector((state: RootState) =>
+        selectSyncFields(state, tabId)
+    );
+
+    const template = useSelector((state: RootState) =>
+        selectTemplate(state, tabId)
+    );
 
     // Находим FieldDto для текущего поля
     const fieldDto = useMemo(() => {
@@ -35,11 +50,11 @@ export function SyncCheckbox({ fieldName }: SyncCheckboxProps) {
         }
 
         if (e.target.checked) {
-            dispatch(addSyncField(fieldDto));
+            dispatch(addSyncField({ tabId, field: fieldDto })); // ← добавили tabId
         } else {
-            dispatch(removeSyncField(fieldName));
+            dispatch(removeSyncField({ tabId, fieldName })); // ← добавили tabId
         }
-    }, [dispatch, fieldDto, fieldName]);
+    }, [dispatch, fieldDto, fieldName, tabId]);
 
     // Не показываем чекбокс если синхронизация выключена
     if (!syncEnabled) {

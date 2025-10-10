@@ -6,9 +6,14 @@ import { setViewBucket, setViewRange, updateView } from "@chartsPage/charts/core
 import { ViewFieldChart } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ViewFieldChart.tsx";
 import { calculateBucket } from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
 import type { RootState } from "@/store/store.ts";
-import { selectFieldCurrentBucketMs } from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
+import {
+    selectFieldCurrentBucketMs,
+    selectSyncEnabled,
+    selectSyncFields
+} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 import type { TimeRange } from "@chartsPage/charts/core/store/types/chart.types.ts";
 import type {FieldDto} from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 interface FieldChartContainerProps {
     readonly fieldName: string;
@@ -23,7 +28,18 @@ interface FieldChartContainerProps {
  * - Синхронизация зума между выбранными графиками
  * - Защита от циклических обновлений при синхронизации
  */
+// src/features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/FieldChartContainer.tsx
+
+// src/features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/FieldChartContainer.tsx
+
+interface FieldChartContainerProps {
+    readonly tabId: Guid; // ← ДОБАВИЛИ
+    readonly fieldName: string;
+    readonly width: number;
+}
+
 export function FieldChartContainer({
+                                        tabId, // ← ДОБАВИЛИ
                                         fieldName,
                                         width,
                                     }: FieldChartContainerProps) {
@@ -32,17 +48,17 @@ export function FieldChartContainer({
     const requestManager = useRequestManager();
 
     const loadDebounceRef = useRef<NodeJS.Timeout | null>(null);
-    const isSyncUpdateRef = useRef(false); // Флаг для предотвращения циклов
+    const isSyncUpdateRef = useRef(false);
+    const syncEnabledRef = useRef(false);
+    const syncFieldsRef = useRef([] as readonly FieldDto[]);
 
-    const syncEnabledRef = useRef(false); // Флаг для предотвращения циклов
-    const syncFieldsRef = useRef([] as readonly FieldDto[]); // Флаг для предотвращения циклов
-
+    // ТОЛЬКО добавили tabId в селекторы
     const currentBucket = useSelector((state: RootState) =>
-        selectFieldCurrentBucketMs(state, fieldName)
+        selectFieldCurrentBucketMs(state, tabId, fieldName)
     );
 
-    const syncEnabled = useSelector((state: RootState) => state.charts.syncEnabled);
-    const syncFields = useSelector((state: RootState) => state.charts.syncFields);
+    const syncEnabled = useSelector((state: RootState) => selectSyncEnabled(state, tabId));
+    const syncFields = useSelector((state: RootState) => selectSyncFields(state, tabId));
 
     const currentBucketRef = useRef(currentBucket);
     const lastRangeRef = useRef<TimeRange | null>(null);
@@ -59,17 +75,7 @@ export function FieldChartContainer({
         syncFieldsRef.current = syncFields;
     }, [syncFields]);
 
-    /**
-     * КРИТИЧНО: Обработка zoom/pan с поддержкой синхронизации
-     *
-     * Вызывается:
-     * 1. После зума колесом мыши (с debounce 150ms)
-     * 2. После отпускания кнопки мыши при пане (с debounce 100ms)
-     * 3. Программно при синхронизации с других графиков
-     */
-
     const handleOnZoomEnd = useCallback((range: TimeRange) => {
-
         if (isSyncUpdateRef.current) {
             console.log('[FieldChartContainer] Пропускаем - обновление от синхронизации');
             return;
@@ -87,16 +93,13 @@ export function FieldChartContainer({
         lastRangeRef.current = range;
 
         const newBucket = calculateBucket(range.fromMs, range.toMs, width);
-
-
         const oldBucket = currentBucketRef.current;
-
         const shouldSync = syncEnabledRef.current && syncFieldsRef.current.some(f => f.name === fieldName);
 
-        // ✅ КРИТИЧНО: Батчим все dispatch в один ре-рендер
         batch(() => {
-            // Обновляем текущее поле
+            // ТОЛЬКО добавили tabId в dispatch
             dispatch(setViewRange({
+                tabId, // ← ДОБАВИЛИ
                 field: fieldName,
                 range: {
                     fromMs: range.fromMs,
@@ -108,18 +111,19 @@ export function FieldChartContainer({
                 requestManager.cancelFieldRequests(fieldName);
 
                 dispatch(setViewBucket({
+                    tabId, // ← ДОБАВИЛИ
                     field: fieldName,
                     bucketMs: newBucket
                 }));
             }
 
-            // СИНХРОНИЗАЦИЯ: Обновляем другие графики
             if (shouldSync) {
                 isSyncUpdateRef.current = true;
 
                 syncFieldsRef.current.forEach(field => {
                     if (field.name !== fieldName) {
                         dispatch(setViewRange({
+                            tabId, // ← ДОБАВИЛИ
                             field: field.name,
                             range: {
                                 fromMs: range.fromMs,
@@ -130,6 +134,7 @@ export function FieldChartContainer({
                         const syncBucket = calculateBucket(range.fromMs, range.toMs, width);
                         if (syncBucket !== currentBucketRef.current) {
                             dispatch(setViewBucket({
+                                tabId, // ← ДОБАВИЛИ
                                 field: field.name,
                                 bucketMs: syncBucket
                             }));
@@ -143,7 +148,6 @@ export function FieldChartContainer({
             }
         });
 
-        // Дозагрузка данных ПОСЛЕ батчинга
         if (loadDebounceRef.current) {
             clearTimeout(loadDebounceRef.current);
         }
@@ -158,8 +162,7 @@ export function FieldChartContainer({
             );
         }, 150);
 
-    }, [dispatch, fieldName, width, requestManager]);
-
+    }, [dispatch, fieldName, width, requestManager, tabId]); // ← добавили tabId в deps
 
     const handleRetry = useCallback(() => {
         console.log('[FieldChartContainer] Попытка handleRetry');
@@ -174,7 +177,8 @@ export function FieldChartContainer({
                 const { width } = entry.contentRect;
                 if (width > 100) {
                     const px = Math.floor(width);
-                    dispatch(updateView({ field: fieldName, px }));
+                    // ТОЛЬКО добавили tabId
+                    dispatch(updateView({ tabId, field: fieldName, px }));
                 }
             }
         });
@@ -187,8 +191,7 @@ export function FieldChartContainer({
                 clearTimeout(loadDebounceRef.current);
             }
         };
-    }, [dispatch, fieldName]);
-
+    }, [dispatch, fieldName, tabId]); // ← добавили tabId в deps
 
     return (
         <div
@@ -203,6 +206,7 @@ export function FieldChartContainer({
         >
             <ViewFieldChart
                 width={width}
+                tabId={tabId} // ← ДОБАВИЛИ
                 fieldName={fieldName}
                 onZoomEnd={handleOnZoomEnd}
                 onRetry={handleRetry}

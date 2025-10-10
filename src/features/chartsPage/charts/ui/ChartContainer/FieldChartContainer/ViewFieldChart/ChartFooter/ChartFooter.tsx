@@ -9,6 +9,7 @@ import {
 import { formatDateWithTimezone } from "@chartsPage/charts/ui/TimeZonePicker/timezoneUtils.ts";
 import { selectTimeSettings } from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
 import type { TimeSettings } from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 interface DateRangeProps {
     readonly fromMs: number;
@@ -74,13 +75,13 @@ const DateRange: React.FC<DateRangeProps> = ({ fromMs, toMs, timeSettings }) => 
     );
 };
 
-export const ChartFooter: React.FC<{ readonly fieldName: string }> = ({ fieldName }) => {
+export const ChartFooter: React.FC<{ readonly fieldName: string, readonly tabId: Guid;}> = ({ fieldName, tabId }) => {
     const currentRange = useSelector((state: RootState) =>
-        selectFieldCurrentRange(state, fieldName)
+        selectFieldCurrentRange(state, tabId, fieldName)
     );
     const timeSettings = useSelector((state: RootState) => selectTimeSettings(state));
     const originalRange = useSelector((state: RootState) =>
-        selectFieldOriginalRange(state, fieldName)
+        selectFieldOriginalRange(state, tabId, fieldName)
     );
 
     return (

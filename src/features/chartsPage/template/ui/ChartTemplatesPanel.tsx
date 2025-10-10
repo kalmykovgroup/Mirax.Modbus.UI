@@ -24,7 +24,7 @@ import {
 } from "@chartsPage/template/store/chartsTemplatesSlice.ts";
 import {selectDatabasesLoaded} from "@chartsPage/metaData/store/chartsMetaSlice.ts";
 import type {ChartReqTemplateDto} from "@chartsPage/template/shared//dtos/ChartReqTemplateDto.ts";
-import {setResolvedCharReqTemplate} from "@chartsPage/charts/core/store/chartsSlice.ts";
+import { setResolvedCharReqTemplate} from "@chartsPage/charts/core/store/chartsSlice.ts";
 import type {TimeRangeBounds} from "@chartsPage/charts/core/store/types/chart.types.ts";
 
 export default function ChartTemplatesPanel() {
@@ -77,7 +77,9 @@ export default function ChartTemplatesPanel() {
 
         // Если ключей нет — сразу вернуть «разрешённый» шаблон (без изменений)v
         if (extractAllKeysFromTemplate(tpl).length == 0 && tpl.originalFromMs != undefined && tpl.originalToMs != undefined) {
-            dispatch(setResolvedCharReqTemplate(tpl as ResolvedCharReqTemplate))
+
+            // Создаём вкладку с шаблоном
+            dispatch(setResolvedCharReqTemplate(tpl as ResolvedCharReqTemplate));
         } else { //Значит требуется заполнить данными, это вызовет модальное окно
             setExecTpl(tpl)
         }

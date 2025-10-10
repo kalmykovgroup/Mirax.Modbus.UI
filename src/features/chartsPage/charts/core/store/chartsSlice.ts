@@ -1,30 +1,46 @@
+// src/features/chartsPage/charts/core/store/chartsSlice.ts
 
-
-import {createSlice, type PayloadAction} from '@reduxjs/toolkit';
-import {type LoadingState, LoadingType} from '@chartsPage/charts/core/store/types/loading.types';
-
-import type {FieldDto} from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
-import type {ResolvedCharReqTemplate} from "@chartsPage/template/shared//dtos/ResolvedCharReqTemplate.ts";
-import type {SeriesBinDto} from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
+import {createSelector, createSlice, type PayloadAction} from '@reduxjs/toolkit';
+import { type LoadingState, LoadingType } from '@chartsPage/charts/core/store/types/loading.types';
+import type { FieldDto } from '@chartsPage/metaData/shared/dtos/FieldDto.ts';
+import type { ResolvedCharReqTemplate } from '@chartsPage/template/shared/dtos/ResolvedCharReqTemplate.ts';
+import type { SeriesBinDto } from '@chartsPage/charts/core/dtos/SeriesBinDto.ts';
 import type {
     BucketsMs,
     CoverageInterval,
     FieldName,
-    FieldView, OriginalRange,
-    SeriesTile, TimeRange
-} from "@chartsPage/charts/core/store/types/chart.types.ts";
+    FieldView,
+    OriginalRange,
+    SeriesTile,
+    TimeRange,
+} from '@chartsPage/charts/core/store/types/chart.types.ts';
+import type { Guid } from '@app/lib/types/Guid';
+import type {RootState} from "@/store/store.ts";
 
+// ============= ТИПЫ =============
 
-export interface ChartsState {
+/**
+ * Состояние графиков для одной вкладки (прежняя ChartsState)
+ */
+export interface TabChartsState {
     syncEnabled: boolean;
-    syncFields: ReadonlyArray<FieldDto>;
-    template?: ResolvedCharReqTemplate | undefined;
-    view: Record<FieldName, FieldView>;
+    syncFields: readonly FieldDto[];
+    template: ResolvedCharReqTemplate | undefined;
+    readonly view: Record<FieldName, FieldView>;
     isDataLoaded: boolean;
 }
 
+/**
+ * Глобальное состояние с поддержкой множественных вкладок
+ */
+export interface ChartsState {
+    readonly byTab: Record<Guid, TabChartsState>;
+    readonly activeTabId: Guid | undefined;
+}
+
 // ============= НАЧАЛЬНОЕ СОСТОЯНИЕ =============
-const initialState: ChartsState = {
+
+const initialTabState: TabChartsState = {
     syncEnabled: false,
     syncFields: [],
     template: undefined,
@@ -32,49 +48,136 @@ const initialState: ChartsState = {
     isDataLoaded: false,
 };
 
+const initialState: ChartsState = {
+    byTab: {},
+    activeTabId: undefined,
+};
+
+// ============= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =============
+
+/**
+ * Безопасное получение состояния вкладки с автоинициализацией
+ */
+function getOrCreateTab(state: ChartsState, tabId: Guid): TabChartsState {
+    if (!(tabId in state.byTab)) {
+        state.byTab[tabId] = {
+            syncEnabled: false,
+            syncFields: [],
+            template: undefined,
+            view: {},
+            isDataLoaded: false,
+        };
+    }
+    return state.byTab[tabId]!;
+}
+
 // ============= SLICE =============
+
 const chartsSlice = createSlice({
     name: 'charts',
     initialState,
     reducers: {
+        // ========== УПРАВЛЕНИЕ ВКЛАДКАМИ ==========
+
+        /**
+         * Установить активную вкладку (с автоинициализацией)
+         */
+        setActiveTab(state, action: PayloadAction<Guid>) {
+            state.activeTabId = action.payload;
+            getOrCreateTab(state, action.payload);
+        },
+
+        /**
+         * Закрыть вкладку и удалить её состояние
+         */
+        closeTab(state, action: PayloadAction<Guid>) {
+            const tabId = action.payload;
+            delete state.byTab[tabId];
+            if (state.activeTabId === tabId) {
+                state.activeTabId = undefined;
+            }
+        },
+
+        /**
+         * Очистить состояние вкладки без удаления
+         */
+        clearTab(state, action: PayloadAction<Guid>) {
+
+            if(state.byTab[action.payload] == undefined){
+                console.error("Вкладка не существует")
+                return;
+            }
+
+            state.byTab[action.payload] = { ...initialTabState };
+        },
+
         // ========== ИНИЦИАЛИЗАЦИЯ ==========
 
+        /**
+         * Устанавливает resolved template и создаёт/обновляет вкладку
+         * Используется при выполнении шаблона из ChartTemplatesPanel
+         */
         setResolvedCharReqTemplate(
             state,
             action: PayloadAction<ResolvedCharReqTemplate>
         ) {
-            state.template = action.payload;
-            console.log("Реализовали шаблон", state.template)
+            const template = action.payload;
+            const tabId = template.id; // ID шаблона = ID вкладки
+
+            console.log('[setResolvedCharReqTemplate] Создаём/обновляем вкладку:', tabId);
+
+            // Создаём вкладку если её нет
+            if (!(tabId in state.byTab)) {
+                state.byTab[tabId] = {
+                    template,
+                    view: {},
+                    syncEnabled: false,
+                    syncFields: [],
+                    isDataLoaded: false,
+                };
+            } else {
+                // Обновляем template существующей вкладки
+                state.byTab[tabId]!.template = template;
+            }
+
+            // Делаем вкладку активной
+            state.activeTabId = tabId;
         },
 
         // ========== УПРАВЛЕНИЕ ТАЙЛАМИ ==========
 
-            // Сохраняем обновлённые тайлы
-
         IniTopTile(
             state,
             action: PayloadAction<{
+                tabId: Guid; // ← ДОБАВИЛИ
                 field: FieldName;
                 bucketMs: BucketsMs;
                 tile: SeriesTile;
             }>
-        ){
-            const { field, bucketMs, tile } = action.payload;
-            const view = state.view[field];
+        ) {
+            const { tabId, field, bucketMs, tile } = action.payload;
+
+            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
+            if (!tab) {
+                console.error('[IniTopTile] Tab not found:', tabId);
+                return;
+            }
+
+            const view = tab.view[field]; // ← ИЗМЕНИЛИ
             if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${field}`);
+                console.error('[IniTopTile] View not found for field:', field);
                 return;
             }
 
             view.seriesLevel[bucketMs]?.push(tile);
         },
 
-
         // ========== УПРАВЛЕНИЕ VIEW ==========
 
         initialDataView(
             state,
             action: PayloadAction<{
+                tabId: Guid; // ← ДОБАВИЛИ
                 field: FieldName;
                 px: number;
                 currentRange: TimeRange;
@@ -83,57 +186,70 @@ const chartsSlice = createSlice({
                 seriesLevels: readonly BucketsMs[];
                 error?: string | undefined;
             }>
-        ){
-            const { field, px, currentRange, originalRange, currentBucketsMs, seriesLevels, error } = action.payload;
+        ) {
+            const { tabId, field, px, currentRange, originalRange, currentBucketsMs, seriesLevels, error } = action.payload;
 
-            let view = state.view[field];
-            if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
+            if(tabId == undefined) {
+                console.error('[initialViews] Tab not found:', tabId);
                 return;
             }
 
-            view.px = px;
-            view.currentRange = currentRange;
-            view.originalRange = originalRange;
-            view.currentBucketsMs = currentBucketsMs;
-            view.error = error;
+            const tab = state.byTab[tabId];
+            if (!tab) {
+                console.error('[initialDataView] Tab not found:', tabId);
+                return;
+            }
 
-            seriesLevels.forEach(bucket => {
-                if (!view.seriesLevel[bucket]) {
-                    view.seriesLevel[bucket] = [];
-                }
-            });
+            const seriesLevel: Record<BucketsMs, SeriesTile[]> = {};
+            for (const bucket of seriesLevels) {
+                seriesLevel[bucket] = [];
+            }
+
+            tab.view[field] = {
+                originalRange,
+                currentRange,
+                currentBucketsMs,
+                seriesLevel,
+                px,
+                loadingState: { active: false, type: LoadingType.Initial, progress: 0, startTime: 0 },
+                error,
+            };
+
+            console.log('Инициализация данных для view прошла успешно', field, tabId);
         },
 
         initialViews(
             state,
             action: PayloadAction<{
-                readonly fields: readonly FieldDto[];
-                readonly px: number;
+                tabId: Guid; // ← ДОБАВИЛИ
+                px: number;
+                fields: readonly FieldDto[];
             }>
         ) {
-            const { fields, px } = action.payload;
+            const { tabId, px, fields } = action.payload;
 
-            fields.forEach(field => {
+            if(tabId == undefined) {
+                console.error('[initialViews] Tab not found:', tabId);
+                return;
+            }
 
-                if (!(field.name in state.view)) {
-                    state.view[field.name] = {
-                        px,
-                        seriesLevel: {},
-                        loadingState: {
-                            active: false,
-                            type: LoadingType.Initial,
-                            progress: 0,
-                            startTime: Date.now()
-                        },
+            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
+            if (!tab) {
+                console.error('[initialViews] Tab not found:', tabId);
+                return;
+            }
+
+            fields.forEach((field) => {
+                if (!(field.name in tab.view)) {
+                    tab.view[field.name] = {
+                        originalRange: undefined,
                         currentRange: undefined,
                         currentBucketsMs: undefined,
-                        error: undefined
+                        seriesLevel: {},
+                        px,
+                        loadingState: { active: false, type: LoadingType.Initial, progress: 0, startTime: 0 },
                     };
-                    console.debug('[initialViews] Created view for:', field.name);
-                } else {
-                    // View уже существует (восстановлен из persist)
-                    console.debug('[initialViews] View already exists (restored):', field.name);
+                    console.log('Инициализация view прошла успешно', field, tabId);
                 }
             });
         },
@@ -141,63 +257,58 @@ const chartsSlice = createSlice({
         updateView(
             state,
             action: PayloadAction<{
+                tabId: Guid; // ← ДОБАВИЛИ
                 field: FieldName;
-                px?: number | undefined;
-                currentRange?: TimeRange | undefined;
-                currentBucketsMs?: BucketsMs | undefined;
-                seriesLevels?: BucketsMs[] | undefined;
-                error?: string | undefined;
+                px: number;
             }>
         ) {
-            const { field, px, currentRange, currentBucketsMs, seriesLevels, error } = action.payload;
+            const { tabId, field, px } = action.payload;
 
-            let view = state.view[field];
-            if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
-                return;
-            }
+            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
+            if (!tab) return;
 
-            if (px !== undefined) view.px = px;
-            if (currentRange !== undefined) view.currentRange = currentRange;
-            if (currentBucketsMs !== undefined) view.currentBucketsMs = currentBucketsMs;
-            if (error !== undefined) view.error = error;
-
-            if (seriesLevels) {
-                seriesLevels.forEach(bucket => {
-                    if (!view.seriesLevel[bucket]) {
-                        view.seriesLevel[bucket] = [];
-                    }
-                });
+            const view = tab.view[field]; // ← ИЗМЕНИЛИ
+            if (view) {
+                view.px = px;
             }
         },
 
         setViewRange(
             state,
             action: PayloadAction<{
+                tabId: Guid; // ← ДОБАВИЛИ
                 field: FieldName;
                 range: TimeRange;
             }>
         ) {
-            const view = state.view[action.payload.field];
-            if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
-                return;
+            const { tabId, field, range } = action.payload;
+
+            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
+            if (!tab) return;
+
+            const view = tab.view[field]; // ← ИЗМЕНИЛИ
+            if (view) {
+                view.currentRange = range;
             }
-            view.currentRange = action.payload.range;
         },
 
         setViewBucket(
             state,
             action: PayloadAction<{
+                tabId: Guid; // ← ДОБАВИЛИ
                 field: FieldName;
                 bucketMs: BucketsMs;
             }>
         ) {
-            if (!state.view[action.payload.field]) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
-                return;
+            const { tabId, field, bucketMs } = action.payload;
+
+            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
+            if (!tab) return;
+
+            const view = tab.view[field]; // ← ИЗМЕНИЛИ
+            if (view) {
+                view.currentBucketsMs = bucketMs;
             }
-            state.view[action.payload.field]!.currentBucketsMs = action.payload.bucketMs;
         },
 
         // ========== УПРАВЛЕНИЕ ЗАГРУЗКОЙ ==========
@@ -205,151 +316,152 @@ const chartsSlice = createSlice({
         setLoadingState(
             state,
             action: PayloadAction<{
+                tabId: Guid; // ← ДОБАВИЛИ
                 field: FieldName;
-                loadingState: Partial<LoadingState>;
+                loadingState: LoadingState;
             }>
         ) {
-            const view = state.view[action.payload.field];
+            const { tabId, field, loadingState } = action.payload;
 
-            if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
-                return;
+            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
+            if (!tab) return;
+
+            const view = tab.view[field]; // ← ИЗМЕНИЛИ
+            if (view) {
+                view.loadingState = loadingState;
             }
-
-            view.loadingState = {
-                ...view.loadingState,
-                ...action.payload.loadingState
-            };
         },
 
         startLoadingFields(
             state,
-                           action: PayloadAction<{
-                               fields: readonly FieldDto[];
-                               type: LoadingType;
-                               message?: string | undefined;
-                           }>){
-            const { fields, type, message } = action.payload;
+            action: PayloadAction<{
+                tabId: Guid;
+                fields: readonly FieldDto[];
+                type: LoadingType;
+            }>
+        ) {
+            const { tabId, fields, type } = action.payload;
 
-            fields.forEach(field => {
-                const view = state.view[field.name];
+            const tab = state.byTab[tabId];
+            if (!tab) {
+                console.error('[startLoadingFields] Tab not found:', tabId);
+                return;
+            }
 
-                if(!view) {
-                    console.error(`[replaceTiles] View not found for field: ${field.name}`);
+            fields.forEach((field) => {
+                const view = tab.view[field.name];
+                if (!view) {
+                    console.warn('[startLoadingFields] View not found for field:', field.name);
                     return;
                 }
-
                 view.loadingState = {
                     active: true,
-                    type: type,
+                    type,
                     progress: 0,
-                    message: message,
-                    startTime: Date.now()
+                    startTime: Date.now(),
                 };
                 view.error = undefined;
-            })
+            });
         },
 
         startLoading(
             state,
             action: PayloadAction<{
+                tabId: Guid; // ← ДОБАВИЛИ
                 field: FieldName;
                 type: LoadingType;
-                message?: string | undefined;
             }>
         ) {
-            const view = state.view[action.payload.field];
+            const { tabId, field, type } = action.payload;
 
-            if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
-                return;
+            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
+            if (!tab) return;
+
+            const view = tab.view[field]; // ← ИЗМЕНИЛИ
+            if (view) {
+                view.loadingState = {
+                    active: true,
+                    type,
+                    progress: 0,
+                    startTime: Date.now(),
+                };
+                view.error = undefined;
             }
-
-            view.loadingState = {
-                active: true,
-                type: action.payload.type,
-                progress: 0,
-                message: action.payload.message,
-                startTime: Date.now()
-            };
-            view.error = undefined;
         },
 
         updateLoadingProgress(
             state,
             action: PayloadAction<{
+                tabId: Guid;
                 field: FieldName;
                 progress: number;
-                message?: string | undefined;
-                estimatedEndTime?: number | undefined;
-                bytesLoaded?: number | undefined;
-                totalBytes?: number | undefined;
             }>
         ) {
-            const view = state.view[action.payload.field];
-            if (view && view.loadingState.active) {
-                view.loadingState.progress = action.payload.progress;
+            const { tabId, field, progress } = action.payload;
 
-                if (action.payload.message !== undefined) {
-                    view.loadingState.message = action.payload.message;
-                }
-                if (action.payload.estimatedEndTime !== undefined) {
-                    view.loadingState.estimatedEndTime = action.payload.estimatedEndTime;
-                }
-                if (action.payload.bytesLoaded !== undefined) {
-                    view.loadingState.bytesLoaded = action.payload.bytesLoaded;
-                }
-                if (action.payload.totalBytes !== undefined) {
-                    view.loadingState.totalBytes = action.payload.totalBytes;
-                }
+            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
+            if (!tab) return;
+
+            const view = tab.view[field]; // ← ИЗМЕНИЛИ
+            if (view && view.loadingState.active) {
+                view.loadingState.progress = progress;
             }
         },
+
         finishLoadings(
             state,
             action: PayloadAction<{
-                 fields: readonly FieldDto[];
-                 success: boolean;
-                 error?: string | undefined;
+                tabId: Guid;
+                fields: readonly FieldDto[];
             }>
         ) {
-            const { fields, success, error } = action.payload;
+            const { tabId, fields } = action.payload;
 
-            fields.forEach(field => {
-                const view = state.view[field.name];
-                if (!view) {
-                    console.error(`[replaceTiles] View not found for field: ${field.name}`);
-                    return;
-                }
-
-                view.loadingState.active = false;
-                view.loadingState.progress = success ? 100 : view.loadingState.progress;
-
-                if (!success && error) {
-                    view.error = error;
-                }
-            });
-        },
-        finishLoading(
-            state,
-            action: PayloadAction<{
-                field: FieldName;
-                success: boolean;
-                error?: string | undefined;
-            }>
-        ) {
-            const view = state.view[action.payload.field];
-            if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
+            const tab = state.byTab[tabId];
+            if (!tab) {
+                console.error('[finishLoadings] Tab not found:', tabId);
                 return;
             }
 
-            view.loadingState.active = false;
-            view.loadingState.progress = action.payload.success ? 100 : view.loadingState.progress;
+            fields.forEach((field) => {
+                const view = tab.view[field.name];
+                if (!view) {
+                    console.warn('[finishLoadings] View not found for field:', field.name);
+                    return;
+                }
+                view.loadingState = {
+                    active: false,
+                    type: LoadingType.Initial,
+                    progress: 100,
+                    startTime: 0,
+                };
+            });
+        },
 
-            if (!action.payload.success && action.payload.error) {
-                view.error = action.payload.error;
+        finishLoading(
+            state,
+            action: PayloadAction<{
+                tabId: Guid;  
+                field: FieldName;
+                success: boolean;
+                errorMessage: string | undefined;
+            }>
+        ) {
+            const { tabId, field, success, errorMessage } = action.payload;
+
+            const tab = state.byTab[tabId];
+            if (!tab) return;
+
+            const view = tab.view[field];
+            if (view) {
+                view.loadingState = {
+                    active: false,
+                    type: LoadingType.Initial,
+                    progress: success ? 100 : 0,
+                    startTime: 0,
+                    message: errorMessage
+                };
             }
-
         },
 
         // ========== УПРАВЛЕНИЕ ОШИБКАМИ ==========
@@ -357,27 +469,38 @@ const chartsSlice = createSlice({
         setFieldError(
             state,
             action: PayloadAction<{
+                tabId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
                 fieldName: FieldName;
-                error?: string | undefined;
+                errorMessage?: string | undefined;
             }>
         ) {
-            const view = state.view[action.payload.fieldName];
-            if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.fieldName}`);
-                return;
-            }
-             view.error = action.payload.error;
+            const { tabId, fieldName, errorMessage } = action.payload;
 
+            const tab = state.byTab[tabId];
+            if (!tab) return;
+
+            const view = tab.view[fieldName];
+            if (view) {
+                view.error = errorMessage;
+            }
         },
 
-        clearFieldError(state, action: PayloadAction<FieldName>) {
-            const view = state.view[action.payload];
-            if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload}`);
-                return;
-            }
-             view.error = undefined;
+        clearFieldError(
+            state,
+            action: PayloadAction<{
+                tabId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
+                fieldName: FieldName;
+            }>
+        ) {
+            const { tabId, fieldName } = action.payload;
 
+            const tab = state.byTab[tabId];
+            if (!tab) return;
+
+            const view = tab.view[fieldName];
+            if (view) {
+                view.error = undefined;
+            }
         },
 
         // ========== УПРАВЛЕНИЕ ЗАПРОСАМИ ==========
@@ -385,48 +508,56 @@ const chartsSlice = createSlice({
         registerRequest(
             state,
             action: PayloadAction<{
-                field: FieldName;
-                bucketMs: BucketsMs;
-                interval: CoverageInterval;
-                requestId: string;
+                readonly tabId: Guid;
+                readonly field: FieldName;
+                readonly bucketMs: BucketsMs;
+                readonly interval: CoverageInterval;
+                readonly requestId: string;
             }>
         ) {
-            const view = state.view[action.payload.field];
-            if (!view)  throw Error("view для поля " + action.payload.field + " не найден")
+            const { tabId, field, bucketMs, interval, requestId } = action.payload;
+            const tab = getOrCreateTab(state, tabId);
+            const view = tab.view[field];
 
-            if (!view.seriesLevel[action.payload.bucketMs]) {
-                view.seriesLevel[action.payload.bucketMs] = [];
+            if (!view) throw Error('view для поля ' + field + ' не найден');
+
+            if (!view.seriesLevel[bucketMs]) {
+                view.seriesLevel[bucketMs] = [];
             }
 
-            view.seriesLevel[action.payload.bucketMs]!.push({
-                coverageInterval: action.payload.interval,
+            view.seriesLevel[bucketMs]!.push({
+                coverageInterval: interval,
                 bins: [],
                 status: 'loading',
-                requestId: action.payload.requestId
+                requestId: requestId,
             });
         },
 
         completeRequest(
             state,
             action: PayloadAction<{
-                field: FieldName;
-                bucketMs: BucketsMs;
-                requestId: string;
-                bins: SeriesBinDto[];
+                readonly tabId: Guid;
+                readonly field: FieldName;
+                readonly bucketMs: BucketsMs;
+                readonly requestId: string;
+                readonly bins: SeriesBinDto[];
             }>
         ) {
-            const view = state.view[action.payload.field];
+            const { tabId, field, bucketMs, requestId, bins } = action.payload;
+            const tab = getOrCreateTab(state, tabId);
+            const view = tab.view[field];
+
             if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
+                console.error(`[completeRequest] View not found for field: ${field}`);
                 return;
             }
 
-            const tiles = view.seriesLevel[action.payload.bucketMs];
+            const tiles = view.seriesLevel[bucketMs];
             if (!tiles) return;
 
-            const tile = tiles.find(t => t.requestId === action.payload.requestId);
+            const tile = tiles.find((t) => t.requestId === requestId);
             if (tile) {
-                tile.bins = action.payload.bins;
+                tile.bins = bins;
                 tile.status = 'ready';
                 tile.loadedAt = Date.now();
                 delete tile.requestId;
@@ -436,105 +567,175 @@ const chartsSlice = createSlice({
         failRequest(
             state,
             action: PayloadAction<{
-                field: FieldName;
-                bucketMs: BucketsMs;
-                requestId: string;
-                error: string;
+                readonly tabId: Guid;
+                readonly field: FieldName;
+                readonly bucketMs: BucketsMs;
+                readonly requestId: string;
+                readonly error: string;
             }>
         ) {
-            const view = state.view[action.payload.field];
+            const { tabId, field, bucketMs, requestId, error } = action.payload;
+            const tab = getOrCreateTab(state, tabId);
+            const view = tab.view[field];
+
             if (!view) {
-                console.error(`[replaceTiles] View not found for field: ${action.payload.field}`);
+                console.error(`[failRequest] View not found for field: ${field}`);
                 return;
             }
 
-            const tiles = view.seriesLevel[action.payload.bucketMs];
+            const tiles = view.seriesLevel[bucketMs];
             if (!tiles) return;
 
-            const tile = tiles.find(t => t.requestId === action.payload.requestId);
+            const tile = tiles.find((t) => t.requestId === requestId);
             if (tile) {
                 tile.status = 'error';
-                tile.error = action.payload.error;
+                tile.error = error;
                 delete tile.requestId;
             }
         },
 
         // ========== СИНХРОНИЗАЦИЯ ==========
 
-        toggleSync(state) {
-            state.syncEnabled = !state.syncEnabled;
+        toggleSync(state, action: PayloadAction<Guid>) {
+            const tab = getOrCreateTab(state, action.payload);
+            tab.syncEnabled = !tab.syncEnabled;
         },
 
-        addSyncField(state, action: PayloadAction<FieldDto>) {
-            const exists = state.syncFields.some(f => f.name === action.payload.name);
+        addSyncField(
+            state,
+            action: PayloadAction<{
+                readonly tabId: Guid;
+                readonly field: FieldDto;
+            }>
+        ) {
+            const { tabId, field } = action.payload;
+            const tab = getOrCreateTab(state, tabId);
+            const exists = tab.syncFields.some((f) => f.name === field.name);
             if (!exists) {
-                state.syncFields = [...state.syncFields, action.payload];
+                tab.syncFields = [...tab.syncFields, field];
             }
         },
 
-        removeSyncField(state, action: PayloadAction<string>) {
-            state.syncFields = state.syncFields.filter(f => f.name !== action.payload);
+        removeSyncField(
+            state,
+            action: PayloadAction<{
+                readonly tabId: Guid;
+                readonly fieldName: string;
+            }>
+        ) {
+            const { tabId, fieldName } = action.payload;
+            const tab = getOrCreateTab(state, tabId);
+            tab.syncFields = tab.syncFields.filter((f) => f.name !== fieldName);
         },
 
-        clearSyncFields(state) {
-            state.syncFields = [];
+        clearSyncFields(state, action: PayloadAction<Guid>) {
+            const tab = getOrCreateTab(state, action.payload);
+            tab.syncFields = [];
         },
 
         // ========== ГЛОБАЛЬНЫЕ ОПЕРАЦИИ ==========
 
-        setIsDataLoaded(state, action: PayloadAction<boolean>) {
-            state.isDataLoaded = action.payload;
+        setIsDataLoaded(
+            state,
+            action: PayloadAction<{
+                tabId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
+                isLoaded: boolean;
+            }>
+        ) {
+            const { tabId, isLoaded } = action.payload;
+
+            const tab = state.byTab[tabId];
+            if (tab) {
+                tab.isDataLoaded = isLoaded;
+            }
         },
 
-        setPx(state, action: PayloadAction<number>) {
-            Object.values(state.view).forEach(view => {
-                 view.px = action.payload;
+        setPx(
+            state,
+            action: PayloadAction<{
+                tabId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
+                px: number;
+            }>
+        ) {
+            const { tabId, px } = action.payload;
+
+            const tab = state.byTab[tabId];
+            if (!tab) return;
+
+            Object.values(tab.view).forEach((view) => {
+                view.px = px;
             });
         },
 
         // ========== ОЧИСТКА ==========
 
-        clearField(state, action: PayloadAction<FieldName>) {
-            delete state.view[action.payload];
+        clearField(
+            state,
+            action: PayloadAction<{
+                tabId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
+                fieldName: FieldName;
+            }>
+        ) {
+            const { tabId, fieldName } = action.payload;
+
+            const tab = state.byTab[tabId];
+            if (tab) {
+                delete tab.view[fieldName];
+            }
         },
 
+// clearAll остаётся БЕЗ tabId - очищает ВСЁ
         clearAll(state) {
-            console.debug("Сброс")
-            state.template = undefined;
-            state.view = {};
-            state.syncFields = [];
-            state.isDataLoaded = false;
+            state.activeTabId = undefined;
+            state.byTab = {};
         },
 
         // ========== BATCH ОПЕРАЦИИ ==========
 
         batchUpdateTiles(
             state,
-            action: PayloadAction<Array<{
-                field: FieldName;
-                bucketMs: BucketsMs;
-                tiles: SeriesTile[];
-            }>>
+            action: PayloadAction<{
+                tabId: Guid; // ← ДОБАВИЛИ
+                updates: Array<{
+                    field: FieldName;
+                    bucketMs: BucketsMs;
+                    tiles: SeriesTile[];
+                }>;
+            }>
         ) {
-            action.payload.forEach(update => {
-                const view = state.view[update.field];
+            const { tabId, updates } = action.payload;
+
+            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
+            if (!tab) {
+                console.error('[batchUpdateTiles] Tab not found:', tabId);
+                return;
+            }
+
+            updates.forEach((update) => {
+                const view = tab.view[update.field]; // ← ИЗМЕНИЛИ
 
                 if (!view) {
-                    console.error(`[replaceTiles] View not found for field: ${update.field}`);
+                    console.error('[batchUpdateTiles] View not found for field:', update.field);
                     return;
                 }
 
                 view.seriesLevel[update.bucketMs] = update.tiles;
-
             });
-        }
-    }
+        },
+
+    },
 });
 
 // ============= ЭКСПОРТЫ =============
+
 export const chartsReducer = chartsSlice.reducer;
 
 export const {
+    // Управление вкладками
+    setActiveTab,
+    closeTab,
+    clearTab,
+
     // Инициализация
     setResolvedCharReqTemplate,
 
@@ -580,5 +781,35 @@ export const {
     clearAll,
 
     // Batch операции
-    batchUpdateTiles
+    batchUpdateTiles,
 } = chartsSlice.actions;
+
+// ============= ДОПОЛНИТЕЛЬНЫЕ СЕЛЕКТОРЫ =============
+
+/**
+ * ✅ МЕМОИЗИРОВАННЫЙ: Получить все ID открытых вкладок
+ */
+export const selectAllTabIds = createSelector(
+    [(state: RootState) => state.charts.byTab],
+    (byTab): readonly Guid[] => {
+        const ids = Object.keys(byTab) as Guid[];
+        return Object.freeze(ids);
+    }
+);
+
+/**
+ * ✅ МЕМОИЗИРОВАННЫЙ: Получить информацию о вкладке
+ */
+export const selectTabInfo = createSelector(
+    [
+        (state: RootState, tabId: Guid) => state.charts.byTab[tabId]?.template,
+    ],
+    (template) => {
+        if (!template) return undefined;
+
+        return {
+            template,
+            fieldsCount: template.selectedFields.length,
+        };
+    }
+);

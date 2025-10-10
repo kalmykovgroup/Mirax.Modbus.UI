@@ -14,12 +14,14 @@ import { useSelector } from "react-redux";
 import type { RootState } from "@/store/store.ts";
 import styles from "./ChartHeader.module.css";
 import { LevelRow } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ChartHeader/LevelRow/LevelRow.tsx";
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 // ============================================
 // ТИПЫ
 // ============================================
 
 export type HeaderProps = {
+    readonly tabId: Guid;
     readonly width: number;
     readonly fieldName: FieldName;
     readonly title?: string | undefined;
@@ -90,6 +92,7 @@ function formatBucketSize(ms: number): string {
 // ============================================
 
 export const ChartHeader: React.FC<HeaderProps> = ({
+                                                       tabId,
                                                        width,
                                                        fieldName,
                                                        title,
@@ -99,9 +102,9 @@ export const ChartHeader: React.FC<HeaderProps> = ({
     // СЕЛЕКТОРЫ
     // ============================================
 
-    const fieldView = useAppSelector(state => selectFieldView(state, fieldName));
+    const fieldView = useAppSelector(state => selectFieldView(state, tabId, fieldName));
     const originalRange = useSelector((state: RootState) =>
-        selectFieldOriginalRange(state, fieldName)
+        selectFieldOriginalRange(state, tabId, fieldName)
     );
 
     // ============================================

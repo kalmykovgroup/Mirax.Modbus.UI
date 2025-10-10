@@ -9,6 +9,7 @@ import {
     selectFieldSeriesLevels,
 } from './base.selectors';
 import type {BucketsMs, FieldName, Gap} from "@chartsPage/charts/core/store/types/chart.types.ts";
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 // ============================================
 // ТИПЫ
@@ -61,15 +62,17 @@ export interface PrefetchMetrics {
 
 export const selectLoadingMetrics = createSelector(
     [
-        (state: RootState, fieldName: FieldName) => selectFieldLoadingState(state, fieldName),
-        (state: RootState, fieldName: FieldName) => selectFieldSeriesLevels(state, fieldName)
+        (state: RootState, tabId: Guid, fieldName: FieldName) =>
+            selectFieldLoadingState(state, tabId, fieldName),
+        (state: RootState, tabId: Guid, fieldName: FieldName) =>
+            selectFieldSeriesLevels(state, tabId, fieldName),
     ],
     (loadingState, seriesLevels): LoadingMetrics => {
         let activeRequestsCount = 0;
 
         if (seriesLevels) {
-            Object.values(seriesLevels).forEach(tiles => {
-                activeRequestsCount += tiles.filter(t => t.status === 'loading').length;
+            Object.values(seriesLevels).forEach((tiles) => {
+                activeRequestsCount += tiles.filter((t) => t.status === 'loading').length;
             });
         }
 
@@ -78,8 +81,7 @@ export const selectLoadingMetrics = createSelector(
             loadingType: loadingState.type,
             progress: loadingState.progress,
             activeRequestsCount,
-            estimatedEndTime: loadingState.estimatedEndTime
+            estimatedEndTime: loadingState.estimatedEndTime,
         };
     }
 );
-

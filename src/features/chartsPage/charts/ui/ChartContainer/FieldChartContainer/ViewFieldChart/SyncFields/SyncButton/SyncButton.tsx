@@ -6,16 +6,31 @@ import { useAppDispatch } from '@/store/hooks';
 import { toggleSync } from '@chartsPage/charts/core/store/chartsSlice';
 import type { RootState } from '@/store/store';
 import styles from './SyncButton.module.css';
+import type {Guid} from "@app/lib/types/Guid.ts";
+import {selectSyncEnabled, selectSyncFields} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 
-export function SyncButton() {
+interface SyncButtonProps {
+    readonly tabId: Guid;
+}
+
+
+export function SyncButton({ tabId }: SyncButtonProps) {
     const dispatch = useAppDispatch();
-    const syncEnabled = useSelector((state: RootState) => state.charts.syncEnabled);
-    const syncFields = useSelector((state: RootState) => state.charts.syncFields);
+
+    // ТОЛЬКО добавили tabId в селекторы
+    const syncEnabled = useSelector((state: RootState) =>
+        selectSyncEnabled(state, tabId)
+    );
+
+    const syncFields = useSelector((state: RootState) =>
+        selectSyncFields(state, tabId)
+    );
 
     const handleToggle = useCallback(() => {
-        dispatch(toggleSync());
-    }, [dispatch]);
+        dispatch(toggleSync(tabId)); // ← добавили tabId
+    }, [dispatch, tabId]);
 
+    // Рендер БЕЗ ИЗМЕНЕНИЙ
     return (
         <button
             type="button"

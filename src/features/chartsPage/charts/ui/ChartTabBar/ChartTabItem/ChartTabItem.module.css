@@ -1,0 +1,96 @@
+/* src/features/chartsPage/charts/ui/ChartTabBar/ChartTabItem/ChartTabItem.module.css */
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 140px;
+    max-width: 220px;
+}
+
+.tab:hover {
+    background: #f5f5f5;
+    border-color: #1976d2;
+}
+
+.tab.active {
+    background: #ffffff;
+    border-color: #1976d2;
+    border-bottom-color: #ffffff;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+.tab.active .title {
+    color: #1976d2;
+    font-weight: 600;
+}
+
+.subtitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    color: #999;
+}
+
+.tab.active .subtitle {
+    color: #1976d2;
+    opacity: 0.8;
+}
+
+.closeButton {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #999;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+    background: #e0e0e0;
+    color: #d32f2f;
+}
+
+.tab.active .closeButton {
+    color: #1976d2;
+}
+
+.tab.active .closeButton:hover {
+    background: rgba(25, 118, 210, 0.1);
+    color: #d32f2f;
+}

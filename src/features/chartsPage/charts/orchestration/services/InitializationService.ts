@@ -9,8 +9,10 @@ import type {
 import {initialDataView, IniTopTile} from '@chartsPage/charts/core/store/chartsSlice';
 import type {MultiSeriesResponse} from "@chartsPage/charts/core/dtos/responses/MultiSeriesResponse.ts";
 import type {SeriesBinDto} from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 interface ProcessInitResponseParams {
+    readonly tabId: Guid;
     readonly px: number;
     readonly response: MultiSeriesResponse;
     readonly dispatch: Dispatch;
@@ -22,7 +24,7 @@ export class InitializationService {
      * Главный метод: обработка результата init thunk
      */
     static processInitResponse(params: ProcessInitResponseParams): void {
-        const { px, response, dispatch, niceMilliseconds } = params;
+        const {tabId, px, response, dispatch, niceMilliseconds } = params;
 
         console.log("Ответ при инициализации", response);
 
@@ -34,6 +36,7 @@ export class InitializationService {
             const currentRange: TimeRange = this.determineCurrentRange(s.fromMs, s.toMs, response);
 
             dispatch(initialDataView({
+                tabId: tabId,
                 field: s.field.name,
                 px: px,
                 currentRange: currentRange,
@@ -51,6 +54,7 @@ export class InitializationService {
             const tile: SeriesTile = this.createReadyTile(snappedInterval, s.bins);
 
             dispatch(IniTopTile({
+                tabId: tabId,
                 field: s.field.name,
                 bucketMs: s.bucketMs,
                 tile: tile

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { selectTemplate } from '@chartsPage/charts/core/store/selectors/base.selectors';
+import {selectAllViews, selectTemplate} from '@chartsPage/charts/core/store/selectors/base.selectors';
 import { fetchMultiSeriesInit } from "@chartsPage/charts/orchestration/thunks/initThunks.ts";
 import { InitializationService } from "@chartsPage/charts/orchestration/services/InitializationService.ts";
 import { useAppDispatch, useAppSelector } from "@/store/hooks.ts";
@@ -7,6 +7,7 @@ import { selectBucketing } from "@chartsPage/charts/core/store/chartsSettingsSli
 import { initialViews } from "@chartsPage/charts/core/store/chartsSlice.ts";
 import type { MultiSeriesResponse } from "@chartsPage/charts/core/dtos/responses/MultiSeriesResponse.ts";
 import type { GetMultiSeriesRequest } from "@chartsPage/charts/core/dtos/requests/GetMultiSeriesRequest.ts";
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 interface InitState {
     readonly isInitializing: boolean;
@@ -15,6 +16,7 @@ interface InitState {
 }
 
 interface UseChartInitializationParams {
+    readonly tabId: Guid,
     readonly px: number | undefined;
 }
 
@@ -53,18 +55,17 @@ function hasExistingData(state: any, fieldNames: string[]): boolean {
     return hasData;
 }
 
-// В начале файла добавьте селектор
-const selectChartsView = (state: any) => state.charts?.view;
 
 export function useChartInitialization(
     params: UseChartInitializationParams
 ): UseChartInitializationResult {
+
+
     const dispatch = useAppDispatch();
-    const template = useAppSelector(selectTemplate);
+    const template = useAppSelector((state) => selectTemplate(state, params.tabId));
     const bucketing = useAppSelector(selectBucketing);
 
-    // ИСПРАВЛЕНИЕ: используем специфичный селектор вместо state => state
-    const chartsView = useAppSelector(selectChartsView);
+    const chartsView = useAppSelector((state) => selectAllViews(state, params.tabId));
 
     const [state, setState] = useState<InitState>({
         isInitializing: false,
@@ -107,7 +108,7 @@ export function useChartInitialization(
             });
 
             // Инициализируем views если их нет (это safe, внутри проверка есть)
-            dispatch(initialViews({ px: params.px, fields: template.selectedFields }));
+            dispatch(initialViews({tabId: params.tabId, px: params.px, fields: template.selectedFields }));
 
             return;
         }
@@ -121,16 +122,17 @@ export function useChartInitialization(
         });
 
         try {
-            dispatch(initialViews({ px: params.px, fields: template.selectedFields }));
+            dispatch(initialViews({ tabId: params.tabId, px: params.px, fields: template.selectedFields }));
 
             const response: MultiSeriesResponse = await dispatch(
-                fetchMultiSeriesInit({
-                    template,
-                    px: params.px
-                } as GetMultiSeriesRequest)
+                fetchMultiSeriesInit({data: {
+                        template,
+                        px: params.px
+                    } as GetMultiSeriesRequest, tabId: params.tabId})
             ).unwrap();
 
             InitializationService.processInitResponse({
+                tabId: params.tabId,
                 px: params.px,
                 response: response,
                 dispatch: dispatch,

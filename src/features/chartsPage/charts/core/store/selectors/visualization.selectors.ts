@@ -18,6 +18,7 @@ import type {
     FieldName, GapsInfo
 } from "@chartsPage/charts/core/store/types/chart.types.ts";
 import {TileSystemCore} from "@chartsPage/charts/core/store/tile-system/TileSystemCore.ts";
+import type {Guid} from "@app/lib/types/Guid.ts";
 
 // ============================================
 // ТИПЫ
@@ -108,9 +109,11 @@ function convertBinsToPoints(bins: readonly SeriesBinDto[], fieldName: string): 
 
 export const selectChartRenderData = createSelector(
     [
-        (state: RootState, fieldName: FieldName) => selectOptimalData(state, fieldName),
-        (state: RootState, fieldName: FieldName) => selectFieldCurrentBucketMs(state, fieldName),
-        (_state: RootState, fieldName: FieldName) => fieldName
+        (state: RootState, tabId: Guid, fieldName: FieldName) =>
+            selectOptimalData(state, tabId, fieldName),
+        (state: RootState, tabId: Guid, fieldName: FieldName) =>
+            selectFieldCurrentBucketMs(state, tabId, fieldName),
+        (_state: RootState, _tabId: Guid, fieldName: FieldName) => fieldName,
     ],
     (optimalData, bucketMs, fieldName): ChartRenderData => {
         const points = convertBinsToPoints(optimalData.data, fieldName);
@@ -121,15 +124,17 @@ export const selectChartRenderData = createSelector(
             maxPoints: points.max,
             bucketMs,
             quality: optimalData.quality,
-            isEmpty: points.avg.length === 0
+            isEmpty: points.avg.length === 0,
         };
     }
 );
 
 export const selectChartStats = createSelector(
     [
-        (state: RootState, fieldName: FieldName) => selectOptimalData(state, fieldName),
-        (state: RootState, fieldName: FieldName) => selectLoadingMetrics(state, fieldName)
+        (state: RootState, tabId: Guid, fieldName: FieldName) =>
+            selectOptimalData(state, tabId, fieldName),
+        (state: RootState, tabId: Guid, fieldName: FieldName) =>
+            selectLoadingMetrics(state, tabId, fieldName),
     ],
     (optimalData, loading): ChartStats => {
         return {
@@ -138,28 +143,34 @@ export const selectChartStats = createSelector(
             gapsCount: optimalData.gaps.length,
             quality: optimalData.quality,
             isLoading: loading.isLoading,
-            loadingProgress: loading.progress
+            loadingProgress: loading.progress,
         };
     }
 );
 
 export const selectSyncedChartsData = createSelector(
-    [selectSyncEnabled, selectSyncFields, selectAllViews],
+    [
+        (state: RootState, tabId: Guid) => selectSyncEnabled(state, tabId),
+        (state: RootState, tabId: Guid) => selectSyncFields(state, tabId),
+        (state: RootState, tabId: Guid) => selectAllViews(state, tabId),
+    ],
     (syncEnabled, syncFields, allViews) => {
         if (!syncEnabled) return [];
 
-        return syncFields.map(field => ({
+        return syncFields.map((field) => ({
             fieldName: field.name,
             hasView: field.name in allViews,
-            hasData: allViews[field.name]?.seriesLevel !== undefined
+            hasData: allViews[field.name]?.seriesLevel !== undefined,
         }));
     }
 );
 
 export const selectVisiblePointsCount = createSelector(
     [
-        (state: RootState, fieldName: FieldName) => selectChartRenderData(state, fieldName),
-        (state: RootState, fieldName: FieldName) => selectFieldCurrentRange(state, fieldName)
+        (state: RootState, tabId: Guid, fieldName: FieldName) =>
+            selectChartRenderData(state, tabId, fieldName),
+        (state: RootState, tabId: Guid, fieldName: FieldName) =>
+            selectFieldCurrentRange(state, tabId, fieldName),
     ],
     (chartData, currentRange): number => {
         if (!currentRange || chartData.avgPoints.length === 0) {
@@ -225,13 +236,15 @@ function binarySearchEnd(points: readonly EChartsPoint[], targetMs: number): num
 
 export const selectFieldGaps = createSelector(
     [
-        (state: RootState, fieldName: FieldName) => selectFieldView(state, fieldName),
-        (state: RootState, fieldName: FieldName) => selectFieldCurrentBucketMs(state, fieldName),
-        (state: RootState, fieldName: FieldName) => selectFieldCurrentRange(state, fieldName)
+        (state: RootState, tabId: Guid, fieldName: FieldName) =>
+            selectFieldView(state, tabId, fieldName),
+        (state: RootState, tabId: Guid, fieldName: FieldName) =>
+            selectFieldCurrentBucketMs(state, tabId, fieldName),
+        (state: RootState, tabId: Guid, fieldName: FieldName) =>
+            selectFieldCurrentRange(state, tabId, fieldName),
     ],
     (fieldView, currentBucketMs, currentRange): GapsInfo => {
         if (!fieldView || !currentBucketMs || !currentRange || !fieldView.originalRange) {
-            // ✅ КРИТИЧНО: Возвращаем константу, НЕ новый объект
             return EMPTY_GAPS_INFO;
         }
 
@@ -239,23 +252,20 @@ export const selectFieldGaps = createSelector(
 
         const targetInterval: CoverageInterval = {
             fromMs: currentRange.fromMs,
-            toMs: currentRange.toMs
+            toMs: currentRange.toMs,
         };
 
-        const gapsResult = TileSystemCore.findGaps(
-            fieldView.originalRange,
-            tiles,
-            targetInterval
-        );
+        const gapsResult = TileSystemCore.findGaps(fieldView.originalRange, tiles, targetInterval);
 
         const dataGaps: CoverageInterval[] = [];
         const loadingGaps: CoverageInterval[] = [];
 
         for (const gap of gapsResult.gaps) {
-            const hasLoadingTile = tiles.some(t =>
-                t.status === 'loading' &&
-                t.coverageInterval.fromMs <= gap.fromMs &&
-                t.coverageInterval.toMs >= gap.toMs
+            const hasLoadingTile = tiles.some(
+                (t) =>
+                    t.status === 'loading' &&
+                    t.coverageInterval.fromMs <= gap.fromMs &&
+                    t.coverageInterval.toMs >= gap.toMs
             );
 
             if (hasLoadingTile) {
@@ -265,20 +275,18 @@ export const selectFieldGaps = createSelector(
             }
         }
 
-        // ✅ КРИТИЧНО: Возвращаем константу если пусто
         if (dataGaps.length === 0 && loadingGaps.length === 0) {
             return EMPTY_GAPS_INFO;
         }
 
         return {
             dataGaps: Object.freeze(dataGaps),
-            loadingGaps: Object.freeze(loadingGaps)
+            loadingGaps: Object.freeze(loadingGaps),
         };
     }
 );
 
-// ✅ Константа для пустого состояния
 const EMPTY_GAPS_INFO: GapsInfo = Object.freeze({
     dataGaps: Object.freeze([]),
-    loadingGaps: Object.freeze([])
+    loadingGaps: Object.freeze([]),
 });
