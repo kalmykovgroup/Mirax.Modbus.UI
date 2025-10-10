@@ -1,13 +1,26 @@
-.bar {
+.topNav {
     position: sticky;
     top: 0;
     z-index: 10;
-    background: #282a35; /* тёмно-синий */
     border-bottom: 1px solid rgba(0, 0, 0, 0.15);
     backdrop-filter: saturate(120%) blur(4px);
+    background-color: var(--color-bg);
+    color: var(--color-text);
 }
 
-.container {
+
+.topNav[data-theme="dark"] {
+    --color-bg: #282a35;;
+    --color-text: rgba(255, 255, 255, 0.94);
+}
+.topNav[data-theme="light"] {
+    --color-bg: rgba(255,255,255,.87);
+    --color-text: #242424;
+}
+
+
+
+.topNav__content {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 16px 1px 16px;

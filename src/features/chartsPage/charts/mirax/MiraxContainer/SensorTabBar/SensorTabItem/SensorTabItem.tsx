@@ -3,7 +3,7 @@ import { useCallback, type JSX } from 'react';
 import classNames from 'classnames';
 
 import styles from './SensorTabItem.module.css';
-import type { SensorTab } from '@chartsPage/charts/mirax/miraxSlice';
+import type { SensorTab } from '@chartsPage/charts/mirax/miraxSlice.ts';
 
 interface Props {
     readonly sensorTab: SensorTab;

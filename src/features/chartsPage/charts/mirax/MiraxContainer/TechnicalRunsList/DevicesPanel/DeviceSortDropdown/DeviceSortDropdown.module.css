@@ -1,0 +1,40 @@
+/* src/features/chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/DevicesPanel/DeviceSortDropdown/DeviceSortDropdown.module.css */
+.container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #424242;
+    white-space: nowrap;
+}
+
+.select {
+    min-width: 200px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #333;
+    background-color: #ffffff;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.select:hover {
+    border-color: #64b5f6;
+    background-color: #f9f9f9;
+}
+
+.select:focus {
+    border-color: #1976d2;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+.select option {
+    padding: 8px;
+}

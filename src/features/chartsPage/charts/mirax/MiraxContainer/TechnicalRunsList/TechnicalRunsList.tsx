@@ -3,7 +3,9 @@ import type { TechnicalRunDto } from '@chartsPage/charts/mirax/contracts/Technic
 
 import styles from './TechnicalRunsList.module.css';
 import type {JSX} from "react";
-import {TechnicalRunItem} from "@chartsPage/charts/mirax/MiraxContainer/TechnicalRunItem/TechnicalRunItem.tsx";
+import {
+    TechnicalRunItem
+} from "@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/TechnicalRunItem/TechnicalRunItem.tsx";
 
 interface Props {
     readonly runs: readonly TechnicalRunDto[];

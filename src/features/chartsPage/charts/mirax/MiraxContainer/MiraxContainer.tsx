@@ -15,7 +15,7 @@ import type { Guid } from '@app/lib/types/Guid';
 import {DevicesPanel} from "@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/DevicesPanel/DevicesPanel.tsx";
 import {
     SensorTabsSection
-} from "@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/DevicesPanel/SensorTabsSection/SensorTabsSection.tsx";
+} from "@chartsPage/charts/mirax/MiraxContainer/SensorTabsSection/SensorTabsSection.tsx";
 
 interface Props {
     readonly dbId: Guid;

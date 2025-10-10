@@ -9,16 +9,13 @@ import {
     selectHasSensorTabs,
 } from '@chartsPage/charts/mirax/miraxSlice';
 import { useGetPortableDevicesQuery } from '@chartsPage/charts/mirax/miraxApi';
-import { SearchInput } from '@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/SearchInput/SearchInput';
 import { PortableDevicesList } from '@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDevicesList';
 import type { Guid } from '@app/lib/types/Guid';
 import {sortDevicesByFactoryNumber} from "@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers.ts";
-import {
-    SensorTabBar
-} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/SensorsList/SensorTabBar/SensorTabBar.tsx";
-import {
-    SensorTabContent
-} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/SensorsList/SensorTabBar/SensorTabContent/SensorTabContent.tsx";
+import {SearchInput} from "@chartsPage/charts/mirax/MiraxContainer/SearchInput/SearchInput.tsx";
+import {SensorTabBar} from "@chartsPage/charts/mirax/MiraxContainer/SensorTabBar/SensorTabBar.tsx";
+import {SensorTabContent} from "@chartsPage/charts/mirax/MiraxContainer/SensorTabContent/SensorTabContent.tsx";
+
 
 interface Props {
     readonly technicalRunId: Guid;

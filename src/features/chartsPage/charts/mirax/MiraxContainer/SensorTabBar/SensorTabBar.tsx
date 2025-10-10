@@ -2,7 +2,7 @@
 import { useCallback, type JSX } from 'react';
 
 import styles from './SensorTabBar.module.css';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks.ts';
 import {
     selectOpenSensorTabs,
     selectActiveSensorTabKey,
@@ -10,9 +10,9 @@ import {
     closeSensorTab,
     closeAllSensorTabs,
     getSensorTabKey,
-} from '@chartsPage/charts/mirax/miraxSlice';
-import { SensorTabItem } from './SensorTabItem/SensorTabItem';
-import type { Guid } from '@app/lib/types/Guid';
+} from '@chartsPage/charts/mirax/miraxSlice.ts';
+import { SensorTabItem } from './SensorTabItem/SensorTabItem.tsx';
+import type { Guid } from '@app/lib/types/Guid.ts';
 
 interface Props {
     readonly technicalRunId: Guid;

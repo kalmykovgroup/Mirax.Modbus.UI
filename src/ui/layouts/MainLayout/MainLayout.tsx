@@ -6,7 +6,7 @@ import Footer from "@/ui/components/Footer/Footrer.tsx";
 import TopNav from "@ui/components/TopNav/TopNav.tsx";
 const MainLayout: React.FC = () => {
     return (
-        <div className={style.container}>
+        <div className={style.mainLayout}>
             <Header className={style.headerContainer}/>
 
              <TopNav/>

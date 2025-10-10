@@ -1,5 +1,5 @@
 // src/features/mirax/components/PortableDevicesList.tsx
-import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto';
+import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto.ts';
 
 import styles from './PortableDevicesList.module.css';
 import {

@@ -1,14 +1,19 @@
-// src/features/mirax/components/DevicesPanel/DevicesPanel.tsx
+// src/features/chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/DevicesPanel/DevicesPanel.tsx
 import { useState, useMemo, useCallback, type JSX } from 'react';
 
 import styles from './DevicesPanel.module.css';
 import { useAppSelector } from '@/store/hooks';
 import { selectDatabaseId } from '@chartsPage/charts/mirax/miraxSlice';
 import { useGetPortableDevicesQuery } from '@chartsPage/charts/mirax/miraxApi';
-import { SearchInput } from '@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/SearchInput/SearchInput';
+import { DeviceSortDropdown } from '@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsList/DevicesPanel/DeviceSortDropdown/DeviceSortDropdown';
 import { PortableDevicesList } from '@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDevicesList';
 import type { Guid } from '@app/lib/types/Guid';
-import {sortDevicesByFactoryNumber} from "@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers.ts";
+import {
+    sortDevices,
+    DeviceSortType,
+    type DeviceSortType as DeviceSortTypeValue,
+} from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers';
+import {SearchInput} from "@chartsPage/charts/mirax/MiraxContainer/SearchInput/SearchInput.tsx";
 
 interface Props {
     readonly technicalRunId: Guid;
@@ -17,6 +22,9 @@ interface Props {
 export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
     const databaseId = useAppSelector(selectDatabaseId);
     const [deviceSearchQuery, setDeviceSearchQuery] = useState('');
+    const [sortType, setSortType] = useState<DeviceSortTypeValue>(
+        DeviceSortType.FACTORY_NUMBER_ASC
+    );
 
     const { data: devices = [], isLoading } = useGetPortableDevicesQuery(
         {
@@ -28,9 +36,10 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
         }
     );
 
-    const filteredDevices = useMemo(() => {
+    const filteredAndSortedDevices = useMemo(() => {
         let result = devices;
 
+        // Фильтрация по поисковому запросу
         if (deviceSearchQuery.trim()) {
             const query = deviceSearchQuery.toLowerCase().trim();
 
@@ -42,8 +51,9 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
             });
         }
 
-        return sortDevicesByFactoryNumber(result);
-    }, [devices, deviceSearchQuery]);
+        // Сортировка
+        return sortDevices(result, sortType);
+    }, [devices, deviceSearchQuery, sortType]);
 
     const handleDeviceSearchChange = useCallback((value: string) => {
         setDeviceSearchQuery(value);
@@ -53,7 +63,11 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
         setDeviceSearchQuery('');
     }, []);
 
-    const showNoResults = deviceSearchQuery.trim() && filteredDevices.length === 0;
+    const handleSortChange = useCallback((newSortType: DeviceSortTypeValue) => {
+        setSortType(newSortType);
+    }, []);
+
+    const showNoResults = deviceSearchQuery.trim() && filteredAndSortedDevices.length === 0;
 
     if (isLoading) {
         return (
@@ -69,21 +83,22 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
                 <h2 className={styles.title}>Устройства</h2>
                 {devices.length > 0 && (
                     <span className={styles.count}>
-            {deviceSearchQuery.trim()
-                ? `${filteredDevices.length} из ${devices.length}`
-                : devices.length}
-          </span>
+                        {deviceSearchQuery.trim()
+                            ? `${filteredAndSortedDevices.length} из ${devices.length}`
+                            : devices.length}
+                    </span>
                 )}
             </div>
 
             {devices.length > 0 && (
-                <div className={styles.searchContainer}>
+                <div className={styles.controls}>
                     <SearchInput
                         value={deviceSearchQuery}
                         onChange={handleDeviceSearchChange}
                         onClear={handleDeviceSearchClear}
                         placeholder="Поиск устройства..."
                     />
+                    <DeviceSortDropdown value={sortType} onChange={handleSortChange} />
                 </div>
             )}
 
@@ -95,7 +110,10 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
                         Ничего не найдено по запросу "{deviceSearchQuery}"
                     </div>
                 ) : (
-                    <PortableDevicesList devices={filteredDevices} technicalRunId={technicalRunId} />
+                    <PortableDevicesList
+                        devices={filteredAndSortedDevices}
+                        technicalRunId={technicalRunId}
+                    />
                 )}
             </div>
         </div>

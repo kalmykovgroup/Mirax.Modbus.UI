@@ -2,9 +2,9 @@
 import type { JSX } from 'react';
 
 import styles from './SensorChartPlaceholder.module.css';
-import type { TechnicalRunDto } from '@chartsPage/charts/mirax/contracts/TechnicalRunDto';
-import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto';
-import type { SensorDto } from '@chartsPage/charts/mirax/contracts/SensorDto';
+import type { TechnicalRunDto } from '@chartsPage/charts/mirax/contracts/TechnicalRunDto.ts';
+import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto.ts';
+import type { SensorDto } from '@chartsPage/charts/mirax/contracts/SensorDto.ts';
 import {formatTechnicalRunDate} from "@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers.ts";
 
 interface Props {

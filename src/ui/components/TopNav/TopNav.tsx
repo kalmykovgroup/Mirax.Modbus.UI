@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import styles from "./TopNav.module.css";
 import {ROUTES} from "@app/constants/routes.ts";
+import {useTheme} from "@app/providers/theme/useTheme.ts";
 
 type LinkItem = {
     to: "/" | "/charts" | "/error";
@@ -15,9 +16,12 @@ const links: LinkItem[] = [
 ] as const;
 
 export default function TopNav() {
+
+    const {theme} = useTheme();
+
     return (
-        <header className={styles.bar}>
-            <div className={styles.container}>
+        <nav className={styles.topNav} data-theme={theme}>
+            <div className={styles.topNav__content}>
                 <nav className={styles.nav} aria-label="Главная навигация">
                     {links.map(({ to, label, end }) => (
                         <NavLink
@@ -34,6 +38,6 @@ export default function TopNav() {
                     ))}
                 </nav>
             </div>
-        </header>
+        </nav>
     );
 }

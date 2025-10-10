@@ -2,8 +2,8 @@
 import type { JSX } from 'react';
 
 import styles from './SensorTabContent.module.css';
-import type { SensorTab } from '@chartsPage/charts/mirax/miraxSlice';
-import { SensorChartPlaceholder } from './SensorChartPlaceholder/SensorChartPlaceholder';
+import type { SensorTab } from '@chartsPage/charts/mirax/miraxSlice.ts';
+import { SensorChartPlaceholder } from './SensorChartPlaceholder/SensorChartPlaceholder.tsx';
 
 interface Props {
     readonly sensorTab: SensorTab;

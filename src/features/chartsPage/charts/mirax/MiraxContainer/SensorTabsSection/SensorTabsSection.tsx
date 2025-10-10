@@ -2,15 +2,13 @@
 import type { JSX } from 'react';
 
 import styles from './SensorTabsSection.module.css';
-import { useAppSelector } from '@/store/hooks';
-import { selectActiveSensorTab } from '@chartsPage/charts/mirax/miraxSlice';
-import type { Guid } from '@app/lib/types/Guid';
-import {
-    SensorTabBar
-} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/SensorsList/SensorTabBar/SensorTabBar.tsx";
+import { useAppSelector } from '@/store/hooks.ts';
+import { selectActiveSensorTab } from '@chartsPage/charts/mirax/miraxSlice.ts';
+import type { Guid } from '@app/lib/types/Guid.ts';
 import {
     SensorTabContent
-} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/SensorsList/SensorTabBar/SensorTabContent/SensorTabContent.tsx";
+} from "@chartsPage/charts/mirax/MiraxContainer/SensorTabContent/SensorTabContent.tsx";
+import {SensorTabBar} from "@chartsPage/charts/mirax/MiraxContainer/SensorTabBar/SensorTabBar.tsx";
 
 interface Props {
     readonly technicalRunId: Guid;

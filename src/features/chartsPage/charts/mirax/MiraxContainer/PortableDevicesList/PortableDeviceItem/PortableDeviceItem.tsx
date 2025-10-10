@@ -3,21 +3,23 @@ import { useCallback, useRef, type JSX } from 'react';
 import classNames from 'classnames';
 
 import styles from './PortableDeviceItem.module.css';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto';
+import { useAppDispatch, useAppSelector } from '@/store/hooks.ts';
+import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto.ts';
 import {
     selectDevice,
     toggleDeviceExpanded,
     selectIsDeviceExpanded,
     selectSelectedDeviceFactoryNumber,
     selectDatabaseId,
-} from '@chartsPage/charts/mirax/miraxSlice';
-import { fetchSensors } from '@chartsPage/charts/mirax/miraxThunks';
-import { useGetSensorsQuery } from '@chartsPage/charts/mirax/miraxApi';
-import type { Guid } from '@app/lib/types/Guid';
+} from '@chartsPage/charts/mirax/miraxSlice.ts';
+import { fetchSensors } from '@chartsPage/charts/mirax/miraxThunks.ts';
+import { useGetSensorsQuery } from '@chartsPage/charts/mirax/miraxApi.ts';
+import type { Guid } from '@app/lib/types/Guid.ts';
 import {getDeviceDisplayName, shouldShowCopyId} from "@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers.ts";
 import {CopyButton} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/CopyButton/CopyButton.tsx";
-import {SensorsList} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/SensorsList/SensorsList.tsx";
+import {
+    SensorsList
+} from "@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/SensorsList/SensorsList.tsx";
 
 interface Props {
     readonly device: PortableDeviceDto;

@@ -2,11 +2,11 @@
 import { useCallback, useMemo, type JSX } from 'react';
 
 import styles from './SensorItem.module.css';
-import type { SensorDto } from '@chartsPage/charts/mirax/contracts/SensorDto';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { openSensorTab, selectDatabaseId } from '@chartsPage/charts/mirax/miraxSlice';
-import { useGetTechnicalRunsQuery, useGetPortableDevicesQuery } from '@chartsPage/charts/mirax/miraxApi';
-import type { Guid } from '@app/lib/types/Guid';
+import type { SensorDto } from '@chartsPage/charts/mirax/contracts/SensorDto.ts';
+import { useAppDispatch, useAppSelector } from '@/store/hooks.ts';
+import { openSensorTab, selectDatabaseId } from '@chartsPage/charts/mirax/miraxSlice.ts';
+import { useGetTechnicalRunsQuery, useGetPortableDevicesQuery } from '@chartsPage/charts/mirax/miraxApi.ts';
+import type { Guid } from '@app/lib/types/Guid.ts';
 
 interface Props {
     readonly sensor: SensorDto;
