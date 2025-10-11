@@ -1,0 +1,161 @@
+/* PortableDeviceItem.module.css */
+.item {
+    list-style: none;
+    margin-bottom: 6px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.item:hover {
+    border-color: #64b5f6;
+}
+
+.item.selected {
+    border-color: #64b5f6;
+    background: #e3f2fd;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    cursor: pointer;
+}
+
+.expandButton {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.expandButton:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.btnCopyFactoryNumber{
+    width: 20px;
+    height: 20px;
+    opacity: 0.2;
+}
+
+.btnCopyFactoryNumber:hover{
+    opacity: 1;
+}
+
+.comPortLabel{
+    font-size: 14px;
+    color: #666666;
+}
+
+.arrow {
+    display: inline-block;
+    font-size: 10px;
+    color: #666;
+    transition: transform 0.2s ease;
+}
+
+.arrow.expanded {
+    transform: rotate(90deg);
+}
+
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.nameContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.name {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.metaRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.factoryNumber {
+    font-size: 12px;
+    color: #999;
+    flex-shrink: 0;
+}
+
+.gasesContainer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.gasBadge {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #1976d2;
+    background: #e3f2fd;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+/* Кнопка построения графика */
+.chartButton {
+    padding: 4px 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #666;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.chartButton:hover {
+    background: #f5f5f5;
+    border-color: #1976d2;
+    color: #1976d2;
+}
+
+.chartButton:active {
+    background: #e3f2fd;
+}
+
+.children {
+    padding: 0 8px 8px 36px;
+    background: #f5f5f5;
+}
+
+.loading,
+.empty {
+    padding: 12px;
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+}

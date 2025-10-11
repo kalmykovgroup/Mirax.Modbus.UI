@@ -7,7 +7,7 @@ import { ChartContainer } from '@chartsPage/charts/ui/ChartContainer/ChartContai
 import ChartTemplatesPanel from '@chartsPage/template/ui/ChartTemplatesPanel.tsx';
 import CollapsibleSection from '@chartsPage/components/Collapse/CollapsibleSection.tsx';
 import { DataSourcePanel } from '@chartsPage/metaData/ui/DataSourcePanel.tsx';
-import { MiraxContainer } from '@chartsPage/charts/mirax/MiraxContainer/MiraxContainer.tsx';
+import { MiraxContainer } from '@chartsPage/mirax/MiraxContainer/MiraxContainer.tsx';
 import { useAppSelector } from '@/store/hooks.ts';
 import { selectAllTabIds } from '@chartsPage/charts/core/store/chartsSlice.ts';
 import { ChartTabBar } from '@chartsPage/charts/ui/ChartTabBar/ChartTabBar.tsx';

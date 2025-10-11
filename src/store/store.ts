@@ -12,7 +12,7 @@ import {chartReqTemplatesApi} from "@chartsPage/template/shared//api/chartReqTem
 import {metadataApi} from "@chartsPage/metaData/shared/api/metadataApi.ts";
 import {chartsApi} from "@chartsPage/charts/core/api/chartsApi.ts";
 import {cleanupOldCharts} from "@chartsPage/charts/core/store/chartsCleanup.ts";
-import {miraxApi} from "@chartsPage/charts/mirax/miraxApi.ts";
+import {miraxApi} from "@chartsPage/mirax/miraxApi.ts";
 
 
 export const store = configureStore({
