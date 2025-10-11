@@ -241,10 +241,13 @@ export class RequestManager {
         try {
             const result = await this.dispatch(
                 fetchMultiSeriesData({
-                    request,
-                    fields: request.template.selectedFields,
-                    loadingType: LoadingType.Zoom,
-                    signal: abortController.signal,
+                    data: {
+                        request,
+                        fields: request.template.selectedFields,
+                        loadingType: LoadingType.Zoom,
+                        signal: abortController.signal,
+                    },
+                    tabId: this.tabId
                 })
             ).unwrap();
 
