@@ -1,11 +1,12 @@
 // src/features/chartsPage/charts/ui/ChartTabBar/ChartTabItem/ChartTabItem.tsx
 
-import React, { useCallback, type JSX } from 'react';
+import { type JSX } from 'react';
 import classNames from 'classnames';
 import type { Guid } from '@app/lib/types/Guid';
 import { useAppSelector } from '@/store/hooks';
-import { selectTabInfo } from '@chartsPage/charts/core/store/chartsSlice';
+import { selectTabInfo} from '@chartsPage/charts/core/store/chartsSlice';
 import styles from './ChartTabItem.module.css';
+import {useConfirm} from "@ui/components/ConfirmProvider/ConfirmProvider.tsx";
 
 interface Props {
     readonly tabId: Guid;
@@ -17,13 +18,21 @@ interface Props {
 export function ChartTabItem({ tabId, isActive, onActivate, onClose }: Props): JSX.Element {
     const tabInfo = useAppSelector((state) => selectTabInfo(state, tabId));
 
-    const handleClose = useCallback(
-        (e: React.MouseEvent) => {
-            e.stopPropagation();
+
+    const confirm = useConfirm()
+
+    const handleClose = async () => {
+        const ok = await confirm({
+            title: 'Закрыть вкладку?',
+            description: 'Данные по графику будут очищены из браузера.',
+            confirmText: 'Закрыть',
+            cancelText: 'Отмена',
+            danger: true,
+        })
+        if (ok) {
             onClose();
-        },
-        [onClose]
-    );
+        }
+    }
 
     if (!tabInfo) {
         return <></>;

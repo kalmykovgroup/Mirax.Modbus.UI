@@ -9,7 +9,7 @@ import {
     selectActiveTabId,
 } from '@chartsPage/charts/mirax/miraxSlice';
 import { TechnicalRunsPanel } from './TechnicalRunsPanel/TechnicalRunsPanel';
-import { TabBar } from './TabBar/TabBar';
+import { TabBar_PortableDevices } from './TabBar_PortableDevices/TabBar_PortableDevices.tsx';
 import type { Guid } from '@app/lib/types/Guid';
 import {DevicesPanel} from "@chartsPage/charts/mirax/MiraxContainer/DevicesPanel/DevicesPanel.tsx";
 
@@ -46,7 +46,7 @@ export function MiraxContainer({ dbId }: Props): JSX.Element {
                 {/* ДОБАВИТЬ ЭТУ СЕКЦИЮ */}
                 <div className={styles.rightSection}>
                     {/* Вкладки испытаний */}
-                    <TabBar />
+                    <TabBar_PortableDevices />
 
                     {/* Устройства активной вкладки */}
                     <div className={styles.devicesContainer}>

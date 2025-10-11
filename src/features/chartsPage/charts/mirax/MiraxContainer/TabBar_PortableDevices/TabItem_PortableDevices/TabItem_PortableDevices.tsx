@@ -2,8 +2,8 @@
 import React, { useCallback, type JSX } from 'react';
 import classNames from 'classnames';
 
-import styles from './TabItem.module.css';
-import type { TechnicalRunTab } from '@chartsPage/charts/mirax/miraxSlice';
+import styles from './TabItem_PortableDevices.module.css';
+import type { TechnicalRunTab } from '@chartsPage/charts/mirax/miraxSlice.ts';
 
 interface Props {
     readonly tab: TechnicalRunTab;
@@ -12,7 +12,8 @@ interface Props {
     readonly onClose: () => void;
 }
 
-export function TabItem({ tab, isActive, onActivate, onClose }: Props): JSX.Element {
+//Вкладки с устройствами
+export function TabItem_PortableDevices({ tab, isActive, onActivate, onClose }: Props): JSX.Element {
     const handleClose = useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation();

@@ -5,7 +5,7 @@ import type {Guid} from "@app/lib/types/Guid.ts";
  */
 export interface PortableDeviceDto {
     readonly id: Guid;
-    readonly factoryNumber: string | undefined;
+    readonly factoryNumber: string;
     readonly name: string | undefined;
     readonly comPortName: string | undefined;
 }

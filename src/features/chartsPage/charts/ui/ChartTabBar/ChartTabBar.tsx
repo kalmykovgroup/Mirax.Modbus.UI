@@ -1,26 +1,39 @@
 // src/features/chartsPage/charts/ui/ChartTabBar/ChartTabBar.tsx
 
-import { useCallback, type JSX } from 'react';
+import { type JSX } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import styles from './ChartTabBar.module.css';
 import {selectActiveTabId} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 import {clearAll, closeTab, selectAllTabIds, setActiveTab} from "@chartsPage/charts/core/store/chartsSlice.ts";
 import {ChartTabItem} from "@chartsPage/charts/ui/ChartTabBar/ChartTabItem/ChartTabItem.tsx";
+import {useConfirm} from "@ui/components/ConfirmProvider/ConfirmProvider.tsx";
+
 
 export function ChartTabBar(): JSX.Element {
     const dispatch = useAppDispatch();
     const tabIds = useAppSelector(selectAllTabIds);
     const activeTabId = useAppSelector(selectActiveTabId);
+    const confirm = useConfirm()
 
-    const handleCloseAll = useCallback(() => {
-        dispatch(clearAll());
-    }, [dispatch]);
+    const handleCloseAll = async () => {
+        const ok = await confirm({
+            title: 'Закрыть все вкладки?',
+            description: 'Данные по графикам будут очищены из браузера.',
+            confirmText: 'Закрыть',
+            cancelText: 'Отмена',
+            danger: true,
+        })
+        if (ok) {
+            dispatch(clearAll());
+        }
+    }
+
 
     if (tabIds.length === 0) {
         return (
             <div className={styles.container}>
                 <div className={styles.placeholder}>
-                    Выберите шаблон из списка слева для создания графика
+                    Выберите шаблон или испытание из списка слева для создания графика
                 </div>
             </div>
         );
@@ -40,7 +53,7 @@ export function ChartTabBar(): JSX.Element {
                 ))}
             </div>
 
-            {tabIds.length > 1 && (
+            {tabIds?.length > 1 && (
                 <button
                     className={styles.closeAllButton}
                     onClick={handleCloseAll}

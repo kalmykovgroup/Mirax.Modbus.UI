@@ -1,403 +1,418 @@
 // src/features/mirax/store/thunks/miraxThunks.ts
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import type {RootState} from "@/store/store.ts";
-import {miraxApi} from "@chartsPage/charts/mirax/miraxApi.ts";
-import {withDb} from "@chartsPage/baseApi/types.ts";
+import type { RootState } from '@/store/store';
+import { miraxApi } from '@chartsPage/charts/mirax/miraxApi';
+import { withDb } from '@chartsPage/baseApi/types';
 import type {
-    LoadPortableDevicesRequest, LoadSensorsRequest,
+    LoadPortableDevicesRequest,
+    LoadSensorsRequest,
     LoadTechnicalRunsRequest,
-    PortableDevicesLoadResult, SensorsLoadResult,
-    TechnicalRunsLoadResult
-} from "@chartsPage/charts/mirax/miraxThunk.types.ts";
+    PortableDevicesLoadResult,
+    SensorsLoadResult,
+    TechnicalRunsLoadResult,
+} from '@chartsPage/charts/mirax/miraxThunk.types';
 import {
-    finishDevicesLoading, finishSensorsLoading,
-    finishTechnicalRunsLoading, startDevicesLoading, startSensorsLoading,
-    startTechnicalRunsLoading, updateDevicesProgress, updateSensorsProgress,
-    updateTechnicalRunsProgress
-} from "@chartsPage/charts/mirax/miraxSlice.ts";
-import {notify} from "@app/lib/notify.ts";
-import type {TechnicalRunDto} from "@chartsPage/charts/mirax/contracts/TechnicalRunDto.ts";
-import type {PortableDeviceDto} from "@chartsPage/charts/mirax/contracts/PortableDeviceDto.ts";
-import type {SensorDto} from "@chartsPage/charts/mirax/contracts/SensorDto.ts";
+    finishDevicesLoading,
+    finishSensorsLoading,
+    finishTechnicalRunsLoading,
+    setTechnicalRunsData,
+    setDevicesData,
+    setSensorsData,
+    startDevicesLoading,
+    startSensorsLoading,
+    startTechnicalRunsLoading,
+    updateDevicesProgress,
+    updateSensorsProgress,
+    updateTechnicalRunsProgress,
+} from '@chartsPage/charts/mirax/miraxSlice';
+import { notify } from '@app/lib/notify';
+import type { TechnicalRunDto } from '@chartsPage/charts/mirax/contracts/TechnicalRunDto';
+import type { PortableDeviceDto } from '@chartsPage/charts/mirax/contracts/PortableDeviceDto';
+import type { SensorDto } from '@chartsPage/charts/mirax/contracts/SensorDto';
 
-
-/**
- * Загрузка списка испытаний
- */
 export const fetchTechnicalRuns = createAsyncThunk<
-TechnicalRunsLoadResult,
+    TechnicalRunsLoadResult,
     LoadTechnicalRunsRequest,
-{ state: RootState }
+    { state: RootState }
 >(
     'mirax/fetchTechnicalRuns',
-        async ({ databaseId, signal, onProgress }, { dispatch, rejectWithValue }) => {
-            // Проверка отмены перед стартом
-            if (signal?.aborted) {
-                return { data: [], wasAborted: true };
+    async ({ databaseId, signal, onProgress }, { dispatch, rejectWithValue }) => {
+        if (signal?.aborted) {
+            return { data: [], wasAborted: true };
+        }
+
+        dispatch(startTechnicalRunsLoading());
+
+        const subscription = dispatch(
+            miraxApi.endpoints.getTechnicalRuns.initiate(withDb(undefined, databaseId))
+        );
+
+        try {
+            let progressInterval: NodeJS.Timeout | undefined;
+
+            if (onProgress !== undefined) {
+                let currentProgress = 0;
+                progressInterval = setInterval(() => {
+                    if (currentProgress < 90) {
+                        currentProgress += 10;
+                        onProgress(currentProgress);
+                        dispatch(updateTechnicalRunsProgress(currentProgress));
+                    }
+                }, 100);
             }
 
-            // Стартуем загрузку
-            dispatch(startTechnicalRunsLoading());
-
-            const subscription = dispatch(
-                miraxApi.endpoints.getTechnicalRuns.initiate(
-                    withDb<void>(undefined, databaseId)
-                )
-            );
-
-            try {
-                // Имитация прогресса
-                let progressInterval: NodeJS.Timeout | undefined;
-
-                if (onProgress) {
-                    let currentProgress = 0;
-                    progressInterval = setInterval(() => {
-                        if (currentProgress < 90) {
-                            currentProgress += 10;
-                            onProgress(currentProgress);
-                            dispatch(updateTechnicalRunsProgress(currentProgress));
-                        }
-                    }, 100);
-                }
-
-                const response = await notify.run(
-                    subscription.unwrap(),
-                    {
-                        loading: { text: 'Загрузка испытаний...' },
-                        success: {
-                            text: 'Испытания загружены',
-                            toastOptions: { duration: 700 }
-                        },
-                        error:{
-                            toastOptions: { duration: 3000 }
-                        }
-                        // error НЕ указываем - baseQuery показал ошибку
+            const response = (await notify.run(
+                subscription.unwrap(),
+                {
+                    loading: { text: 'Загрузка списка испытаний...' },
+                    success: {
+                        text: 'Испытания загружены',
+                        toastOptions: { duration: 700 },
                     },
-                    { id: 'fetch-technical-runs' }
-                ) as TechnicalRunDto[]
+                    error: {
+                        toastOptions: { duration: 3000 },
+                    },
+                },
+                { id: 'fetch-technical-runs' }
+            )) as TechnicalRunDto[];
 
+            if (progressInterval !== undefined) {
+                clearInterval(progressInterval);
+            }
 
-                // Завершаем прогресс
-                if (progressInterval) {
-                    clearInterval(progressInterval);
-                }
-
-                // Проверка отмены после загрузки
-                if (signal?.aborted) {
-                    dispatch(
-                        finishTechnicalRunsLoading({
-                            success: false,
-                            error: undefined,
-                        })
-                    );
-                    return { data: response, wasAborted: true };
-                }
-
-                // Успех
-                if (onProgress) {
-                    onProgress(100);
-                }
-
-                dispatch(updateTechnicalRunsProgress(100));
-                dispatch(finishTechnicalRunsLoading({ success: true }));
-
-                return { data: response, wasAborted: false };
-            } catch (error: any) {
-                // Обработка отмены
-                if (error.name === 'AbortError' || signal?.aborted) {
-                    dispatch(
-                        finishTechnicalRunsLoading({
-                            success: false,
-                            error: undefined,
-                        })
-                    );
-                    return { data: [], wasAborted: true };
-                }
-
-                // Обработка ошибки
-                const errorMessage = error?.message || 'Ошибка загрузки испытаний';
-
+            if (signal?.aborted) {
                 dispatch(
                     finishTechnicalRunsLoading({
                         success: false,
-                        error: errorMessage,
+                        error: undefined,
                     })
                 );
-
-                return rejectWithValue(errorMessage);
-            } finally {
-                subscription.unsubscribe?.();
+                return { data: response, wasAborted: true };
             }
+
+            if (onProgress !== undefined) {
+                onProgress(100);
+            }
+            dispatch(updateTechnicalRunsProgress(100));
+
+            dispatch(setTechnicalRunsData(response));
+
+            dispatch(
+                finishTechnicalRunsLoading({
+                    success: true,
+                })
+            );
+
+            return { data: response, wasAborted: false };
+        } catch (error: unknown) {
+            if (
+                (error !== null &&
+                    typeof error === 'object' &&
+                    'name' in error &&
+                    error.name === 'AbortError') ||
+                signal?.aborted
+            ) {
+                dispatch(
+                    finishTechnicalRunsLoading({
+                        success: false,
+                        error: undefined,
+                    })
+                );
+                return { data: [], wasAborted: true };
+            }
+
+            const errorMessage =
+                error !== null && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
+                    ? error.message
+                    : 'Ошибка загрузки списка испытаний';
+
+            dispatch(
+                finishTechnicalRunsLoading({
+                    success: false,
+                    error: errorMessage,
+                })
+            );
+
+            return rejectWithValue(errorMessage);
+        } finally {
+            subscription.unsubscribe?.();
         }
+    }
 );
 
-/**
- * Загрузка устройств для испытания
- */
 export const fetchPortableDevices = createAsyncThunk<
-PortableDevicesLoadResult,
+    PortableDevicesLoadResult,
     LoadPortableDevicesRequest,
-{ state: RootState }
+    { state: RootState }
 >(
     'mirax/fetchPortableDevices',
-        async (
-            { databaseId, technicalRunId, signal, onProgress },
-            { dispatch, rejectWithValue }
-        ) => {
-            // Проверка отмены перед стартом
-            if (signal?.aborted) {
-                return { data: [], wasAborted: true };
+    async ({ databaseId, technicalRunId, signal, onProgress }, { dispatch, rejectWithValue }) => {
+        if (signal?.aborted) {
+            return { data: [], wasAborted: true };
+        }
+
+        dispatch(startDevicesLoading(technicalRunId));
+
+        const subscription = dispatch(
+            miraxApi.endpoints.getPortableDevices.initiate(
+                withDb({ technicalRunId }, databaseId)
+            )
+        );
+
+        try {
+            let progressInterval: NodeJS.Timeout | undefined;
+
+            if (onProgress !== undefined) {
+                let currentProgress = 0;
+                progressInterval = setInterval(() => {
+                    if (currentProgress < 90) {
+                        currentProgress += 10;
+                        onProgress(currentProgress);
+                        dispatch(
+                            updateDevicesProgress({
+                                technicalRunId,
+                                progress: currentProgress,
+                            })
+                        );
+                    }
+                }, 100);
             }
 
-            // Стартуем загрузку
-            dispatch(startDevicesLoading(technicalRunId));
-
-            const subscription = dispatch(
-                miraxApi.endpoints.getPortableDevices.initiate(
-                    withDb({ technicalRunId }, databaseId)
-                )
-            );
-
-            try {
-                // Имитация прогресса
-                let progressInterval: NodeJS.Timeout | undefined;
-
-                if (onProgress) {
-                    let currentProgress = 0;
-                    progressInterval = setInterval(() => {
-                        if (currentProgress < 90) {
-                            currentProgress += 10;
-                            onProgress(currentProgress);
-                            dispatch(
-                                updateDevicesProgress({
-                                    technicalRunId,
-                                    progress: currentProgress,
-                                })
-                            );
-                        }
-                    }, 100);
-                }
-
-                const response = await notify.run(
-                    subscription.unwrap(),
-                    {
-                        loading: { text: 'Загрузка списка устройств...' },
-                        success: {
-                            text: 'Устройства загружены',
-                            toastOptions: { duration: 700 }
-                        },
-                        error:{
-                            toastOptions: { duration: 3000 }
-                        }
-                        // error НЕ указываем - baseQuery показал ошибку
+            const response = (await notify.run(
+                subscription.unwrap(),
+                {
+                    loading: { text: 'Загрузка списка устройств...' },
+                    success: {
+                        text: 'Устройства загружены',
+                        toastOptions: { duration: 700 },
                     },
-                    { id: 'fetch-portable-devices' }
-                ) as PortableDeviceDto[]
+                    error: {
+                        toastOptions: { duration: 3000 },
+                    },
+                },
+                { id: 'fetch-portable-devices' }
+            )) as PortableDeviceDto[];
 
+            if (progressInterval !== undefined) {
+                clearInterval(progressInterval);
+            }
 
-
-                // Завершаем прогресс
-                if (progressInterval) {
-                    clearInterval(progressInterval);
-                }
-
-                // Проверка отмены после загрузки
-                if (signal?.aborted) {
-                    dispatch(
-                        finishDevicesLoading({
-                            technicalRunId,
-                            success: false,
-                            error: undefined,
-                        })
-                    );
-                    return { data: response, wasAborted: true };
-                }
-
-                // Успех
-                if (onProgress) {
-                    onProgress(100);
-                }
-
-                dispatch(
-                    updateDevicesProgress({
-                        technicalRunId,
-                        progress: 100,
-                    })
-                );
-                dispatch(
-                    finishDevicesLoading({
-                        technicalRunId,
-                        success: true,
-                    })
-                );
-
-                return { data: response, wasAborted: false };
-            } catch (error: any) {
-                // Обработка отмены
-                if (error.name === 'AbortError' || signal?.aborted) {
-                    dispatch(
-                        finishDevicesLoading({
-                            technicalRunId,
-                            success: false,
-                            error: undefined,
-                        })
-                    );
-                    return { data: [], wasAborted: true };
-                }
-
-                // Обработка ошибки
-                const errorMessage = error?.message || 'Ошибка загрузки устройств';
-
+            if (signal?.aborted) {
                 dispatch(
                     finishDevicesLoading({
                         technicalRunId,
                         success: false,
-                        error: errorMessage,
+                        error: undefined,
                     })
                 );
-
-                return rejectWithValue(errorMessage);
-            } finally {
-                subscription.unsubscribe?.();
+                return { data: response, wasAborted: true };
             }
+
+            if (onProgress !== undefined) {
+                onProgress(100);
+            }
+
+            dispatch(
+                updateDevicesProgress({
+                    technicalRunId,
+                    progress: 100,
+                })
+            );
+
+            // ✅ Сохраняем данные в slice
+            dispatch(
+                setDevicesData({
+                    technicalRunId,
+                    devices: response,
+                })
+            );
+
+            dispatch(
+                finishDevicesLoading({
+                    technicalRunId,
+                    success: true,
+                })
+            );
+
+            return { data: response, wasAborted: false };
+        } catch (error: unknown) {
+            if (
+                (error !== null &&
+                    typeof error === 'object' &&
+                    'name' in error &&
+                    error.name === 'AbortError') ||
+                signal?.aborted
+            ) {
+                dispatch(
+                    finishDevicesLoading({
+                        technicalRunId,
+                        success: false,
+                        error: undefined,
+                    })
+                );
+                return { data: [], wasAborted: true };
+            }
+
+            const errorMessage =
+                error !== null && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
+                    ? error.message
+                    : 'Ошибка загрузки устройств';
+
+            dispatch(
+                finishDevicesLoading({
+                    technicalRunId,
+                    success: false,
+                    error: errorMessage,
+                })
+            );
+
+            return rejectWithValue(errorMessage);
+        } finally {
+            subscription.unsubscribe?.();
         }
+    }
 );
 
-/**
- * Загрузка сенсоров для устройства
- */
 export const fetchSensors = createAsyncThunk<
-SensorsLoadResult,
+    SensorsLoadResult,
     LoadSensorsRequest,
-{ state: RootState }
+    { state: RootState }
 >(
     'mirax/fetchSensors',
-        async (
-            { databaseId, technicalRunId, factoryNumber, signal, onProgress },
-            { dispatch, rejectWithValue }
-        ) => {
-            // Проверка отмены перед стартом
-            if (signal?.aborted) {
-                return { data: [], wasAborted: true };
+    async (
+        { databaseId, technicalRunId, factoryNumber, signal, onProgress },
+        { dispatch, rejectWithValue }
+    ) => {
+        if (signal?.aborted) {
+            return { data: [], wasAborted: true };
+        }
+
+        dispatch(startSensorsLoading({ technicalRunId, factoryNumber }));
+
+        const subscription = dispatch(
+            miraxApi.endpoints.getSensors.initiate(
+                withDb({ technicalRunId, factoryNumber }, databaseId)
+            )
+        );
+
+        try {
+            let progressInterval: NodeJS.Timeout | undefined;
+
+            if (onProgress !== undefined) {
+                let currentProgress = 0;
+                progressInterval = setInterval(() => {
+                    if (currentProgress < 90) {
+                        currentProgress += 10;
+                        onProgress(currentProgress);
+                        dispatch(
+                            updateSensorsProgress({
+                                technicalRunId,
+                                factoryNumber,
+                                progress: currentProgress,
+                            })
+                        );
+                    }
+                }, 100);
             }
 
-            // Стартуем загрузку
-            dispatch(startSensorsLoading({ technicalRunId, factoryNumber }));
-
-            const subscription = dispatch(
-                miraxApi.endpoints.getSensors.initiate(
-                    withDb({ technicalRunId, factoryNumber }, databaseId)
-                )
-            );
-
-            try {
-                // Имитация прогресса
-                let progressInterval: NodeJS.Timeout | undefined;
-
-                if (onProgress) {
-                    let currentProgress = 0;
-                    progressInterval = setInterval(() => {
-                        if (currentProgress < 90) {
-                            currentProgress += 10;
-                            onProgress(currentProgress);
-                            dispatch(
-                                updateSensorsProgress({
-                                    technicalRunId,
-                                    factoryNumber,
-                                    progress: currentProgress,
-                                })
-                            );
-                        }
-                    }, 100);
-                }
-
-                const response = await notify.run(
-                    subscription.unwrap(),
-                    {
-                        loading: { text: 'Загрузка сенсоров...' },
-                        success: {
-                            text: 'Сенсоры загружены',
-                            toastOptions: { duration: 700 }
-                        },
-                        error:{
-                            toastOptions: { duration: 3000 }
-                        }
+            const response = (await notify.run(
+                subscription.unwrap(),
+                {
+                    loading: { text: 'Загрузка сенсоров...' },
+                    success: {
+                        text: 'Сенсоры загружены',
+                        toastOptions: { duration: 700 },
                     },
-                    { id: 'fetch-sensors' }
-                ) as SensorDto[]
+                    error: {
+                        toastOptions: { duration: 3000 },
+                    },
+                },
+                { id: 'fetch-sensors' }
+            )) as SensorDto[];
 
+            if (progressInterval !== undefined) {
+                clearInterval(progressInterval);
+            }
 
-
-                // Завершаем прогресс
-                if (progressInterval) {
-                    clearInterval(progressInterval);
-                }
-
-                // Проверка отмены после загрузки
-                if (signal?.aborted) {
-                    dispatch(
-                        finishSensorsLoading({
-                            technicalRunId,
-                            factoryNumber,
-                            success: false,
-                            error: undefined,
-                        })
-                    );
-                    return { data: response, wasAborted: true };
-                }
-
-                // Успех
-                if (onProgress) {
-                    onProgress(100);
-                }
-
-                dispatch(
-                    updateSensorsProgress({
-                        technicalRunId,
-                        factoryNumber,
-                        progress: 100,
-                    })
-                );
-                dispatch(
-                    finishSensorsLoading({
-                        technicalRunId,
-                        factoryNumber,
-                        success: true,
-                    })
-                );
-
-                return { data: response, wasAborted: false };
-
-            } catch (error: any) {
-                // Обработка отмены
-                if (error.name === 'AbortError' || signal?.aborted) {
-                    dispatch(
-                        finishSensorsLoading({
-                            technicalRunId,
-                            factoryNumber,
-                            success: false,
-                            error: undefined,
-                        })
-                    );
-                    return { data: [], wasAborted: true };
-                }
-
-                // Обработка ошибки
-                const errorMessage = error?.message || 'Ошибка загрузки сенсоров';
-
+            if (signal?.aborted) {
                 dispatch(
                     finishSensorsLoading({
                         technicalRunId,
                         factoryNumber,
                         success: false,
-                        error: errorMessage,
+                        error: undefined,
                     })
                 );
-
-                return rejectWithValue(errorMessage);
-            } finally {
-                subscription.unsubscribe?.();
+                return { data: response, wasAborted: true };
             }
+
+            if (onProgress !== undefined) {
+                onProgress(100);
+            }
+
+            dispatch(
+                updateSensorsProgress({
+                    technicalRunId,
+                    factoryNumber,
+                    progress: 100,
+                })
+            );
+
+            // ✅ Сохраняем данные в slice
+            dispatch(
+                setSensorsData({
+                    technicalRunId,
+                    factoryNumber,
+                    sensors: response,
+                })
+            );
+
+            dispatch(
+                finishSensorsLoading({
+                    technicalRunId,
+                    factoryNumber,
+                    success: true,
+                })
+            );
+
+            return { data: response, wasAborted: false };
+        } catch (error: unknown) {
+            if (
+                (error !== null &&
+                    typeof error === 'object' &&
+                    'name' in error &&
+                    error.name === 'AbortError') ||
+                signal?.aborted
+            ) {
+                dispatch(
+                    finishSensorsLoading({
+                        technicalRunId,
+                        factoryNumber,
+                        success: false,
+                        error: undefined,
+                    })
+                );
+                return { data: [], wasAborted: true };
+            }
+
+            const errorMessage =
+                error !== null && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
+                    ? error.message
+                    : 'Ошибка загрузки сенсоров';
+
+            dispatch(
+                finishSensorsLoading({
+                    technicalRunId,
+                    factoryNumber,
+                    success: false,
+                    error: errorMessage,
+                })
+            );
+
+            return rejectWithValue(errorMessage);
+        } finally {
+            subscription.unsubscribe?.();
         }
+    }
 );

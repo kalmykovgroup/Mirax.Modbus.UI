@@ -10,14 +10,169 @@
     background: #f5f5f5;
 }
 
-.chartsContainer {
+/* Верхние вкладки */
+.topTabsContainer {
+    display: flex;
+    gap: 4px;
+    background: #fff;
+    padding: 8px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.topTab {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.topTab:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.topTabActive {
+    padding: 10px 20px;
+    border: none;
+    background: #1890ff;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.topTabActive:hover {
+    background: #40a9ff;
+}
+
+/* Обёртки для вкладки с ChartTabBar */
+.topTabWrapper {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.topTabWrapper:hover {
+    background: #f0f0f0;
+}
+
+.topTabActiveWrapper {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    background: #e6f7ff;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid #1890ff;
+}
+
+.topTabActiveWrapper:hover {
+    background: #bae7ff;
+}
+
+/* Контент верхних вкладок */
+.topTabContent {
     display: flex;
     flex-direction: column;
     width: 100%;
+    min-height: 200px;
+    position: relative;
 }
 
-.chartTabContent {
+/* Видимая вкладка */
+.tabVisible {
+    position: relative;
     width: 100%;
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    height: auto;
+    overflow: visible;
+}
+
+/* Скрытая вкладка - сжата до минимума */
+.tabHidden {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    min-height: 1px;
+    max-height: 1px;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: -1;
+}
+
+.templatesContent {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Контейнер графиков */
+.chartsContainerVisible {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    position: relative;
+}
+
+.chartsContainerHidden {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    min-height: 1px;
+    max-height: 1px;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: -1;
+}
+
+/* Видимая вкладка графика */
+.chartTabVisible {
+    width: 100%;
+    position: relative;
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    height: auto;
+    overflow: visible;
+}
+
+/* Скрытая вкладка графика - сжата до минимума */
+.chartTabHidden {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    min-height: 1px;
+    max-height: 1px;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: -1;
 }
 
 .emptyState {

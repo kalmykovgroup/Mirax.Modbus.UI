@@ -1,18 +1,18 @@
 // src/features/mirax/components/TabBar/TabBar.tsx
 import { useCallback, type JSX } from 'react';
 
-import styles from './TabBar.module.css';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import styles from './TabBar_PortableDevices.module.css';
+import { useAppDispatch, useAppSelector } from '@/store/hooks.ts';
 import {
     selectOpenTabs,
     selectActiveTabId,
     setActiveTab,
     closeTechnicalRunTab,
     closeAllTabs,
-} from '@chartsPage/charts/mirax/miraxSlice';
-import { TabItem } from './TabItem/TabItem';
+} from '@chartsPage/charts/mirax/miraxSlice.ts';
+import { TabItem_PortableDevices } from './TabItem_PortableDevices/TabItem_PortableDevices.tsx';
 
-export function TabBar(): JSX.Element {
+export function TabBar_PortableDevices(): JSX.Element {
     const dispatch = useAppDispatch();
     const openTabs = useAppSelector(selectOpenTabs);
     const activeTabId = useAppSelector(selectActiveTabId);
@@ -35,7 +35,7 @@ export function TabBar(): JSX.Element {
         <div className={styles.container}>
             <div className={styles.tabs}>
                 {openTabs.map((tab) => (
-                    <TabItem
+                    <TabItem_PortableDevices
                         key={tab.id}
                         tab={tab}
                         isActive={tab.id === activeTabId}

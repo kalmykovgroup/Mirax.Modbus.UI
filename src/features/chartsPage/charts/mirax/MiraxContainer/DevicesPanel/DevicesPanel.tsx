@@ -2,27 +2,26 @@
 import { useState, useMemo, useCallback, useEffect, type JSX } from 'react';
 
 import styles from './DevicesPanel.module.css';
-import { useAppDispatch, useAppSelector } from '@/store/hooks.ts';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
     selectDatabaseId,
     selectDevicesLoading,
     selectIsDevicesLoading,
-    selectDevicesError,
-} from '@chartsPage/charts/mirax/miraxSlice.ts';
-import { useGetPortableDevicesQuery } from '@chartsPage/charts/mirax/miraxApi.ts';
-import { fetchPortableDevices } from '@chartsPage/charts/mirax/miraxThunks.ts';
-import { DeviceSortDropdown } from '@chartsPage/charts/mirax/MiraxContainer/DevicesPanel/DeviceSortDropdown/DeviceSortDropdown.tsx';
-import { ComPortsFilter } from '@chartsPage/charts/mirax/MiraxContainer/DevicesPanel/ComPortsFilter/ComPortsFilter.tsx';
-import { PortableDevicesList } from '@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDevicesList.tsx';
-import { ErrorMessage } from '@chartsPage/charts/mirax/MiraxContainer/ErrorMessage/ErrorMessage.tsx';
-import { LoadingProgress } from '@chartsPage/charts/mirax/MiraxContainer/LoadingProgress/LoadingProgress.tsx';
-import type { Guid } from '@app/lib/types/Guid.ts';
+    selectDevicesError, selectTechnicalRunById, selectDevicesByTechnicalRunId,
+} from '@chartsPage/charts/mirax/miraxSlice';
+import { fetchPortableDevices } from '@chartsPage/charts/mirax/miraxThunks';
+import { DeviceSortDropdown } from '@chartsPage/charts/mirax/MiraxContainer/DevicesPanel/DeviceSortDropdown/DeviceSortDropdown';
+import { ComPortsFilter } from '@chartsPage/charts/mirax/MiraxContainer/DevicesPanel/ComPortsFilter/ComPortsFilter';
+import { PortableDevicesList } from '@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDevicesList';
+import { ErrorMessage } from '@chartsPage/charts/mirax/MiraxContainer/ErrorMessage/ErrorMessage';
+import { LoadingProgress } from '@chartsPage/charts/mirax/MiraxContainer/LoadingProgress/LoadingProgress';
+import type { Guid } from '@app/lib/types/Guid';
 import {
     sortDevices,
     DeviceSortType,
     type DeviceSortType as DeviceSortTypeValue,
-} from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers.ts';
-import { SearchInput } from '@chartsPage/charts/mirax/MiraxContainer/SearchInput/SearchInput.tsx';
+} from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers';
+import { SearchInput } from '@chartsPage/charts/mirax/MiraxContainer/SearchInput/SearchInput';
 
 interface Props {
     readonly technicalRunId: Guid;
@@ -35,27 +34,22 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
     const isLoading = useAppSelector((state) => selectIsDevicesLoading(state, technicalRunId));
     const error = useAppSelector((state) => selectDevicesError(state, technicalRunId));
 
+    // ✅ Получаем данные испытания через селектор
+    const technicalRun = useAppSelector((state) => selectTechnicalRunById(state, technicalRunId));
+
+    // ✅ Получаем устройства из slice через селектор
+    const devices = useAppSelector((state) => selectDevicesByTechnicalRunId(state, technicalRunId));
+
     const [deviceSearchQuery, setDeviceSearchQuery] = useState('');
-    const [selectedPort, setSelectedPort] = useState<string | null>(null);
+    const [selectedPort, setSelectedPort] = useState<string | undefined>(undefined);
     const [sortType, setSortType] = useState<DeviceSortTypeValue>(
         DeviceSortType.FACTORY_NUMBER_ASC
-    );
-
-    // Читаем данные из RTK Query кеша
-    const { data: devices = [] } = useGetPortableDevicesQuery(
-        {
-            dbId: databaseId!,
-            body: { technicalRunId },
-        },
-        {
-            skip: databaseId === undefined,
-        }
     );
 
     // Загрузка устройств при монтировании (через thunk)
     useEffect(() => {
         if (databaseId !== undefined && devices.length === 0 && !isLoading && error === undefined) {
-            dispatch(fetchPortableDevices({ databaseId, technicalRunId }));
+            void dispatch(fetchPortableDevices({ databaseId, technicalRunId }));
         }
     }, [dispatch, databaseId, technicalRunId, devices.length, isLoading, error]);
 
@@ -63,10 +57,10 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
         let result = devices;
 
         // Фильтрация по COM-порту
-        if (selectedPort !== null) {
+        if (selectedPort !== undefined) {
             result = result.filter((device) => {
                 const portName = device.comPortName;
-                return portName != null && portName === selectedPort;
+                return portName !== undefined && portName === selectedPort;
             });
         }
 
@@ -75,8 +69,8 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
             const query = deviceSearchQuery.toLowerCase().trim();
 
             result = result.filter((device) => {
-                const nameMatch = device.name?.toLowerCase().includes(query);
-                const factoryNumberMatch = device.factoryNumber?.toLowerCase().includes(query);
+                const nameMatch = device.name?.toLowerCase().includes(query) ?? false;
+                const factoryNumberMatch = device.factoryNumber?.toLowerCase().includes(query) ?? false;
 
                 return nameMatch || factoryNumberMatch;
             });
@@ -94,7 +88,7 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
         setDeviceSearchQuery('');
     }, []);
 
-    const handlePortChange = useCallback((port: string | null) => {
+    const handlePortChange = useCallback((port: string | undefined) => {
         setSelectedPort(port);
     }, []);
 
@@ -104,13 +98,22 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
 
     const handleRetry = useCallback(() => {
         if (databaseId !== undefined) {
-            dispatch(fetchPortableDevices({ databaseId, technicalRunId }));
+            void dispatch(fetchPortableDevices({ databaseId, technicalRunId }));
         }
     }, [dispatch, databaseId, technicalRunId]);
 
     const showNoResults =
-        (deviceSearchQuery.trim() || selectedPort !== null) &&
+        (deviceSearchQuery.trim() || selectedPort !== undefined) &&
         filteredAndSortedDevices.length === 0;
+
+    // ✅ Проверка: нет данных испытания
+    if (technicalRun === undefined) {
+        return (
+            <div className={styles.container}>
+                <div className={styles.error}>Ошибка: данные испытания не найдены</div>
+            </div>
+        );
+    }
 
     // Ошибка загрузки
     if (error !== undefined) {
@@ -125,10 +128,7 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
     if (isLoading) {
         return (
             <div className={styles.container}>
-                <LoadingProgress
-                    progress={loadingState.progress}
-                    message="Загрузка устройств..."
-                />
+                <LoadingProgress progress={loadingState.progress} message="Загрузка устройств..." />
             </div>
         );
     }
@@ -139,7 +139,7 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
                 <h2 className={styles.title}>Устройства</h2>
                 {devices.length > 0 && (
                     <span className={styles.count}>
-                        {deviceSearchQuery.trim() || selectedPort !== null
+                        {deviceSearchQuery.trim() || selectedPort !== undefined
                             ? `${filteredAndSortedDevices.length} из ${devices.length}`
                             : devices.length}
                     </span>
@@ -170,14 +170,14 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
                     <div className={styles.placeholder}>Нет устройств</div>
                 ) : showNoResults ? (
                     <div className={styles.placeholder}>
-                        {selectedPort !== null && !deviceSearchQuery.trim()
+                        {selectedPort !== undefined && !deviceSearchQuery.trim()
                             ? `Нет устройств на порту ${selectedPort}`
                             : `Ничего не найдено по запросу "${deviceSearchQuery}"`}
                     </div>
                 ) : (
                     <PortableDevicesList
                         devices={filteredAndSortedDevices}
-                        technicalRunId={technicalRunId}
+                        technicalRun={technicalRun}
                     />
                 )}
             </div>

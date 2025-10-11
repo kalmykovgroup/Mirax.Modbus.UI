@@ -13,17 +13,21 @@ import {
     selectIsDeviceExpanded,
     selectSelectedDeviceFactoryNumber,
     selectDatabaseId,
+    selectSensorsData,
+    selectSensorsLoading,
 } from '@chartsPage/charts/mirax/miraxSlice';
 import { fetchSensors } from '@chartsPage/charts/mirax/miraxThunks';
-import { useGetSensorsQuery, useGetTechnicalRunsQuery } from '@chartsPage/charts/mirax/miraxApi';
-import type { Guid } from '@app/lib/types/Guid';
-import { getDeviceDisplayName, shouldShowCopyId } from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers';
+import {
+    getDeviceDisplayName,
+    shouldShowCopyId,
+} from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers';
 import { CopyButton } from '@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/CopyButton/CopyButton';
 import { SensorsList } from '@chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/SensorsList/SensorsList';
+import type { LoadSensorsRequest } from '@chartsPage/charts/mirax/miraxThunk.types';
 
 interface Props {
     readonly device: PortableDeviceDto;
-    readonly technicalRunId: Guid;
+    readonly technicalRun: TechnicalRunDto;
     readonly isFirst: boolean;
 }
 
@@ -31,7 +35,7 @@ interface Props {
  * Метод для вывода данных испытания, устройства и сенсоров в консоль
  */
 async function logDeviceData(
-    technicalRun: TechnicalRunDto | undefined,
+    technicalRun: TechnicalRunDto,
     device: PortableDeviceDto,
     sensors: readonly SensorDto[]
 ): Promise<void> {
@@ -40,7 +44,20 @@ async function logDeviceData(
     console.log('SensorDto[]:', sensors);
 }
 
-export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): JSX.Element {
+export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JSX.Element {
+    // ✅ Runtime-защита: проверяем обязательные данные
+    if (!technicalRun || !device) {
+        console.error('PortableDeviceItem: отсутствуют обязательные данные', {
+            technicalRun,
+            device,
+        });
+        return (
+            <li className={styles.item}>
+                <div className={styles.error}>Ошибка: отсутствуют данные устройства или испытания</div>
+            </li>
+        );
+    }
+
     const dispatch = useAppDispatch();
     const databaseId = useAppSelector(selectDatabaseId);
     const factoryNumber = device.factoryNumber ?? '';
@@ -48,35 +65,22 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
     const isSelected = useAppSelector(selectSelectedDeviceFactoryNumber) === factoryNumber;
     const abortControllerRef = useRef<AbortController | undefined>(undefined);
     const firstLoadTriggeredRef = useRef(false);
-    const sensorsLoadedRef = useRef(false);
 
     const showCopyButton = shouldShowCopyId(device);
 
-    // Получаем данные испытания из кеша
-    const { data: technicalRuns = [] } = useGetTechnicalRunsQuery(
-        { dbId: databaseId!, body: undefined },
-        { skip: databaseId === undefined }
+    // ✅ Получаем данные сенсоров из slice
+    const sensors = useAppSelector((state) =>
+        selectSensorsData(state, technicalRun.id, factoryNumber)
     );
 
-    const currentTechnicalRun = useMemo((): TechnicalRunDto | undefined => {
-        return technicalRuns.find((run) => run.id === technicalRunId);
-    }, [technicalRuns, technicalRunId]);
-
-    // Читаем сенсоры из RTK Query кеша
-    // skip: false если (первое ИЛИ раскрыто ИЛИ уже загружали)
-    const { data: sensors = [], isLoading } = useGetSensorsQuery(
-        {
-            dbId: databaseId!,
-            body: { technicalRunId, factoryNumber },
-        },
-        {
-            skip: databaseId === undefined || !factoryNumber || (!isFirst && !isExpanded && !sensorsLoadedRef.current),
-        }
+    // ✅ Получаем статус загрузки сенсоров
+    const sensorsLoadingState = useAppSelector((state) =>
+        selectSensorsLoading(state, technicalRun.id, factoryNumber)
     );
+    const isLoading = sensorsLoadingState.isLoading;
 
     // Автозагрузка сенсоров ТОЛЬКО для первого устройства через thunk
     useEffect(() => {
-        // ВАЖНО: проверяем isFirst в зависимостях, чтобы не срабатывало для остальных
         if (!isFirst) return;
 
         const shouldTriggerLoad =
@@ -92,18 +96,16 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
             const controller = new AbortController();
             abortControllerRef.current = controller;
 
-            dispatch(
+            void dispatch(
                 fetchSensors({
                     databaseId,
-                    technicalRunId,
+                    technicalRunId: technicalRun.id,
                     factoryNumber,
                     signal: controller.signal,
-                })
-            ).then(() => {
-                sensorsLoadedRef.current = true;
-            });
+                } satisfies LoadSensorsRequest)
+            );
         }
-    }, [isFirst, databaseId, technicalRunId, factoryNumber, sensors.length, isLoading, dispatch]);
+    }, [isFirst, databaseId, technicalRun.id, factoryNumber, sensors.length, isLoading, dispatch]);
 
     // Собираем уникальные газы из сенсоров
     const uniqueGases = useMemo(() => {
@@ -139,21 +141,24 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
                     await dispatch(
                         fetchSensors({
                             databaseId,
-                            technicalRunId,
+                            technicalRunId: technicalRun.id,
                             factoryNumber,
                             signal: abortControllerRef.current.signal,
-                        })
+                        } satisfies LoadSensorsRequest)
                     ).unwrap();
-
-                    sensorsLoadedRef.current = true;
                 } catch (error) {
-                    if (error && typeof error === 'object' && 'name' in error && error.name !== 'AbortError') {
+                    if (
+                        error !== null &&
+                        typeof error === 'object' &&
+                        'name' in error &&
+                        error.name !== 'AbortError'
+                    ) {
                         console.error('Ошибка загрузки сенсоров:', error);
                     }
                 }
             }
         },
-        [dispatch, factoryNumber, isExpanded, sensors.length, databaseId, technicalRunId]
+        [dispatch, factoryNumber, isExpanded, sensors.length, databaseId, technicalRun.id]
     );
 
     /**
@@ -171,22 +176,22 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
                     const result = await dispatch(
                         fetchSensors({
                             databaseId,
-                            technicalRunId,
+                            technicalRunId: technicalRun.id,
                             factoryNumber,
                             signal: new AbortController().signal,
-                        })
+                        } satisfies LoadSensorsRequest)
                     ).unwrap();
 
                     actualSensors = result.data;
-                    sensorsLoadedRef.current = true; // Устанавливаем флаг, чтобы useGetSensorsQuery подхватил данные
                 } catch (error) {
                     console.error('Ошибка загрузки сенсоров:', error);
+                    return;
                 }
             }
 
-            await logDeviceData(currentTechnicalRun, device, actualSensors);
+            await logDeviceData(technicalRun, device, actualSensors);
         },
-        [currentTechnicalRun, device, sensors, databaseId, factoryNumber, technicalRunId, dispatch]
+        [technicalRun, device, sensors, databaseId, factoryNumber, dispatch]
     );
 
     return (
@@ -198,6 +203,7 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
                     aria-expanded={isExpanded}
                     aria-label={isExpanded ? 'Свернуть' : 'Развернуть'}
                     disabled={!factoryNumber}
+                    type="button"
                 >
                     <span className={classNames(styles.arrow, isExpanded && styles.expanded)}>▶</span>
                 </button>
@@ -205,9 +211,7 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
                 <div className={styles.content}>
                     <div className={styles.nameContainer}>
                         <h4 className={styles.name}>{getDeviceDisplayName(device)}</h4>
-                        {showCopyButton && (
-                            <CopyButton text={device.id} label="Копировать ID устройства" />
-                        )}
+                        {showCopyButton && <CopyButton text={device.id} label="Копировать ID устройства" />}
                     </div>
 
                     <div className={styles.metaRow}>
@@ -225,7 +229,6 @@ export function PortableDeviceItem({ device, technicalRunId, isFirst }: Props): 
                             </div>
                         )}
 
-                        {/* Кнопка построения графика */}
                         <button
                             className={styles.chartButton}
                             onClick={handleBuildChart}

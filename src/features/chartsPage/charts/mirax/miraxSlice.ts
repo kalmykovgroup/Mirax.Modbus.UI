@@ -1,4 +1,3 @@
-// src/features/mirax/store/miraxSlice.ts
 import {createSelector, createSlice, type PayloadAction} from '@reduxjs/toolkit';
 import type { Guid } from '@app/lib/types/Guid';
 import type { TechnicalRunDto } from '@chartsPage/charts/mirax/contracts/TechnicalRunDto';
@@ -13,6 +12,25 @@ import type {RootState} from "@/store/store.ts";
 export interface TechnicalRunTab {
     readonly id: Guid;
     readonly name: string | undefined;
+}
+
+/**
+ * Тип ключа для идентификации сенсоров устройства
+ * Формат: `${technicalRunId}-${factoryNumber}`
+ */
+export type SensorKey = `${Guid}-${string}`;
+
+/**
+ * Создать уникальный ключ для сенсоров устройства
+ * @param technicalRunId - ID технического прогона
+ * @param factoryNumber - заводской номер устройства
+ * @returns уникальный ключ для хранения сенсоров
+ */
+export function createSensorKey(
+    technicalRunId: Guid,
+    factoryNumber: string
+): SensorKey {
+    return `${technicalRunId}-${factoryNumber}` as SensorKey;
 }
 
 /**
@@ -42,7 +60,7 @@ export interface SensorTabsState {
  */
 export interface MiraxState {
     readonly databaseId: Guid | undefined;
-    readonly openTabs: readonly TechnicalRunTab[];
+    readonly openTabs: TechnicalRunTab[];
     readonly activeTabId: Guid | undefined;
     readonly sensorTabs: Record<Guid, SensorTabsState>;
     readonly selectedDeviceFactoryNumber: string | undefined;
@@ -51,6 +69,11 @@ export interface MiraxState {
     readonly technicalRunsLoading: MiraxLoadingState;
     readonly devicesLoading: Record<string, MiraxLoadingState>;
     readonly sensorsLoading: Record<string, MiraxLoadingState>;
+
+    readonly technicalRunsData: TechnicalRunDto[];
+    readonly devicesByTechnicalRun: Record<Guid, PortableDeviceDto[]>;
+    readonly sensorsBySensorKey: Record<SensorKey, SensorDto[]>; // key: `${technicalRunId}-${factoryNumber}`
+
 }
 
 const initialLoadingState: MiraxLoadingState = {
@@ -70,6 +93,10 @@ const initialState: MiraxState = {
     technicalRunsLoading: initialLoadingState,
     devicesLoading: {},
     sensorsLoading: {},
+
+    technicalRunsData: [],
+    devicesByTechnicalRun: {},
+    sensorsBySensorKey: {},
 };
 
 /**
@@ -85,7 +112,7 @@ export const miraxSlice = createSlice({
     reducers: {
         setDatabaseId: (state, action: PayloadAction<Guid>) => {
             state.databaseId = action.payload;
-            state.openTabs = [];
+            state.openTabs = [] as TechnicalRunTab[];
             state.activeTabId = undefined;
             state.sensorTabs = {};
             state.selectedDeviceFactoryNumber = undefined;
@@ -94,6 +121,9 @@ export const miraxSlice = createSlice({
             state.technicalRunsLoading = initialLoadingState;
             state.devicesLoading = {};
             state.sensorsLoading = {};
+            state.technicalRunsData = [];
+            state.devicesByTechnicalRun = {};
+            state.sensorsBySensorKey = {};
         },
 
         clearDatabase: (state) => {
@@ -107,6 +137,39 @@ export const miraxSlice = createSlice({
             state.technicalRunsLoading = initialLoadingState;
             state.devicesLoading = {};
             state.sensorsLoading = {};
+            state.technicalRunsData = [];
+            state.devicesByTechnicalRun = {};
+            state.sensorsBySensorKey = {};
+        },
+
+        //Сохранение данных испытаний
+        setTechnicalRunsData: (state, action: PayloadAction<TechnicalRunDto[]>) => {
+            state.technicalRunsData = action.payload;
+        },
+
+        //Сохранение устройств для испытания
+        setDevicesData: (
+            state,
+            action: PayloadAction<{
+                readonly technicalRunId: Guid;
+                readonly devices: PortableDeviceDto[];
+            }>
+        ) => {
+            const { technicalRunId, devices } = action.payload;
+            state.devicesByTechnicalRun[technicalRunId] = devices;
+        },
+
+        // ✅ НОВОЕ - Сохранение сенсоров для устройства
+        setSensorsData: (
+            state,
+            action: PayloadAction<{
+                readonly technicalRunId: Guid;
+                readonly factoryNumber: string;
+                readonly sensors: SensorDto[];
+            }>
+        ) => {
+            const { technicalRunId, factoryNumber, sensors } = action.payload;
+            state.sensorsBySensorKey[createSensorKey(technicalRunId, factoryNumber)] = sensors;
         },
 
         openTechnicalRunTab: (state, action: PayloadAction<TechnicalRunTab>) => {
@@ -500,6 +563,9 @@ export const miraxSlice = createSlice({
 export const {
     setDatabaseId,
     clearDatabase,
+    setTechnicalRunsData,
+    setDevicesData,
+    setSensorsData,
     openTechnicalRunTab,
     closeTechnicalRunTab,
     setActiveTab,
@@ -535,6 +601,10 @@ export const {
     clearAllSensorsLoading,
     resetMiraxState,
 } = miraxSlice.actions;
+
+// Селекторы для данных
+export const selectTechnicalRunsData = (state: RootState): readonly TechnicalRunDto[] =>
+    state.mirax.technicalRunsData;
 
 // Selectors
 export const selectDatabaseId = (state: RootState): Guid | undefined =>
@@ -606,18 +676,6 @@ export function getSensorTabKey(sensorTab: SensorTab): SensorTabKey {
 
 export const selectSelectedDeviceFactoryNumber = (state: RootState): string | undefined =>
     state.mirax.selectedDeviceFactoryNumber;
-
-export const selectHasSelectedDevice = (state: RootState): boolean =>
-    state.mirax.selectedDeviceFactoryNumber !== undefined;
-
-export const selectExpandedTechnicalRunIds = (state: RootState): readonly Guid[] =>
-    state.mirax.expandedTechnicalRunIds;
-
-export const selectExpandedDeviceFactoryNumbers = (state: RootState): readonly string[] =>
-    state.mirax.expandedDeviceFactoryNumbers;
-
-export const selectIsTechnicalRunExpanded = (state: RootState, technicalRunId: Guid): boolean =>
-    state.mirax.expandedTechnicalRunIds.includes(technicalRunId);
 
 export const selectIsDeviceExpanded = (state: RootState, factoryNumber: string): boolean =>
     state.mirax.expandedDeviceFactoryNumbers.includes(factoryNumber);
@@ -701,3 +759,92 @@ export const selectSensorsError = (
     const key = `${technicalRunId}-${factoryNumber}`;
     return state.mirax.sensorsLoading[key]?.error;
 };
+
+
+/**
+ * Пустой массив для использования как fallback (чтобы не создавать новый при каждом вызове)
+ */
+const EMPTY_SENSORS_ARRAY: readonly SensorDto[] = [];
+const EMPTY_DEVICES_ARRAY: readonly PortableDeviceDto[] = [];
+
+/**
+ * Получить данные сенсоров (мемоизированный)
+ */
+export const selectSensorsData = createSelector(
+    [
+        (state: RootState) => state.mirax.sensorsBySensorKey,
+        (_state: RootState, technicalRunId: Guid, factoryNumber: string) =>
+            createSensorKey(technicalRunId, factoryNumber),
+    ],
+    (sensorsByKey, key): readonly SensorDto[] =>
+        sensorsByKey[key] ?? EMPTY_SENSORS_ARRAY
+);
+
+// ========================================================================
+// ДОБАВИТЬ В КОНЕЦ ФАЙЛА (если ещё не добавлены)
+// ========================================================================
+
+/**
+ * Получить испытание по ID (мемоизированный)
+ */
+export const selectTechnicalRunById = createSelector(
+    [
+        selectTechnicalRunsData,
+        (_state: RootState, technicalRunId: Guid) => technicalRunId,
+    ],
+    (technicalRuns, technicalRunId): TechnicalRunDto | undefined =>
+        technicalRuns.find((run) => run.id === technicalRunId)
+);
+
+/**
+ * Получить активное испытание (текущая вкладка) (мемоизированный)
+ */
+export const selectActiveTechnicalRun = createSelector(
+    [selectTechnicalRunsData, selectActiveTabId],
+    (technicalRuns, activeTabId): TechnicalRunDto | undefined => {
+        if (activeTabId === undefined) return undefined;
+        return technicalRuns.find((run) => run.id === activeTabId);
+    }
+);
+
+/**
+ * Получить устройства для конкретного испытания по ID (мемоизированный)
+ */
+export const selectDevicesByTechnicalRunId = createSelector(
+    [
+        (state: RootState) => state.mirax.devicesByTechnicalRun,
+        (_state: RootState, technicalRunId: Guid) => technicalRunId,
+    ],
+    (devicesByRun, technicalRunId): readonly PortableDeviceDto[] =>
+        devicesByRun[technicalRunId] ?? EMPTY_DEVICES_ARRAY
+);
+
+/**
+ * Получить устройства для активного испытания (мемоизированный)
+ */
+export const selectDevicesForActiveRun = createSelector(
+    [
+        (state: RootState) => state.mirax.devicesByTechnicalRun,
+        selectActiveTabId,
+    ],
+    (devicesByRun, activeTabId): readonly PortableDeviceDto[] => {
+        if (activeTabId === undefined) return EMPTY_DEVICES_ARRAY;
+        return devicesByRun[activeTabId] ?? EMPTY_DEVICES_ARRAY;
+    }
+);
+
+/**
+ * Проверка, загружены ли устройства для испытания
+ */
+export const selectHasDevicesForRun = createSelector(
+    [selectDevicesByTechnicalRunId],
+    (devices): boolean => devices.length > 0
+);
+
+/**
+ * Получить количество устройств для испытания
+ */
+export const selectDevicesCountForRun = createSelector(
+    [selectDevicesByTechnicalRunId],
+    (devices): number => devices.length
+);

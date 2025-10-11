@@ -1,5 +1,5 @@
-
-import { useMemo, useState, useCallback, type JSX } from 'react';
+// src/features/chartsPage/charts/mirax/MiraxContainer/TechnicalRunsPanel/TechnicalRunsPanel.tsx
+import { useMemo, useState, useCallback, type JSX, useEffect } from 'react';
 import classNames from 'classnames';
 
 import styles from './TechnicalRunsPanel.module.css';
@@ -11,8 +11,8 @@ import {
     selectTechnicalRunsLoading,
     openTechnicalRunTab,
     selectActiveTabId,
+    selectTechnicalRunsData,
 } from '@chartsPage/charts/mirax/miraxSlice';
-import { useGetTechnicalRunsQuery } from '@chartsPage/charts/mirax/miraxApi';
 import { fetchTechnicalRuns } from '@chartsPage/charts/mirax/miraxThunks';
 import { ErrorMessage } from '@chartsPage/charts/mirax/MiraxContainer/ErrorMessage/ErrorMessage';
 import { SortDropdown } from '@chartsPage/charts/mirax/MiraxContainer/TechnicalRunsPanel/SortDropdown/SortDropdown';
@@ -23,8 +23,8 @@ import {
     TechnicalRunSortType,
     type TechnicalRunSortType as TechnicalRunSortTypeValue,
 } from '@chartsPage/charts/mirax/MiraxContainer/utils/miraxHelpers';
-import {SearchInput} from "@chartsPage/charts/mirax/MiraxContainer/SearchInput/SearchInput.tsx";
-import {LoadingProgress} from "@chartsPage/charts/mirax/MiraxContainer/LoadingProgress/LoadingProgress.tsx";
+import { SearchInput } from '@chartsPage/charts/mirax/MiraxContainer/SearchInput/SearchInput';
+import { LoadingProgress } from '@chartsPage/charts/mirax/MiraxContainer/LoadingProgress/LoadingProgress';
 
 export function TechnicalRunsPanel(): JSX.Element {
     const dispatch = useAppDispatch();
@@ -39,10 +39,38 @@ export function TechnicalRunsPanel(): JSX.Element {
         TechnicalRunSortType.DATE_END_DESC
     );
 
-    const { data: technicalRuns = [] } = useGetTechnicalRunsQuery(
-        { dbId: databaseId!, body: undefined },
-        { skip: databaseId === undefined }
-    );
+    const technicalRuns = useAppSelector(selectTechnicalRunsData);
+
+    // ✅ Автозагрузка при монтировании
+    useEffect(() => {
+        if (databaseId === undefined) {
+            console.error('Database id is undefined');
+            return;
+        }
+
+        // ✅ Ключевая проверка: если уже загружается или есть данные - не стартуем
+        if (isLoading) {
+            console.warn('Данные уже загружаются');
+            return;
+        }
+
+        if (technicalRuns.length > 0) {
+            return;
+        }
+
+        if (error !== undefined) {
+            return;
+        }
+
+        void dispatch(
+            fetchTechnicalRuns({
+                databaseId,
+                onProgress: (progress) => {
+                    console.log(`[TechnicalRuns] Progress: ${progress}%`);
+                },
+            })
+        );
+    }, [databaseId, dispatch, isLoading, technicalRuns.length, error]);
 
     const filteredAndSortedRuns = useMemo(() => {
         let result = technicalRuns;
@@ -67,7 +95,7 @@ export function TechnicalRunsPanel(): JSX.Element {
 
     const handleRetry = useCallback(() => {
         if (databaseId === undefined) return;
-        dispatch(fetchTechnicalRuns({ databaseId }));
+        void dispatch(fetchTechnicalRuns({ databaseId }));
     }, [dispatch, databaseId]);
 
     const handleSearchChange = useCallback((value: string) => {
@@ -102,7 +130,7 @@ export function TechnicalRunsPanel(): JSX.Element {
         );
     }
 
-    if (error) {
+    if (error !== undefined) {
         return (
             <div className={styles.container}>
                 <ErrorMessage message={error} onRetry={handleRetry} />
@@ -152,9 +180,7 @@ export function TechnicalRunsPanel(): JSX.Element {
                                 onClick={() => handleRunClick(run)}
                             >
                                 <div className={styles.itemContent}>
-                                    <h3 className={styles.itemName}>
-                                        {run.name ?? 'Без названия'}
-                                    </h3>
+                                    <h3 className={styles.itemName}>{run.name ?? 'Без названия'}</h3>
                                     <div className={styles.itemDates}>
                                         <span className={styles.itemDate}>
                                             {formatTechnicalRunDate(run.dateStarTime)}

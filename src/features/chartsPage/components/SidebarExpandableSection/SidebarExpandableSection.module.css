@@ -1,0 +1,7 @@
+/* src/features/chartsPage/components/SidebarExpandableSection/SidebarExpandableSection.module.css */
+
+/* Контейнер */
+.container {
+    position: relative;
+    width: 100%;
+}

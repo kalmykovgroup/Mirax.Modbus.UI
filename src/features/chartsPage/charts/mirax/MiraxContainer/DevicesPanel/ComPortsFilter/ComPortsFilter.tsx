@@ -7,8 +7,8 @@ import styles from './ComPortsFilter.module.css';
 
 interface Props {
     readonly devices: readonly PortableDeviceDto[];
-    readonly selectedPort: string | null;
-    readonly onPortChange: (port: string | null) => void;
+    readonly selectedPort: string | undefined; // ✅ Было: string | null
+    readonly onPortChange: (port: string | undefined) => void; // ✅ Было: (port: string | null) => void
 }
 
 /**
@@ -24,7 +24,8 @@ export function ComPortsFilter({ devices, selectedPort, onPortChange }: Props): 
 
         for (const device of devices) {
             const portName = device.comPortName;
-            if (portName != null && portName.trim() !== '') {
+            // ✅ Было: portName != null
+            if (portName !== undefined && portName.trim() !== '') {
                 portsSet.add(portName);
             }
         }
@@ -43,7 +44,8 @@ export function ComPortsFilter({ devices, selectedPort, onPortChange }: Props): 
      */
     const handlePortClick = useCallback(
         (port: string): void => {
-            onPortChange(selectedPort === port ? null : port);
+            // ✅ Было: null, стало: undefined
+            onPortChange(selectedPort === port ? undefined : port);
         },
         [selectedPort, onPortChange]
     );
@@ -55,7 +57,8 @@ export function ComPortsFilter({ devices, selectedPort, onPortChange }: Props): 
         (port: string): number => {
             return devices.filter((d) => {
                 const portName = d.comPortName;
-                return portName != null && portName === port;
+                // ✅ Было: portName != null
+                return portName !== undefined && portName === port;
             }).length;
         },
         [devices]
@@ -73,9 +76,7 @@ export function ComPortsFilter({ devices, selectedPort, onPortChange }: Props): 
                     <button
                         key={port}
                         type="button"
-                        className={classNames(styles.tab, {
-                            [styles.tabActive]: selectedPort === port,
-                        })}
+                        className={classNames(styles.tab, selectedPort === port ? styles.tabActive : "")}
                         onClick={() => handlePortClick(port)}
                         title={
                             selectedPort === port

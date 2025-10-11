@@ -82,10 +82,3 @@ export const miraxApi = createApi({
     }),
   })
 });
-
-export const {
-    useGetTechnicalRunsQuery,
-    useGetPortableDevicesQuery,
-    useGetSensorsQuery,
-    useLazyGetSensorsQuery,
-} = miraxApi;

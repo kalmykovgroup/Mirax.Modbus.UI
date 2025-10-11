@@ -86,6 +86,9 @@ export const fetchChartReqTemplates = createAsyncThunk<
 >(
     'chartsTemplates/fetchAll',
     async (args, { getState, dispatch }) => {
+
+        console.log("Попытка")
+
         const force = !!(args && (args as any).force)
         const stateChartsTemplates = getState().chartsTemplates
         if (!force && stateChartsTemplates.listLoaded && stateChartsTemplates.items.length > 0) return
