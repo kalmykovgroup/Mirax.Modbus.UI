@@ -14,7 +14,7 @@ import type {
     SeriesTile,
     TimeRange,
 } from '@chartsPage/charts/core/store/types/chart.types.ts';
-import type { Guid } from '@app/lib/types/Guid';
+import { Guid } from '@/app/lib/types/Guid';
 import type {RootState} from "@/store/store.ts";
 
 // ============= ТИПЫ =============
@@ -119,17 +119,18 @@ const chartsSlice = createSlice({
          */
         setResolvedCharReqTemplate(
             state,
-            action: PayloadAction<ResolvedCharReqTemplate>
+            action: PayloadAction<{template : ResolvedCharReqTemplate, tabId?: Guid | undefined}>
         ) {
-            const template = action.payload;
-            const tabId = template.id; // ID шаблона = ID вкладки
+            const { template, tabId } = action.payload;
 
-            console.log('[setResolvedCharReqTemplate] Создаём/обновляем вкладку:', tabId);
+            const _tabId = tabId == null ? Guid.NewGuid() : tabId // ID шаблона = ID вкладки
+
+            console.log('[setResolvedCharReqTemplate] Создаём/обновляем вкладку:', _tabId);
 
             // Создаём вкладку если её нет
-            if (!(tabId in state.byTab)) {
-                state.byTab[tabId] = {
-                    template,
+            if (!(_tabId in state.byTab)) {
+                state.byTab[_tabId] = {
+                    template: template,
                     view: {},
                     syncEnabled: false,
                     syncFields: [],
@@ -137,11 +138,11 @@ const chartsSlice = createSlice({
                 };
             } else {
                 // Обновляем template существующей вкладки
-                state.byTab[tabId]!.template = template;
+                state.byTab[_tabId]!.template = template;
             }
 
             // Делаем вкладку активной
-            state.activeTabId = tabId;
+            state.activeTabId = _tabId;
         },
 
         // ========== УПРАВЛЕНИЕ ТАЙЛАМИ ==========

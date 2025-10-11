@@ -90,7 +90,7 @@ export default function ChartTemplatesPanel() {
             tpl.originalToMs != undefined
         ) {
             // Создаём вкладку с шаблоном
-            dispatch(setResolvedCharReqTemplate(tpl as ResolvedCharReqTemplate))
+            dispatch(setResolvedCharReqTemplate({template: tpl as ResolvedCharReqTemplate}))
         } else {
             // Значит требуется заполнить данными, это вызовет модальное окно
             setExecTpl(tpl)
@@ -117,7 +117,7 @@ export default function ChartTemplatesPanel() {
             resolvedToMs: result.range.toMs,
         } as ResolvedCharReqTemplate
 
-        dispatch(setResolvedCharReqTemplate(resolved as ResolvedCharReqTemplate))
+        dispatch(setResolvedCharReqTemplate({template: resolved as ResolvedCharReqTemplate}))
         setExecTpl(null)
     }
 
