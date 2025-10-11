@@ -33,13 +33,13 @@ interface FieldChartContainerProps {
 // src/features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/FieldChartContainer.tsx
 
 interface FieldChartContainerProps {
-    readonly tabId: Guid; // ← ДОБАВИЛИ
+    readonly contextId: Guid; // ← ДОБАВИЛИ
     readonly fieldName: string;
     readonly width: number;
 }
 
 export function FieldChartContainer({
-                                        tabId, // ← ДОБАВИЛИ
+                                        contextId, // ← ДОБАВИЛИ
                                         fieldName,
                                         width,
                                     }: FieldChartContainerProps) {
@@ -52,13 +52,13 @@ export function FieldChartContainer({
     const syncEnabledRef = useRef(false);
     const syncFieldsRef = useRef([] as readonly FieldDto[]);
 
-    // ТОЛЬКО добавили tabId в селекторы
+    // ТОЛЬКО добавили contextId в селекторы
     const currentBucket = useSelector((state: RootState) =>
-        selectFieldCurrentBucketMs(state, tabId, fieldName)
+        selectFieldCurrentBucketMs(state, contextId, fieldName)
     );
 
-    const syncEnabled = useSelector((state: RootState) => selectSyncEnabled(state, tabId));
-    const syncFields = useSelector((state: RootState) => selectSyncFields(state, tabId));
+    const syncEnabled = useSelector((state: RootState) => selectSyncEnabled(state, contextId));
+    const syncFields = useSelector((state: RootState) => selectSyncFields(state, contextId));
 
     const currentBucketRef = useRef(currentBucket);
     const lastRangeRef = useRef<TimeRange | null>(null);
@@ -97,9 +97,9 @@ export function FieldChartContainer({
         const shouldSync = syncEnabledRef.current && syncFieldsRef.current.some(f => f.name === fieldName);
 
         batch(() => {
-            // ТОЛЬКО добавили tabId в dispatch
+            // ТОЛЬКО добавили contextId в dispatch
             dispatch(setViewRange({
-                tabId, // ← ДОБАВИЛИ
+                contextId, // ← ДОБАВИЛИ
                 field: fieldName,
                 range: {
                     fromMs: range.fromMs,
@@ -111,7 +111,7 @@ export function FieldChartContainer({
                 requestManager.cancelFieldRequests(fieldName);
 
                 dispatch(setViewBucket({
-                    tabId, // ← ДОБАВИЛИ
+                    contextId, // ← ДОБАВИЛИ
                     field: fieldName,
                     bucketMs: newBucket
                 }));
@@ -123,7 +123,7 @@ export function FieldChartContainer({
                 syncFieldsRef.current.forEach(field => {
                     if (field.name !== fieldName) {
                         dispatch(setViewRange({
-                            tabId, // ← ДОБАВИЛИ
+                            contextId, // ← ДОБАВИЛИ
                             field: field.name,
                             range: {
                                 fromMs: range.fromMs,
@@ -134,7 +134,7 @@ export function FieldChartContainer({
                         const syncBucket = calculateBucket(range.fromMs, range.toMs, width);
                         if (syncBucket !== currentBucketRef.current) {
                             dispatch(setViewBucket({
-                                tabId, // ← ДОБАВИЛИ
+                                contextId, // ← ДОБАВИЛИ
                                 field: field.name,
                                 bucketMs: syncBucket
                             }));
@@ -162,7 +162,7 @@ export function FieldChartContainer({
             );
         }, 150);
 
-    }, [dispatch, fieldName, width, requestManager, tabId]); // ← добавили tabId в deps
+    }, [dispatch, fieldName, width, requestManager, contextId]); // ← добавили contextId в deps
 
     const handleRetry = useCallback(() => {
         console.log('[FieldChartContainer] Попытка handleRetry');
@@ -177,8 +177,8 @@ export function FieldChartContainer({
                 const { width } = entry.contentRect;
                 if (width > 100) {
                     const px = Math.floor(width);
-                    // ТОЛЬКО добавили tabId
-                    dispatch(updateView({ tabId, field: fieldName, px }));
+                    // ТОЛЬКО добавили contextId
+                    dispatch(updateView({ contextId, field: fieldName, px }));
                 }
             }
         });
@@ -191,7 +191,7 @@ export function FieldChartContainer({
                 clearTimeout(loadDebounceRef.current);
             }
         };
-    }, [dispatch, fieldName, tabId]); // ← добавили tabId в deps
+    }, [dispatch, fieldName, contextId]); // ← добавили contextId в deps
 
     return (
         <div
@@ -206,7 +206,7 @@ export function FieldChartContainer({
         >
             <ViewFieldChart
                 width={width}
-                tabId={tabId} // ← ДОБАВИЛИ
+                contextId={contextId} // ← ДОБАВИЛИ
                 fieldName={fieldName}
                 onZoomEnd={handleOnZoomEnd}
                 onRetry={handleRetry}

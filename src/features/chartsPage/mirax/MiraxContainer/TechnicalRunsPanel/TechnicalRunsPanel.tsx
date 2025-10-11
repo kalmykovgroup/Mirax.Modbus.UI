@@ -10,7 +10,7 @@ import {
     selectTechnicalRunsError,
     selectTechnicalRunsLoading,
     openTechnicalRunTab,
-    selectActiveTabId,
+    selectActivecontextId,
     selectTechnicalRunsData,
 } from '@chartsPage/mirax/miraxSlice';
 import { fetchTechnicalRuns } from '@chartsPage/mirax/miraxThunks';
@@ -33,7 +33,7 @@ export function TechnicalRunsPanel(): JSX.Element {
     const loadingState = useAppSelector(selectTechnicalRunsLoading);
     const isLoading = useAppSelector(selectIsTechnicalRunsLoading);
     const error = useAppSelector(selectTechnicalRunsError);
-    const activeTabId = useAppSelector(selectActiveTabId);
+    const activecontextId = useAppSelector(selectActivecontextId);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [sortType, setSortType] = useState<TechnicalRunSortTypeValue>(
@@ -176,7 +176,7 @@ export function TechnicalRunsPanel(): JSX.Element {
                                 key={run.id}
                                 className={classNames(
                                     styles.item,
-                                    activeTabId === run.id && styles.itemActive
+                                    activecontextId === run.id && styles.itemActive
                                 )}
                                 onClick={() => handleRunClick(run)}
                             >

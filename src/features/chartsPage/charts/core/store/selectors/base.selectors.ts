@@ -1,4 +1,4 @@
-// store/selectors/base.selectors.ts
+// src/features/chartsPage/charts/core/store/selectors/base.selectors.ts
 
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/store/store';
@@ -15,7 +15,7 @@ import type {
     TimeRange,
 } from '@chartsPage/charts/core/store/types/chart.types.ts';
 import type { Guid } from '@app/lib/types/Guid';
-import type { TabChartsState } from '@chartsPage/charts/core/store/chartsSlice';
+import type { ContextState } from '@chartsPage/charts/core/store/chartsSlice';
 
 // ============================================
 // КОНСТАНТЫ ДЛЯ DEFAULT ЗНАЧЕНИЙ
@@ -30,46 +30,45 @@ const DEFAULT_LOADING_STATE: LoadingState = {
 
 const EMPTY_TILES: readonly SeriesTile[] = [];
 const EMPTY_BUCKETS: readonly BucketsMs[] = [];
+const EMPTY_FIELDS: readonly FieldDto[] = [];
 
 // ============================================
 // БАЗОВЫЕ СЕЛЕКТОРЫ
 // ============================================
 
-export const selectActiveTabId = (state: RootState): Guid | undefined => state.charts.activeTabId;
-
-export const selectTabState = (state: RootState, tabId: Guid): TabChartsState | undefined =>
-    state.charts.byTab[tabId];
+export const selectContextState = (state: RootState, contextId: Guid): ContextState | undefined =>
+    state.contexts.byContext[contextId];
 
 // ============================================
-// ГЛОБАЛЬНЫЕ СЕЛЕКТОРЫ (для конкретной вкладки)
+// ГЛОБАЛЬНЫЕ СЕЛЕКТОРЫ (для конкретного контекста)
 // ============================================
 
 export const selectTemplate = (
     state: RootState,
-    tabId: Guid
+    contextId: Guid
 ): ResolvedCharReqTemplate | undefined => {
-    const tab = selectTabState(state, tabId);
-    return tab?.template;
+    const context = selectContextState(state, contextId);
+    return context?.template;
 };
 
-export const selectIsDataLoaded = (state: RootState, tabId: Guid): boolean => {
-    const tab = selectTabState(state, tabId);
-    return tab?.isDataLoaded ?? false;
+export const selectIsDataLoaded = (state: RootState, contextId: Guid): boolean => {
+    const context = selectContextState(state, contextId);
+    return context?.isDataLoaded ?? false;
 };
 
-export const selectSyncEnabled = (state: RootState, tabId: Guid): boolean => {
-    const tab = selectTabState(state, tabId);
-    return tab?.syncEnabled ?? false;
+export const selectSyncEnabled = (state: RootState, contextId: Guid): boolean => {
+    const context = selectContextState(state, contextId);
+    return context?.syncEnabled ?? false;
 };
 
-export const selectSyncFields = (state: RootState, tabId: Guid): readonly FieldDto[] => {
-    const tab = selectTabState(state, tabId);
-    return tab?.syncFields ?? [];
+export const selectSyncFields = (state: RootState, contextId: Guid): readonly FieldDto[] => {
+    const context = selectContextState(state, contextId);
+    return context?.syncFields ?? EMPTY_FIELDS;
 };
 
-export const selectAllViews = (state: RootState, tabId: Guid): Record<FieldName, FieldView> => {
-    const tab = selectTabState(state, tabId);
-    return tab?.view ?? {};
+export const selectAllViews = (state: RootState, contextId: Guid): Record<FieldName, FieldView> => {
+    const context = selectContextState(state, contextId);
+    return context?.view ?? {};
 };
 
 // ============================================
@@ -78,73 +77,73 @@ export const selectAllViews = (state: RootState, tabId: Guid): Record<FieldName,
 
 export const selectFieldView = (
     state: RootState,
-    tabId: Guid,
+    contextId: Guid,
     fieldName: FieldName
 ): FieldView | undefined => {
-    const tab = selectTabState(state, tabId);
-    return tab?.view[fieldName];
+    const context = selectContextState(state, contextId);
+    return context?.view[fieldName];
 };
 
 export const selectFieldOriginalRange = (
     state: RootState,
-    tabId: Guid,
+    contextId: Guid,
     fieldName: FieldName
 ): OriginalRange | undefined => {
-    const view = selectFieldView(state, tabId, fieldName);
+    const view = selectFieldView(state, contextId, fieldName);
     return view?.originalRange;
 };
 
 export const selectFieldCurrentRange = (
     state: RootState,
-    tabId: Guid,
+    contextId: Guid,
     fieldName: FieldName
 ): TimeRange | undefined => {
-    const view = selectFieldView(state, tabId, fieldName);
+    const view = selectFieldView(state, contextId, fieldName);
     return view?.currentRange;
 };
 
 export const selectFieldCurrentBucketMs = (
     state: RootState,
-    tabId: Guid,
+    contextId: Guid,
     fieldName: FieldName
 ): BucketsMs | undefined => {
-    const view = selectFieldView(state, tabId, fieldName);
+    const view = selectFieldView(state, contextId, fieldName);
     return view?.currentBucketsMs;
 };
 
 export const selectFieldPx = (
     state: RootState,
-    tabId: Guid,
+    contextId: Guid,
     fieldName: FieldName
 ): number | undefined => {
-    const view = selectFieldView(state, tabId, fieldName);
+    const view = selectFieldView(state, contextId, fieldName);
     return view?.px;
 };
 
 export const selectFieldSeriesLevels = (
     state: RootState,
-    tabId: Guid,
+    contextId: Guid,
     fieldName: FieldName
 ): Record<BucketsMs, SeriesTile[]> | undefined => {
-    const view = selectFieldView(state, tabId, fieldName);
+    const view = selectFieldView(state, contextId, fieldName);
     return view?.seriesLevel;
 };
 
 export const selectFieldLoadingState = (
     state: RootState,
-    tabId: Guid,
+    contextId: Guid,
     fieldName: FieldName
 ): LoadingState => {
-    const view = selectFieldView(state, tabId, fieldName);
+    const view = selectFieldView(state, contextId, fieldName);
     return view?.loadingState ?? DEFAULT_LOADING_STATE;
 };
 
 export const selectFieldError = (
     state: RootState,
-    tabId: Guid,
+    contextId: Guid,
     fieldName: FieldName
 ): string | undefined => {
-    const view = selectFieldView(state, tabId, fieldName);
+    const view = selectFieldView(state, contextId, fieldName);
     return view?.error;
 };
 
@@ -154,11 +153,11 @@ export const selectFieldError = (
 
 export const selectTilesByBucket = (
     state: RootState,
-    tabId: Guid,
+    contextId: Guid,
     fieldName: FieldName,
     bucketMs: BucketsMs
 ): readonly SeriesTile[] => {
-    const seriesLevels = selectFieldSeriesLevels(state, tabId, fieldName);
+    const seriesLevels = selectFieldSeriesLevels(state, contextId, fieldName);
     if (!seriesLevels) return EMPTY_TILES;
 
     const tiles = seriesLevels[bucketMs];
@@ -169,7 +168,10 @@ export const selectTilesByBucket = (
  * Мемоизированный селектор доступных bucket-уровней
  */
 export const selectAvailableBuckets = createSelector(
-    [(state: RootState, tabId: Guid, fieldName: FieldName) => selectFieldSeriesLevels(state, tabId, fieldName)],
+    [
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldSeriesLevels(state, contextId, fieldName),
+    ],
     (seriesLevels): readonly BucketsMs[] => {
         if (!seriesLevels) return EMPTY_BUCKETS;
 
@@ -179,27 +181,76 @@ export const selectAvailableBuckets = createSelector(
     }
 );
 
+// ============================================
+// МЕМОИЗИРОВАННЫЕ СЕЛЕКТОРЫ
+// ============================================
 
 /**
- * ✅ УДОБНЫЕ СЕЛЕКТОРЫ: Автоматически используют activeTabId
+ * ✅ МЕМОИЗИРОВАННЫЙ: Получить все поля в контексте
  */
+export const selectContextFields = createSelector(
+    [(state: RootState, contextId: Guid) => selectTemplate(state, contextId)],
+    (template): readonly FieldDto[] => {
+        return template?.selectedFields ?? EMPTY_FIELDS;
+    }
+);
 
-export const selectActiveTemplate = (state: RootState): ResolvedCharReqTemplate | undefined => {
-    const tabId = selectActiveTabId(state);
-    return tabId ? selectTemplate(state, tabId) : undefined;
-};
+/**
+ * ✅ МЕМОИЗИРОВАННЫЙ: Получить количество полей
+ */
+export const selectContextFieldsCount = createSelector(
+    [selectContextFields],
+    (fields): number => fields.length
+);
 
-export const selectActiveTabState = (state: RootState): TabChartsState | undefined => {
-    const tabId = selectActiveTabId(state);
-    return tabId ? selectTabState(state, tabId) : undefined;
-};
+/**
+ * ✅ МЕМОИЗИРОВАННЫЙ: Проверка, есть ли данные для поля
+ */
+export const selectHasFieldData = createSelector(
+    [
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldView(state, contextId, fieldName),
+    ],
+    (view): boolean => {
+        if (!view) return false;
 
-export const selectActiveSyncEnabled = (state: RootState): boolean => {
-    const tabId = selectActiveTabId(state);
-    return tabId ? selectSyncEnabled(state, tabId) : false;
-};
+        // Проверяем наличие тайлов в любом bucket
+        return Object.values(view.seriesLevel).some((tiles) => tiles.length > 0);
+    }
+);
 
-export const selectActiveSyncFields = (state: RootState): readonly FieldDto[] => {
-    const tabId = selectActiveTabId(state);
-    return tabId ? selectSyncFields(state, tabId) : [];
-};
+/**
+ * ✅ МЕМОИЗИРОВАННЫЙ: Получить все загружающиеся поля
+ */
+export const selectLoadingFields = createSelector(
+    [(state: RootState, contextId: Guid) => selectAllViews(state, contextId)],
+    (views): readonly FieldName[] => {
+        const loadingFields = Object.entries(views)
+            .filter(([_, view]) => view.loadingState.active)
+            .map(([fieldName]) => fieldName);
+
+        return Object.freeze(loadingFields);
+    }
+);
+
+/**
+ * ✅ МЕМОИЗИРОВАННЫЙ: Проверка, идёт ли загрузка в контексте
+ */
+export const selectIsContextLoading = createSelector(
+    [selectLoadingFields],
+    (loadingFields): boolean => loadingFields.length > 0
+);
+
+/**
+ * ✅ МЕМОИЗИРОВАННЫЙ: Получить поля с ошибками
+ */
+export const selectFieldsWithErrors = createSelector(
+    [(state: RootState, contextId: Guid) => selectAllViews(state, contextId)],
+    (views): readonly FieldName[] => {
+        const errorFields = Object.entries(views)
+            .filter(([_, view]) => view.error !== undefined)
+            .map(([fieldName]) => fieldName);
+
+        return Object.freeze(errorFields);
+    }
+);

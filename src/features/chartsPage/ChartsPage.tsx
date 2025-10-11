@@ -1,54 +1,60 @@
 // src/features/chartsPage/ChartsPage.tsx
 
-import {type JSX, useCallback, useState} from 'react';
+import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import styles from './ChartsPage.module.css';
-import { RequestManagerProvider } from '@chartsPage/charts/orchestration/requests/RequestManagerProvider.tsx';
-import { ChartContainer } from '@chartsPage/charts/ui/ChartContainer/ChartContainer.tsx';
-import ChartTemplatesPanel from '@chartsPage/template/ui/ChartTemplatesPanel.tsx';
-import CollapsibleSection from '@chartsPage/components/Collapse/CollapsibleSection.tsx';
-import { DataSourcePanel } from '@chartsPage/metaData/ui/DataSourcePanel.tsx';
-import { MiraxContainer } from '@chartsPage/mirax/MiraxContainer/MiraxContainer.tsx';
-import { useAppSelector } from '@/store/hooks.ts';
-import { selectAllTabIds } from '@chartsPage/charts/core/store/chartsSlice.ts';
-import { ChartTabBar } from '@chartsPage/charts/ui/ChartTabBar/ChartTabBar.tsx';
-import { selectActiveTabId } from '@chartsPage/charts/core/store/selectors/base.selectors.ts';
+import {selectActiveTabId, selectAllTabIds} from "@chartsPage/charts/core/store/tabsSlice.ts";
+import {ChartTabBar} from "@chartsPage/charts/ui/ChartTabBar/ChartTabBar.tsx";
+import {MiraxContainer} from "@chartsPage/mirax/MiraxContainer/MiraxContainer.tsx";
+import ChartTemplatesPanel from "@chartsPage/template/ui/ChartTemplatesPanel.tsx";
+import CollapsibleSection from "@chartsPage/components/Collapse/CollapsibleSection.tsx";
+import {DataSourcePanel} from "@chartsPage/metaData/ui/DataSourcePanel.tsx";
+import {TabContent} from "@chartsPage/charts/ui/TabContent/TabContent.tsx";
 
-type TopTabId = 'mirax' | 'templates' | 'charts';
+type TopTab = 'mirax' | 'templates' | 'charts';
 
-export default function ChartsPage(): JSX.Element {
-    const activeTabId = useAppSelector(selectActiveTabId);
-    const allTabIds = useAppSelector(selectAllTabIds);
+export function ChartsPage() {
+    const [activeTopTab, setActiveTopTab] = useState<TopTab>('templates');
 
-    const [activeTopTab, setActiveTopTab] = useState<TopTabId>('mirax');
+    const allTabIds = useSelector(selectAllTabIds);
+    const activeTabId = useSelector(selectActiveTabId);
 
-    const handleTabChange = useCallback((tabId: TopTabId): void => {
-        setActiveTopTab(tabId);
-    }, []);
+    // Автопереключение на charts при создании первой вкладки
+    useEffect(() => {
+        if (allTabIds.length > 0 && activeTopTab !== 'charts') {
+            setActiveTopTab('charts');
+        }
+    }, [allTabIds.length, activeTopTab]);
+
+    const handleTabChange = (tab: TopTab) => {
+        setActiveTopTab(tab);
+    };
 
     return (
-        <div className={styles.chartPageContainer}>
-            {/* Вкладки верхнего уровня */}
-            <div className={styles.topTabsContainer}>
+        <div className={styles.chartsPage}>
+            {/* Верхняя навигация (3 вкладки) */}
+            <div className={styles.topTabBar}>
                 <button
-                    type="button"
                     className={activeTopTab === 'mirax' ? styles.topTabActive : styles.topTab}
                     onClick={() => handleTabChange('mirax')}
                 >
                     Mirax
                 </button>
+
                 <button
-                    type="button"
                     className={activeTopTab === 'templates' ? styles.topTabActive : styles.topTab}
                     onClick={() => handleTabChange('templates')}
                 >
                     Шаблоны и источники
                 </button>
 
-                {/* Третья вкладка с ChartTabBar вместо текста */}
+                {/* Третья вкладка с ChartTabBar */}
                 <div
                     role="button"
                     tabIndex={0}
-                    className={activeTopTab === 'charts' ? styles.topTabActiveWrapper : styles.topTabWrapper}
+                    className={
+                        activeTopTab === 'charts' ? styles.topTabActiveWrapper : styles.topTabWrapper
+                    }
                     onClick={() => handleTabChange('charts')}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
@@ -61,24 +67,22 @@ export default function ChartsPage(): JSX.Element {
                 </div>
             </div>
 
-            {/* Контент вкладок верхнего уровня - все рендерятся, неактивные скрыты */}
+            {/* Контент вкладок верхнего уровня */}
             <div className={styles.topTabContent}>
-
                 {/* Вкладка Mirax */}
                 <div className={activeTopTab === 'mirax' ? styles.tabVisible : styles.tabHidden}>
                     <MiraxContainer dbId={'77777777-0000-0000-0000-000000000011'} />
                 </div>
+
                 {/* Вкладка Шаблоны и источники */}
-                <div
-                    className={activeTopTab === 'templates' ? styles.tabVisible : styles.tabHidden}
-                >
+                <div className={activeTopTab === 'templates' ? styles.tabVisible : styles.tabHidden}>
                     <ChartTemplatesPanel />
                     <CollapsibleSection>
                         <DataSourcePanel />
                     </CollapsibleSection>
                 </div>
 
-                {/* Вкладка Графики - контейнер для отображения сообщения */}
+                {/* Вкладка Графики - показываем сообщение если нет вкладок */}
                 <div className={activeTopTab === 'charts' ? styles.tabVisible : styles.tabHidden}>
                     {allTabIds.length === 0 && (
                         <div className={styles.emptyState}>
@@ -86,21 +90,22 @@ export default function ChartsPage(): JSX.Element {
                         </div>
                     )}
                 </div>
-
             </div>
 
-            {/* Контейнеры для ВСЕХ графиков - рендерятся всегда, но скрыты если не на вкладке charts */}
+            {/* Контейнер для ВСЕХ вкладок - рендерятся всегда */}
             <div
-                className={activeTopTab === 'charts' ? styles.chartsContainerVisible : styles.chartsContainerHidden}
+                className={
+                    activeTopTab === 'charts'
+                        ? styles.chartsContainerVisible
+                        : styles.chartsContainerHidden
+                }
             >
                 {allTabIds.map((tabId) => (
                     <div
                         key={tabId}
-                        className={tabId === activeTabId ? styles.chartTabVisible : styles.chartTabHidden}
+                        className={tabId === activeTabId ? styles.tabVisible : styles.tabHidden}
                     >
-                        <RequestManagerProvider tabId={tabId}>
-                            <ChartContainer />
-                        </RequestManagerProvider>
+                        <TabContent tabId={tabId} />
                     </div>
                 ))}
             </div>

@@ -47,7 +47,7 @@ import type {Guid} from "@app/lib/types/Guid.ts";
 const GROUP_ID = "ChartContainer";
 
 interface ViewFieldChartProps {
-    readonly tabId: Guid;
+    readonly contextId: Guid;
     readonly fieldName: string;
     readonly onZoomEnd?: ((range: TimeRange) => void) | undefined;
     readonly onRetry?: (() => void) | undefined;
@@ -56,7 +56,7 @@ interface ViewFieldChartProps {
 
 // memo: не рендерим если props не изменились
 export const ViewFieldChart = memo(function ViewFieldChart({
-                                                               tabId,
+                                                               contextId,
                                                                fieldName,
                                                                onZoomEnd,
                                                                width
@@ -64,10 +64,10 @@ export const ViewFieldChart = memo(function ViewFieldChart({
 
 
 
-    const chartData = useSelector((state: RootState) => selectChartRenderData(state, tabId, fieldName));
-    const chartFieldStatus: ChartStats = useSelector((state: RootState) => selectChartStats(state, tabId, fieldName));
-    const gapsInfo = useSelector((state: RootState) => selectFieldGaps(state, tabId, fieldName));
-    const originalRange = useSelector((state: RootState) => selectFieldOriginalRange(state, tabId, fieldName));
+    const chartData = useSelector((state: RootState) => selectChartRenderData(state, contextId, fieldName));
+    const chartFieldStatus: ChartStats = useSelector((state: RootState) => selectChartStats(state, contextId, fieldName));
+    const gapsInfo = useSelector((state: RootState) => selectFieldGaps(state, contextId, fieldName));
+    const originalRange = useSelector((state: RootState) => selectFieldOriginalRange(state, contextId, fieldName));
     const timeSettings = useSelector((state: RootState) => selectTimeSettings(state));
     const [containerHeight, setContainerHeight] = useState<number>(600);
     //Стабильный callback (не меняется между рендерами)
@@ -140,7 +140,7 @@ export const ViewFieldChart = memo(function ViewFieldChart({
     return (
         <>
             <CollapsibleSection>
-                <ChartHeader fieldName={fieldName} width={width} tabId={tabId}/>
+                <ChartHeader fieldName={fieldName} width={width} contextId={contextId}/>
             </CollapsibleSection>
 
             <ResizableContainer
@@ -156,12 +156,12 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                     <div className={styles.header}>
 
 
-                       <SyncCheckbox fieldName={fieldName} tabId={tabId} />
+                       <SyncCheckbox fieldName={fieldName} contextId={contextId} />
 
 
                         <h3 className={styles.title}>{fieldName}</h3>
                         <StatsBadge
-                            tabId={tabId}
+                            contextId={contextId}
                             totalPoints={chartData.avgPoints.length + chartData.minPoints.length  + chartData.maxPoints.length }
                             coverage={chartFieldStatus.coverage}
                             quality={chartData.quality}
@@ -184,7 +184,7 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                     </div>
 
 
-                    <ChartFooter fieldName={fieldName} tabId={tabId}/>
+                    <ChartFooter fieldName={fieldName} contextId={contextId}/>
                 </div>
 
             </ResizableContainer>

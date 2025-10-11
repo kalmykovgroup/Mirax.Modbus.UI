@@ -62,10 +62,10 @@ export interface PrefetchMetrics {
 
 export const selectLoadingMetrics = createSelector(
     [
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldLoadingState(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldSeriesLevels(state, tabId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldLoadingState(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldSeriesLevels(state, contextId, fieldName),
     ],
     (loadingState, seriesLevels): LoadingMetrics => {
         let activeRequestsCount = 0;

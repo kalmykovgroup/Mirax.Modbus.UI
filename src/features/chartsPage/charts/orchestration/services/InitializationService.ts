@@ -12,7 +12,7 @@ import type {SeriesBinDto} from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
 import type {Guid} from "@app/lib/types/Guid.ts";
 
 interface ProcessInitResponseParams {
-    readonly tabId: Guid;
+    readonly contextId: Guid;
     readonly px: number;
     readonly response: MultiSeriesResponse;
     readonly dispatch: Dispatch;
@@ -24,7 +24,7 @@ export class InitializationService {
      * Главный метод: обработка результата init thunk
      */
     static processInitResponse(params: ProcessInitResponseParams): void {
-        const {tabId, px, response, dispatch, niceMilliseconds } = params;
+        const {contextId, px, response, dispatch, niceMilliseconds } = params;
 
         console.log("Ответ при инициализации", response);
 
@@ -36,7 +36,7 @@ export class InitializationService {
             const currentRange: TimeRange = this.determineCurrentRange(s.fromMs, s.toMs, response);
 
             dispatch(initialDataView({
-                tabId: tabId,
+                contextId: contextId,
                 field: s.field.name,
                 px: px,
                 currentRange: currentRange,
@@ -54,7 +54,7 @@ export class InitializationService {
             const tile: SeriesTile = this.createReadyTile(snappedInterval, s.bins);
 
             dispatch(IniTopTile({
-                tabId: tabId,
+                contextId: contextId,
                 field: s.field.name,
                 bucketMs: s.bucketMs,
                 tile: tile

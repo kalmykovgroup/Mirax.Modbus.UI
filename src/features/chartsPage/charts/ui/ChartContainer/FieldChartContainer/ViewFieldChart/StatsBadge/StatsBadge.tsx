@@ -15,7 +15,7 @@ import classNames from "classnames";
 import type {Guid} from "@app/lib/types/Guid.ts";
 
 interface StatsBadgeProps {
-    readonly tabId: Guid;
+    readonly contextId: Guid;
     readonly totalPoints: number;
     readonly coverage: number;
     readonly quality: string;
@@ -24,7 +24,7 @@ interface StatsBadgeProps {
 }
 
 export function StatsBadge({
-                               tabId,
+                               contextId,
                                totalPoints,
                                coverage,
                                quality,
@@ -34,13 +34,13 @@ export function StatsBadge({
     const dispatch = useAppDispatch();
     const timeSettings = useSelector((state: RootState) => selectTimeSettings(state));
     const currentBucketMs = useSelector((state: RootState) =>
-        selectFieldCurrentBucketMs(state, tabId, fieldName)
+        selectFieldCurrentBucketMs(state, contextId, fieldName)
     );
 
 
     //  ИСПРАВЛЕНО: получаем реальное количество видимых точек из селектора
     const visiblePoints = useSelector((state: RootState) =>
-        selectVisiblePointsCount(state, tabId, fieldName)
+        selectVisiblePointsCount(state, contextId, fieldName)
     );
 
     const coverageColor = coverage >= 95 ? 'green' : coverage >= 80 ? 'orange' : 'red';

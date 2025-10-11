@@ -1,5 +1,5 @@
 .container{
-    color: white;
+
 }
 
 
@@ -32,7 +32,8 @@
     padding: 8px;
     border: 1px solid #333;
     border-radius: 8px;
-    background: #1a1a1a;
+    background: var(--card-background);;
+    color: var(--card-text-color);
 }
 
 .card[data-active="true"] {
@@ -40,11 +41,13 @@
 }
 
 .card[data-theme="light"] {
-   color: white;
+    --card-background: #ffffff;
+    --card-text-color: #000000;
 }
 
 .card[data-theme="dark"] {
-    color: #ffc580;
+    --card-background: black;
+    --card-text-color: #ffc580;
 }
 
 .cardTitle {
@@ -63,18 +66,24 @@
 .btnExec {
     display: inline-grid;
     place-items: center;
-
     border: 1px solid #333;
-    background: transparent;
-    color: #e6e6e6;
     border-radius: 8px;
     cursor: pointer;
     transition: transform .05s ease, background .15s ease, border-color .15s ease;
 }
-.btnExec:hover {
+
+
+.card[data-theme="light"] .btnExec:hover{
     background: #202020;
-    border-color: #404040;
+    border-color: #ffc580;
 }
+
+.card[data-theme="dark"] .btnExec:hover  {
+    background: #202020;
+    border-color: #ffc580;
+}
+
+
 .btnExec:active {
     transform: translateY(1px);
 }

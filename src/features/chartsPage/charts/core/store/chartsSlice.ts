@@ -1,6 +1,6 @@
 // src/features/chartsPage/charts/core/store/chartsSlice.ts
 
-import {createSelector, createSlice, type PayloadAction} from '@reduxjs/toolkit';
+import { createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { type LoadingState, LoadingType } from '@chartsPage/charts/core/store/types/loading.types';
 import type { FieldDto } from '@chartsPage/metaData/shared/dtos/FieldDto.ts';
 import type { ResolvedCharReqTemplate } from '@chartsPage/template/shared/dtos/ResolvedCharReqTemplate.ts';
@@ -14,15 +14,16 @@ import type {
     SeriesTile,
     TimeRange,
 } from '@chartsPage/charts/core/store/types/chart.types.ts';
-import { Guid } from '@/app/lib/types/Guid';
-import type {RootState} from "@/store/store.ts";
+import type { Guid } from '@app/lib/types/Guid';
+import type { RootState } from '@/store/store.ts';
 
 // ============= ТИПЫ =============
 
 /**
- * Состояние графиков для одной вкладки (прежняя ChartsState)
+ * Состояние графиков для одного контекста (прежнее TabChartsState)
  */
-export interface TabChartsState {
+export interface ContextState {
+    readonly contextId: Guid;
     syncEnabled: boolean;
     syncFields: readonly FieldDto[];
     template: ResolvedCharReqTemplate | undefined;
@@ -31,16 +32,15 @@ export interface TabChartsState {
 }
 
 /**
- * Глобальное состояние с поддержкой множественных вкладок
+ * Глобальное состояние с поддержкой множественных контекстов
  */
-export interface ChartsState {
-    readonly byTab: Record<Guid, TabChartsState>;
-    readonly activeTabId: Guid | undefined;
+export interface ContextsState {
+    readonly byContext: Record<Guid, ContextState>;
 }
 
 // ============= НАЧАЛЬНОЕ СОСТОЯНИЕ =============
 
-const initialTabState: TabChartsState = {
+const initialContextState: Omit<ContextState, 'contextId'> = {
     syncEnabled: false,
     syncFields: [],
     template: undefined,
@@ -48,19 +48,19 @@ const initialTabState: TabChartsState = {
     isDataLoaded: false,
 };
 
-const initialState: ChartsState = {
-    byTab: {},
-    activeTabId: undefined,
+const initialState: ContextsState = {
+    byContext: {},
 };
 
 // ============= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =============
 
 /**
- * Безопасное получение состояния вкладки с автоинициализацией
+ * Безопасное получение состояния контекста с автоинициализацией
  */
-function getOrCreateTab(state: ChartsState, tabId: Guid): TabChartsState {
-    if (!(tabId in state.byTab)) {
-        state.byTab[tabId] = {
+function getOrCreateContext(state: ContextsState, contextId: Guid): ContextState {
+    if (!(contextId in state.byContext)) {
+        state.byContext[contextId] = {
+            contextId,
             syncEnabled: false,
             syncFields: [],
             template: undefined,
@@ -68,68 +68,83 @@ function getOrCreateTab(state: ChartsState, tabId: Guid): TabChartsState {
             isDataLoaded: false,
         };
     }
-    return state.byTab[tabId]!;
+    return state.byContext[contextId]!;
 }
 
 // ============= SLICE =============
 
-const chartsSlice = createSlice({
-    name: 'charts',
+const contextsSlice = createSlice({
+    name: 'contexts',
     initialState,
     reducers: {
-        // ========== УПРАВЛЕНИЕ ВКЛАДКАМИ ==========
+        // ========== УПРАВЛЕНИЕ КОНТЕКСТАМИ ==========
 
         /**
-         * Установить активную вкладку (с автоинициализацией)
+         * Создать или обновить контекст
          */
-        setActiveTab(state, action: PayloadAction<Guid>) {
-            state.activeTabId = action.payload;
-            getOrCreateTab(state, action.payload);
+        createContext(
+            state,
+            action: PayloadAction<{
+                readonly contextId: Guid;
+                readonly template: ResolvedCharReqTemplate;
+            }>
+        ) {
+            const { contextId, template } = action.payload;
+
+            state.byContext[contextId] = {
+                contextId: contextId,
+                template: template,
+                view: {},
+                syncEnabled: false,
+                syncFields: [],
+                isDataLoaded: false,
+            };
+
+            console.log('[createContext] Created:', contextId);
         },
 
         /**
-         * Закрыть вкладку и удалить её состояние
+         * Удалить контекст полностью
          */
-        closeTab(state, action: PayloadAction<Guid>) {
-            const tabId = action.payload;
-            delete state.byTab[tabId];
-            if (state.activeTabId === tabId) {
-                state.activeTabId = undefined;
-            }
+        deleteContext(state, action: PayloadAction<Guid>) {
+            const contextId = action.payload;
+            delete state.byContext[contextId];
+            console.log('[deleteContext] Deleted:', contextId);
         },
 
         /**
-         * Очистить состояние вкладки без удаления
+         * Очистить состояние контекста без удаления
          */
-        clearTab(state, action: PayloadAction<Guid>) {
+        clearContext(state, action: PayloadAction<Guid>) {
+            const contextId = action.payload;
 
-            if(state.byTab[action.payload] == undefined){
-                console.error("Вкладка не существует")
+            if (state.byContext[contextId] === undefined) {
+                console.error('[clearContext] Context not found:', contextId);
                 return;
             }
 
-            state.byTab[action.payload] = { ...initialTabState };
+            state.byContext[contextId] = {
+                contextId,
+                ...initialContextState,
+            };
         },
 
         // ========== ИНИЦИАЛИЗАЦИЯ ==========
 
         /**
-         * Устанавливает resolved template и создаёт/обновляет вкладку
+         * Устанавливает resolved template и создаёт/обновляет контекст
          * Используется при выполнении шаблона из ChartTemplatesPanel
          */
-        setResolvedCharReqTemplate(
-            state,
-            action: PayloadAction<{template : ResolvedCharReqTemplate, tabId?: Guid | undefined}>
-        ) {
-            const { template, tabId } = action.payload;
+        setResolvedCharReqTemplate(state, action: PayloadAction<ResolvedCharReqTemplate>) {
+            const template = action.payload;
+            const contextId = template.id; // ID шаблона = ID контекста
 
-            const _tabId = tabId == null ? Guid.NewGuid() : tabId // ID шаблона = ID вкладки
+            console.log('[setResolvedCharReqTemplate] Создаём/обновляем контекст:', contextId);
 
-            console.log('[setResolvedCharReqTemplate] Создаём/обновляем вкладку:', _tabId);
-
-            // Создаём вкладку если её нет
-            if (!(_tabId in state.byTab)) {
-                state.byTab[_tabId] = {
+            // Создаём контекст если его нет
+            if (!(contextId in state.byContext)) {
+                state.byContext[contextId] = {
+                    contextId: contextId,
                     template: template,
                     view: {},
                     syncEnabled: false,
@@ -137,12 +152,9 @@ const chartsSlice = createSlice({
                     isDataLoaded: false,
                 };
             } else {
-                // Обновляем template существующей вкладки
-                state.byTab[_tabId]!.template = template;
+                // Обновляем template существующего контекста
+                state.byContext[contextId]!.template = template;
             }
-
-            // Делаем вкладку активной
-            state.activeTabId = _tabId;
         },
 
         // ========== УПРАВЛЕНИЕ ТАЙЛАМИ ==========
@@ -150,21 +162,21 @@ const chartsSlice = createSlice({
         IniTopTile(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ДОБАВИЛИ
+                contextId: Guid;
                 field: FieldName;
                 bucketMs: BucketsMs;
                 tile: SeriesTile;
             }>
         ) {
-            const { tabId, field, bucketMs, tile } = action.payload;
+            const { contextId, field, bucketMs, tile } = action.payload;
 
-            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
-            if (!tab) {
-                console.error('[IniTopTile] Tab not found:', tabId);
+            const context = state.byContext[contextId];
+            if (!context) {
+                console.error('[IniTopTile] Context not found:', contextId);
                 return;
             }
 
-            const view = tab.view[field]; // ← ИЗМЕНИЛИ
+            const view = context.view[field];
             if (!view) {
                 console.error('[IniTopTile] View not found for field:', field);
                 return;
@@ -178,7 +190,7 @@ const chartsSlice = createSlice({
         initialDataView(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ДОБАВИЛИ
+                contextId: Guid;
                 field: FieldName;
                 px: number;
                 currentRange: TimeRange;
@@ -188,16 +200,25 @@ const chartsSlice = createSlice({
                 error?: string | undefined;
             }>
         ) {
-            const { tabId, field, px, currentRange, originalRange, currentBucketsMs, seriesLevels, error } = action.payload;
+            const {
+                contextId,
+                field,
+                px,
+                currentRange,
+                originalRange,
+                currentBucketsMs,
+                seriesLevels,
+                error,
+            } = action.payload;
 
-            if(tabId == undefined) {
-                console.error('[initialViews] Tab not found:', tabId);
+            if (contextId === undefined) {
+                console.error('[initialDataView] contextId is undefined');
                 return;
             }
 
-            const tab = state.byTab[tabId];
-            if (!tab) {
-                console.error('[initialDataView] Tab not found:', tabId);
+            const context = state.byContext[contextId];
+            if (!context) {
+                console.error('[initialDataView] Context not found:', contextId);
                 return;
             }
 
@@ -206,7 +227,7 @@ const chartsSlice = createSlice({
                 seriesLevel[bucket] = [];
             }
 
-            tab.view[field] = {
+            context.view[field] = {
                 originalRange,
                 currentRange,
                 currentBucketsMs,
@@ -216,41 +237,46 @@ const chartsSlice = createSlice({
                 error,
             };
 
-            console.log('Инициализация данных для view прошла успешно', field, tabId);
+            console.log('[initialDataView] Инициализация данных для view прошла успешно', field, contextId);
         },
 
         initialViews(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ДОБАВИЛИ
+                contextId: Guid;
                 px: number;
                 fields: readonly FieldDto[];
             }>
         ) {
-            const { tabId, px, fields } = action.payload;
+            const { contextId, px, fields } = action.payload;
 
-            if(tabId == undefined) {
-                console.error('[initialViews] Tab not found:', tabId);
+            if (contextId === undefined) {
+                console.error('[initialViews] contextId is undefined');
                 return;
             }
 
-            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
-            if (!tab) {
-                console.error('[initialViews] Tab not found:', tabId);
+            const context = state.byContext[contextId];
+            if (!context) {
+                console.error('[initialViews] Context not found:', contextId);
                 return;
             }
 
             fields.forEach((field) => {
-                if (!(field.name in tab.view)) {
-                    tab.view[field.name] = {
-                        originalRange: undefined,
-                        currentRange: undefined,
-                        currentBucketsMs: undefined,
+                if (!(field.name in context.view)) {
+                    context.view[field.name] = {
+                        originalRange: { fromMs: 0, toMs: 0 },
+                        currentRange: { fromMs: 0, toMs: 0 },
+                        currentBucketsMs: 0,
                         seriesLevel: {},
                         px,
-                        loadingState: { active: false, type: LoadingType.Initial, progress: 0, startTime: 0 },
+                        loadingState: {
+                            active: false,
+                            type: LoadingType.Initial,
+                            progress: 0,
+                            startTime: 0,
+                        },
+                        error: undefined,
                     };
-                    console.log('Инициализация view прошла успешно', field, tabId);
                 }
             });
         },
@@ -258,17 +284,17 @@ const chartsSlice = createSlice({
         updateView(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ДОБАВИЛИ
+                contextId: Guid;  // ← БЫЛО: tabId
                 field: FieldName;
-                px: number;
+                px: number;  // ← ПРАВИЛЬНО: px, а не bins!
             }>
         ) {
-            const { tabId, field, px } = action.payload;
+            const { contextId, field, px } = action.payload;
 
-            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
-            if (!tab) return;
+            const context = state.byContext[contextId];  // ← БЫЛО: state.byTab[tabId]
+            if (!context) return;
 
-            const view = tab.view[field]; // ← ИЗМЕНИЛИ
+            const view = context.view[field];
             if (view) {
                 view.px = px;
             }
@@ -277,17 +303,17 @@ const chartsSlice = createSlice({
         setViewRange(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ДОБАВИЛИ
+                contextId: Guid;
                 field: FieldName;
                 range: TimeRange;
             }>
         ) {
-            const { tabId, field, range } = action.payload;
+            const { contextId, field, range } = action.payload;
 
-            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
-            if (!tab) return;
+            const context = state.byContext[contextId];
+            if (!context) return;
 
-            const view = tab.view[field]; // ← ИЗМЕНИЛИ
+            const view = context.view[field];
             if (view) {
                 view.currentRange = range;
             }
@@ -296,17 +322,17 @@ const chartsSlice = createSlice({
         setViewBucket(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ДОБАВИЛИ
+                contextId: Guid;
                 field: FieldName;
                 bucketMs: BucketsMs;
             }>
         ) {
-            const { tabId, field, bucketMs } = action.payload;
+            const { contextId, field, bucketMs } = action.payload;
 
-            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
-            if (!tab) return;
+            const context = state.byContext[contextId];
+            if (!context) return;
 
-            const view = tab.view[field]; // ← ИЗМЕНИЛИ
+            const view = context.view[field];
             if (view) {
                 view.currentBucketsMs = bucketMs;
             }
@@ -317,41 +343,65 @@ const chartsSlice = createSlice({
         setLoadingState(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ДОБАВИЛИ
+                contextId: Guid;
                 field: FieldName;
                 loadingState: LoadingState;
             }>
         ) {
-            const { tabId, field, loadingState } = action.payload;
+            const { contextId, field, loadingState } = action.payload;
 
-            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
-            if (!tab) return;
+            const context = state.byContext[contextId];
+            if (!context) return;
 
-            const view = tab.view[field]; // ← ИЗМЕНИЛИ
+            const view = context.view[field];
             if (view) {
                 view.loadingState = loadingState;
+            }
+        },
+
+        startLoading(
+            state,
+            action: PayloadAction<{
+                contextId: Guid;
+                field: FieldName;
+                type: LoadingType;
+            }>
+        ) {
+            const { contextId, field, type } = action.payload;
+
+            const context = state.byContext[contextId];
+            if (!context) return;
+
+            const view = context.view[field];
+            if (view) {
+                view.loadingState = {
+                    active: true,
+                    type,
+                    progress: 0,
+                    startTime: Date.now(),
+                };
             }
         },
 
         startLoadingFields(
             state,
             action: PayloadAction<{
-                tabId: Guid;
+                contextId: Guid;
                 fields: readonly FieldDto[];
                 type: LoadingType;
                 messageError: string;
             }>
         ) {
-            const { tabId, fields, type, messageError} = action.payload;
+            const { contextId, fields, type, messageError } = action.payload;
 
-            const tab = state.byTab[tabId];
-            if (!tab) {
-                console.error('[startLoadingFields] Tab not found:', tabId);
+            const context = state.byContext[contextId];
+            if (!context) {
+                console.error('[startLoadingFields] Context not found:', contextId);
                 return;
             }
 
             fields.forEach((field) => {
-                const view = tab.view[field.name];
+                const view = context.view[field.name];
                 if (!view) {
                     console.warn('[startLoadingFields] View not found for field:', field.name);
                     return;
@@ -361,116 +411,79 @@ const chartsSlice = createSlice({
                     type,
                     progress: 0,
                     startTime: Date.now(),
-                    message: messageError
-                };
-                view.error = undefined;
-            });
-        },
-
-        startLoading(
-            state,
-            action: PayloadAction<{
-                tabId: Guid; // ← ДОБАВИЛИ
-                field: FieldName;
-                type: LoadingType;
-                message: string | undefined;
-            }>
-        ) {
-            const { tabId, field, type, message } = action.payload;
-
-            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
-            if (!tab) return;
-
-            const view = tab.view[field]; // ← ИЗМЕНИЛИ
-            if (view) {
-                view.loadingState = {
-                    active: true,
-                    type,
-                    progress: 0,
-                    startTime: Date.now(),
-                    message
+                    message: messageError,
                 } as LoadingState;
-                view.error = undefined;
-            }
+            });
         },
 
         updateLoadingProgress(
             state,
             action: PayloadAction<{
-                tabId: Guid;
+                contextId: Guid;
                 field: FieldName;
                 progress: number;
-                message: string | undefined;
             }>
         ) {
-            const { tabId, field, progress, message } = action.payload;
+            const { contextId, field, progress } = action.payload;
 
-            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
-            if (!tab) return;
+            const context = state.byContext[contextId];
+            if (!context) return;
 
-            const view = tab.view[field]; // ← ИЗМЕНИЛИ
+            const view = context.view[field];
             if (view && view.loadingState.active) {
-                view.loadingState.progress = progress;
-                view.loadingState.message = message;
+                view.loadingState = {
+                    ...view.loadingState,
+                    progress: Math.min(progress, 100),
+                };
             }
         },
 
         finishLoadings(
             state,
             action: PayloadAction<{
-                tabId: Guid;
-                fields: readonly FieldDto[];
-                success: boolean;
-                messageError?: string | undefined;
+                contextId: Guid;
+                fields: readonly FieldName[];
             }>
         ) {
-            const { tabId, fields, success, messageError } = action.payload;
+            const { contextId, fields } = action.payload;
 
-            const tab = state.byTab[tabId];
-            if (!tab) {
-                console.error('[finishLoadings] Tab not found:', tabId);
-                return;
-            }
+            const context = state.byContext[contextId];
+            if (!context) return;
 
             fields.forEach((field) => {
-                const view = tab.view[field.name];
-                if (!view) {
-                    console.warn('[finishLoadings] View not found for field:', field.name);
-                    return;
+                const view = context.view[field];
+                if (view) {
+                    view.loadingState = {
+                        active: false,
+                        type: LoadingType.Initial,
+                        progress: 100,
+                        startTime: 0,
+                    };
                 }
-                view.loadingState = {
-                    active: false,
-                    type: LoadingType.Initial,
-                    progress: 100,
-                    startTime: 0,
-                    message: messageError,
-                    success: success
-                } as LoadingState;
             });
         },
 
         finishLoading(
             state,
             action: PayloadAction<{
-                tabId: Guid;
+                contextId: Guid;
                 field: FieldName;
-                success: boolean;
-                message: string | undefined;
+                message?: string | undefined;
             }>
         ) {
-            const { tabId, field, success, message } = action.payload;
+            const { contextId, field, message } = action.payload;
 
-            const tab = state.byTab[tabId];
-            if (!tab) return;
+            const context = state.byContext[contextId];
+            if (!context) return;
 
-            const view = tab.view[field];
+            const view = context.view[field];
             if (view) {
                 view.loadingState = {
                     active: false,
                     type: LoadingType.Initial,
-                    progress: success ? 100 : 0,
+                    progress: message ? 100 : 0,
                     startTime: 0,
-                    message: message
+                    message: message,
                 };
             }
         },
@@ -480,17 +493,17 @@ const chartsSlice = createSlice({
         setFieldError(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
+                contextId: Guid;
                 fieldName: FieldName;
                 errorMessage?: string | undefined;
             }>
         ) {
-            const { tabId, fieldName, errorMessage } = action.payload;
+            const { contextId, fieldName, errorMessage } = action.payload;
 
-            const tab = state.byTab[tabId];
-            if (!tab) return;
+            const context = state.byContext[contextId];
+            if (!context) return;
 
-            const view = tab.view[fieldName];
+            const view = context.view[fieldName];
             if (view) {
                 view.error = errorMessage;
             }
@@ -499,16 +512,16 @@ const chartsSlice = createSlice({
         clearFieldError(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
+                contextId: Guid;
                 fieldName: FieldName;
             }>
         ) {
-            const { tabId, fieldName } = action.payload;
+            const { contextId, fieldName } = action.payload;
 
-            const tab = state.byTab[tabId];
-            if (!tab) return;
+            const context = state.byContext[contextId];
+            if (!context) return;
 
-            const view = tab.view[fieldName];
+            const view = context.view[fieldName];
             if (view) {
                 view.error = undefined;
             }
@@ -519,16 +532,16 @@ const chartsSlice = createSlice({
         registerRequest(
             state,
             action: PayloadAction<{
-                readonly tabId: Guid;
+                readonly contextId: Guid;
                 readonly field: FieldName;
                 readonly bucketMs: BucketsMs;
                 readonly interval: CoverageInterval;
                 readonly requestId: string;
             }>
         ) {
-            const { tabId, field, bucketMs, interval, requestId } = action.payload;
-            const tab = getOrCreateTab(state, tabId);
-            const view = tab.view[field];
+            const { contextId, field, bucketMs, interval, requestId } = action.payload;
+            const context = getOrCreateContext(state, contextId);
+            const view = context.view[field];
 
             if (!view) throw Error('view для поля ' + field + ' не найден');
 
@@ -547,30 +560,28 @@ const chartsSlice = createSlice({
         completeRequest(
             state,
             action: PayloadAction<{
-                readonly tabId: Guid;
+                readonly contextId: Guid;
                 readonly field: FieldName;
                 readonly bucketMs: BucketsMs;
                 readonly requestId: string;
                 readonly bins: SeriesBinDto[];
             }>
         ) {
-            const { tabId, field, bucketMs, requestId, bins } = action.payload;
-            const tab = getOrCreateTab(state, tabId);
-            const view = tab.view[field];
+            const { contextId, field, bucketMs, requestId, bins } = action.payload;
+            const context = state.byContext[contextId];
+            if (!context) return;
 
-            if (!view) {
-                console.error(`[completeRequest] View not found for field: ${field}`);
-                return;
-            }
+            const view = context.view[field];
+            if (!view) return;
 
             const tiles = view.seriesLevel[bucketMs];
             if (!tiles) return;
 
-            const tile = tiles.find((t) => t.requestId === requestId);
-            if (tile) {
+            const tile: SeriesTile | undefined = tiles.find((t) => t.requestId === requestId);
+
+            if (tile != undefined) {
                 tile.bins = bins;
-                tile.status = 'ready';
-                tile.loadedAt = Date.now();
+                tile.status = 'loading';
                 delete tile.requestId;
             }
         },
@@ -578,21 +589,19 @@ const chartsSlice = createSlice({
         failRequest(
             state,
             action: PayloadAction<{
-                readonly tabId: Guid;
+                readonly contextId: Guid;
                 readonly field: FieldName;
                 readonly bucketMs: BucketsMs;
                 readonly requestId: string;
                 readonly error: string;
             }>
         ) {
-            const { tabId, field, bucketMs, requestId, error } = action.payload;
-            const tab = getOrCreateTab(state, tabId);
-            const view = tab.view[field];
+            const { contextId, field, bucketMs, requestId, error } = action.payload;
+            const context = state.byContext[contextId];
+            if (!context) return;
 
-            if (!view) {
-                console.error(`[failRequest] View not found for field: ${field}`);
-                return;
-            }
+            const view = context.view[field];
+            if (!view) return;
 
             const tiles = view.seriesLevel[bucketMs];
             if (!tiles) return;
@@ -608,40 +617,40 @@ const chartsSlice = createSlice({
         // ========== СИНХРОНИЗАЦИЯ ==========
 
         toggleSync(state, action: PayloadAction<Guid>) {
-            const tab = getOrCreateTab(state, action.payload);
-            tab.syncEnabled = !tab.syncEnabled;
+            const context = getOrCreateContext(state, action.payload);
+            context.syncEnabled = !context.syncEnabled;
         },
 
         addSyncField(
             state,
             action: PayloadAction<{
-                readonly tabId: Guid;
+                readonly contextId: Guid;
                 readonly field: FieldDto;
             }>
         ) {
-            const { tabId, field } = action.payload;
-            const tab = getOrCreateTab(state, tabId);
-            const exists = tab.syncFields.some((f) => f.name === field.name);
+            const { contextId, field } = action.payload;
+            const context = getOrCreateContext(state, contextId);
+            const exists = context.syncFields.some((f) => f.name === field.name);
             if (!exists) {
-                tab.syncFields = [...tab.syncFields, field];
+                context.syncFields = [...context.syncFields, field];
             }
         },
 
         removeSyncField(
             state,
             action: PayloadAction<{
-                readonly tabId: Guid;
+                readonly contextId: Guid;
                 readonly fieldName: string;
             }>
         ) {
-            const { tabId, fieldName } = action.payload;
-            const tab = getOrCreateTab(state, tabId);
-            tab.syncFields = tab.syncFields.filter((f) => f.name !== fieldName);
+            const { contextId, fieldName } = action.payload;
+            const context = getOrCreateContext(state, contextId);
+            context.syncFields = context.syncFields.filter((f) => f.name !== fieldName);
         },
 
         clearSyncFields(state, action: PayloadAction<Guid>) {
-            const tab = getOrCreateTab(state, action.payload);
-            tab.syncFields = [];
+            const context = getOrCreateContext(state, action.payload);
+            context.syncFields = [];
         },
 
         // ========== ГЛОБАЛЬНЫЕ ОПЕРАЦИИ ==========
@@ -649,31 +658,31 @@ const chartsSlice = createSlice({
         setIsDataLoaded(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
+                contextId: Guid;
                 isLoaded: boolean;
             }>
         ) {
-            const { tabId, isLoaded } = action.payload;
+            const { contextId, isLoaded } = action.payload;
 
-            const tab = state.byTab[tabId];
-            if (tab) {
-                tab.isDataLoaded = isLoaded;
+            const context = state.byContext[contextId];
+            if (context) {
+                context.isDataLoaded = isLoaded;
             }
         },
 
         setPx(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
+                contextId: Guid;
                 px: number;
             }>
         ) {
-            const { tabId, px } = action.payload;
+            const { contextId, px } = action.payload;
 
-            const tab = state.byTab[tabId];
-            if (!tab) return;
+            const context = state.byContext[contextId];
+            if (!context) return;
 
-            Object.values(tab.view).forEach((view) => {
+            Object.values(context.view).forEach((view) => {
                 view.px = px;
             });
         },
@@ -683,22 +692,21 @@ const chartsSlice = createSlice({
         clearField(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
+                contextId: Guid;
                 fieldName: FieldName;
             }>
         ) {
-            const { tabId, fieldName } = action.payload;
+            const { contextId, fieldName } = action.payload;
 
-            const tab = state.byTab[tabId];
-            if (tab) {
-                delete tab.view[fieldName];
+            const context = state.byContext[contextId];
+            if (context) {
+                delete context.view[fieldName];
             }
         },
 
-// clearAll остаётся БЕЗ tabId - очищает ВСЁ
+        // clearAll остаётся — очищает ВСЕ контексты
         clearAll(state) {
-            state.activeTabId = undefined;
-            state.byTab = {};
+            state.byContext = {};
         },
 
         // ========== BATCH ОПЕРАЦИИ ==========
@@ -706,7 +714,7 @@ const chartsSlice = createSlice({
         batchUpdateTiles(
             state,
             action: PayloadAction<{
-                tabId: Guid; // ← ДОБАВИЛИ
+                contextId: Guid;
                 updates: Array<{
                     field: FieldName;
                     bucketMs: BucketsMs;
@@ -714,16 +722,16 @@ const chartsSlice = createSlice({
                 }>;
             }>
         ) {
-            const { tabId, updates } = action.payload;
+            const { contextId, updates } = action.payload;
 
-            const tab = state.byTab[tabId]; // ← ДОБАВИЛИ
-            if (!tab) {
-                console.error('[batchUpdateTiles] Tab not found:', tabId);
+            const context = state.byContext[contextId];
+            if (!context) {
+                console.error('[batchUpdateTiles] Context not found:', contextId);
                 return;
             }
 
             updates.forEach((update) => {
-                const view = tab.view[update.field]; // ← ИЗМЕНИЛИ
+                const view = context.view[update.field];
 
                 if (!view) {
                     console.error('[batchUpdateTiles] View not found for field:', update.field);
@@ -733,19 +741,18 @@ const chartsSlice = createSlice({
                 view.seriesLevel[update.bucketMs] = update.tiles;
             });
         },
-
     },
 });
 
 // ============= ЭКСПОРТЫ =============
 
-export const chartsReducer = chartsSlice.reducer;
+export const contextsReducer = contextsSlice.reducer;
 
 export const {
-    // Управление вкладками
-    setActiveTab,
-    closeTab,
-    clearTab,
+    // Управление контекстами
+    createContext,
+    deleteContext,
+    clearContext,
 
     // Инициализация
     setResolvedCharReqTemplate,
@@ -793,34 +800,32 @@ export const {
 
     // Batch операции
     batchUpdateTiles,
-} = chartsSlice.actions;
+} = contextsSlice.actions;
 
 // ============= ДОПОЛНИТЕЛЬНЫЕ СЕЛЕКТОРЫ =============
 
 /**
- * ✅ МЕМОИЗИРОВАННЫЙ: Получить все ID открытых вкладок
+ * ✅ МЕМОИЗИРОВАННЫЙ: Получить все ID открытых контекстов
  */
-export const selectAllTabIds = createSelector(
-    [(state: RootState) => state.charts.byTab],
-    (byTab): readonly Guid[] => {
-        const ids = Object.keys(byTab) as Guid[];
+export const selectAllContextIds = createSelector(
+    [(state: RootState) => state.contexts.byContext],
+    (byContext): readonly Guid[] => {
+        const ids = Object.keys(byContext) as Guid[];
         return Object.freeze(ids);
     }
 );
 
 /**
- * ✅ МЕМОИЗИРОВАННЫЙ: Получить информацию о вкладке
+ * ✅ МЕМОИЗИРОВАННЫЙ: Получить информацию о контексте
  */
-export const selectTabInfo = createSelector(
-    [
-        (state: RootState, tabId: Guid) => state.charts.byTab[tabId]?.template,
-    ],
-    (template) => {
-        if (!template) return undefined;
+export const selectContextInfo = createSelector(
+    [(state: RootState, contextId: Guid) => state.contexts.byContext[contextId]],
+    (context) => {
+        if (!context || !context.template) return undefined;
 
         return {
-            template,
-            fieldsCount: template.selectedFields.length,
+            template: context.template,
+            fieldsCount: context.template.selectedFields.length,
         };
     }
 );

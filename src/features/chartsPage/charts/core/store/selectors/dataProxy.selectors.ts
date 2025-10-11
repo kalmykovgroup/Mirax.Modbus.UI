@@ -1,34 +1,42 @@
-// store/selectors/dataProxy.selectors.ts
+// src/features/chartsPage/charts/core/store/selectors/dataProxy.selectors.ts
+
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/store/store';
+
+import {
+    DataProxyService,
+    type OptimalDataResult,
+} from '@chartsPage/charts/orchestration/services/DataProxyService';
+import type {
+    BucketsMs,
+    CoverageResult,
+    FieldName,
+} from '@chartsPage/charts/core/store/types/chart.types.ts';
+import { TileSystemCore } from '@chartsPage/charts/core/store/tile-system/TileSystemCore.ts';
+import type { Guid } from '@app/lib/types/Guid.ts';
 import {
     selectAvailableBuckets,
     selectFieldCurrentBucketMs,
     selectFieldCurrentRange,
-    selectFieldOriginalRange,
-    selectFieldSeriesLevels,
-    selectTilesByBucket
-} from './base.selectors';
-import { DataProxyService, type OptimalDataResult } from '@chartsPage/charts/orchestration/services/DataProxyService';
-import type {BucketsMs, CoverageResult, FieldName} from "@chartsPage/charts/core/store/types/chart.types.ts";
-import {TileSystemCore} from "@chartsPage/charts/core/store/tile-system/TileSystemCore.ts";
-import type {Guid} from "@app/lib/types/Guid.ts";
+    selectFieldOriginalRange, selectFieldSeriesLevels, selectTilesByBucket
+} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 
 /**
- *     РЕФАКТОРИНГ: Используем TileSystemCore напрямую
+ * РЕФАКТОРИНГ: Используем TileSystemCore напрямую
+ * Вычисляет покрытие для текущего диапазона в активном bucket
  */
 export const selectCurrentCoverage = createSelector(
     [
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldCurrentRange(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldOriginalRange(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldCurrentBucketMs(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) => {
-            const bucketMs = selectFieldCurrentBucketMs(state, tabId, fieldName);
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldCurrentRange(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldOriginalRange(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldCurrentBucketMs(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) => {
+            const bucketMs = selectFieldCurrentBucketMs(state, contextId, fieldName);
             if (!bucketMs) return [];
-            return selectTilesByBucket(state, tabId, fieldName, bucketMs);
+            return selectTilesByBucket(state, contextId, fieldName, bucketMs);
         },
     ],
     (currentRange, originalRange, bucketMs, tiles): CoverageResult => {
@@ -50,29 +58,30 @@ export const selectCurrentCoverage = createSelector(
 );
 
 /**
- *     РЕФАКТОРИНГ: Используем TileSystemCore
+ * РЕФАКТОРИНГ: Используем TileSystemCore
+ * Вычисляет покрытие для произвольного диапазона в указанном bucket
  */
 export const selectBucketCoverageForRange = createSelector(
     [
         (
             _state: RootState,
-            _tabId: Guid,
+            _contextId: Guid,
             _fieldName: FieldName,
             _bucketMs: BucketsMs,
             fromMs: number
         ) => fromMs,
         (
             _state: RootState,
-            _tabId: Guid,
+            _contextId: Guid,
             _fieldName: FieldName,
             _bucketMs: BucketsMs,
             _fromMs: number,
             toMs: number
         ) => toMs,
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldOriginalRange(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName, bucketMs: BucketsMs) =>
-            selectTilesByBucket(state, tabId, fieldName, bucketMs),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldOriginalRange(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName, bucketMs: BucketsMs) =>
+            selectTilesByBucket(state, contextId, fieldName, bucketMs),
     ],
     (fromMs, toMs, originalRange, tiles): CoverageResult => {
         if (!originalRange) {
@@ -83,28 +92,31 @@ export const selectBucketCoverageForRange = createSelector(
 
         return {
             coverage: gapsResult.coverage,
-            gaps: gapsResult.gaps.map((g) => ({ fromMs: g.fromMs, toMs: g.toMs })),
+            gaps: gapsResult.gaps.map((g) => ({
+                fromMs: g.fromMs,
+                toMs: g.toMs,
+            })),
             coveredRanges: [],
         };
     }
 );
 
-
 /**
- *     ИСПРАВЛЕНО: Передаем originalRange в DataProxyService
+ * ИСПРАВЛЕНО: Передаем originalRange в DataProxyService
+ * Выбирает оптимальные данные для отображения на графике
  */
 export const selectOptimalData = createSelector(
     [
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldCurrentBucketMs(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldCurrentRange(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldOriginalRange(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldSeriesLevels(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectAvailableBuckets(state, tabId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldCurrentBucketMs(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldCurrentRange(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldOriginalRange(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldSeriesLevels(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectAvailableBuckets(state, contextId, fieldName),
     ],
     (
         currentBucketMs,

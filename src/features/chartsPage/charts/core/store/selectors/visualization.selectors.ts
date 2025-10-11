@@ -109,11 +109,11 @@ function convertBinsToPoints(bins: readonly SeriesBinDto[], fieldName: string): 
 
 export const selectChartRenderData = createSelector(
     [
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectOptimalData(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldCurrentBucketMs(state, tabId, fieldName),
-        (_state: RootState, _tabId: Guid, fieldName: FieldName) => fieldName,
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectOptimalData(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldCurrentBucketMs(state, contextId, fieldName),
+        (_state: RootState, _contextId: Guid, fieldName: FieldName) => fieldName,
     ],
     (optimalData, bucketMs, fieldName): ChartRenderData => {
         const points = convertBinsToPoints(optimalData.data, fieldName);
@@ -131,10 +131,10 @@ export const selectChartRenderData = createSelector(
 
 export const selectChartStats = createSelector(
     [
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectOptimalData(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectLoadingMetrics(state, tabId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectOptimalData(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectLoadingMetrics(state, contextId, fieldName),
     ],
     (optimalData, loading): ChartStats => {
         return {
@@ -150,9 +150,9 @@ export const selectChartStats = createSelector(
 
 export const selectSyncedChartsData = createSelector(
     [
-        (state: RootState, tabId: Guid) => selectSyncEnabled(state, tabId),
-        (state: RootState, tabId: Guid) => selectSyncFields(state, tabId),
-        (state: RootState, tabId: Guid) => selectAllViews(state, tabId),
+        (state: RootState, contextId: Guid) => selectSyncEnabled(state, contextId),
+        (state: RootState, contextId: Guid) => selectSyncFields(state, contextId),
+        (state: RootState, contextId: Guid) => selectAllViews(state, contextId),
     ],
     (syncEnabled, syncFields, allViews) => {
         if (!syncEnabled) return [];
@@ -167,10 +167,10 @@ export const selectSyncedChartsData = createSelector(
 
 export const selectVisiblePointsCount = createSelector(
     [
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectChartRenderData(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldCurrentRange(state, tabId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectChartRenderData(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldCurrentRange(state, contextId, fieldName),
     ],
     (chartData, currentRange): number => {
         if (!currentRange || chartData.avgPoints.length === 0) {
@@ -236,12 +236,12 @@ function binarySearchEnd(points: readonly EChartsPoint[], targetMs: number): num
 
 export const selectFieldGaps = createSelector(
     [
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldView(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldCurrentBucketMs(state, tabId, fieldName),
-        (state: RootState, tabId: Guid, fieldName: FieldName) =>
-            selectFieldCurrentRange(state, tabId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldView(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldCurrentBucketMs(state, contextId, fieldName),
+        (state: RootState, contextId: Guid, fieldName: FieldName) =>
+            selectFieldCurrentRange(state, contextId, fieldName),
     ],
     (fieldView, currentBucketMs, currentRange): GapsInfo => {
         if (!fieldView || !currentBucketMs || !currentRange || !fieldView.originalRange) {

@@ -28,26 +28,26 @@ interface ActiveRequestInfo {
 }
 
 /**
- * Менеджер запросов для одной вкладки испытания
- * Создаётся и уничтожается вместе с вкладкой
+ * Менеджер запросов для одного контекста
+ * Создаётся и уничтожается вместе с контекстом
  */
 export class RequestManager {
     private readonly dispatch: AppDispatch;
     private readonly getState: () => RootState;
-    private readonly tabId: Guid; // ← Знает свою вкладку
+    private readonly contextId: Guid; // ← БЫЛО: tabId
 
     private activeRequests: Map<string, ActiveRequestInfo>;
     private requestHistory: Map<string, number>;
     private readonly metrics: RequestMetrics;
 
     private readonly REQUEST_TIMEOUT_MS = 30000;
-    private readonly MAX_CONCURRENT_REQUESTS = 4; // ← 4 на вкладку вместо 6 глобальных
+    private readonly MAX_CONCURRENT_REQUESTS = 4;
     private isDisposed: boolean;
 
-    constructor(dispatch: AppDispatch, getState: () => RootState, tabId: Guid) {
+    constructor(dispatch: AppDispatch, getState: () => RootState, contextId: Guid) {
         this.dispatch = dispatch;
         this.getState = getState;
-        this.tabId = tabId;
+        this.contextId = contextId; // ← БЫЛО: tabId
         this.activeRequests = new Map();
         this.requestHistory = new Map();
         this.isDisposed = false;
@@ -60,11 +60,11 @@ export class RequestManager {
             averageLoadTime: 0,
         };
 
-        console.log(`[RequestManager] Created for tab: ${tabId}`);
+        console.log(`[RequestManager] Created for context: ${contextId}`); // ← БЫЛО: tab
     }
 
     /**
-     * Главный метод загрузки (БЕЗ tabId - менеджер уже знает свою вкладку)
+     * Главный метод загрузки (БЕЗ contextId - менеджер уже знает свой контекст)
      */
     async loadVisibleRange(
         fieldName: FieldName,
@@ -81,14 +81,14 @@ export class RequestManager {
         const timeSettings = this.getState().chartsSettings.timeSettings;
 
         console.log('[loadVisibleRange]', {
-            tabId: this.tabId,
+            contextId: this.contextId, // ← БЫЛО: tabId
             field: fieldName,
             from: toLocalInputValue(from, timeSettings),
             to: toLocalInputValue(to, timeSettings),
         });
 
         const request = DataProcessingService.analyzeLoadNeeds(
-            this.tabId, // ← Используем внутренний tabId
+            this.contextId, // ← БЫЛО: this.tabId
             fieldName,
             from,
             to,
@@ -119,7 +119,7 @@ export class RequestManager {
         const fields = request.template.selectedFields.map((f) => f.name);
 
         const loadingUpdates = DataProcessingService.prepareLoadingTiles({
-            tabId: this.tabId,
+            contextId: this.contextId, // ← БЫЛО: tabId
             fields,
             bucketMs: bucketsMs,
             loadingInterval: requestedInterval,
@@ -128,7 +128,7 @@ export class RequestManager {
         });
 
         if (loadingUpdates.length > 0) {
-            this.dispatch(batchUpdateTiles({ tabId: this.tabId, updates: loadingUpdates }));
+            this.dispatch(batchUpdateTiles({ contextId: this.contextId, updates: loadingUpdates })); // ← БЫЛО: tabId
         }
 
         await this.executeRequest(request, bucketsMs, requestedInterval, requestId);
@@ -175,7 +175,7 @@ export class RequestManager {
             return;
         }
 
-        // Очередь внутри вкладки
+        // Очередь внутри контекста
         while (this.activeRequests.size >= this.MAX_CONCURRENT_REQUESTS && !this.isDisposed) {
             await new Promise((resolve) => setTimeout(resolve, 100));
         }
@@ -247,7 +247,7 @@ export class RequestManager {
                         loadingType: LoadingType.Zoom,
                         signal: abortController.signal,
                     },
-                    tabId: this.tabId
+                    contextId: this.contextId // ← БЫЛО: tabId
                 })
             ).unwrap();
 
@@ -260,7 +260,7 @@ export class RequestManager {
             }
 
             DataProcessingService.processServerResponse({
-                tabId: this.tabId,
+                contextId: this.contextId, // ← БЫЛО: tabId
                 response: result.response,
                 bucketMs: request.bucketMs!,
                 requestedInterval,
@@ -308,51 +308,8 @@ export class RequestManager {
             this.removeLoadingTiles(tilesToRemove);
 
             console.log('[RequestManager] Cancelled requests:', {
-                tabId: this.tabId,
+                contextId: this.contextId, // ← БЫЛО: tabId
                 triggerField: fieldName,
-                requestsCancelled: cancelled,
-            });
-        }
-    }
-
-    /**
-     * Отмена запросов кроме указанного bucket
-     */
-    cancelFieldRequestsExceptBucket(fieldName: FieldName, keepBucket: BucketsMs): void {
-        let cancelled = 0;
-        const tilesToRemove: Array<{
-            field: FieldName;
-            bucketMs: BucketsMs;
-            requestId: string;
-        }> = [];
-
-        for (const [key, request] of this.activeRequests.entries()) {
-            const hasField = request.selectedFields.some((f) => f.name === fieldName);
-
-            if (hasField && request.bucketMs !== keepBucket) {
-                request.abortController.abort();
-
-                for (const field of request.selectedFields) {
-                    tilesToRemove.push({
-                        field: field.name,
-                        bucketMs: request.bucketMs,
-                        requestId: request.requestId,
-                    });
-                }
-
-                this.activeRequests.delete(key);
-                cancelled++;
-            }
-        }
-
-        if (cancelled > 0) {
-            this.metrics.cancelledRequests += cancelled;
-            this.removeLoadingTiles(tilesToRemove);
-
-            console.log('[RequestManager] Cancelled old bucket requests:', {
-                tabId: this.tabId,
-                field: fieldName,
-                keepBucket,
                 requestsCancelled: cancelled,
             });
         }
@@ -362,40 +319,21 @@ export class RequestManager {
      * Удаление loading тайлов
      */
     private removeLoadingTiles(
-        requests: Array<{
-            field: FieldName;
-            bucketMs: BucketsMs;
-            requestId: string;
-        }>
+        tilesToRemove: Array<{ field: FieldName; bucketMs: BucketsMs; requestId: string }>
     ): void {
-        if (requests.length === 0) return;
-
-        const state = this.getState();
         const updates: Array<{
             field: FieldName;
             bucketMs: BucketsMs;
             tiles: any[];
         }> = [];
 
-        const grouped = new Map<string, Set<string>>();
+        const requestIds = new Set(tilesToRemove.map((t) => t.requestId));
 
-        for (const req of requests) {
-            const key = `${req.field}:${req.bucketMs}`;
-            const requestIds = grouped.get(key) ?? new Set();
-            requestIds.add(req.requestId);
-            grouped.set(key, requestIds);
-        }
+        for (const { field: fieldName, bucketMs } of tilesToRemove) {
+            const view = selectFieldView(this.getState(), this.contextId, fieldName); // ← БЫЛО: tabId
+            if (!view) continue;
 
-        for (const [key, requestIds] of grouped.entries()) {
-            const [fieldName, bucketMsStr] = key.split(':');
-            if (!fieldName || !bucketMsStr) continue;
-
-            const bucketMs = Number(bucketMsStr);
-            const fieldView = selectFieldView(state, this.tabId, fieldName);
-
-            if (!fieldView) continue;
-
-            const tiles = fieldView.seriesLevel[bucketMs];
+            const tiles = view.seriesLevel[bucketMs];
             if (!tiles) continue;
 
             const filteredTiles = tiles.filter(
@@ -412,12 +350,12 @@ export class RequestManager {
         }
 
         if (updates.length > 0) {
-            this.dispatch(batchUpdateTiles({ tabId: this.tabId, updates }));
+            this.dispatch(batchUpdateTiles({ contextId: this.contextId, updates })); // ← БЫЛО: tabId
         }
     }
 
     /**
-     * Построение ключа запроса (без tabId - он уже внутри менеджера)
+     * Построение ключа запроса
      */
     private buildRequestKey(
         fieldName: FieldName,
@@ -455,7 +393,7 @@ export class RequestManager {
 
         if (cleared > 0) {
             console.log('[RequestManager] Cleared old history:', {
-                tabId: this.tabId,
+                contextId: this.contextId, // ← БЫЛО: tabId
                 cleared,
                 remaining: this.requestHistory.size,
             });
@@ -470,10 +408,10 @@ export class RequestManager {
     }
 
     /**
-     * Получение tabId
+     * Получение contextId
      */
-    getTabId(): Guid {
-        return this.tabId;
+    getContextId(): Guid { // ← БЫЛО: getTabId()
+        return this.contextId;
     }
 
     /**
@@ -483,7 +421,7 @@ export class RequestManager {
         if (this.isDisposed) return;
 
         console.log('[RequestManager] Disposing...', {
-            tabId: this.tabId,
+            contextId: this.contextId, // ← БЫЛО: tabId
             activeRequests: this.activeRequests.size,
         });
 

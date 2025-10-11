@@ -22,7 +22,7 @@ import type {Guid} from "@app/lib/types/Guid.ts";
 // ============================================
 
 export interface ProcessServerResponseParams {
-    readonly tabId: Guid;
+    readonly contextId: Guid;
     readonly response: MultiSeriesResponse;
     readonly bucketMs: BucketsMs;
     readonly requestedInterval: CoverageInterval;
@@ -31,7 +31,7 @@ export interface ProcessServerResponseParams {
 }
 
 interface ProcessFieldResult {
-    readonly tabId: Guid;
+    readonly contextId: Guid;
     readonly field: FieldName;
     readonly success: boolean;
     readonly newTiles: SeriesTile[] | null;
@@ -46,7 +46,7 @@ interface ProcessFieldResult {
 export class DataProcessingService {
 
     static processServerResponse(params: ProcessServerResponseParams): void {
-        const { tabId, response, bucketMs, requestedInterval, dispatch, getState } = params;
+        const { contextId, response, bucketMs, requestedInterval, dispatch, getState } = params;
 
         console.log('[DataProcessingService] 🔄 Processing response, fields:',
             response.series.map(s => s.field.name)
@@ -60,7 +60,7 @@ export class DataProcessingService {
 
         for (const series of response.series) {
             const result = this.processFieldSeries({
-                tabId: tabId,
+                contextId: contextId,
                 fieldName: series.field.name,
                 bins: series.bins,
                 bucketMs,
@@ -78,29 +78,29 @@ export class DataProcessingService {
 
         if (updates.length > 0) {
             console.log('[DataProcessingService] 📦 batchUpdateTiles, updates:', updates.length);
-            dispatch(batchUpdateTiles({tabId, updates}));
+            dispatch(batchUpdateTiles({contextId, updates}));
         }
 
     }
 
 
     private static processFieldSeries(params: {
-        readonly tabId: Guid;
+        readonly contextId: Guid;
         readonly fieldName: FieldName;
         readonly bins: readonly any[];
         readonly bucketMs: BucketsMs;
         readonly requestedInterval: CoverageInterval;
         readonly getState: () => RootState;
     }): ProcessFieldResult {
-        const { tabId, fieldName, bins, bucketMs, requestedInterval, getState } = params;
+        const { contextId, fieldName, bins, bucketMs, requestedInterval, getState } = params;
 
         try {
             const state = getState();
-            const fieldView = selectFieldView(state, tabId, fieldName);
+            const fieldView = selectFieldView(state, contextId, fieldName);
 
             if (!fieldView) {
                 return {
-                    tabId: tabId,
+                    contextId: contextId,
                     field: fieldName,
                     success: false,
                     newTiles: null,
@@ -111,7 +111,7 @@ export class DataProcessingService {
 
             if (!fieldView.originalRange) {
                 return {
-                    tabId: tabId,
+                    contextId: contextId,
                     field: fieldName,
                     success: false,
                     newTiles: null,
@@ -196,7 +196,7 @@ export class DataProcessingService {
             );
 
             return {
-                tabId: tabId,
+                contextId: contextId,
                 field: fieldName,
                 success: true,
                 newTiles: [...addResult.tiles],
@@ -212,7 +212,7 @@ export class DataProcessingService {
             });
 
             return {
-                tabId: tabId,
+                contextId: contextId,
                 field: fieldName,
                 success: false,
                 newTiles: null,
@@ -226,14 +226,14 @@ export class DataProcessingService {
      *   НОВЫЙ МЕТОД: Подготовка loading тайлов
      */
     static prepareLoadingTiles(params: {
-        readonly tabId: Guid;
+        readonly contextId: Guid;
         readonly fields: readonly FieldName[];
         readonly bucketMs: BucketsMs;
         readonly loadingInterval: CoverageInterval;
         readonly requestId: string;
         readonly getState: () => RootState;
     }): Array<{ field: FieldName; bucketMs: BucketsMs; tiles: SeriesTile[] }> {
-        const {tabId, fields, bucketMs, loadingInterval, requestId, getState } = params;
+        const {contextId, fields, bucketMs, loadingInterval, requestId, getState } = params;
 
         const updates: Array<{
             field: FieldName;
@@ -244,7 +244,7 @@ export class DataProcessingService {
         const state = getState();
 
         for (const fieldName of fields) {
-            const fieldView = selectFieldView(state, tabId, fieldName);
+            const fieldView = selectFieldView(state, contextId, fieldName);
 
             if (!fieldView || !fieldView.originalRange) {
                 console.warn('[prepareLoadingTiles] No view for field:', fieldName);
@@ -300,7 +300,7 @@ export class DataProcessingService {
      * Анализ необходимости загрузки
      */
     static analyzeLoadNeeds(
-        tabId: Guid,
+        contextId: Guid,
         fieldName: FieldName,
         from: number,
         to: number,
@@ -309,7 +309,7 @@ export class DataProcessingService {
         getState: () => RootState
     ): GetMultiSeriesRequest | false {
         const state = getState();
-        const fieldView = selectFieldView(state, tabId, fieldName);
+        const fieldView = selectFieldView(state, contextId, fieldName);
 
         if (!fieldView || !fieldView.originalRange) {
             console.warn('[analyzeLoadNeeds] No field view or original range');
@@ -364,7 +364,7 @@ export class DataProcessingService {
 
 
         // Формируем запрос
-        const template = state.charts.byTab[tabId]?.template;
+        const template = state.charts.byContext[contextId]?.template;
         if (!template) {
             console.error('[analyzeLoadNeeds] No template');
             return false;
@@ -376,7 +376,7 @@ export class DataProcessingService {
             return false;
         }
 
-        const selected = state.charts.byTab[tabId]?.syncEnabled ? [...state.charts.byTab[tabId]?.syncFields, field] : [field]
+        const selected = state.charts.byContext[contextId]?.syncEnabled ? [...state.charts.byContext[contextId]?.syncFields, field] : [field]
 
         return {
             template: {...template,

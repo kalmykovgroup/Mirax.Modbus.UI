@@ -4,9 +4,9 @@ import { type JSX } from 'react';
 import classNames from 'classnames';
 import type { Guid } from '@app/lib/types/Guid';
 import { useAppSelector } from '@/store/hooks';
-import { selectTabInfo} from '@chartsPage/charts/core/store/chartsSlice';
+import { useConfirm } from '@ui/components/ConfirmProvider/ConfirmProvider.tsx';
 import styles from './ChartTabItem.module.css';
-import {useConfirm} from "@ui/components/ConfirmProvider/ConfirmProvider.tsx";
+import {selectTabContextIds, selectTabInfo} from "@chartsPage/charts/core/store/tabsSlice.ts";
 
 interface Props {
     readonly tabId: Guid;
@@ -17,31 +17,35 @@ interface Props {
 
 export function ChartTabItem({ tabId, isActive, onActivate, onClose }: Props): JSX.Element {
     const tabInfo = useAppSelector((state) => selectTabInfo(state, tabId));
+    const contextIds = useAppSelector((state) => selectTabContextIds(state, tabId));
+    const confirm = useConfirm();
 
+    const handleClose = async (e: React.MouseEvent) => {
+        e.stopPropagation(); // Предотвращаем активацию вкладки при клике на кнопку закрытия
 
-    const confirm = useConfirm()
-
-    const handleClose = async () => {
         const ok = await confirm({
             title: 'Закрыть вкладку?',
             description: 'Данные по графику будут очищены из браузера.',
             confirmText: 'Закрыть',
             cancelText: 'Отмена',
             danger: true,
-        })
+        });
         if (ok) {
             onClose();
         }
-    }
+    };
 
     if (!tabInfo) {
         return <></>;
     }
 
     // Формируем название вкладки
-    const tabName = tabInfo.template.entity.name || 'График';
-    const fieldsCount = tabInfo.template.selectedFields.length;
-    const subtitle = `${fieldsCount} ${fieldsCount === 1 ? 'поле' : fieldsCount < 5 ? 'поля' : 'полей'}`;
+    const tabName = tabInfo.name;
+    const contextsCount = contextIds.length;
+    const subtitle =
+        contextsCount === 0
+            ? 'Пусто'
+            : `${contextsCount} ${contextsCount === 1 ? 'контекст' : contextsCount < 5 ? 'контекста' : 'контекстов'}`;
 
     return (
         <div
@@ -58,7 +62,7 @@ export function ChartTabItem({ tabId, isActive, onActivate, onClose }: Props): J
             <button
                 className={styles.closeButton}
                 onClick={handleClose}
-                aria-label="Закрыть график"
+                aria-label="Закрыть вкладку"
                 type="button"
             >
                 ×

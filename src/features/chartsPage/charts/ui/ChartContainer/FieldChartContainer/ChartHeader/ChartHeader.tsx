@@ -21,7 +21,7 @@ import type {Guid} from "@app/lib/types/Guid.ts";
 // ============================================
 
 export type HeaderProps = {
-    readonly tabId: Guid;
+    readonly contextId: Guid;
     readonly width: number;
     readonly fieldName: FieldName;
     readonly title?: string | undefined;
@@ -92,7 +92,7 @@ function formatBucketSize(ms: number): string {
 // ============================================
 
 export const ChartHeader: React.FC<HeaderProps> = ({
-                                                       tabId,
+                                                       contextId,
                                                        width,
                                                        fieldName,
                                                        title,
@@ -102,9 +102,9 @@ export const ChartHeader: React.FC<HeaderProps> = ({
     // СЕЛЕКТОРЫ
     // ============================================
 
-    const fieldView = useAppSelector(state => selectFieldView(state, tabId, fieldName));
+    const fieldView = useAppSelector(state => selectFieldView(state, contextId, fieldName));
     const originalRange = useSelector((state: RootState) =>
-        selectFieldOriginalRange(state, tabId, fieldName)
+        selectFieldOriginalRange(state, contextId, fieldName)
     );
 
     // ============================================

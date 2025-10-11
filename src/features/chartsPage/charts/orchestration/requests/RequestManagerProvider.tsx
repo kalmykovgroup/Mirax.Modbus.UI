@@ -9,37 +9,37 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { RequestManagerContext } from './RequestManagerContext';
 
 interface RequestManagerProviderProps {
-    readonly tabId: Guid; // ← Принимаем tabId
+    readonly contextId: Guid;
     readonly children: ReactNode;
 }
 
 /**
- * Провайдер RequestManager для одной вкладки
+ * Провайдер RequestManager для одного контекста
  * Создаёт изолированный менеджер при монтировании
  */
-export function RequestManagerProvider({ tabId, children }: RequestManagerProviderProps) {
+export function RequestManagerProvider({ contextId, children }: RequestManagerProviderProps) {
     const dispatch = useAppDispatch();
     const store = useStore<RootState>();
 
     const managerRef = useRef<RequestManager | null>(null);
 
-    // Создание менеджера для вкладки
+    // Создание менеджера для контекста
     if (!managerRef.current) {
-        managerRef.current = new RequestManager(dispatch, () => store.getState(), tabId);
-        console.log(`[RequestManagerProvider] Created manager for tab: ${tabId}`);
+        managerRef.current = new RequestManager(dispatch, () => store.getState(), contextId);
+        console.log(`[RequestManagerProvider] Created manager for context: ${contextId}`);
     }
 
-    // Cleanup при unmount вкладки
+    // Cleanup при unmount контекста
     useEffect(() => {
         const manager = managerRef.current;
 
         return () => {
             if (manager) {
-                console.log(`[RequestManagerProvider] Disposing manager for tab: ${tabId}`);
+                console.log(`[RequestManagerProvider] Disposing manager for context: ${contextId}`);
                 manager.dispose();
             }
         };
-    }, [tabId]);
+    }, [contextId]);
 
     // Периодическая очистка истории
     useEffect(() => {

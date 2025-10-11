@@ -1,5 +1,5 @@
 import { persistReducer } from 'redux-persist';
-import { chartsReducer } from '@chartsPage/charts/core/store/chartsSlice';
+import { contextsReducer } from '@chartsPage/charts/core/store/chartsSlice';
 import localforage from "localforage";
 
 
@@ -22,6 +22,6 @@ const chartsPersistConfig = {
 
 export const persistedChartsReducer = persistReducer(
     chartsPersistConfig,
-    chartsReducer
+    contextsReducer
 );
 

@@ -29,9 +29,9 @@ export function ChartContainer() {
     const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
 
     const manager = useRequestManager(); // Получаем менеджер из Context
-    const tabId = manager.getTabId(); // Менеджер знает свой tabId
+    const contextId = manager.getContextId(); // Менеджер знает свой contextId
 
-    const template = useSelector((state: RootState) => selectTemplate(state, tabId));
+    const template = useSelector((state: RootState) => selectTemplate(state, contextId));
 
     /**
      * Измерение ширины контейнера
@@ -91,7 +91,7 @@ export function ChartContainer() {
      * Запустится автоматически после измерения ширины
      */
     const { isInitializing, isInitialized, error, reinitialize } = useChartInitialization({
-        tabId: tabId,
+        contextId: contextId,
         px: containerWidth
     });
 
@@ -175,13 +175,13 @@ export function ChartContainer() {
                 <div className={styles.info}>
                     {template.selectedFields.length} графиков
                 </div>
-                <SyncButton tabId={tabId} />
+                <SyncButton contextId={contextId} />
             </div>
 
             <div className={styles.chartsGrid}>
                 {template.selectedFields.map(field => (
                         <FieldChartContainer
-                            tabId={tabId}
+                            contextId={contextId}
                             key={field.name}
                             fieldName={field.name}
                             width={containerWidth}

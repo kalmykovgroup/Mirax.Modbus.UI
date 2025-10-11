@@ -75,13 +75,13 @@ const DateRange: React.FC<DateRangeProps> = ({ fromMs, toMs, timeSettings }) => 
     );
 };
 
-export const ChartFooter: React.FC<{ readonly fieldName: string, readonly tabId: Guid;}> = ({ fieldName, tabId }) => {
+export const ChartFooter: React.FC<{ readonly fieldName: string, readonly contextId: Guid;}> = ({ fieldName, contextId }) => {
     const currentRange = useSelector((state: RootState) =>
-        selectFieldCurrentRange(state, tabId, fieldName)
+        selectFieldCurrentRange(state, contextId, fieldName)
     );
     const timeSettings = useSelector((state: RootState) => selectTimeSettings(state));
     const originalRange = useSelector((state: RootState) =>
-        selectFieldOriginalRange(state, tabId, fieldName)
+        selectFieldOriginalRange(state, contextId, fieldName)
     );
 
     return (

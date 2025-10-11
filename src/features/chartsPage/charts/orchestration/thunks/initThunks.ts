@@ -30,7 +30,7 @@ import type {Guid} from "@app/lib/types/Guid.ts";
  */
 export const fetchMultiSeriesInit = createAsyncThunk<
     MultiSeriesResponse | any,
-    {data: GetMultiSeriesRequest, tabId: Guid},
+    {data: GetMultiSeriesRequest, contextId: Guid},
     { state: RootState }
 >(
     'charts/fetchMultiSeriesInit',
@@ -46,7 +46,7 @@ export const fetchMultiSeriesInit = createAsyncThunk<
         );
 
         dispatch(startLoadingFields({
-            tabId: request.tabId,
+            contextId: request.contextId,
             fields: request.data.template.selectedFields,
             type: LoadingType.Initial,
             messageError: 'Инициализация графика...'
@@ -75,12 +75,12 @@ export const fetchMultiSeriesInit = createAsyncThunk<
 
             // Успешная загрузка
             dispatch(finishLoadings({
-                tabId: request.tabId,
+                contextId: request.contextId,
                 fields: request.data.template.selectedFields,
                 success: true
             }));
 
-            dispatch(setIsDataLoaded({isLoaded: true, tabId: request.tabId}));
+            dispatch(setIsDataLoaded({isLoaded: true, contextId: request.contextId}));
 
             return result;
 
@@ -97,12 +97,12 @@ export const fetchMultiSeriesInit = createAsyncThunk<
 
             request.data.template.selectedFields.forEach(field => {
                 dispatch(setFieldError({
-                    tabId: request.tabId,
+                    contextId: request.contextId,
                     fieldName: field.name,
                     errorMessage: errorMessage
                 }));
                 dispatch(finishLoading({
-                    tabId: request.tabId,
+                    contextId: request.contextId,
                     field: field.name,
                     success: false,
                     message: errorMessage

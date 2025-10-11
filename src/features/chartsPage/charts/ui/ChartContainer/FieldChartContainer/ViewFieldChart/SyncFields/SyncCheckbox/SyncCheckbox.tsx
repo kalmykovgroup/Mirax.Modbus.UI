@@ -14,23 +14,23 @@ import {
 } from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 
 interface SyncCheckboxProps {
-    readonly tabId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
+    readonly contextId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
     readonly fieldName: string;
 }
 
-export function SyncCheckbox({ fieldName, tabId }: SyncCheckboxProps) {
+export function SyncCheckbox({ fieldName, contextId }: SyncCheckboxProps) {
     const dispatch = useAppDispatch();
 
     const syncEnabled = useSelector((state: RootState) =>
-        selectSyncEnabled(state, tabId)
+        selectSyncEnabled(state, contextId)
     );
 
     const syncFields = useSelector((state: RootState) =>
-        selectSyncFields(state, tabId)
+        selectSyncFields(state, contextId)
     );
 
     const template = useSelector((state: RootState) =>
-        selectTemplate(state, tabId)
+        selectTemplate(state, contextId)
     );
 
     // Находим FieldDto для текущего поля
@@ -50,11 +50,11 @@ export function SyncCheckbox({ fieldName, tabId }: SyncCheckboxProps) {
         }
 
         if (e.target.checked) {
-            dispatch(addSyncField({ tabId, field: fieldDto })); // ← добавили tabId
+            dispatch(addSyncField({ contextId, field: fieldDto })); // ← добавили contextId
         } else {
-            dispatch(removeSyncField({ tabId, fieldName })); // ← добавили tabId
+            dispatch(removeSyncField({ contextId, fieldName })); // ← добавили contextId
         }
-    }, [dispatch, fieldDto, fieldName, tabId]);
+    }, [dispatch, fieldDto, fieldName, contextId]);
 
     // Не показываем чекбокс если синхронизация выключена
     if (!syncEnabled) {

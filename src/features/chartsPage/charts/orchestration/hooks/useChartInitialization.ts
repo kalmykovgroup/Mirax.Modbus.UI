@@ -16,7 +16,7 @@ interface InitState {
 }
 
 interface UseChartInitializationParams {
-    readonly tabId: Guid,
+    readonly contextId: Guid,
     readonly px: number | undefined;
 }
 
@@ -62,10 +62,10 @@ export function useChartInitialization(
 
 
     const dispatch = useAppDispatch();
-    const template = useAppSelector((state) => selectTemplate(state, params.tabId));
+    const template = useAppSelector((state) => selectTemplate(state, params.contextId));
     const bucketing = useAppSelector(selectBucketing);
 
-    const chartsView = useAppSelector((state) => selectAllViews(state, params.tabId));
+    const chartsView = useAppSelector((state) => selectAllViews(state, params.contextId));
 
     const [state, setState] = useState<InitState>({
         isInitializing: false,
@@ -108,7 +108,7 @@ export function useChartInitialization(
             });
 
             // Инициализируем views если их нет (это safe, внутри проверка есть)
-            dispatch(initialViews({tabId: params.tabId, px: params.px, fields: template.selectedFields }));
+            dispatch(initialViews({contextId: params.contextId, px: params.px, fields: template.selectedFields }));
 
             return;
         }
@@ -122,17 +122,17 @@ export function useChartInitialization(
         });
 
         try {
-            dispatch(initialViews({ tabId: params.tabId, px: params.px, fields: template.selectedFields }));
+            dispatch(initialViews({ contextId: params.contextId, px: params.px, fields: template.selectedFields }));
 
             const response: MultiSeriesResponse = await dispatch(
                 fetchMultiSeriesInit({data: {
                         template,
                         px: params.px
-                    } as GetMultiSeriesRequest, tabId: params.tabId})
+                    } as GetMultiSeriesRequest, contextId: params.contextId})
             ).unwrap();
 
             InitializationService.processInitResponse({
-                tabId: params.tabId,
+                contextId: params.contextId,
                 px: params.px,
                 response: response,
                 dispatch: dispatch,

@@ -10,25 +10,25 @@ import type {Guid} from "@app/lib/types/Guid.ts";
 import {selectSyncEnabled, selectSyncFields} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 
 interface SyncButtonProps {
-    readonly tabId: Guid;
+    readonly contextId: Guid;
 }
 
 
-export function SyncButton({ tabId }: SyncButtonProps) {
+export function SyncButton({ contextId }: SyncButtonProps) {
     const dispatch = useAppDispatch();
 
-    // ТОЛЬКО добавили tabId в селекторы
+    // ТОЛЬКО добавили contextId в селекторы
     const syncEnabled = useSelector((state: RootState) =>
-        selectSyncEnabled(state, tabId)
+        selectSyncEnabled(state, contextId)
     );
 
     const syncFields = useSelector((state: RootState) =>
-        selectSyncFields(state, tabId)
+        selectSyncFields(state, contextId)
     );
 
     const handleToggle = useCallback(() => {
-        dispatch(toggleSync(tabId)); // ← добавили tabId
-    }, [dispatch, tabId]);
+        dispatch(toggleSync(contextId)); // ← добавили contextId
+    }, [dispatch, contextId]);
 
     // Рендер БЕЗ ИЗМЕНЕНИЙ
     return (

@@ -5,7 +5,7 @@ import styles from './TabBar_PortableDevices.module.css';
 import { useAppDispatch, useAppSelector } from '@/store/hooks.ts';
 import {
     selectOpenTabs,
-    selectActiveTabId,
+    selectActivecontextId,
     setActiveTab,
     closeTechnicalRunTab,
     closeAllTabs,
@@ -15,7 +15,7 @@ import { TabItem_PortableDevices } from './TabItem_PortableDevices/TabItem_Porta
 export function TabBar_PortableDevices(): JSX.Element {
     const dispatch = useAppDispatch();
     const openTabs = useAppSelector(selectOpenTabs);
-    const activeTabId = useAppSelector(selectActiveTabId);
+    const activecontextId = useAppSelector(selectActivecontextId);
 
     const handleCloseAll = useCallback(() => {
         dispatch(closeAllTabs());
@@ -38,7 +38,7 @@ export function TabBar_PortableDevices(): JSX.Element {
                     <TabItem_PortableDevices
                         key={tab.id}
                         tab={tab}
-                        isActive={tab.id === activeTabId}
+                        isActive={tab.id === activecontextId}
                         onActivate={() => dispatch(setActiveTab(tab.id))}
                         onClose={() => dispatch(closeTechnicalRunTab(tab.id))}
                     />

@@ -6,7 +6,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
     setDatabaseId,
     selectDatabaseId,
-    selectActiveTabId,
+    selectActivecontextId,
 } from '@chartsPage/mirax/miraxSlice';
 import { TechnicalRunsPanel } from './TechnicalRunsPanel/TechnicalRunsPanel';
 import { TabBar_PortableDevices } from './TabBar_PortableDevices/TabBar_PortableDevices.tsx';
@@ -21,7 +21,7 @@ interface Props {
 export function MiraxContainer({ dbId }: Props): JSX.Element {
     const dispatch = useAppDispatch();
     const currentDbId = useAppSelector(selectDatabaseId);
-    const activeTabId = useAppSelector(selectActiveTabId);
+    const activecontextId = useAppSelector(selectActivecontextId);
 
     useEffect(() => {
         if (currentDbId !== dbId) {
@@ -50,8 +50,8 @@ export function MiraxContainer({ dbId }: Props): JSX.Element {
 
                     {/* Устройства активной вкладки */}
                     <div className={styles.devicesContainer}>
-                        {activeTabId ? (
-                            <DevicesPanel technicalRunId={activeTabId} />
+                        {activecontextId ? (
+                            <DevicesPanel technicalRunId={activecontextId} />
                         ) : (
                             <div className={styles.noSelectionPanel}>
                                 <div className={styles.placeholder}>Нет активной вкладки</div>
