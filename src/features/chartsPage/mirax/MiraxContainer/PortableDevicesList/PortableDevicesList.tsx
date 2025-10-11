@@ -16,7 +16,7 @@ interface Props {
  * Фильтрация по портам происходит выше в DevicesPanel.
  */
 export function PortableDevicesList({ devices, technicalRun }: Props): JSX.Element {
-    // ✅ Runtime-защита: проверяем обязательные данные
+    //  Runtime-защита: проверяем обязательные данные
     if (!technicalRun) {
         console.error('PortableDevicesList: отсутствует technicalRun');
         return (
@@ -26,7 +26,7 @@ export function PortableDevicesList({ devices, technicalRun }: Props): JSX.Eleme
         );
     }
 
-    // ✅ Проверка пустого списка устройств
+    //  Проверка пустого списка устройств
     if (devices.length === 0) {
         return (
             <div className={styles.emptyState}>

@@ -1,4 +1,4 @@
-// src/features/chartsPage/tabs/store/tabsSlice.ts
+// src/features/chartsPage/charts/core/store/tabsSlice.ts
 
 import { createSlice, type PayloadAction, createSelector } from '@reduxjs/toolkit';
 import type { Guid } from '@app/lib/types/Guid';
@@ -8,13 +8,12 @@ import type { RootState } from '@/store/store';
 
 /**
  * Информация о вкладке
- * Вкладка = UI-представление, содержащее список контекстов
  */
 export interface TabInfo {
     readonly id: Guid;
     readonly name: string;
-    readonly contextIds: readonly Guid[]; // список контекстов для отображения
-    readonly activeContextId: Guid | undefined; // какой контекст сейчас видим
+    readonly contextIds: readonly Guid[]; // все контексты в вкладке
+    readonly visibleContextIds: readonly Guid[]; // какие контексты показываем (фильтр)
 }
 
 /**
@@ -36,9 +35,6 @@ const initialState: TabsState = {
 
 // ============= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =============
 
-/**
- * Генерация дефолтного имени вкладки
- */
 function generateTabName(existingCount: number): string {
     return `Вкладка ${existingCount + 1}`;
 }
@@ -74,7 +70,7 @@ const tabsSlice = createSlice({
                 id,
                 name: tabName,
                 contextIds: [],
-                activeContextId: undefined,
+                visibleContextIds: [],
             };
 
             state.allIds = [...state.allIds, id];
@@ -98,8 +94,7 @@ const tabsSlice = createSlice({
         },
 
         /**
-         * Закрыть вкладку и удалить её
-         * Контексты НЕ удаляются (остаются в contextsSlice)
+         * Закрыть вкладку
          */
         closeTab(state, action: PayloadAction<Guid>) {
             const tabId = action.payload;
@@ -141,7 +136,7 @@ const tabsSlice = createSlice({
             state.byId[tabId] = { ...tab, name };
         },
 
-        // ========== УПРАВЛЕНИЕ КОНТЕКСТАМИ В ВКЛАДКЕ ==========
+        // ========== УПРАВЛЕНИЕ КОНТЕКСТАМИ ==========
 
         /**
          * Добавить контекст в вкладку
@@ -161,16 +156,18 @@ const tabsSlice = createSlice({
                 return;
             }
 
-            // Проверка на дубликат
             if (tab.contextIds.includes(contextId)) {
-                console.warn('[addContextToTab] Context already in tab:', { tabId, contextId });
+                console.warn('[addContextToTab] Context already exists:', { tabId, contextId });
                 return;
             }
 
+            const newContextIds = [...tab.contextIds, contextId];
+            const newVisibleIds = [...tab.visibleContextIds, contextId]; // автоматически показываем
+
             state.byId[tabId] = {
                 ...tab,
-                contextIds: [...tab.contextIds, contextId],
-                activeContextId: contextId, // делаем новый контекст активным
+                contextIds: newContextIds,
+                visibleContextIds: newVisibleIds,
             };
 
             console.log('[addContextToTab] Added:', { tabId, contextId });
@@ -178,7 +175,6 @@ const tabsSlice = createSlice({
 
         /**
          * Удалить контекст из вкладки
-         * Контекст НЕ удаляется из contextsSlice
          */
         removeContextFromTab(
             state,
@@ -196,26 +192,21 @@ const tabsSlice = createSlice({
             }
 
             const newContextIds = tab.contextIds.filter((id) => id !== contextId);
-
-            // Если удаляем активный контекст, переключаемся на другой
-            let newActiveContextId = tab.activeContextId;
-            if (tab.activeContextId === contextId) {
-                newActiveContextId = newContextIds[0];
-            }
+            const newVisibleIds = tab.visibleContextIds.filter((id) => id !== contextId);
 
             state.byId[tabId] = {
                 ...tab,
                 contextIds: newContextIds,
-                activeContextId: newActiveContextId,
+                visibleContextIds: newVisibleIds,
             };
 
             console.log('[removeContextFromTab] Removed:', { tabId, contextId });
         },
 
         /**
-         * Установить активный контекст в вкладке
+         * Переключить видимость контекста (для фильтра)
          */
-        setActiveContext(
+        toggleContextVisibility(
             state,
             action: PayloadAction<{
                 readonly tabId: Guid;
@@ -226,18 +217,68 @@ const tabsSlice = createSlice({
             const tab = state.byId[tabId];
 
             if (!tab) {
-                console.error('[setActiveContext] Tab not found:', tabId);
+                console.error('[toggleContextVisibility] Tab not found:', tabId);
                 return;
             }
 
             if (!tab.contextIds.includes(contextId)) {
-                console.error('[setActiveContext] Context not in tab:', { tabId, contextId });
+                console.error('[toggleContextVisibility] Context not in tab:', {
+                    tabId,
+                    contextId,
+                });
+                return;
+            }
+
+            const isVisible = tab.visibleContextIds.includes(contextId);
+            const newVisibleIds = isVisible
+                ? tab.visibleContextIds.filter((id) => id !== contextId)
+                : [...tab.visibleContextIds, contextId];
+
+            state.byId[tabId] = {
+                ...tab,
+                visibleContextIds: newVisibleIds,
+            };
+
+            console.log('[toggleContextVisibility]', {
+                tabId,
+                contextId,
+                nowVisible: !isVisible,
+            });
+        },
+
+        /**
+         * Показать все контексты
+         */
+        showAllContexts(state, action: PayloadAction<Guid>) {
+            const tabId = action.payload;
+            const tab = state.byId[tabId];
+
+            if (!tab) {
+                console.error('[showAllContexts] Tab not found:', tabId);
                 return;
             }
 
             state.byId[tabId] = {
                 ...tab,
-                activeContextId: contextId,
+                visibleContextIds: [...tab.contextIds],
+            };
+        },
+
+        /**
+         * Скрыть все контексты
+         */
+        hideAllContexts(state, action: PayloadAction<Guid>) {
+            const tabId = action.payload;
+            const tab = state.byId[tabId];
+
+            if (!tab) {
+                console.error('[hideAllContexts] Tab not found:', tabId);
+                return;
+            }
+
+            state.byId[tabId] = {
+                ...tab,
+                visibleContextIds: [],
             };
         },
 
@@ -256,7 +297,7 @@ const tabsSlice = createSlice({
             state.byId[tabId] = {
                 ...tab,
                 contextIds: [],
-                activeContextId: undefined,
+                visibleContextIds: [],
             };
         },
 
@@ -284,32 +325,27 @@ export const {
     renameTab,
     addContextToTab,
     removeContextFromTab,
-    setActiveContext,
+    toggleContextVisibility,
+    showAllContexts,
+    hideAllContexts,
     clearTabContexts,
     clearAllTabs,
 } = tabsSlice.actions;
 
 // ============= СЕЛЕКТОРЫ =============
 
-// Базовые селекторы
 export const selectTabsState = (state: RootState): TabsState => state.tabs;
 
 export const selectActiveTabId = (state: RootState): Guid | undefined =>
     state.tabs.activeTabId;
 
-export const selectAllTabIds = (state: RootState): readonly Guid[] =>
-    state.tabs.allIds;
-
-// Мемоизированные селекторы
+export const selectAllTabIds = (state: RootState): readonly Guid[] => state.tabs.allIds;
 
 /**
- * Получить информацию о вкладке по ID
+ * Получить информацию о вкладке
  */
 export const selectTabInfo = createSelector(
-    [
-        (state: RootState) => state.tabs.byId,
-        (_state: RootState, tabId: Guid) => tabId,
-    ],
+    [(state: RootState) => state.tabs.byId, (_state: RootState, tabId: Guid) => tabId],
     (byId, tabId): TabInfo | undefined => byId[tabId]
 );
 
@@ -322,7 +358,7 @@ export const selectTabName = createSelector(
 );
 
 /**
- * Получить список контекстов в вкладке
+ * Получить все контексты вкладки
  */
 export const selectTabContextIds = createSelector(
     [selectTabInfo],
@@ -330,23 +366,25 @@ export const selectTabContextIds = createSelector(
 );
 
 /**
- * Получить активный контекст в вкладке
+ * Получить видимые контексты (фильтр)
  */
-export const selectActiveContextId = createSelector(
+export const selectVisibleContextIds = createSelector(
     [selectTabInfo],
-    (tabInfo): Guid | undefined => tabInfo?.activeContextId
+    (tabInfo): readonly Guid[] => tabInfo?.visibleContextIds ?? []
 );
 
 /**
- * Проверить, есть ли контексты в вкладке
+ * Проверить, видим ли контекст
  */
-export const selectHasContexts = createSelector(
-    [selectTabContextIds],
-    (contextIds): boolean => contextIds.length > 0
+export const selectIsContextVisible = createSelector(
+    [selectTabInfo, (_state: RootState, _tabId: Guid, contextId: Guid) => contextId],
+    (tabInfo, contextId): boolean => {
+        return tabInfo?.visibleContextIds.includes(contextId) ?? false;
+    }
 );
 
 /**
- * Получить количество контекстов в вкладке
+ * Получить количество контекстов
  */
 export const selectContextCount = createSelector(
     [selectTabContextIds],
@@ -354,13 +392,18 @@ export const selectContextCount = createSelector(
 );
 
 /**
+ * Проверить, есть ли контексты
+ */
+export const selectHasContexts = createSelector(
+    [selectTabContextIds],
+    (contextIds): boolean => contextIds.length > 0
+);
+
+/**
  * Получить информацию об активной вкладке
  */
 export const selectActiveTabInfo = createSelector(
-    [
-        (state: RootState) => state.tabs.byId,
-        selectActiveTabId,
-    ],
+    [(state: RootState) => state.tabs.byId, selectActiveTabId],
     (byId, activeTabId): TabInfo | undefined => {
         if (activeTabId === undefined) return undefined;
         return byId[activeTabId];
@@ -368,13 +411,10 @@ export const selectActiveTabInfo = createSelector(
 );
 
 /**
- * Получить все вкладки как массив
+ * Все вкладки как массив
  */
 export const selectAllTabs = createSelector(
-    [
-        (state: RootState) => state.tabs.byId,
-        selectAllTabIds,
-    ],
+    [(state: RootState) => state.tabs.byId, selectAllTabIds],
     (byId, allIds): readonly TabInfo[] => {
         return allIds.map((id) => byId[id]!);
     }

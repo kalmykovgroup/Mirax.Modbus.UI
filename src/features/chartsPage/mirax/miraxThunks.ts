@@ -220,7 +220,7 @@ export const fetchPortableDevices = createAsyncThunk<
                 })
             );
 
-            // ✅ Сохраняем данные в slice
+            //  Сохраняем данные в slice
             dispatch(
                 setDevicesData({
                     technicalRunId,
@@ -359,7 +359,7 @@ export const fetchSensors = createAsyncThunk<
                 })
             );
 
-            // ✅ Сохраняем данные в slice
+            //  Сохраняем данные в slice
             dispatch(
                 setSensorsData({
                     technicalRunId,

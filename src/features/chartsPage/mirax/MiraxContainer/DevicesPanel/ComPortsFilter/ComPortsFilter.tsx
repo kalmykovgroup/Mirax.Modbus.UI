@@ -7,8 +7,8 @@ import styles from './ComPortsFilter.module.css';
 
 interface Props {
     readonly devices: readonly PortableDeviceDto[];
-    readonly selectedPort: string | undefined; // ✅ Было: string | null
-    readonly onPortChange: (port: string | undefined) => void; // ✅ Было: (port: string | null) => void
+    readonly selectedPort: string | undefined; //  Было: string | null
+    readonly onPortChange: (port: string | undefined) => void; //  Было: (port: string | null) => void
 }
 
 /**
@@ -24,7 +24,7 @@ export function ComPortsFilter({ devices, selectedPort, onPortChange }: Props): 
 
         for (const device of devices) {
             const portName = device.comPortName;
-            // ✅ Было: portName != null
+            //  Было: portName != null
             if (portName !== undefined && portName.trim() !== '') {
                 portsSet.add(portName);
             }
@@ -44,7 +44,7 @@ export function ComPortsFilter({ devices, selectedPort, onPortChange }: Props): 
      */
     const handlePortClick = useCallback(
         (port: string): void => {
-            // ✅ Было: null, стало: undefined
+            //  Было: null, стало: undefined
             onPortChange(selectedPort === port ? undefined : port);
         },
         [selectedPort, onPortChange]
@@ -57,7 +57,7 @@ export function ComPortsFilter({ devices, selectedPort, onPortChange }: Props): 
         (port: string): number => {
             return devices.filter((d) => {
                 const portName = d.comPortName;
-                // ✅ Было: portName != null
+                //  Было: portName != null
                 return portName !== undefined && portName === port;
             }).length;
         },

@@ -186,7 +186,7 @@ export const selectAvailableBuckets = createSelector(
 // ============================================
 
 /**
- * ✅ МЕМОИЗИРОВАННЫЙ: Получить все поля в контексте
+ *  МЕМОИЗИРОВАННЫЙ: Получить все поля в контексте
  */
 export const selectContextFields = createSelector(
     [(state: RootState, contextId: Guid) => selectTemplate(state, contextId)],
@@ -196,7 +196,7 @@ export const selectContextFields = createSelector(
 );
 
 /**
- * ✅ МЕМОИЗИРОВАННЫЙ: Получить количество полей
+ *  МЕМОИЗИРОВАННЫЙ: Получить количество полей
  */
 export const selectContextFieldsCount = createSelector(
     [selectContextFields],
@@ -204,7 +204,7 @@ export const selectContextFieldsCount = createSelector(
 );
 
 /**
- * ✅ МЕМОИЗИРОВАННЫЙ: Проверка, есть ли данные для поля
+ *  МЕМОИЗИРОВАННЫЙ: Проверка, есть ли данные для поля
  */
 export const selectHasFieldData = createSelector(
     [
@@ -220,7 +220,7 @@ export const selectHasFieldData = createSelector(
 );
 
 /**
- * ✅ МЕМОИЗИРОВАННЫЙ: Получить все загружающиеся поля
+ *  МЕМОИЗИРОВАННЫЙ: Получить все загружающиеся поля
  */
 export const selectLoadingFields = createSelector(
     [(state: RootState, contextId: Guid) => selectAllViews(state, contextId)],
@@ -234,7 +234,7 @@ export const selectLoadingFields = createSelector(
 );
 
 /**
- * ✅ МЕМОИЗИРОВАННЫЙ: Проверка, идёт ли загрузка в контексте
+ *  МЕМОИЗИРОВАННЫЙ: Проверка, идёт ли загрузка в контексте
  */
 export const selectIsContextLoading = createSelector(
     [selectLoadingFields],
@@ -242,7 +242,7 @@ export const selectIsContextLoading = createSelector(
 );
 
 /**
- * ✅ МЕМОИЗИРОВАННЫЙ: Получить поля с ошибками
+ *  МЕМОИЗИРОВАННЫЙ: Получить поля с ошибками
  */
 export const selectFieldsWithErrors = createSelector(
     [(state: RootState, contextId: Guid) => selectAllViews(state, contextId)],

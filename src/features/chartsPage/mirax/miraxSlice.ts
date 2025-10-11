@@ -159,7 +159,7 @@ export const miraxSlice = createSlice({
             state.devicesByTechnicalRun[technicalRunId] = devices;
         },
 
-        // ✅ НОВОЕ - Сохранение сенсоров для устройства
+        //  НОВОЕ - Сохранение сенсоров для устройства
         setSensorsData: (
             state,
             action: PayloadAction<{

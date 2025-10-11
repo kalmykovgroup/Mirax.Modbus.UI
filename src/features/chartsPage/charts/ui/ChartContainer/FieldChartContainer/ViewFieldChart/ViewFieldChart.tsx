@@ -104,10 +104,10 @@ export const ViewFieldChart = memo(function ViewFieldChart({
         };
     }, [chartData.avgPoints]);
 
-// ✅ Хук вызываем напрямую, НЕ в useMemo
+//  Хук вызываем напрямую, НЕ в useMemo
     const yAxisControl = useYAxisRange(optimalYRange.min, optimalYRange.max);
 
-// ✅ Мемоизируем только customYAxisRange для options
+//  Мемоизируем только customYAxisRange для options
     const customYAxisRange = useMemo(
         () => yAxisControl.isCustom ? yAxisControl.currentRange : undefined,
         [yAxisControl.isCustom, yAxisControl.currentRange.min, yAxisControl.currentRange.max]
@@ -123,7 +123,7 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                 originalRange,
                 timeSettings,
                 gapsInfo,
-                customYAxisRange // ✅ Стабильная зависимость
+                customYAxisRange //  Стабильная зависимость
             }),
         [
             chartData.avgPoints,
@@ -133,7 +133,7 @@ export const ViewFieldChart = memo(function ViewFieldChart({
             originalRange,
             timeSettings,
             gapsInfo,
-            customYAxisRange // ✅ Изменяется только при ручной настройке
+            customYAxisRange //  Изменяется только при ручной настройке
         ]
     );
 

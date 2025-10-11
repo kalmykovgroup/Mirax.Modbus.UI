@@ -20,6 +20,12 @@ import { fetchSensors } from '@chartsPage/mirax/miraxThunks';
 import { CopyButton } from '@chartsPage/mirax/MiraxContainer/CopyButton/CopyButton';
 import { SensorsList } from '@chartsPage/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/SensorsList/SensorsList';
 import type { LoadSensorsRequest } from '@chartsPage/mirax/miraxThunk.types';
+import type {ChartReqTemplateDto} from "@chartsPage/template/shared/dtos/ChartReqTemplateDto.ts";
+import {Guid} from "@app/lib/types/Guid.ts";
+import {addContextToTab, createTab, setActiveTab} from "@chartsPage/charts/core/store/tabsSlice.ts";
+import {resolveTemplateForServer} from "@chartsPage/template/ui/templateResolve.ts";
+import type {ResolvedCharReqTemplate} from "@chartsPage/template/shared/dtos/ResolvedCharReqTemplate.ts";
+import {createContext} from "@chartsPage/charts/core/store/chartsSlice.ts";
 
 interface Props {
     readonly device: PortableDeviceDto;
@@ -27,21 +33,143 @@ interface Props {
     readonly isFirst: boolean;
 }
 
+// ========== КОНСТАНТЫ ДЕФОЛТНЫХ ШАБЛОНОВ ==========
+const DEFAULT_BASE_TEMPLATE_ID = '0199d3de-88f4-7ed7-b9da-10a33742a3d4';
+const DEFAULT_SENSOR_TEMPLATE_ID = '77777777-0000-0000-0000-000000000222';
+
 /**
- * Метод для вывода данных испытания, устройства и сенсоров в консоль
+ * Метод для построения графиков: базовый шаблон + шаблоны для каждого сенсора
  */
 async function logDeviceData(
+    dispatch: ReturnType<typeof useAppDispatch>,
     technicalRun: TechnicalRunDto,
     device: PortableDeviceDto,
-    sensors: readonly SensorDto[]
+    sensors: readonly SensorDto[],
+    allTemplates: readonly ChartReqTemplateDto[]
 ): Promise<void> {
+    console.group('📊 Построение графиков для устройства');
     console.log('TechnicalRunDto:', technicalRun);
     console.log('PortableDeviceDto:', device);
     console.log('SensorDto[]:', sensors);
+
+    try {
+        // 1. Получить дефолтные шаблоны по ID
+        const baseTemplate = allTemplates.find(t => t.id === DEFAULT_BASE_TEMPLATE_ID);
+        const sensorTemplate = allTemplates.find(t => t.id === DEFAULT_SENSOR_TEMPLATE_ID);
+
+        if (!baseTemplate) {
+            console.error(' Базовый шаблон не найден:', DEFAULT_BASE_TEMPLATE_ID);
+            alert('Базовый шаблон не найден. Проверьте конфигурацию.');
+            return;
+        }
+
+        if (!sensorTemplate) {
+            console.error(' Шаблон сенсора не найден:', DEFAULT_SENSOR_TEMPLATE_ID);
+            alert('Шаблон сенсора не найден. Проверьте конфигурацию.');
+            return;
+        }
+
+        // 2. Получить параметры для заполнения шаблонов
+        const deviceId = device.factoryNumber ?? '';
+        const technicalRunToStartId = technicalRun.id;
+
+       /* // 3. Получить временной диапазон из испытания
+        const fromMs = technicalRun.dateStarTime
+            ? new Date(technicalRun.dateStarTime).getTime()
+            : Date.now() - 24 * 60 * 60 * 1000; // По умолчанию: последние 24 часа
+
+        const toMs = technicalRun.dateEndTime
+            ? new Date(technicalRun.dateEndTime).getTime()
+            : Date.now();*/
+
+        // 4. Создать новую вкладку
+        const newTabId = Guid.NewGuid();
+        dispatch(
+            createTab({
+                id: newTabId,
+                name: `${device.name ?? 'Устройство'} - ${device.factoryNumber}`,
+            })
+        );
+        dispatch(setActiveTab(newTabId));
+
+        console.log(' Создана вкладка:', { tabId: newTabId });
+
+        // 5. Запустить базовый шаблон (BatteryVoltage, BatteryLevel, Temperature)
+        const baseParams = {
+            deviceId,
+            technicalRunToStartId,
+        };
+
+        const baseResolved = resolveTemplateForServer(baseTemplate, baseParams) as ResolvedCharReqTemplate;
+        /*baseResolved.resolvedFromMs = fromMs;
+        baseResolved.resolvedToMs = toMs;*/
+
+        const baseContextId = Guid.NewGuid();
+        dispatch(
+            createContext({
+                contextId: baseContextId,
+                template: baseResolved,
+            })
+        );
+        dispatch(addContextToTab({ tabId: newTabId, contextId: baseContextId }));
+
+        console.log(' Базовый шаблон запущен:', {
+            templateId: baseTemplate.id,
+            templateName: baseTemplate.name,
+            contextId: baseContextId,
+            params: baseParams,
+        });
+
+        // 6. Запустить шаблоны для каждого сенсора (Concentration)
+        for (const sensor of sensors) {
+            const sensorParams = {
+                deviceId,
+                technicalRunToStartId,
+                channelNumber: sensor.channelNumber ?? 0,
+            };
+
+            const sensorResolved = resolveTemplateForServer(
+                sensorTemplate,
+                sensorParams
+            ) as ResolvedCharReqTemplate;
+            /*sensorResolved.resolvedFromMs = fromMs;
+            sensorResolved.resolvedToMs = toMs;*/
+
+            // Изменяем имя шаблона для удобства (добавляем номер канала и газ)
+            sensorResolved.name = `${sensorTemplate.name} - Канал ${sensor.channelNumber} (${sensor.gas ?? 'N/A'})`;
+
+            const sensorContextId = Guid.NewGuid();
+            dispatch(
+                createContext({
+                    contextId: sensorContextId,
+                    template: sensorResolved,
+                })
+            );
+            dispatch(addContextToTab({ tabId: newTabId, contextId: sensorContextId }));
+
+            console.log(' Шаблон сенсора запущен:', {
+                templateId: sensorTemplate.id,
+                templateName: sensorResolved.name,
+                contextId: sensorContextId,
+                channelNumber: sensor.channelNumber,
+                gas: sensor.gas,
+            });
+        }
+
+        console.log('🎉 Все графики успешно созданы!');
+        console.log('📈 Всего контекстов:', 1 + sensors.length);
+
+    } catch (error) {
+        console.error(' Ошибка при построении графиков:', error);
+        alert('Ошибка при построении графиков. См. консоль для деталей.');
+    } finally {
+        console.groupEnd();
+    }
 }
 
+
 export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JSX.Element {
-    // ✅ Runtime-защита: проверяем обязательные данные
+    //  Runtime-защита: проверяем обязательные данные
     if (!technicalRun || !device) {
         console.error('PortableDeviceItem: отсутствуют обязательные данные', {
             technicalRun,
@@ -62,13 +190,15 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
     const abortControllerRef = useRef<AbortController | undefined>(undefined);
     const firstLoadTriggeredRef = useRef(false);
 
+    //  Получаем все шаблоны для построения графиков
+    const allTemplates = useAppSelector((state) => state.chartsTemplates.items);
 
-    // ✅ Получаем данные сенсоров из slice
+    //  Получаем данные сенсоров из slice
     const sensors = useAppSelector((state) =>
         selectSensorsData(state, technicalRun.id, factoryNumber)
     );
 
-    // ✅ Получаем статус загрузки сенсоров
+    //  Получаем статус загрузки сенсоров
     const sensorsLoadingState = useAppSelector((state) =>
         selectSensorsLoading(state, technicalRun.id, factoryNumber)
     );
@@ -184,7 +314,7 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
                 }
             }
 
-            await logDeviceData(technicalRun, device, actualSensors);
+            await logDeviceData(dispatch, technicalRun, device, actualSensors, allTemplates);
         },
         [technicalRun, device, sensors, databaseId, factoryNumber, dispatch]
     );

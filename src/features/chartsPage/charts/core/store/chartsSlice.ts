@@ -805,7 +805,7 @@ export const {
 // ============= ДОПОЛНИТЕЛЬНЫЕ СЕЛЕКТОРЫ =============
 
 /**
- * ✅ МЕМОИЗИРОВАННЫЙ: Получить все ID открытых контекстов
+ *  МЕМОИЗИРОВАННЫЙ: Получить все ID открытых контекстов
  */
 export const selectAllContextIds = createSelector(
     [(state: RootState) => state.contexts.byContext],
@@ -816,7 +816,7 @@ export const selectAllContextIds = createSelector(
 );
 
 /**
- * ✅ МЕМОИЗИРОВАННЫЙ: Получить информацию о контексте
+ *  МЕМОИЗИРОВАННЫЙ: Получить информацию о контексте
  */
 export const selectContextInfo = createSelector(
     [(state: RootState, contextId: Guid) => state.contexts.byContext[contextId]],

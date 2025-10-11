@@ -1,42 +1,134 @@
 // src/features/chartsPage/ChartsPage.tsx
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSelector } from 'react-redux';
+import { useAppDispatch } from '@/store/hooks';
+import { MiraxContainer } from '@chartsPage/mirax/MiraxContainer/MiraxContainer.tsx';
+import ChartTemplatesPanel from '@chartsPage/template/ui/ChartTemplatesPanel.tsx';
+import CollapsibleSection from '@chartsPage/components/Collapse/CollapsibleSection.tsx';
+import { DataSourcePanel } from '@chartsPage/metaData/ui/DataSourcePanel.tsx';
+import { TabContent } from '@chartsPage/charts/ui/TabContent/TabContent.tsx';
+import {
+    selectAllTabIds,
+    setActiveTab,
+    closeTab,
+    createTab,
+    selectTabName,
+} from '@chartsPage/charts/core/store/tabsSlice.ts';
+import { clearAll } from '@chartsPage/charts/core/store/chartsSlice';
+import { useConfirm } from '@ui/components/ConfirmProvider/ConfirmProvider';
+import type { Guid } from '@app/lib/types/Guid';
+import type { RootState } from '@/store/store';
 import styles from './ChartsPage.module.css';
-import {selectActiveTabId, selectAllTabIds} from "@chartsPage/charts/core/store/tabsSlice.ts";
-import {ChartTabBar} from "@chartsPage/charts/ui/ChartTabBar/ChartTabBar.tsx";
-import {MiraxContainer} from "@chartsPage/mirax/MiraxContainer/MiraxContainer.tsx";
-import ChartTemplatesPanel from "@chartsPage/template/ui/ChartTemplatesPanel.tsx";
-import CollapsibleSection from "@chartsPage/components/Collapse/CollapsibleSection.tsx";
-import {DataSourcePanel} from "@chartsPage/metaData/ui/DataSourcePanel.tsx";
-import {TabContent} from "@chartsPage/charts/ui/TabContent/TabContent.tsx";
 
-type TopTab = 'mirax' | 'templates' | 'charts';
+type TopTab = 'mirax' | 'templates';
 
 export function ChartsPage() {
-    const [activeTopTab, setActiveTopTab] = useState<TopTab>('templates');
+    const dispatch = useAppDispatch();
+    const confirm = useConfirm();
+
+    const [activeTopTab, setActiveTopTab] = useState<TopTab | Guid>('templates');
 
     const allTabIds = useSelector(selectAllTabIds);
-    const activeTabId = useSelector(selectActiveTabId);
 
-    // Автопереключение на charts при создании первой вкладки
+    // Запоминаем предыдущее количество вкладок
+    const prevTabsCountRef = useRef(allTabIds.length);
+
+    // Автопереключение на первую вкладку графиков при создании (0 → 1)
     useEffect(() => {
-        if (allTabIds.length > 0 && activeTopTab !== 'charts') {
-            setActiveTopTab('charts');
-        }
-    }, [allTabIds.length, activeTopTab]);
+        const prevCount = prevTabsCountRef.current;
+        const currentCount = allTabIds.length;
 
-    const handleTabChange = (tab: TopTab) => {
+        if (prevCount === 0 && currentCount > 0) {
+            const firstTabId = allTabIds[0];
+            if (firstTabId) {
+                setActiveTopTab(firstTabId);
+                dispatch(setActiveTab(firstTabId));
+            }
+        }
+
+        prevTabsCountRef.current = currentCount;
+    }, [allTabIds.length, allTabIds, dispatch]);
+
+    // Обработка переключения вкладок
+    const handleTabChange = (tab: TopTab | Guid) => {
         setActiveTopTab(tab);
+
+        // Если это вкладка графика, обновляем activeTabId в store
+        if (tab !== 'mirax' && tab !== 'templates') {
+            dispatch(setActiveTab(tab as Guid));
+        }
+    };
+
+    // Закрытие вкладки графика
+    const handleCloseTab = async (e: React.MouseEvent, tabId: Guid) => {
+        e.stopPropagation();
+
+        const ok = await confirm({
+            title: 'Закрыть вкладку?',
+            description: 'Данные графиков будут удалены.',
+            confirmText: 'Закрыть',
+            cancelText: 'Отмена',
+            danger: true,
+        });
+
+        if (!ok) return;
+
+        dispatch(closeTab(tabId));
+
+        // Если закрыли активную вкладку, переключаемся на другую
+        if (activeTopTab === tabId) {
+            const remaining = allTabIds.filter(id => id !== tabId);
+            if (remaining.length > 0) {
+                setActiveTopTab(remaining[0]!);
+                dispatch(setActiveTab(remaining[0]!));
+            } else {
+                setActiveTopTab('templates');
+            }
+        }
+    };
+
+    // Создание новой вкладки
+    const handleCreateNewTab = () => {
+        const newTabId = crypto.randomUUID() as Guid;
+        dispatch(
+            createTab({
+                id: newTabId,
+                name: `Вкладка ${allTabIds.length + 1}`,
+            })
+        );
+        setActiveTopTab(newTabId);
+        dispatch(setActiveTab(newTabId));
+    };
+
+    // Закрыть все вкладки
+    const handleCloseAll = async () => {
+        const ok = await confirm({
+            title: 'Закрыть все вкладки?',
+            description: 'Все данные графиков будут удалены.',
+            confirmText: 'Закрыть все',
+            cancelText: 'Отмена',
+            danger: true,
+        });
+
+        if (!ok) return;
+
+        allTabIds.forEach(tabId => {
+            dispatch(closeTab(tabId));
+        });
+        dispatch(clearAll());
+        setActiveTopTab('templates');
     };
 
     return (
         <div className={styles.chartsPage}>
-            {/* Верхняя навигация (3 вкладки) */}
+            {/* ВЕРХНЯЯ ПАНЕЛЬ - все вкладки на одном уровне */}
             <div className={styles.topTabBar}>
+                {/* Системные вкладки */}
                 <button
                     className={activeTopTab === 'mirax' ? styles.topTabActive : styles.topTab}
                     onClick={() => handleTabChange('mirax')}
+                    type="button"
                 >
                     Mirax
                 </button>
@@ -44,71 +136,114 @@ export function ChartsPage() {
                 <button
                     className={activeTopTab === 'templates' ? styles.topTabActive : styles.topTab}
                     onClick={() => handleTabChange('templates')}
+                    type="button"
                 >
                     Шаблоны и источники
                 </button>
 
-                {/* Третья вкладка с ChartTabBar */}
-                <div
-                    role="button"
-                    tabIndex={0}
-                    className={
-                        activeTopTab === 'charts' ? styles.topTabActiveWrapper : styles.topTabWrapper
-                    }
-                    onClick={() => handleTabChange('charts')}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleTabChange('charts');
-                        }
-                    }}
-                >
-                    <ChartTabBar />
-                </div>
+                {/* Разделитель */}
+                {allTabIds.length > 0 && <div className={styles.divider} />}
+
+                {/* Вкладки графиков */}
+                {allTabIds.map(tabId => (
+                    <ChartTab
+                        key={tabId}
+                        tabId={tabId}
+                        isActive={activeTopTab === tabId}
+                        onActivate={() => handleTabChange(tabId)}
+                        onClose={(e) => handleCloseTab(e, tabId)}
+                    />
+                ))}
+
+                {/* Кнопка создания новой вкладки */}
+                {allTabIds.length > 0 && (
+                    <>
+                        <button
+                            className={styles.addTabButton}
+                            onClick={handleCreateNewTab}
+                            title="Создать новую вкладку"
+                            type="button"
+                        >
+                            +
+                        </button>
+
+                        {/* Кнопка закрыть все */}
+                        {allTabIds.length > 1 && (
+                            <button
+                                className={styles.closeAllButton}
+                                onClick={handleCloseAll}
+                                title="Закрыть все вкладки"
+                                type="button"
+                            >
+                                ✕ Все
+                            </button>
+                        )}
+                    </>
+                )}
             </div>
 
-            {/* Контент вкладок верхнего уровня */}
-            <div className={styles.topTabContent}>
-                {/* Вкладка Mirax */}
-                <div className={activeTopTab === 'mirax' ? styles.tabVisible : styles.tabHidden}>
-                    <MiraxContainer dbId={'77777777-0000-0000-0000-000000000011'} />
-                </div>
+            {/* КОНТЕНТ */}
+            <div className={styles.contentArea}>
+                {/* Mirax */}
+                {activeTopTab === 'mirax' && (
+                    <div className={styles.pageContent}>
+                        <MiraxContainer dbId={'77777777-0000-0000-0000-000000000011'} />
+                    </div>
+                )}
 
-                {/* Вкладка Шаблоны и источники */}
-                <div className={activeTopTab === 'templates' ? styles.tabVisible : styles.tabHidden}>
-                    <ChartTemplatesPanel />
-                    <CollapsibleSection>
-                        <DataSourcePanel />
-                    </CollapsibleSection>
-                </div>
+                {/* Шаблоны */}
+                {activeTopTab === 'templates' && (
+                    <div className={styles.pageContent}>
+                        <ChartTemplatesPanel />
+                        <CollapsibleSection>
+                            <DataSourcePanel />
+                        </CollapsibleSection>
+                    </div>
+                )}
 
-                {/* Вкладка Графики - показываем сообщение если нет вкладок */}
-                <div className={activeTopTab === 'charts' ? styles.tabVisible : styles.tabHidden}>
-                    {allTabIds.length === 0 && (
-                        <div className={styles.emptyState}>
-                            <p>Выберите шаблон из списка слева для создания графика</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Контейнер для ВСЕХ вкладок - рендерятся всегда */}
-            <div
-                className={
-                    activeTopTab === 'charts'
-                        ? styles.chartsContainerVisible
-                        : styles.chartsContainerHidden
-                }
-            >
-                {allTabIds.map((tabId) => (
+                {/* Вкладки графиков */}
+                {allTabIds.map(tabId => (
                     <div
                         key={tabId}
-                        className={tabId === activeTabId ? styles.tabVisible : styles.tabHidden}
+                        style={{
+                            display: activeTopTab === tabId ? 'block' : 'none',
+                        }}
+                        className={styles.pageContent}
                     >
                         <TabContent tabId={tabId} />
                     </div>
                 ))}
             </div>
+        </div>
+    );
+}
+
+// ========== КОМПОНЕНТ ВКЛАДКИ ГРАФИКА ==========
+
+interface ChartTabProps {
+    readonly tabId: Guid;
+    readonly isActive: boolean;
+    readonly onActivate: () => void;
+    readonly onClose: (e: React.MouseEvent) => void;
+}
+
+function ChartTab({ tabId, isActive, onActivate, onClose }: ChartTabProps) {
+    const tabName = useSelector((state: RootState) => selectTabName(state, tabId));
+
+    return (
+        <div
+            className={isActive ? styles.chartTabActive : styles.chartTab}
+            onClick={onActivate}
+        >
+            <span className={styles.tabLabel}>{tabName ?? 'Вкладка'}</span>
+            <button
+                className={styles.tabCloseButton}
+                onClick={onClose}
+                title="Закрыть вкладку"
+                type="button"
+            >
+                ×
+            </button>
         </div>
     );
 }

@@ -73,15 +73,7 @@
 }
 
 
-.card[data-theme="light"] .btnExec:hover{
-    background: #202020;
-    border-color: #ffc580;
-}
 
-.card[data-theme="dark"] .btnExec:hover  {
-    background: #202020;
-    border-color: #ffc580;
-}
 
 
 .btnExec:active {

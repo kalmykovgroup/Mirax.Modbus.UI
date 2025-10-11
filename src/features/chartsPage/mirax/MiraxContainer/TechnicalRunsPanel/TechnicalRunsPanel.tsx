@@ -42,14 +42,14 @@ export function TechnicalRunsPanel(): JSX.Element {
 
     const technicalRuns = useAppSelector(selectTechnicalRunsData);
 
-    // ✅ Автозагрузка при монтировании
+    //  Автозагрузка при монтировании
     useEffect(() => {
         if (databaseId === undefined) {
             console.error('Database id is undefined');
             return;
         }
 
-        // ✅ Ключевая проверка: если уже загружается или есть данные - не стартуем
+        //  Ключевая проверка: если уже загружается или есть данные - не стартуем
         if (isLoading) {
             console.warn('Данные уже загружаются');
             return;

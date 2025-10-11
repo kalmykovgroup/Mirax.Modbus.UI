@@ -1,52 +1,242 @@
-/* src/features/chartsPage/tabs/ui/TabContent.module.css */
+/* src/features/chartsPage/charts/ui/TabContent/TabContent.module.css */
 
 .tabContent {
     display: flex;
     flex-direction: column;
+    gap: 24px;
     width: 100%;
-    height: 100%;
-    gap: 12px;
 }
 
-.emptyState {
+/* ========== ФИЛЬТР КОНТЕКСТОВ ========== */
+.contextFilter {
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    /* УБРАЛИ: position: sticky, top, z-index */
+}
+
+/* Кнопка раскрытия */
+.filterToggle {
     display: flex;
     align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.filterToggle:hover {
+    background: #fafafa;
+}
+
+.filterToggle[aria-expanded='true'] {
+    background: #f5f5f5;
+}
+
+.filterArrow {
+    font-size: 12px;
+    color: #999;
+    transition: transform 0.2s ease;
+}
+
+.filterTitle {
+    flex: 1;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Раскрывающийся контент */
+.filterContent {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 16px 12px 16px;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.filterActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.filterToggleAll {
+    padding: 4px 8px;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #555;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filterToggleAll:hover {
+    background: #fafafa;
+    border-color: #1890ff;
+    color: #1890ff;
+}
+
+.contextList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.contextList::-webkit-scrollbar {
+    width: 6px;
+}
+
+.contextList::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 3px;
+}
+
+.contextList::-webkit-scrollbar-thumb {
+    background: #d9d9d9;
+    border-radius: 3px;
+}
+
+.contextList::-webkit-scrollbar-thumb:hover {
+    background: #bfbfbf;
+}
+
+.contextItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.contextItem:hover {
+    background: #fafafa;
+}
+
+.contextCheckbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+}
+
+.contextCheckbox input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.contextName {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.contextRemove {
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: transparent;
+    color: #999;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.contextRemove:hover {
+    background: rgba(244, 67, 54, 0.1);
+    color: #f44336;
+}
+
+/* ========== EMPTY STATE ========== */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
+    gap: 12px;
+    min-height: 300px;
     padding: 48px 24px;
     color: #999;
     font-size: 16px;
     text-align: center;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
 }
 
-.contextsContainer {
-    position: relative;
-    width: 100%;
-    flex: 1;
+.hint {
+    font-size: 14px;
+    color: #bbb;
 }
 
-/* Видимый контекст */
-.contextVisible {
-    width: 100%;
-    position: relative;
-    visibility: visible;
-    opacity: 1;
-    pointer-events: auto;
-    height: auto;
-    overflow: visible;
+/* ========== СЕКЦИИ КОНТЕКСТОВ ========== */
+.contextSections {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
-/* Скрытый контекст - сжат до минимума */
-.contextHidden {
-    position: absolute;
-    top: 0;
-    left: 0;
+.contextSection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.contextHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.contextTitle {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.contextContent {
     width: 100%;
-    height: 1px;
-    min-height: 1px;
-    max-height: 1px;
-    visibility: hidden;
-    opacity: 0;
-    pointer-events: none;
-    overflow: hidden;
-    z-index: -1;
 }

@@ -8,6 +8,8 @@ import type {SqlFilter} from "@chartsPage/template/shared//dtos/SqlFilter.ts";
 export type ResolvedCharReqTemplate = {
     readonly id: Guid
 
+    name: string
+
     // настройки графиков
     readonly databaseId: Guid
 

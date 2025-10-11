@@ -34,10 +34,10 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
     const isLoading = useAppSelector((state) => selectIsDevicesLoading(state, technicalRunId));
     const error = useAppSelector((state) => selectDevicesError(state, technicalRunId));
 
-    // ✅ Получаем данные испытания через селектор
+    //  Получаем данные испытания через селектор
     const technicalRun = useAppSelector((state) => selectTechnicalRunById(state, technicalRunId));
 
-    // ✅ Получаем устройства из slice через селектор
+    //  Получаем устройства из slice через селектор
     const devices = useAppSelector((state) => selectDevicesByTechnicalRunId(state, technicalRunId));
 
     const [deviceSearchQuery, setDeviceSearchQuery] = useState('');
@@ -106,7 +106,7 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
         (deviceSearchQuery.trim() || selectedPort !== undefined) &&
         filteredAndSortedDevices.length === 0;
 
-    // ✅ Проверка: нет данных испытания
+    //  Проверка: нет данных испытания
     if (technicalRun === undefined) {
         return (
             <div className={styles.container}>

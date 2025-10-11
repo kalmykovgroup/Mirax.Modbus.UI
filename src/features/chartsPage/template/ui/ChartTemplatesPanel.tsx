@@ -5,26 +5,36 @@ import { useSelector } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks.ts';
 import { useConfirm } from '@ui/components/ConfirmProvider/ConfirmProvider.tsx';
 import { useTheme } from '@app/providers/theme/useTheme.ts';
+import { Guid } from '@app/lib/types/Guid.ts';
 import type { ResolvedCharReqTemplate } from '@chartsPage/template/shared/dtos/ResolvedCharReqTemplate.ts';
+import type { ChartReqTemplateDto } from '@chartsPage/template/shared/dtos/ChartReqTemplateDto.ts';
+import type { TimeRangeBounds } from '@chartsPage/charts/core/store/types/chart.types.ts';
+
+// Store
 import {
-    applyTemplate,
     deleteChartReqTemplate,
     fetchChartReqTemplates,
     selectChartReqTemplates,
-    selectChartReqTemplatesLoaded,
+    selectChartReqTemplatesLoaded, setActiveTemplate,
 } from '@chartsPage/template/store/chartsTemplatesSlice.ts';
 import {
     fetchDatabases,
     selectChartsMetaLoading,
     selectDatabasesLoaded,
 } from '@chartsPage/metaData/store/chartsMetaSlice.ts';
-import type { ChartReqTemplateDto } from '@chartsPage/template/shared/dtos/ChartReqTemplateDto.ts';
-import { setResolvedCharReqTemplate } from '@chartsPage/charts/core/store/chartsSlice.ts';
-import type { TimeRangeBounds } from '@chartsPage/charts/core/store/types/chart.types.ts';
+import { createContext } from '@chartsPage/charts/core/store/chartsSlice.ts'; // ← Используем createContext
+import {
+    addContextToTab,
+    createTab,
+    selectAllTabIds,
+    setActiveTab,
+} from '@chartsPage/charts/core/store/tabsSlice.ts';
 
-
+// UI
 import TemplatesList from './TemplatesList/TemplatesList.tsx';
 import ExecuteTemplateModal from './ExecuteTemplateModal/ExecuteTemplateModal.tsx';
+
+// Utils
 import {
     extractAllKeysFromTemplate,
     resolveTemplateForServer,
@@ -32,27 +42,20 @@ import {
 } from './templateResolve';
 
 import styles from './ChartTemplatesPanel.module.css';
-import {
-    addContextToTab, createTab,
-    selectActiveTabId,
-    selectAllTabIds,
-    setActiveContext, setActiveTab
-} from "@chartsPage/charts/core/store/tabsSlice.ts";
-import {Guid} from "@app/lib/types/Guid.ts";
+import {SelectTabModal} from "@chartsPage/charts/ui/SelectTabModal/SelectTabModal.tsx";
+
 
 export default function ChartTemplatesPanel() {
     const dispatch = useAppDispatch();
     const { theme } = useTheme();
-    const items = useSelector(selectChartReqTemplates);
+    const confirm = useConfirm();
 
+    // Селекторы
+    const items = useSelector(selectChartReqTemplates);
     const databasesLoaded = useSelector(selectDatabasesLoaded);
     const databasesLoading = useSelector(selectChartsMetaLoading).databases;
     const chartReqTemplatesLoaded = useSelector(selectChartReqTemplatesLoaded);
-
-    const activeTabId = useSelector(selectActiveTabId);
     const allTabIds = useSelector(selectAllTabIds);
-
-    const confirm = useConfirm();
 
     // Инициация загрузки баз данных
     useEffect(() => {
@@ -68,8 +71,11 @@ export default function ChartTemplatesPanel() {
         }
     }, [dispatch, databasesLoaded, chartReqTemplatesLoaded]);
 
-    // Exec modal state
+    // Состояние модального окна выполнения
     const [execTpl, setExecTpl] = useState<ChartReqTemplateDto | null>(null);
+
+    // Состояние модального окна выбора вкладки
+    const [selectTabTpl, setSelectTabTpl] = useState<ResolvedCharReqTemplate | null>(null);
 
     const hasParams = useMemo(() => {
         if (!execTpl) return false;
@@ -80,7 +86,11 @@ export default function ChartTemplatesPanel() {
         );
     }, [execTpl]);
 
-    // Пользователь нажал "Удалить шаблон"
+    // ========== ОБРАБОТЧИКИ ==========
+
+    /**
+     * Удаление шаблона
+     */
     const handleDelete = async (id: string) => {
         const ok = await confirm({
             title: 'Удалить шаблон?',
@@ -94,79 +104,145 @@ export default function ChartTemplatesPanel() {
         }
     };
 
-    // Этот метод вызывается когда пользователь нажал выполнить шаблон
+    const onPick = (tpl: ChartReqTemplateDto) => {
+        console.log('pick', tpl);
+        dispatch(setActiveTemplate(tpl))
+    }
+
+    /**
+     * Запуск выполнения шаблона
+     */
     const handleExecute = (tpl: ChartReqTemplateDto) => {
-        // Если ключей нет — сразу выполнить
+        // Если параметров нет - выполняем сразу
         if (
             extractAllKeysFromTemplate(tpl).length === 0 &&
             tpl.originalFromMs !== undefined &&
             tpl.originalToMs !== undefined
         ) {
-            executeTemplate(tpl as ResolvedCharReqTemplate);
+            const resolved = tpl as ResolvedCharReqTemplate;
+            handleTemplateResolved(resolved);
         } else {
-            // Требуется заполнить данными
+            // Открываем модалку для заполнения параметров
             setExecTpl(tpl);
         }
     };
 
-    // Выполнение шаблона после заполнения параметров
-    const handleSubmitExec = (result: { values: Record<string, unknown>; range: TimeRangeBounds }) => {
+    /**
+     * Подтверждение выполнения шаблона с параметрами
+     */
+    const handleSubmitExec = (result: {
+        values: Record<string, unknown>;
+        range: TimeRangeBounds;
+    }) => {
         if (!execTpl) return;
 
+        // Валидация обязательных параметров
         const errors = missingRequiredParams(execTpl.params, result.values);
-        if (errors.length) {
+        if (errors.length > 0) {
             alert(errors[0]);
             return;
         }
 
+        // Резолвинг шаблона с параметрами
         const tmpl: ChartReqTemplateDto = resolveTemplateForServer(execTpl, result.values);
 
-        const resolved = {
+        const resolved: ResolvedCharReqTemplate = {
             ...tmpl,
             resolvedFromMs: result.range.fromMs,
             resolvedToMs: result.range.toMs,
         } as ResolvedCharReqTemplate;
 
-        executeTemplate(resolved);
+        handleTemplateResolved(resolved);
         setExecTpl(null);
     };
 
-    // НОВАЯ ЛОГИКА: Создание контекста + добавление в вкладку
-    const executeTemplate = (resolved: ResolvedCharReqTemplate) => {
-        const contextId = resolved.id; // ID шаблона = ID контекста
-
-        // 1. Создать контекст в contextsSlice
-        dispatch(setResolvedCharReqTemplate(resolved));
-
-        // 2. Определить целевую вкладку
-        let targetTabId = activeTabId;
-
-        if (!targetTabId) {
-            // Создать новую вкладку если нет активной
-            targetTabId = Guid.NewGuid();
-            dispatch(
-                createTab({
-                    id: targetTabId,
-                    name: `Вкладка ${allTabIds.length + 1}`,
-                })
-            );
-            dispatch(setActiveTab(targetTabId));
+    /**
+     * Обработка резолвнутого шаблона:
+     * - Если нет открытых вкладок → создать новую
+     * - Если есть вкладки → показать выбор
+     */
+    const handleTemplateResolved = (resolved: ResolvedCharReqTemplate) => {
+        if (allTabIds.length === 0) {
+            // Нет открытых вкладок - создаём новую сразу
+            executeTemplateInNewTab(resolved);
+        } else {
+            // Есть вкладки - показываем модалку выбора
+            setSelectTabTpl(resolved);
         }
+    };
 
-        // 3. Добавить контекст в вкладку
-        dispatch(addContextToTab({ tabId: targetTabId, contextId }));
-        dispatch(setActiveContext({ tabId: targetTabId, contextId }));
+    /**
+     * Создание новой вкладки и добавление в неё контекста
+     */
+    const executeTemplateInNewTab = (resolved: ResolvedCharReqTemplate) => {
+        // 1. Генерировать уникальный contextId
+        const contextId = Guid.NewGuid();
 
-        console.log('[ChartTemplatesPanel] Template executed:', {
+        // 2. Создать контекст в chartsSlice
+        dispatch(
+            createContext({
+                contextId,
+                template: resolved,
+            })
+        );
+
+        // 3. Создать новую вкладку
+        const newTabId = Guid.NewGuid();
+        dispatch(
+            createTab({
+                id: newTabId,
+                name: `Вкладка ${allTabIds.length + 1}`,
+            })
+        );
+        dispatch(setActiveTab(newTabId));
+
+        // 4. Добавить контекст в вкладку
+        dispatch(addContextToTab({ tabId: newTabId, contextId }));
+
+        console.log('[ChartTemplatesPanel] Created new tab:', {
             templateId: resolved.id,
+            templateName: resolved.name,
             contextId,
-            tabId: targetTabId,
+            tabId: newTabId,
         });
     };
 
+    /**
+     * Добавление контекста в существующую вкладку
+     */
+    const executeTemplateInExistingTab = (resolved: ResolvedCharReqTemplate, tabId: Guid) => {
+        // 1. Генерировать уникальный contextId
+        const contextId = Guid.NewGuid();
+
+        // 2. Создать контекст в chartsSlice
+        dispatch(
+            createContext({
+                contextId,
+                template: resolved,
+            })
+        );
+
+        // 3. Добавить контекст в выбранную вкладку
+        dispatch(addContextToTab({ tabId, contextId }));
+
+        // 4. Активировать вкладку
+        dispatch(setActiveTab(tabId));
+
+        console.log('[ChartTemplatesPanel] Added to existing tab:', {
+            templateId: resolved.id,
+            templateName: resolved.name,
+            contextId,
+            tabId,
+        });
+    };
+
+    /**
+     * Показать детали шаблона (debug)
+     */
     const onExecuteShow = (template: ChartReqTemplateDto) => {
-        alert('show template ' + template.name);
+        console.group(`📋 Template Details: ${template.name}`);
         console.log(template);
+        console.groupEnd();
     };
 
     return (
@@ -177,17 +253,33 @@ export default function ChartTemplatesPanel() {
 
             <TemplatesList
                 items={items}
-                onPick={(tpl) => dispatch(applyTemplate(tpl))}
+                onPick={onPick}
                 onDelete={handleDelete}
                 onExecute={handleExecute}
                 onExecuteShow={onExecuteShow}
             />
 
+            {/* Модальное окно для заполнения параметров */}
             {execTpl && hasParams && (
                 <ExecuteTemplateModal
                     template={execTpl}
                     onCancel={() => setExecTpl(null)}
                     onSubmit={handleSubmitExec}
+                />
+            )}
+
+            {/* Модальное окно выбора вкладки */}
+            {selectTabTpl && (
+                <SelectTabModal
+                    onSelectExisting={(tabId) => {
+                        executeTemplateInExistingTab(selectTabTpl, tabId);
+                        setSelectTabTpl(null);
+                    }}
+                    onCreateNew={() => {
+                        executeTemplateInNewTab(selectTabTpl);
+                        setSelectTabTpl(null);
+                    }}
+                    onCancel={() => setSelectTabTpl(null)}
                 />
             )}
         </div>
