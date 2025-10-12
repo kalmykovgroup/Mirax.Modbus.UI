@@ -1,77 +1,91 @@
-// @chartsPage/charts/ui/ChartContainer/FieldChartContainer/ChartHeader/SyncCheckbox/SyncCheckbox.tsx
+// src/features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncCheckbox/SyncCheckbox.tsx
 
-import React, { useCallback, useMemo } from 'react';
+import { useCallback} from 'react';
 import { useSelector } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
-import { addSyncField, removeSyncField } from '@chartsPage/charts/core/store/chartsSlice';
 import type { RootState } from '@/store/store';
+import type { Guid } from '@app/lib/types/Guid';
 import styles from './SyncCheckbox.module.css';
-import type {Guid} from "@app/lib/types/Guid.ts";
 import {
-    selectSyncEnabled,
-    selectSyncFields,
-    selectTemplate
-} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
+    addTabSyncField,
+    removeTabSyncField,
+    selectActiveTabId,
+    selectTabSyncEnabled
+} from "@chartsPage/charts/core/store/tabsSlice.ts";
+import {selectIsTabFieldSynced} from "@chartsPage/charts/core/store/tabsSelectors.ts";
 
 interface SyncCheckboxProps {
-    readonly contextId: Guid; // ← ТОЛЬКО ДОБАВИЛИ
+    readonly contextId: Guid;
     readonly fieldName: string;
 }
 
+/**
+ * Чекбокс для добавления/удаления поля в синхронизацию на уровне вкладки
+ * Теперь работает с общей синхронизацией всех шаблонов текущей вкладки
+ */
 export function SyncCheckbox({ fieldName, contextId }: SyncCheckboxProps) {
     const dispatch = useAppDispatch();
 
-    const syncEnabled = useSelector((state: RootState) =>
-        selectSyncEnabled(state, contextId)
-    );
+    // Получаем активную вкладку
+    const activeTabId = useSelector(selectActiveTabId);
 
-    const syncFields = useSelector((state: RootState) =>
-        selectSyncFields(state, contextId)
-    );
-
-    const template = useSelector((state: RootState) =>
-        selectTemplate(state, contextId)
-    );
-
-    // Находим FieldDto для текущего поля
-    const fieldDto = useMemo(() => {
-        return template?.selectedFields.find(f => f.name === fieldName);
-    }, [template?.selectedFields, fieldName]);
+    // Проверяем, включена ли синхронизация
+    const syncEnabled = useSelector((state: RootState) => {
+        if (!activeTabId) return false;
+        return selectTabSyncEnabled(state, activeTabId);
+    });
 
     // Проверяем, выбрано ли поле для синхронизации
-    const isChecked = useMemo(() => {
-        return syncFields.some(f => f.name === fieldName);
-    }, [syncFields, fieldName]);
+    const isChecked = useSelector((state: RootState) => {
+        if (!activeTabId) return false;
+        return selectIsTabFieldSynced(state, activeTabId, contextId, fieldName);
+    });
 
-    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!fieldDto) {
-            console.error('[SyncCheckbox] FieldDto not found for:', fieldName);
-            return;
-        }
+    const handleChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            if (!activeTabId) {
+                console.warn('[SyncCheckbox] No active tab');
+                return;
+            }
 
-        if (e.target.checked) {
-            dispatch(addSyncField({ contextId, field: fieldDto })); // ← добавили contextId
-        } else {
-            dispatch(removeSyncField({ contextId, fieldName })); // ← добавили contextId
-        }
-    }, [dispatch, fieldDto, fieldName, contextId]);
+            if (e.target.checked) {
+                dispatch(
+                    addTabSyncField({
+                        tabId: activeTabId,
+                        contextId,
+                        fieldName,
+                    })
+                );
+            } else {
+                dispatch(
+                    removeTabSyncField({
+                        tabId: activeTabId,
+                        contextId,
+                        fieldName,
+                    })
+                );
+            }
+        },
+        [dispatch, activeTabId, contextId, fieldName]
+    );
 
-    // Не показываем чекбокс если синхронизация выключена
-    if (!syncEnabled) {
+    // Не показываем чекбокс если синхронизация выключена или нет активной вкладки
+    if (!syncEnabled || !activeTabId) {
         return null;
     }
 
     return (
-        <label className={styles.syncCheckbox} title="Синхронизировать зум с другими графиками">
+        <label
+            className={styles.syncCheckbox}
+            title="Синхронизировать зум с другими графиками"
+        >
             <input
                 type="checkbox"
                 checked={isChecked}
                 onChange={handleChange}
                 className={styles.checkbox}
             />
-            <span className={styles.label}>
-                Синхронизация
-            </span>
+            <span className={styles.label}>Синхронизация</span>
         </label>
     );
 }

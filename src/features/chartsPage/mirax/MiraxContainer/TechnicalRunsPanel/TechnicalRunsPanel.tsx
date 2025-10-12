@@ -25,7 +25,7 @@ import {
 } from '@chartsPage/mirax/MiraxContainer/utils/miraxHelpers';
 import { SearchInput } from '@chartsPage/mirax/MiraxContainer/SearchInput/SearchInput';
 import { LoadingProgress } from '@chartsPage/mirax/MiraxContainer/LoadingProgress/LoadingProgress';
-import {CopyButton} from "@chartsPage/mirax/MiraxContainer/CopyButton/CopyButton.tsx";
+import {CopyButton} from "@chartsPage/components/CopyButton/CopyButton.tsx";
 
 export function TechnicalRunsPanel(): JSX.Element {
     const dispatch = useAppDispatch();

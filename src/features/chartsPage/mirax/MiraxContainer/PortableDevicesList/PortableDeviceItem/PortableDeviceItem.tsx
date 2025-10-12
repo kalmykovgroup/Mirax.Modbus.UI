@@ -17,7 +17,7 @@ import {
     selectSensorsLoading,
 } from '@chartsPage/mirax/miraxSlice';
 import { fetchSensors } from '@chartsPage/mirax/miraxThunks';
-import { CopyButton } from '@chartsPage/mirax/MiraxContainer/CopyButton/CopyButton';
+import { CopyButton } from '@chartsPage/components/CopyButton/CopyButton';
 import { SensorsList } from '@chartsPage/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/SensorsList/SensorsList';
 import type { LoadSensorsRequest } from '@chartsPage/mirax/miraxThunk.types';
 import type {ChartReqTemplateDto} from "@chartsPage/template/shared/dtos/ChartReqTemplateDto.ts";
@@ -34,7 +34,7 @@ interface Props {
 }
 
 // ========== КОНСТАНТЫ ДЕФОЛТНЫХ ШАБЛОНОВ ==========
-const DEFAULT_BASE_TEMPLATE_ID = '0199d3de-88f4-7ed7-b9da-10a33742a3d4';
+const DEFAULT_BASE_TEMPLATE_ID = '77777777-0000-0000-0000-000000000223';
 const DEFAULT_SENSOR_TEMPLATE_ID = '77777777-0000-0000-0000-000000000222';
 
 /**
@@ -48,10 +48,6 @@ async function logDeviceData(
     allTemplates: readonly ChartReqTemplateDto[]
 ): Promise<void> {
     console.group('📊 Построение графиков для устройства');
-    console.log('TechnicalRunDto:', technicalRun);
-    console.log('PortableDeviceDto:', device);
-    console.log('SensorDto[]:', sensors);
-
     try {
         // 1. Получить дефолтные шаблоны по ID
         const baseTemplate = allTemplates.find(t => t.id === DEFAULT_BASE_TEMPLATE_ID);

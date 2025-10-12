@@ -1,53 +1,68 @@
-// @chartsPage/charts/ui/SyncButton/SyncButton.tsx
+// src/features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton.tsx
 
 import { useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
-import { toggleSync } from '@chartsPage/charts/core/store/chartsSlice';
 import type { RootState } from '@/store/store';
+import {
+    selectActiveTabId,
+    selectTabSyncEnabled,
+    selectTabSyncFieldsCount,
+    toggleTabSync,
+} from '@chartsPage/charts/core/store/tabsSlice';
 import styles from './SyncButton.module.css';
-import type {Guid} from "@app/lib/types/Guid.ts";
-import {selectSyncEnabled, selectSyncFields} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 
-interface SyncButtonProps {
-    readonly contextId: Guid;
-}
-
-
-export function SyncButton({ contextId }: SyncButtonProps) {
+/**
+ * Кнопка включения/отключения синхронизации зума для всей вкладки
+ * Теперь работает на уровне вкладки, а не контекста
+ */
+export function SyncButton() {
     const dispatch = useAppDispatch();
 
-    // ТОЛЬКО добавили contextId в селекторы
-    const syncEnabled = useSelector((state: RootState) =>
-        selectSyncEnabled(state, contextId)
-    );
+    // Получаем активную вкладку
+    const activeTabId = useSelector(selectActiveTabId);
 
-    const syncFields = useSelector((state: RootState) =>
-        selectSyncFields(state, contextId)
-    );
+    // Состояние синхронизации текущей вкладки
+    const syncEnabled = useSelector((state: RootState) => {
+        if (!activeTabId) return false;
+        return selectTabSyncEnabled(state, activeTabId);
+    });
+
+    // Количество синхронизированных полей
+    const syncFieldsCount = useSelector((state: RootState) => {
+        if (!activeTabId) return 0;
+        return selectTabSyncFieldsCount(state, activeTabId);
+    });
 
     const handleToggle = useCallback(() => {
-        dispatch(toggleSync(contextId)); // ← добавили contextId
-    }, [dispatch, contextId]);
+        if (!activeTabId) {
+            console.warn('[SyncButton] No active tab');
+            return;
+        }
 
-    // Рендер БЕЗ ИЗМЕНЕНИЙ
+        dispatch(toggleTabSync(activeTabId));
+    }, [dispatch, activeTabId]);
+
+    // Если нет активной вкладки - не показываем кнопку
+    if (!activeTabId) {
+        return null;
+    }
+
     return (
         <button
             type="button"
             className={`${styles.syncButton} ${syncEnabled ? styles.active : ''}`}
             onClick={handleToggle}
-            title={syncEnabled ? 'Отключить синхронизацию зума' : 'Включить синхронизацию зума'}
+            title={
+                syncEnabled
+                    ? 'Отключить синхронизацию зума (для всех шаблонов)'
+                    : 'Включить синхронизацию зума (для всех шаблонов)'
+            }
         >
-            <span className={styles.icon}>
-                {syncEnabled ? '🔗' : '⛓️‍💥'}
-            </span>
-            <span className={styles.label}>
-                Синхронизация зума
-            </span>
-            {syncEnabled && syncFields.length > 0 && (
-                <span className={styles.badge}>
-                    {syncFields.length}
-                </span>
+            <span className={styles.icon}>{syncEnabled ? '🔗' : '⛓️‍💥'}</span>
+            <span className={styles.label}>Синхронизация зума</span>
+            {syncEnabled && syncFieldsCount > 0 && (
+                <span className={styles.badge}>{syncFieldsCount}</span>
             )}
         </button>
     );

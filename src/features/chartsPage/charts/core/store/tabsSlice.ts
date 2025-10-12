@@ -7,13 +7,26 @@ import type { RootState } from '@/store/store';
 // ============= ТИПЫ =============
 
 /**
- * Информация о вкладке
+ * Идентификатор поля с привязкой к контексту
+ * Используется для однозначной идентификации поля при синхронизации
+ */
+export interface SyncFieldId {
+    readonly contextId: Guid;
+    readonly fieldName: string;
+}
+
+/**
+ * Информация о вкладке с синхронизацией
  */
 export interface TabInfo {
     readonly id: Guid;
     readonly name: string;
-    readonly contextIds: readonly Guid[]; // все контексты в вкладке
-    readonly visibleContextIds: readonly Guid[]; // какие контексты показываем (фильтр)
+    readonly contextIds: readonly Guid[];
+    readonly visibleContextIds: readonly Guid[];
+
+    // ========== СИНХРОНИЗАЦИЯ НА УРОВНЕ ВКЛАДКИ ==========
+    readonly syncEnabled: boolean;
+    readonly syncFields: readonly SyncFieldId[]; // поля для синхронизации со всех контекстов
 }
 
 /**
@@ -71,6 +84,8 @@ const tabsSlice = createSlice({
                 name: tabName,
                 contextIds: [],
                 visibleContextIds: [],
+                syncEnabled: false,
+                syncFields: [],
             };
 
             state.allIds = [...state.allIds, id];
@@ -162,7 +177,7 @@ const tabsSlice = createSlice({
             }
 
             const newContextIds = [...tab.contextIds, contextId];
-            const newVisibleIds = [...tab.visibleContextIds, contextId]; // автоматически показываем
+            const newVisibleIds = [...tab.visibleContextIds, contextId];
 
             state.byId[tabId] = {
                 ...tab,
@@ -194,10 +209,16 @@ const tabsSlice = createSlice({
             const newContextIds = tab.contextIds.filter((id) => id !== contextId);
             const newVisibleIds = tab.visibleContextIds.filter((id) => id !== contextId);
 
+            // Удаляем все syncFields из удаляемого контекста
+            const newSyncFields = tab.syncFields.filter(
+                (field) => field.contextId !== contextId
+            );
+
             state.byId[tabId] = {
                 ...tab,
                 contextIds: newContextIds,
                 visibleContextIds: newVisibleIds,
+                syncFields: newSyncFields,
             };
 
             console.log('[removeContextFromTab] Removed:', { tabId, contextId });
@@ -298,7 +319,131 @@ const tabsSlice = createSlice({
                 ...tab,
                 contextIds: [],
                 visibleContextIds: [],
+                syncFields: [], // Очищаем синхронизацию
             };
+        },
+
+        // ========== СИНХРОНИЗАЦИЯ ==========
+
+        /**
+         * Переключить режим синхронизации для вкладки
+         */
+        toggleTabSync(state, action: PayloadAction<Guid>) {
+            const tabId = action.payload;
+            const tab = state.byId[tabId];
+
+            if (!tab) {
+                console.error('[toggleTabSync] Tab not found:', tabId);
+                return;
+            }
+
+            const newSyncEnabled = !tab.syncEnabled;
+
+            state.byId[tabId] = {
+                ...tab,
+                syncEnabled: newSyncEnabled,
+                // Если отключаем синхронизацию - очищаем список полей
+                syncFields: newSyncEnabled ? tab.syncFields : [],
+            };
+
+            console.log('[toggleTabSync]', { tabId, syncEnabled: newSyncEnabled });
+        },
+
+        /**
+         * Добавить поле в синхронизацию вкладки
+         */
+        addTabSyncField(
+            state,
+            action: PayloadAction<{
+                readonly tabId: Guid;
+                readonly contextId: Guid;
+                readonly fieldName: string;
+            }>
+        ) {
+            const { tabId, contextId, fieldName } = action.payload;
+            const tab = state.byId[tabId];
+
+            if (!tab) {
+                console.error('[addTabSyncField] Tab not found:', tabId);
+                return;
+            }
+
+            // Проверяем, что поле еще не добавлено
+            const exists = tab.syncFields.some(
+                (f) => f.contextId === contextId && f.fieldName === fieldName
+            );
+
+            if (exists) {
+                console.warn('[addTabSyncField] Field already synced:', {
+                    tabId,
+                    contextId,
+                    fieldName,
+                });
+                return;
+            }
+
+            const newSyncFields = [
+                ...tab.syncFields,
+                { contextId, fieldName },
+            ];
+
+            state.byId[tabId] = {
+                ...tab,
+                syncFields: newSyncFields,
+            };
+
+            console.log('[addTabSyncField] Added:', { tabId, contextId, fieldName });
+        },
+
+        /**
+         * Удалить поле из синхронизации вкладки
+         */
+        removeTabSyncField(
+            state,
+            action: PayloadAction<{
+                readonly tabId: Guid;
+                readonly contextId: Guid;
+                readonly fieldName: string;
+            }>
+        ) {
+            const { tabId, contextId, fieldName } = action.payload;
+            const tab = state.byId[tabId];
+
+            if (!tab) {
+                console.error('[removeTabSyncField] Tab not found:', tabId);
+                return;
+            }
+
+            const newSyncFields = tab.syncFields.filter(
+                (f) => !(f.contextId === contextId && f.fieldName === fieldName)
+            );
+
+            state.byId[tabId] = {
+                ...tab,
+                syncFields: newSyncFields,
+            };
+
+            console.log('[removeTabSyncField] Removed:', { tabId, contextId, fieldName });
+        },
+
+        /**
+         * Очистить все поля синхронизации вкладки
+         */
+        clearTabSyncFields(state, action: PayloadAction<Guid>) {
+            const tabId = action.payload;
+            const tab = state.byId[tabId];
+
+            if (!tab) {
+                console.error('[clearTabSyncFields] Tab not found:', tabId);
+                return;
+            }
+
+            state.byId[tabId] = {
+                ...tab,
+                syncFields: [],
+            };
+
+            console.log('[clearTabSyncFields]', { tabId });
         },
 
         // ========== ГЛОБАЛЬНАЯ ОЧИСТКА ==========
@@ -314,7 +459,7 @@ const tabsSlice = createSlice({
     },
 });
 
-// ============= ЭКСПОРТЫ =============
+// ============= ЭКСПОРТЫ ACTIONS =============
 
 export const tabsReducer = tabsSlice.reducer;
 
@@ -330,6 +475,11 @@ export const {
     hideAllContexts,
     clearTabContexts,
     clearAllTabs,
+    // Синхронизация
+    toggleTabSync,
+    addTabSyncField,
+    removeTabSyncField,
+    clearTabSyncFields,
 } = tabsSlice.actions;
 
 // ============= СЕЛЕКТОРЫ =============
@@ -434,4 +584,47 @@ export const selectHasTabs = createSelector(
 export const selectTabsCount = createSelector(
     [selectAllTabIds],
     (allIds): number => allIds.length
+);
+
+// ========== СЕЛЕКТОРЫ СИНХРОНИЗАЦИИ ==========
+
+/**
+ * Включена ли синхронизация для вкладки
+ */
+export const selectTabSyncEnabled = createSelector(
+    [selectTabInfo],
+    (tabInfo): boolean => tabInfo?.syncEnabled ?? false
+);
+
+/**
+ * Получить все поля для синхронизации вкладки
+ */
+export const selectTabSyncFields = createSelector(
+    [selectTabInfo],
+    (tabInfo): readonly SyncFieldId[] => tabInfo?.syncFields ?? []
+);
+
+/**
+ * Проверить, синхронизировано ли конкретное поле
+ */
+export const selectIsFieldSynced = createSelector(
+    [
+        selectTabInfo,
+        (_state: RootState, _tabId: Guid, contextId: Guid) => contextId,
+        (_state: RootState, _tabId: Guid, _contextId: Guid, fieldName: string) => fieldName,
+    ],
+    (tabInfo, contextId, fieldName): boolean => {
+        if (!tabInfo) return false;
+        return tabInfo.syncFields.some(
+            (f) => f.contextId === contextId && f.fieldName === fieldName
+        );
+    }
+);
+
+/**
+ * Количество синхронизированных полей
+ */
+export const selectTabSyncFieldsCount = createSelector(
+    [selectTabSyncFields],
+    (syncFields): number => syncFields.length
 );

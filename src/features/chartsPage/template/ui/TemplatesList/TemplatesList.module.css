@@ -50,6 +50,20 @@
     --card-text-color: #ffc580;
 }
 
+.blockId{
+    display: flex;
+    flex-direction: row;
+    font-size: 8px;
+    color: #999999;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btnCopyFactoryNumber{
+    width: 20px;
+    height: 20px;
+}
+
 .cardTitle {
     font-weight: 600;
     font-size: 13px;

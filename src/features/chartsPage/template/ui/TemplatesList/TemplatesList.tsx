@@ -9,6 +9,8 @@ import {
 } from "@chartsPage/template/store/chartsTemplatesSlice.ts";
 import type {ChartReqTemplateDto} from "@chartsPage/template/shared//dtos/ChartReqTemplateDto.ts";
 import {useSelector} from "react-redux";
+import {CopyButton} from "@chartsPage/components/CopyButton/CopyButton.tsx";
+
 
 export default function TemplatesList({
                                           items,
@@ -27,7 +29,10 @@ export default function TemplatesList({
 
     const template: ChartReqTemplateDto | NewChartReqTemplate = useSelector(selectActiveTemplate)
     const {theme} = useTheme()
- 
+
+    console.log(template)
+
+
     return (
         <div className={styles.container} data-theme={theme}>
 
@@ -37,6 +42,7 @@ export default function TemplatesList({
                 <div className={styles.emptyText}>Шаблонов пока нет</div>
             )}
 
+
             <div className={styles.list}>
                 {items.map((t) => {
                     const id = (t as any).id as string
@@ -45,6 +51,10 @@ export default function TemplatesList({
 
                     return (
                         <div data-theme={theme} key={id} className={styles.card} onClick={() => onPick(t)} data-active={template.id === id} >
+                            <div className={styles.blockId}>
+                                <span>ID:{t.id}</span>
+                                <CopyButton className={styles.btnCopyFactoryNumber} text={t.id!} label="Копировать Id шаблона" />
+                            </div>
                             <div className={styles.card_center}>
                                 <div className={styles.actions}>
                                     <button
