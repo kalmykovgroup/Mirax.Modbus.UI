@@ -47,7 +47,7 @@ export class RequestManager {
     constructor(dispatch: AppDispatch, getState: () => RootState, contextId: Guid) {
         this.dispatch = dispatch;
         this.getState = getState;
-        this.contextId = contextId; // ← БЫЛО: tabId
+        this.contextId = contextId;
         this.activeRequests = new Map();
         this.requestHistory = new Map();
         this.isDisposed = false;
@@ -60,7 +60,7 @@ export class RequestManager {
             averageLoadTime: 0,
         };
 
-        console.log(`[RequestManager] Created for context: ${contextId}`); // ← БЫЛО: tab
+        console.log(`[RequestManager] Created for context: ${contextId}`);
     }
 
     /**
@@ -81,14 +81,14 @@ export class RequestManager {
         const timeSettings = this.getState().chartsSettings.timeSettings;
 
         console.log('[loadVisibleRange]', {
-            contextId: this.contextId, // ← БЫЛО: tabId
+            contextId: this.contextId,
             field: fieldName,
             from: toLocalInputValue(from, timeSettings),
             to: toLocalInputValue(to, timeSettings),
         });
 
         const request = DataProcessingService.analyzeLoadNeeds(
-            this.contextId, // ← БЫЛО: this.tabId
+            this.contextId,
             fieldName,
             from,
             to,
@@ -119,7 +119,7 @@ export class RequestManager {
         const fields = request.template.selectedFields.map((f) => f.name);
 
         const loadingUpdates = DataProcessingService.prepareLoadingTiles({
-            contextId: this.contextId, // ← БЫЛО: tabId
+            contextId: this.contextId,
             fields,
             bucketMs: bucketsMs,
             loadingInterval: requestedInterval,
@@ -128,7 +128,7 @@ export class RequestManager {
         });
 
         if (loadingUpdates.length > 0) {
-            this.dispatch(batchUpdateTiles({ contextId: this.contextId, updates: loadingUpdates })); // ← БЫЛО: tabId
+            this.dispatch(batchUpdateTiles({ contextId: this.contextId, updates: loadingUpdates }));
         }
 
         await this.executeRequest(request, bucketsMs, requestedInterval, requestId);

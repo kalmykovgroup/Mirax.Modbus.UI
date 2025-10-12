@@ -376,11 +376,10 @@ export class DataProcessingService {
             return false;
         }
 
-        const selected = state.charts.byContext[contextId]?.syncEnabled ? [...state.charts.byContext[contextId]?.syncFields, field] : [field]
 
         return {
             template: {...template,
-                selectedFields: selected,
+                selectedFields: [...state.charts.byContext[contextId]?.syncFields ?? [], field],
                 resolvedFromMs: optimizedInterval.fromMs,
                 resolvedToMs: optimizedInterval.toMs,
             },

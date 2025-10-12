@@ -1,18 +1,26 @@
 // src/features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncCheckbox/SyncCheckbox.tsx
 
-import { useCallback} from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
 import type { RootState } from '@/store/store';
 import type { Guid } from '@app/lib/types/Guid';
-import styles from './SyncCheckbox.module.css';
 import {
-    addTabSyncField,
-    removeTabSyncField,
+    addContextSyncField,
+    removeContextSyncField,
+} from '@chartsPage/charts/core/store/chartsSlice';
+import {
+    addSyncContext,
+    removeSyncContext,
     selectActiveTabId,
-    selectTabSyncEnabled
-} from "@chartsPage/charts/core/store/tabsSlice.ts";
-import {selectIsTabFieldSynced} from "@chartsPage/charts/core/store/tabsSelectors.ts";
+    selectTabSyncEnabled,
+} from '@chartsPage/charts/core/store/tabsSlice';
+import {
+    selectContextSyncFields,
+    selectIsContextFieldSynced,
+    selectTemplate,
+} from '@chartsPage/charts/core/store/selectors/base.selectors';
+import styles from './SyncCheckbox.module.css';
 
 interface SyncCheckboxProps {
     readonly contextId: Guid;
@@ -20,8 +28,15 @@ interface SyncCheckboxProps {
 }
 
 /**
- * Чекбокс для добавления/удаления поля в синхронизацию на уровне вкладки
- * Теперь работает с общей синхронизацией всех шаблонов текущей вкладки
+ * Чекбокс для добавления/удаления поля в синхронизацию
+ *
+ * ДВУХУРОВНЕВАЯ СИНХРОНИЗАЦИЯ:
+ * 1. Управляет ContextState.syncFields (какие поля контекста синхронизированы)
+ * 2. Управляет TabInfo.syncContextIds (какие контексты вкладки синхронизированы)
+ *
+ * Логика:
+ * - При добавлении первого поля -> добавляем контекст в TabInfo.syncContextIds
+ * - При удалении последнего поля -> удаляем контекст из TabInfo.syncContextIds
  */
 export function SyncCheckbox({ fieldName, contextId }: SyncCheckboxProps) {
     const dispatch = useAppDispatch();
@@ -35,11 +50,23 @@ export function SyncCheckbox({ fieldName, contextId }: SyncCheckboxProps) {
         return selectTabSyncEnabled(state, activeTabId);
     });
 
-    // Проверяем, выбрано ли поле для синхронизации
-    const isChecked = useSelector((state: RootState) => {
-        if (!activeTabId) return false;
-        return selectIsTabFieldSynced(state, activeTabId, contextId, fieldName);
-    });
+    // Получаем шаблон для поиска FieldDto
+    const template = useSelector((state: RootState) => selectTemplate(state, contextId));
+
+    // Получаем текущие синхронизированные поля контекста
+    const contextSyncFields = useSelector((state: RootState) =>
+        selectContextSyncFields(state, contextId)
+    );
+
+    // Проверяем, выбрано ли это поле для синхронизации
+    const isChecked = useSelector((state: RootState) =>
+        selectIsContextFieldSynced(state, contextId, fieldName)
+    );
+
+    // Находим FieldDto для текущего поля
+    const fieldDto = useMemo(() => {
+        return template?.selectedFields.find((f) => f.name === fieldName);
+    }, [template?.selectedFields, fieldName]);
 
     const handleChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,25 +75,64 @@ export function SyncCheckbox({ fieldName, contextId }: SyncCheckboxProps) {
                 return;
             }
 
+            if (!fieldDto) {
+                console.error('[SyncCheckbox] FieldDto not found for:', fieldName);
+                return;
+            }
+
             if (e.target.checked) {
+                // ========== ДОБАВЛЕНИЕ ПОЛЯ ==========
+
+                // 1. Добавляем поле в syncFields контекста
                 dispatch(
-                    addTabSyncField({
-                        tabId: activeTabId,
+                    addContextSyncField({
                         contextId,
-                        fieldName,
+                        field: fieldDto,
                     })
                 );
+
+                // 2. Если это первое поле контекста - добавляем контекст в Tab
+                const isFirstField = contextSyncFields.length === 0;
+                if (isFirstField) {
+                    dispatch(
+                        addSyncContext({
+                            tabId: activeTabId,
+                            contextId,
+                        })
+                    );
+                    console.log(
+                        '[SyncCheckbox] Added first field, context added to tab sync:',
+                        contextId
+                    );
+                }
             } else {
+                // ========== УДАЛЕНИЕ ПОЛЯ ==========
+
+                // 1. Удаляем поле из syncFields контекста
                 dispatch(
-                    removeTabSyncField({
-                        tabId: activeTabId,
+                    removeContextSyncField({
                         contextId,
                         fieldName,
                     })
                 );
+
+                // 2. Если это было последнее поле - удаляем контекст из Tab
+                const isLastField = contextSyncFields.length === 1;
+                if (isLastField) {
+                    dispatch(
+                        removeSyncContext({
+                            tabId: activeTabId,
+                            contextId,
+                        })
+                    );
+                    console.log(
+                        '[SyncCheckbox] Removed last field, context removed from tab sync:',
+                        contextId
+                    );
+                }
             }
         },
-        [dispatch, activeTabId, contextId, fieldName]
+        [dispatch, activeTabId, contextId, fieldName, fieldDto, contextSyncFields.length]
     );
 
     // Не показываем чекбокс если синхронизация выключена или нет активной вкладки

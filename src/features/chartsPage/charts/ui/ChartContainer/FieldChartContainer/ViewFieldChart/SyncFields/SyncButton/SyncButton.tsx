@@ -6,15 +6,15 @@ import { useAppDispatch } from '@/store/hooks';
 import type { RootState } from '@/store/store';
 import {
     selectActiveTabId,
+    selectTabSyncContextsCount,
     selectTabSyncEnabled,
-    selectTabSyncFieldsCount,
     toggleTabSync,
 } from '@chartsPage/charts/core/store/tabsSlice';
 import styles from './SyncButton.module.css';
 
 /**
  * Кнопка включения/отключения синхронизации зума для всей вкладки
- * Теперь работает на уровне вкладки, а не контекста
+ * Показывает количество контекстов (шаблонов), участвующих в синхронизации
  */
 export function SyncButton() {
     const dispatch = useAppDispatch();
@@ -28,10 +28,10 @@ export function SyncButton() {
         return selectTabSyncEnabled(state, activeTabId);
     });
 
-    // Количество синхронизированных полей
-    const syncFieldsCount = useSelector((state: RootState) => {
+    // Количество контекстов в синхронизации
+    const syncContextsCount = useSelector((state: RootState) => {
         if (!activeTabId) return 0;
-        return selectTabSyncFieldsCount(state, activeTabId);
+        return selectTabSyncContextsCount(state, activeTabId);
     });
 
     const handleToggle = useCallback(() => {
@@ -61,8 +61,10 @@ export function SyncButton() {
         >
             <span className={styles.icon}>{syncEnabled ? '🔗' : '⛓️‍💥'}</span>
             <span className={styles.label}>Синхронизация зума</span>
-            {syncEnabled && syncFieldsCount > 0 && (
-                <span className={styles.badge}>{syncFieldsCount}</span>
+            {syncEnabled && syncContextsCount > 0 && (
+                <span className={styles.badge} title={`${syncContextsCount} шаблонов`}>
+                    {syncContextsCount}
+                </span>
             )}
         </button>
     );

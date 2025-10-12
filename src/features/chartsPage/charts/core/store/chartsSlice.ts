@@ -24,7 +24,6 @@ import type { RootState } from '@/store/store.ts';
  */
 export interface ContextState {
     readonly contextId: Guid;
-    syncEnabled: boolean;
     syncFields: readonly FieldDto[];
     template: ResolvedCharReqTemplate | undefined;
     readonly view: Record<FieldName, FieldView>;
@@ -41,7 +40,6 @@ export interface ContextsState {
 // ============= НАЧАЛЬНОЕ СОСТОЯНИЕ =============
 
 const initialContextState: Omit<ContextState, 'contextId'> = {
-    syncEnabled: false,
     syncFields: [],
     template: undefined,
     view: {},
@@ -61,7 +59,6 @@ function getOrCreateContext(state: ContextsState, contextId: Guid): ContextState
     if (!(contextId in state.byContext)) {
         state.byContext[contextId] = {
             contextId,
-            syncEnabled: false,
             syncFields: [],
             template: undefined,
             view: {},
@@ -95,7 +92,6 @@ const contextsSlice = createSlice({
                 contextId: contextId,
                 template: template,
                 view: {},
-                syncEnabled: false,
                 syncFields: [],
                 isDataLoaded: false,
             };
@@ -147,7 +143,6 @@ const contextsSlice = createSlice({
                     contextId: contextId,
                     template: template,
                     view: {},
-                    syncEnabled: false,
                     syncFields: [],
                     isDataLoaded: false,
                 };
@@ -616,12 +611,10 @@ const contextsSlice = createSlice({
 
         // ========== СИНХРОНИЗАЦИЯ ==========
 
-        toggleSync(state, action: PayloadAction<Guid>) {
-            const context = getOrCreateContext(state, action.payload);
-            context.syncEnabled = !context.syncEnabled;
-        },
-
-        addSyncField(
+        /**
+         * Добавить поле в синхронизацию контекста
+         */
+        addContextSyncField(
             state,
             action: PayloadAction<{
                 readonly contextId: Guid;
@@ -630,13 +623,23 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, field } = action.payload;
             const context = getOrCreateContext(state, contextId);
+
             const exists = context.syncFields.some((f) => f.name === field.name);
             if (!exists) {
                 context.syncFields = [...context.syncFields, field];
+                console.log('[addContextSyncField] Added:', { contextId, fieldName: field.name });
+            } else {
+                console.warn('[addContextSyncField] Field already exists:', {
+                    contextId,
+                    fieldName: field.name,
+                });
             }
         },
 
-        removeSyncField(
+        /**
+         * Удалить поле из синхронизации контекста
+         */
+        removeContextSyncField(
             state,
             action: PayloadAction<{
                 readonly contextId: Guid;
@@ -645,13 +648,22 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, fieldName } = action.payload;
             const context = getOrCreateContext(state, contextId);
+
             context.syncFields = context.syncFields.filter((f) => f.name !== fieldName);
+            console.log('[removeContextSyncField] Removed:', { contextId, fieldName });
         },
 
-        clearSyncFields(state, action: PayloadAction<Guid>) {
-            const context = getOrCreateContext(state, action.payload);
+        /**
+         * Очистить все поля синхронизации контекста
+         */
+        clearContextSyncFields(state, action: PayloadAction<Guid>) {
+            const contextId = action.payload;
+            const context = getOrCreateContext(state, contextId);
+
             context.syncFields = [];
+            console.log('[clearContextSyncFields]', { contextId });
         },
+
 
         // ========== ГЛОБАЛЬНЫЕ ОПЕРАЦИИ ==========
 
@@ -784,11 +796,11 @@ export const {
     completeRequest,
     failRequest,
 
-    // Синхронизация
-    toggleSync,
-    addSyncField,
-    removeSyncField,
-    clearSyncFields,
+    // Синхронизация полей контекста
+    addContextSyncField,
+    removeContextSyncField,
+    clearContextSyncFields,
+
 
     // Глобальные операции
     setIsDataLoaded,

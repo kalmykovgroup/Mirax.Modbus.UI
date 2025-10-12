@@ -6,8 +6,6 @@ import {
     selectAllViews,
     selectFieldCurrentBucketMs,
     selectFieldCurrentRange, selectFieldView,
-    selectSyncEnabled,
-    selectSyncFields
 } from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 import { selectLoadingMetrics } from "@chartsPage/charts/core/store/selectors/orchestration.selectors.ts";
 import type { SeriesBinDto } from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
@@ -148,22 +146,7 @@ export const selectChartStats = createSelector(
     }
 );
 
-export const selectSyncedChartsData = createSelector(
-    [
-        (state: RootState, contextId: Guid) => selectSyncEnabled(state, contextId),
-        (state: RootState, contextId: Guid) => selectSyncFields(state, contextId),
-        (state: RootState, contextId: Guid) => selectAllViews(state, contextId),
-    ],
-    (syncEnabled, syncFields, allViews) => {
-        if (!syncEnabled) return [];
 
-        return syncFields.map((field) => ({
-            fieldName: field.name,
-            hasView: field.name in allViews,
-            hasData: allViews[field.name]?.seriesLevel !== undefined,
-        }));
-    }
-);
 
 export const selectVisiblePointsCount = createSelector(
     [

@@ -7,16 +7,8 @@ import type { RootState } from '@/store/store';
 // ============= ТИПЫ =============
 
 /**
- * Идентификатор поля с привязкой к контексту
- * Используется для однозначной идентификации поля при синхронизации
- */
-export interface SyncFieldId {
-    readonly contextId: Guid;
-    readonly fieldName: string;
-}
-
-/**
- * Информация о вкладке с синхронизацией
+ * Информация о вкладке
+ * Хранит только список контекстов, участвующих в синхронизации
  */
 export interface TabInfo {
     readonly id: Guid;
@@ -26,7 +18,7 @@ export interface TabInfo {
 
     // ========== СИНХРОНИЗАЦИЯ НА УРОВНЕ ВКЛАДКИ ==========
     readonly syncEnabled: boolean;
-    readonly syncFields: readonly SyncFieldId[]; // поля для синхронизации со всех контекстов
+    readonly syncContextIds: readonly Guid[]; // какие КОНТЕКСТЫ участвуют в синхронизации
 }
 
 /**
@@ -60,9 +52,6 @@ const tabsSlice = createSlice({
     reducers: {
         // ========== УПРАВЛЕНИЕ ВКЛАДКАМИ ==========
 
-        /**
-         * Создать новую вкладку
-         */
         createTab(
             state,
             action: PayloadAction<{
@@ -85,7 +74,7 @@ const tabsSlice = createSlice({
                 contextIds: [],
                 visibleContextIds: [],
                 syncEnabled: false,
-                syncFields: [],
+                syncContextIds: [],
             };
 
             state.allIds = [...state.allIds, id];
@@ -94,9 +83,6 @@ const tabsSlice = createSlice({
             console.log('[createTab] Created:', { id, name: tabName });
         },
 
-        /**
-         * Установить активную вкладку
-         */
         setActiveTab(state, action: PayloadAction<Guid>) {
             const tabId = action.payload;
 
@@ -108,9 +94,6 @@ const tabsSlice = createSlice({
             state.activeTabId = tabId;
         },
 
-        /**
-         * Закрыть вкладку
-         */
         closeTab(state, action: PayloadAction<Guid>) {
             const tabId = action.payload;
 
@@ -122,7 +105,6 @@ const tabsSlice = createSlice({
             delete state.byId[tabId];
             state.allIds = state.allIds.filter((id) => id !== tabId);
 
-            // Если закрыли активную вкладку, переключаемся на другую
             if (state.activeTabId === tabId) {
                 state.activeTabId = state.allIds[0];
             }
@@ -130,9 +112,6 @@ const tabsSlice = createSlice({
             console.log('[closeTab] Closed:', tabId);
         },
 
-        /**
-         * Переименовать вкладку
-         */
         renameTab(
             state,
             action: PayloadAction<{
@@ -153,9 +132,6 @@ const tabsSlice = createSlice({
 
         // ========== УПРАВЛЕНИЕ КОНТЕКСТАМИ ==========
 
-        /**
-         * Добавить контекст в вкладку
-         */
         addContextToTab(
             state,
             action: PayloadAction<{
@@ -188,9 +164,6 @@ const tabsSlice = createSlice({
             console.log('[addContextToTab] Added:', { tabId, contextId });
         },
 
-        /**
-         * Удалить контекст из вкладки
-         */
         removeContextFromTab(
             state,
             action: PayloadAction<{
@@ -209,24 +182,19 @@ const tabsSlice = createSlice({
             const newContextIds = tab.contextIds.filter((id) => id !== contextId);
             const newVisibleIds = tab.visibleContextIds.filter((id) => id !== contextId);
 
-            // Удаляем все syncFields из удаляемого контекста
-            const newSyncFields = tab.syncFields.filter(
-                (field) => field.contextId !== contextId
-            );
+            // Удаляем контекст из синхронизации
+            const newSyncContextIds = tab.syncContextIds.filter((id) => id !== contextId);
 
             state.byId[tabId] = {
                 ...tab,
                 contextIds: newContextIds,
                 visibleContextIds: newVisibleIds,
-                syncFields: newSyncFields,
+                syncContextIds: newSyncContextIds,
             };
 
             console.log('[removeContextFromTab] Removed:', { tabId, contextId });
         },
 
-        /**
-         * Переключить видимость контекста (для фильтра)
-         */
         toggleContextVisibility(
             state,
             action: PayloadAction<{
@@ -267,9 +235,6 @@ const tabsSlice = createSlice({
             });
         },
 
-        /**
-         * Показать все контексты
-         */
         showAllContexts(state, action: PayloadAction<Guid>) {
             const tabId = action.payload;
             const tab = state.byId[tabId];
@@ -285,9 +250,6 @@ const tabsSlice = createSlice({
             };
         },
 
-        /**
-         * Скрыть все контексты
-         */
         hideAllContexts(state, action: PayloadAction<Guid>) {
             const tabId = action.payload;
             const tab = state.byId[tabId];
@@ -303,9 +265,6 @@ const tabsSlice = createSlice({
             };
         },
 
-        /**
-         * Очистить все контексты из вкладки
-         */
         clearTabContexts(state, action: PayloadAction<Guid>) {
             const tabId = action.payload;
             const tab = state.byId[tabId];
@@ -319,7 +278,7 @@ const tabsSlice = createSlice({
                 ...tab,
                 contextIds: [],
                 visibleContextIds: [],
-                syncFields: [], // Очищаем синхронизацию
+                syncContextIds: [],
             };
         },
 
@@ -342,115 +301,98 @@ const tabsSlice = createSlice({
             state.byId[tabId] = {
                 ...tab,
                 syncEnabled: newSyncEnabled,
-                // Если отключаем синхронизацию - очищаем список полей
-                syncFields: newSyncEnabled ? tab.syncFields : [],
+                // Если отключаем синхронизацию - очищаем список контекстов
+                syncContextIds: newSyncEnabled ? tab.syncContextIds : [],
             };
 
             console.log('[toggleTabSync]', { tabId, syncEnabled: newSyncEnabled });
         },
 
         /**
-         * Добавить поле в синхронизацию вкладки
+         * Добавить контекст в синхронизацию вкладки
+         * Вызывается автоматически при добавлении первого поля контекста
          */
-        addTabSyncField(
+        addSyncContext(
             state,
             action: PayloadAction<{
                 readonly tabId: Guid;
                 readonly contextId: Guid;
-                readonly fieldName: string;
             }>
         ) {
-            const { tabId, contextId, fieldName } = action.payload;
+            const { tabId, contextId } = action.payload;
             const tab = state.byId[tabId];
 
             if (!tab) {
-                console.error('[addTabSyncField] Tab not found:', tabId);
+                console.error('[addSyncContext] Tab not found:', tabId);
                 return;
             }
 
-            // Проверяем, что поле еще не добавлено
-            const exists = tab.syncFields.some(
-                (f) => f.contextId === contextId && f.fieldName === fieldName
-            );
-
-            if (exists) {
-                console.warn('[addTabSyncField] Field already synced:', {
-                    tabId,
-                    contextId,
-                    fieldName,
-                });
+            if (tab.syncContextIds.includes(contextId)) {
+                console.warn('[addSyncContext] Context already synced:', { tabId, contextId });
                 return;
             }
 
-            const newSyncFields = [
-                ...tab.syncFields,
-                { contextId, fieldName },
-            ];
+            const newSyncContextIds = [...tab.syncContextIds, contextId];
 
             state.byId[tabId] = {
                 ...tab,
-                syncFields: newSyncFields,
+                syncContextIds: newSyncContextIds,
             };
 
-            console.log('[addTabSyncField] Added:', { tabId, contextId, fieldName });
+            console.log('[addSyncContext] Added:', { tabId, contextId });
         },
 
         /**
-         * Удалить поле из синхронизации вкладки
+         * Удалить контекст из синхронизации вкладки
+         * Вызывается автоматически при удалении последнего поля контекста
          */
-        removeTabSyncField(
+        removeSyncContext(
             state,
             action: PayloadAction<{
                 readonly tabId: Guid;
                 readonly contextId: Guid;
-                readonly fieldName: string;
             }>
         ) {
-            const { tabId, contextId, fieldName } = action.payload;
+            const { tabId, contextId } = action.payload;
             const tab = state.byId[tabId];
 
             if (!tab) {
-                console.error('[removeTabSyncField] Tab not found:', tabId);
+                console.error('[removeSyncContext] Tab not found:', tabId);
                 return;
             }
 
-            const newSyncFields = tab.syncFields.filter(
-                (f) => !(f.contextId === contextId && f.fieldName === fieldName)
-            );
+            const newSyncContextIds = tab.syncContextIds.filter((id) => id !== contextId);
 
             state.byId[tabId] = {
                 ...tab,
-                syncFields: newSyncFields,
+                syncContextIds: newSyncContextIds,
             };
 
-            console.log('[removeTabSyncField] Removed:', { tabId, contextId, fieldName });
+            console.log('[removeSyncContext] Removed:', { tabId, contextId });
         },
 
         /**
-         * Очистить все поля синхронизации вкладки
+         * Очистить все контексты синхронизации вкладки
          */
-        clearTabSyncFields(state, action: PayloadAction<Guid>) {
+        clearTabSyncContexts(state, action: PayloadAction<Guid>) {
             const tabId = action.payload;
             const tab = state.byId[tabId];
 
             if (!tab) {
-                console.error('[clearTabSyncFields] Tab not found:', tabId);
+                console.error('[clearTabSyncContexts] Tab not found:', tabId);
                 return;
             }
 
             state.byId[tabId] = {
                 ...tab,
-                syncFields: [],
+                syncContextIds: [],
             };
 
-            console.log('[clearTabSyncFields]', { tabId });
+            console.log('[clearTabSyncContexts]', { tabId });
         },
 
         // ========== ГЛОБАЛЬНАЯ ОЧИСТКА ==========
 
-        /**
-         * Удалить все вкладки
-         */
         clearAllTabs(state) {
             state.byId = {};
             state.allIds = [];
@@ -477,9 +419,9 @@ export const {
     clearAllTabs,
     // Синхронизация
     toggleTabSync,
-    addTabSyncField,
-    removeTabSyncField,
-    clearTabSyncFields,
+    addSyncContext,
+    removeSyncContext,
+    clearTabSyncContexts,
 } = tabsSlice.actions;
 
 // ============= СЕЛЕКТОРЫ =============
@@ -491,41 +433,26 @@ export const selectActiveTabId = (state: RootState): Guid | undefined =>
 
 export const selectAllTabIds = (state: RootState): readonly Guid[] => state.tabs.allIds;
 
-/**
- * Получить информацию о вкладке
- */
 export const selectTabInfo = createSelector(
     [(state: RootState) => state.tabs.byId, (_state: RootState, tabId: Guid) => tabId],
     (byId, tabId): TabInfo | undefined => byId[tabId]
 );
 
-/**
- * Получить имя вкладки
- */
 export const selectTabName = createSelector(
     [selectTabInfo],
     (tabInfo): string | undefined => tabInfo?.name
 );
 
-/**
- * Получить все контексты вкладки
- */
 export const selectTabContextIds = createSelector(
     [selectTabInfo],
     (tabInfo): readonly Guid[] => tabInfo?.contextIds ?? []
 );
 
-/**
- * Получить видимые контексты (фильтр)
- */
 export const selectVisibleContextIds = createSelector(
     [selectTabInfo],
     (tabInfo): readonly Guid[] => tabInfo?.visibleContextIds ?? []
 );
 
-/**
- * Проверить, видим ли контекст
- */
 export const selectIsContextVisible = createSelector(
     [selectTabInfo, (_state: RootState, _tabId: Guid, contextId: Guid) => contextId],
     (tabInfo, contextId): boolean => {
@@ -533,25 +460,16 @@ export const selectIsContextVisible = createSelector(
     }
 );
 
-/**
- * Получить количество контекстов
- */
 export const selectContextCount = createSelector(
     [selectTabContextIds],
     (contextIds): number => contextIds.length
 );
 
-/**
- * Проверить, есть ли контексты
- */
 export const selectHasContexts = createSelector(
     [selectTabContextIds],
     (contextIds): boolean => contextIds.length > 0
 );
 
-/**
- * Получить информацию об активной вкладке
- */
 export const selectActiveTabInfo = createSelector(
     [(state: RootState) => state.tabs.byId, selectActiveTabId],
     (byId, activeTabId): TabInfo | undefined => {
@@ -560,9 +478,6 @@ export const selectActiveTabInfo = createSelector(
     }
 );
 
-/**
- * Все вкладки как массив
- */
 export const selectAllTabs = createSelector(
     [(state: RootState) => state.tabs.byId, selectAllTabIds],
     (byId, allIds): readonly TabInfo[] => {
@@ -570,17 +485,11 @@ export const selectAllTabs = createSelector(
     }
 );
 
-/**
- * Проверить, есть ли открытые вкладки
- */
 export const selectHasTabs = createSelector(
     [selectAllTabIds],
     (allIds): boolean => allIds.length > 0
 );
 
-/**
- * Получить количество вкладок
- */
 export const selectTabsCount = createSelector(
     [selectAllTabIds],
     (allIds): number => allIds.length
@@ -597,34 +506,31 @@ export const selectTabSyncEnabled = createSelector(
 );
 
 /**
- * Получить все поля для синхронизации вкладки
+ * Получить все контексты, участвующие в синхронизации
  */
-export const selectTabSyncFields = createSelector(
+export const selectTabSyncContextIds = createSelector(
     [selectTabInfo],
-    (tabInfo): readonly SyncFieldId[] => tabInfo?.syncFields ?? []
+    (tabInfo): readonly Guid[] => tabInfo?.syncContextIds ?? []
 );
 
 /**
- * Проверить, синхронизировано ли конкретное поле
+ * Проверить, участвует ли контекст в синхронизации
  */
-export const selectIsFieldSynced = createSelector(
+export const selectIsContextSynced = createSelector(
     [
         selectTabInfo,
         (_state: RootState, _tabId: Guid, contextId: Guid) => contextId,
-        (_state: RootState, _tabId: Guid, _contextId: Guid, fieldName: string) => fieldName,
     ],
-    (tabInfo, contextId, fieldName): boolean => {
+    (tabInfo, contextId): boolean => {
         if (!tabInfo) return false;
-        return tabInfo.syncFields.some(
-            (f) => f.contextId === contextId && f.fieldName === fieldName
-        );
+        return tabInfo.syncContextIds.includes(contextId);
     }
 );
 
 /**
- * Количество синхронизированных полей
+ * Количество синхронизированных контекстов
  */
-export const selectTabSyncFieldsCount = createSelector(
-    [selectTabSyncFields],
-    (syncFields): number => syncFields.length
+export const selectTabSyncContextsCount = createSelector(
+    [selectTabSyncContextIds],
+    (syncContextIds): number => syncContextIds.length
 );

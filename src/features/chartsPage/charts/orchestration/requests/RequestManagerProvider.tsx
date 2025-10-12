@@ -1,12 +1,13 @@
 // src/features/chartsPage/charts/orchestration/requests/RequestManagerProvider.tsx
 
-import { useAppDispatch } from '@/store/hooks.ts';
+import { useAppDispatch } from '@/store/hooks';
 import { useStore } from 'react-redux';
-import type { RootState } from '@/store/store.ts';
+import type { RootState } from '@/store/store';
 import type { Guid } from '@app/lib/types/Guid';
-import { RequestManager } from '@chartsPage/charts/orchestration/requests/RequestManager.ts';
+import { RequestManager } from '@chartsPage/charts/orchestration/requests/RequestManager';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { RequestManagerContext } from './RequestManagerContext';
+import { RequestManagerRegistry } from './RequestManagerRegistry';
 
 interface RequestManagerProviderProps {
     readonly contextId: Guid;
@@ -15,7 +16,12 @@ interface RequestManagerProviderProps {
 
 /**
  * Провайдер RequestManager для одного контекста
- * Создаёт изолированный менеджер при монтировании
+ *
+ * ВАЖНО:
+ * - Создаёт изолированный менеджер при монтировании
+ * - Регистрирует менеджер в глобальном реестре
+ * - Удаляет менеджер из реестра при размонтировании
+ * - Это позволяет FieldChartContainer'ам получать доступ к менеджерам других контекстов
  */
 export function RequestManagerProvider({ contextId, children }: RequestManagerProviderProps) {
     const dispatch = useAppDispatch();
@@ -29,15 +35,18 @@ export function RequestManagerProvider({ contextId, children }: RequestManagerPr
         console.log(`[RequestManagerProvider] Created manager for context: ${contextId}`);
     }
 
-    // Cleanup при unmount контекста
+    // Регистрация в реестре + cleanup при unmount контекста
     useEffect(() => {
         const manager = managerRef.current;
+        if (!manager) return;
+
+        console.log(`[RequestManagerProvider] Registering manager for context: ${contextId}`);
+        RequestManagerRegistry.register(contextId, manager);
 
         return () => {
-            if (manager) {
-                console.log(`[RequestManagerProvider] Disposing manager for context: ${contextId}`);
-                manager.dispose();
-            }
+            console.log(`[RequestManagerProvider] Unregistering and disposing manager for context: ${contextId}`);
+            RequestManagerRegistry.unregister(contextId);
+            manager.dispose();
         };
     }, [contextId]);
 

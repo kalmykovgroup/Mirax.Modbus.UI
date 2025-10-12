@@ -56,14 +56,43 @@ export const selectIsDataLoaded = (state: RootState, contextId: Guid): boolean =
     return context?.isDataLoaded ?? false;
 };
 
-export const selectSyncEnabled = (state: RootState, contextId: Guid): boolean => {
-    const context = selectContextState(state, contextId);
-    return context?.syncEnabled ?? false;
-};
 
-export const selectSyncFields = (state: RootState, contextId: Guid): readonly FieldDto[] => {
+// ============================================
+// СЕЛЕКТОРЫ СИНХРОНИЗАЦИИ КОНТЕКСТА
+// ============================================
+
+/**
+ * Получить все поля контекста, участвующие в синхронизации
+ */
+export const selectContextSyncFields = (
+    state: RootState,
+    contextId: Guid
+): readonly FieldDto[] => {
     const context = selectContextState(state, contextId);
     return context?.syncFields ?? EMPTY_FIELDS;
+};
+
+/**
+ * Проверить, участвует ли поле контекста в синхронизации
+ */
+export const selectIsContextFieldSynced = (
+    state: RootState,
+    contextId: Guid,
+    fieldName: string
+): boolean => {
+    const syncFields = selectContextSyncFields(state, contextId);
+    return syncFields.some((f) => f.name === fieldName);
+};
+
+/**
+ * Количество синхронизированных полей контекста
+ */
+export const selectContextSyncFieldsCount = (
+    state: RootState,
+    contextId: Guid
+): number => {
+    const syncFields = selectContextSyncFields(state, contextId);
+    return syncFields.length;
 };
 
 export const selectAllViews = (state: RootState, contextId: Guid): Record<FieldName, FieldView> => {
