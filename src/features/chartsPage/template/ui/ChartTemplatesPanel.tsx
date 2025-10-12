@@ -56,7 +56,7 @@ export default function ChartTemplatesPanel() {
     const [execTpl, setExecTpl] = useState<ChartReqTemplateDto | null>(null);
     const [selectTabTpl, setSelectTabTpl] = useState<ResolvedCharReqTemplate | null>(null);
 
-    // ✅ КРИТИЧНО: Защита от двойных кликов
+    //  КРИТИЧНО: Защита от двойных кликов
     const isProcessingRef = useRef(false);
 
     const hasParams = useMemo(() => {
@@ -140,10 +140,10 @@ export default function ChartTemplatesPanel() {
     };
 
     /**
-     * ✅ ИСПРАВЛЕНИЕ: Добавлена защита от повторного вызова
+     *  ИСПРАВЛЕНИЕ: Добавлена защита от повторного вызова
      */
     const executeTemplateInNewTab = (resolved: ResolvedCharReqTemplate) => {
-        // ✅ Проверка: уже обрабатывается
+        //  Проверка: уже обрабатывается
         if (isProcessingRef.current) {
             console.warn('[ChartTemplatesPanel] Already processing, skipping');
             return;
@@ -181,7 +181,7 @@ export default function ChartTemplatesPanel() {
                 tabId: newTabId,
             });
         } finally {
-            // ✅ Сбрасываем флаг через небольшой таймаут
+            //  Сбрасываем флаг через небольшой таймаут
             setTimeout(() => {
                 isProcessingRef.current = false;
             }, 300);
@@ -189,10 +189,10 @@ export default function ChartTemplatesPanel() {
     };
 
     /**
-     * ✅ ИСПРАВЛЕНИЕ: Добавлена защита от повторного вызова
+     *  ИСПРАВЛЕНИЕ: Добавлена защита от повторного вызова
      */
     const executeTemplateInExistingTab = (resolved: ResolvedCharReqTemplate, tabId: Guid) => {
-        // ✅ Проверка: уже обрабатывается
+        //  Проверка: уже обрабатывается
         if (isProcessingRef.current) {
             console.warn('[ChartTemplatesPanel] Already processing, skipping');
             return;

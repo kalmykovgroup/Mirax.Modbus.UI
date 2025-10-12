@@ -13,7 +13,7 @@ import {
 import { useSelector } from "react-redux";
 import type { RootState } from "@/store/store.ts";
 import styles from "./ChartHeader.module.css";
-import { LevelRow } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ChartHeader/LevelRow/LevelRow.tsx";
+import { LevelRow } from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ChartHeader/LevelRow/LevelRow.tsx";
 import type {Guid} from "@app/lib/types/Guid.ts";
 
 // ============================================

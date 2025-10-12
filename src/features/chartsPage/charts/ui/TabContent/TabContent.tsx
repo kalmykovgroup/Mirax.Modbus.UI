@@ -4,9 +4,6 @@ import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
 import { useConfirm } from '@ui/components/ConfirmProvider/ConfirmProvider';
-import { RequestManagerProvider } from '@chartsPage/charts/orchestration/requests/RequestManagerProvider';
-import { ChartContainer } from '@chartsPage/charts/ui/ChartContainer/ChartContainer';
-import { selectTemplate } from '@chartsPage/charts/core/store/selectors/base.selectors';
 import {
     selectTabContextIds,
     selectVisibleContextIds,
@@ -18,6 +15,11 @@ import {
 import type { Guid } from '@app/lib/types/Guid';
 import type { RootState } from '@/store/store';
 import styles from './TabContent.module.css';
+import {ContextFilterItem} from "@chartsPage/charts/ui/TabContent/ContextFilterItem/ContextFilterItem.tsx";
+import {ContextSection} from "@chartsPage/charts/ui/TabContent/ContextSection/ContextSection.tsx";
+import {
+    SyncButton
+} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton.tsx";
 
 interface TabContentProps {
     readonly tabId: Guid;
@@ -118,6 +120,8 @@ export function TabContent({ tabId }: TabContentProps) {
                 )}
             </div>
 
+            <SyncButton />
+
             {/* Графики */}
             {visibleContextIds.length === 0 ? (
                 <div className={styles.emptyState}>
@@ -131,63 +135,6 @@ export function TabContent({ tabId }: TabContentProps) {
                     ))}
                 </div>
             )}
-        </div>
-    );
-}
-
-// ========== ЭЛЕМЕНТ ФИЛЬТРА ==========
-
-interface ContextFilterItemProps {
-    readonly tabId: Guid;
-    readonly contextId: Guid;
-    readonly isVisible: boolean;
-    readonly onToggle: () => void;
-    readonly onRemove: () => void;
-}
-
-function ContextFilterItem({ contextId, isVisible, onToggle, onRemove }: ContextFilterItemProps) {
-    const template = useSelector((state: RootState) => selectTemplate(state, contextId));
-    const templateName = template?.name ?? `Контекст ${contextId.slice(0, 8)}`;
-
-    return (
-        <div className={styles.contextItem}>
-            <label className={styles.contextCheckbox}>
-                <input type="checkbox" checked={isVisible} onChange={onToggle} />
-                <span className={styles.contextName}>{templateName}</span>
-            </label>
-            <button
-                className={styles.contextRemove}
-                onClick={onRemove}
-                title="Удалить контекст"
-                type="button"
-            >
-                ×
-            </button>
-        </div>
-    );
-}
-
-// ========== СЕКЦИЯ КОНТЕКСТА ==========
-
-interface ContextSectionProps {
-    readonly contextId: Guid;
-}
-
-function ContextSection({ contextId }: ContextSectionProps) {
-    const template = useSelector((state: RootState) => selectTemplate(state, contextId));
-    const templateName = template?.name ?? `Контекст ${contextId.slice(0, 8)}`;
-
-    return (
-        <div className={styles.contextSection}>
-            <div className={styles.contextHeader}>
-                <h3 className={styles.contextTitle}>{templateName}</h3>
-            </div>
-
-            <div className={styles.contextContent}>
-                <RequestManagerProvider contextId={contextId}>
-                    <ChartContainer />
-                </RequestManagerProvider>
-            </div>
         </div>
     );
 }

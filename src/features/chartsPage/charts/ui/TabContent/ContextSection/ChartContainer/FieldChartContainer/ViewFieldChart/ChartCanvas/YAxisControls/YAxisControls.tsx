@@ -4,7 +4,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import styles from './YAxisControls.module.css';
 import type {
     YAxisRangeControl
-} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/useYAxisRange.ts";
+} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/useYAxisRange.ts";
 
 interface YAxisControlsProps {
     readonly control: YAxisRangeControl;

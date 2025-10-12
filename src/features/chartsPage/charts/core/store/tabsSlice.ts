@@ -8,7 +8,7 @@ import type { RootState } from '@/store/store';
 // ============= КОНСТАНТЫ =============
 
 /**
- * ✅ КРИТИЧНО: Константы для пустых массивов
+ *  КРИТИЧНО: Константы для пустых массивов
  * Предотвращают создание новых массивов при каждом вызове селектора
  */
 const EMPTY_CONTEXT_IDS: readonly Guid[] = Object.freeze([]);
@@ -402,13 +402,13 @@ export const selectTabName = createSelector(
     (tabInfo): string | undefined => tabInfo?.name
 );
 
-// ✅ ИСПРАВЛЕНИЕ: Используем константу вместо создания нового массива
+//  ИСПРАВЛЕНИЕ: Используем константу вместо создания нового массива
 export const selectTabContextIds = createSelector(
     [selectTabInfo],
     (tabInfo): readonly Guid[] => tabInfo?.contextIds ?? EMPTY_CONTEXT_IDS
 );
 
-// ✅ ИСПРАВЛЕНИЕ: Используем константу вместо создания нового массива
+//  ИСПРАВЛЕНИЕ: Используем константу вместо создания нового массива
 export const selectVisibleContextIds = createSelector(
     [selectTabInfo],
     (tabInfo): readonly Guid[] => tabInfo?.visibleContextIds ?? EMPTY_CONTEXT_IDS
@@ -463,7 +463,7 @@ export const selectTabSyncEnabled = createSelector(
     (tabInfo): boolean => tabInfo?.syncEnabled ?? false
 );
 
-// ✅ ИСПРАВЛЕНИЕ: Используем константу вместо создания нового массива
+//  ИСПРАВЛЕНИЕ: Используем константу вместо создания нового массива
 export const selectTabSyncContextIds = createSelector(
     [selectTabInfo],
     (tabInfo): readonly Guid[] => tabInfo?.syncContextIds ?? EMPTY_CONTEXT_IDS

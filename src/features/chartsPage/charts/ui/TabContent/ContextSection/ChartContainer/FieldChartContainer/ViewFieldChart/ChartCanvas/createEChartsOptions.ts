@@ -8,7 +8,7 @@ import type {EChartsOption, LineSeriesOption, MarkAreaComponentOption} from "ech
 import {formatDateWithTimezone} from "@chartsPage/charts/ui/TimeZonePicker/timezoneUtils.ts";
 import type {
     YAxisRange
-} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/useYAxisRange.ts";
+} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/useYAxisRange.ts";
 
 
 interface AnimationConfig {

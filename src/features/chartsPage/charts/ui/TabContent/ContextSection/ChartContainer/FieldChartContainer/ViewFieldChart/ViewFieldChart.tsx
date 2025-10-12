@@ -13,18 +13,18 @@ import {
 import styles from './ViewFieldChart.module.css';
 import { selectFieldOriginalRange } from '@chartsPage/charts/core/store/selectors/base.selectors.ts';
 import { selectTimeSettings } from '@chartsPage/charts/core/store/chartsSettingsSlice.ts';
-import { ChartCanvas } from '@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/ChartCanvas.tsx';
-import { StatsBadge } from '@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/StatsBadge/StatsBadge.tsx';
-import { ChartFooter } from '@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartFooter/ChartFooter.tsx';
-import { ChartHeader } from '@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ChartHeader/ChartHeader.tsx';
-import LoadingIndicator from '@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/LoadingIndicator/LoadingIndicator.tsx';
+import { ChartCanvas } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/ChartCanvas.tsx';
+import { StatsBadge } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/StatsBadge/StatsBadge.tsx';
+import { ChartFooter } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartFooter/ChartFooter.tsx';
+import { ChartHeader } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ChartHeader/ChartHeader.tsx';
+import LoadingIndicator from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/LoadingIndicator/LoadingIndicator.tsx';
 import CollapsibleSection from '@chartsPage/components/Collapse/CollapsibleSection.tsx';
-import { ResizableContainer } from '@chartsPage/charts/ui/ChartContainer/ResizableContainer/ResizableContainer.tsx';
-import { createOptions } from '@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/createEChartsOptions.ts';
-import { useYAxisRange } from '@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/useYAxisRange.ts';
-import { YAxisControls } from '@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/YAxisControls.tsx';
+import { ResizableContainer } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/ResizableContainer/ResizableContainer.tsx';
+import { createOptions } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/createEChartsOptions.ts';
+import { useYAxisRange } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/useYAxisRange.ts';
+import { YAxisControls } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/YAxisControls.tsx';
 import type { TimeRange } from '@chartsPage/charts/core/store/types/chart.types.ts';
-import { SyncCheckbox } from '@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncCheckbox/SyncCheckbox.tsx';
+import { SyncCheckbox } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncCheckbox/SyncCheckbox.tsx';
 import type { Guid } from '@app/lib/types/Guid.ts';
 
 const GROUP_ID = 'ChartContainer';

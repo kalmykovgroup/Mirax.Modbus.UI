@@ -1,0 +1,56 @@
+.contextItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.contextItem:hover {
+    background: #fafafa;
+}
+
+.contextCheckbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+}
+
+.contextCheckbox input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.contextName {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.contextRemove {
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: transparent;
+    color: #999;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.contextRemove:hover {
+    background: rgba(244, 67, 54, 0.1);
+    color: #f44336;
+}

@@ -74,11 +74,11 @@ export function useChartInitialization(
 
     const initializationAttemptedRef = useRef(false);
 
-    // ✅ КРИТИЧНО: Ref для отслеживания активной инициализации
+    //  КРИТИЧНО: Ref для отслеживания активной инициализации
     const isInitializingRef = useRef(false);
 
     const initialize = useCallback(async (): Promise<void> => {
-        // ✅ Проверка: уже идёт инициализация
+        //  Проверка: уже идёт инициализация
         if (isInitializingRef.current) {
             console.log('[useChartInitialization] Already initializing, skipping');
             return;
@@ -126,7 +126,7 @@ export function useChartInitialization(
             return;
         }
 
-        // ✅ Устанавливаем флаг перед началом
+        //  Устанавливаем флаг перед началом
         initializationAttemptedRef.current = true;
         isInitializingRef.current = true;
 
@@ -182,7 +182,7 @@ export function useChartInitialization(
                 error: errorMessage,
             });
         } finally {
-            // ✅ Сбрасываем флаг после завершения
+            //  Сбрасываем флаг после завершения
             isInitializingRef.current = false;
         }
     }, [dispatch, template, params.contextId, params.px, bucketing.niceMilliseconds, chartsView]);
@@ -198,9 +198,9 @@ export function useChartInitialization(
         void initialize();
     }, [initialize]);
 
-    // ✅ ИСПРАВЛЕНИЕ: Упрощённые зависимости + cleanup
+    //  ИСПРАВЛЕНИЕ: Упрощённые зависимости + cleanup
     useEffect(() => {
-        // ✅ Добавляем флаг cancelled для cleanup
+        //  Добавляем флаг cancelled для cleanup
         let cancelled = false;
 
         const shouldInitialize =
@@ -214,7 +214,7 @@ export function useChartInitialization(
             void initialize();
         }
 
-        // ✅ Cleanup при размонтировании
+        //  Cleanup при размонтировании
         return () => {
             cancelled = true;
         };

@@ -37,13 +37,13 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
 
     const activeTabId = useSelector(selectActiveTabId);
 
-    // ========== ✅ ИСПРАВЛЕНИЕ #1: Стабильный boolean ==========
+    // ==========  ИСПРАВЛЕНИЕ #1: Стабильный boolean ==========
     const syncEnabled = useSelector((state: RootState) => {
         if (!activeTabId) return false;
         return selectTabSyncEnabled(state, activeTabId);
     });
 
-    // ========== ✅ ИСПРАВЛЕНИЕ #2: Мемоизация через useMemo ==========
+    // ==========  ИСПРАВЛЕНИЕ #2: Мемоизация через useMemo ==========
     // Получаем RAW массив (стабильная ссылка из Redux)
     const syncContextIdsRaw = useSelector((state: RootState) => {
         if (!activeTabId) return undefined; // undefined вместо []
@@ -59,7 +59,7 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
         selectIsContextFieldSynced(state, contextId, fieldName)
     );
 
-    // ========== ✅ ИСПРАВЛЕНИЕ #3: Мемоизация allSyncFields ==========
+    // ==========  ИСПРАВЛЕНИЕ #3: Мемоизация allSyncFields ==========
 
     // Получаем данные для всех контекстов (Object с ключами contextId)
     const allContextSyncFieldsMap = useSelector((state: RootState) => {
@@ -69,7 +69,7 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
         }
         return result;
     }, (a, b) => {
-        // ✅ Кастомное сравнение: сравниваем ключи и значения
+        //  Кастомное сравнение: сравниваем ключи и значения
         const aKeys = Object.keys(a);
         const bKeys = Object.keys(b);
 
@@ -118,7 +118,7 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
         return undefined;
     });
 
-    // ========== ✅ ИСПРАВЛЕНИЕ #4: useRef с initialValue ==========
+    // ==========  ИСПРАВЛЕНИЕ #4: useRef с initialValue ==========
 
     const currentBucketRef = useRef<typeof currentBucket>(currentBucket);
     const syncEnabledRef = useRef<boolean>(syncEnabled);

@@ -125,62 +125,7 @@
     background: #bfbfbf;
 }
 
-.contextItem {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 6px 8px;
-    border-radius: 4px;
-    transition: background 0.2s ease;
-}
 
-.contextItem:hover {
-    background: #fafafa;
-}
-
-.contextCheckbox {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    cursor: pointer;
-    font-size: 13px;
-    color: #333;
-}
-
-.contextCheckbox input[type='checkbox'] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-}
-
-.contextName {
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.contextRemove {
-    padding: 0;
-    width: 20px;
-    height: 20px;
-    border: none;
-    background: transparent;
-    color: #999;
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.contextRemove:hover {
-    background: rgba(244, 67, 54, 0.1);
-    color: #f44336;
-}
 
 /* ========== EMPTY STATE ========== */
 .emptyState {
@@ -209,34 +154,4 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
-}
-
-.contextSection {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 16px;
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.contextHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: 12px;
-    border-bottom: 2px solid #f0f0f0;
-}
-
-.contextTitle {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-}
-
-.contextContent {
-    width: 100%;
 }

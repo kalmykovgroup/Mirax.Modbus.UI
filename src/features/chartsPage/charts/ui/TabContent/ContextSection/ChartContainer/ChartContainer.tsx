@@ -7,22 +7,11 @@ import type { RootState } from '@/store/store';
 import { selectTemplate } from '@chartsPage/charts/core/store/selectors/base.selectors';
 import styles from './ChartContainer.module.css';
 import {useChartInitialization} from "@chartsPage/charts/orchestration/hooks/useChartInitialization.ts";
-import {FieldChartContainer} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/FieldChartContainer.tsx";
-import {
-    SyncButton
-} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton.tsx";
+import {FieldChartContainer} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/FieldChartContainer.tsx";
 import {useRequestManager} from "@chartsPage/charts/orchestration/hooks/useRequestManager.ts";
 
-// ============================================
-// КОНСТАНТЫ
-// ============================================
 
 const MIN_CONTAINER_WIDTH = 640;
-
-
-// ============================================
-// КОМПОНЕНТ
-// ============================================
 
 export function ChartContainer() {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -170,14 +159,6 @@ export function ChartContainer() {
     // Основной контент: список графиков
     return (
         <div ref={containerRef} className={styles.container}>
-            <div className={styles.header}>
-                <h2 className={styles.title}>Графики</h2>
-                <div className={styles.info}>
-                    {template.selectedFields.length} графиков
-                </div>
-                <SyncButton contextId={contextId} />
-            </div>
-
             <div className={styles.chartsGrid}>
                 {template.selectedFields.map(field => (
                         <FieldChartContainer

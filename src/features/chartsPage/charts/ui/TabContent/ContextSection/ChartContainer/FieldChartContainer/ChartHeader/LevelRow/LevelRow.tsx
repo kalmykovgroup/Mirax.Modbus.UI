@@ -1,10 +1,10 @@
 // LevelRow.tsx — ИСПРАВЛЕННАЯ ВЕРСИЯ
 import React from "react";
 import styles from "./LevelRow.module.css";
-import type { LevelInfo } from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ChartHeader/ChartHeader.tsx";
+import type { LevelInfo } from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ChartHeader/ChartHeader.tsx";
 import {
     TimelineCoverageBar
-} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ChartHeader/TimelineCoverageBar/TimelineCoverageBar.tsx";
+} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ChartHeader/TimelineCoverageBar/TimelineCoverageBar.tsx";
 import type {FieldName, OriginalRange} from "@chartsPage/charts/core/store/types/chart.types.ts";
 import {useRequestManager} from "@chartsPage/charts/orchestration/hooks/useRequestManager.ts";
 

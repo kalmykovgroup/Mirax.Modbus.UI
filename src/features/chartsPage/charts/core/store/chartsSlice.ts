@@ -88,7 +88,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, template } = action.payload;
 
-            // ✅ КРИТИЧНО: Проверяем, существует ли контекст
+            //  КРИТИЧНО: Проверяем, существует ли контекст
             if (state.byContext[contextId] !== undefined) {
                 console.warn('[createContext] Context already exists, skipping:', contextId);
                 return; // НЕ создаём повторно!
