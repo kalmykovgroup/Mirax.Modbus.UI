@@ -1,29 +1,29 @@
 // src/features/chartsPage/charts/core/store/tabsSlice.ts
+// ИСПРАВЛЕНИЕ: Добавлены константы для пустых массивов
 
 import { createSlice, type PayloadAction, createSelector } from '@reduxjs/toolkit';
 import type { Guid } from '@app/lib/types/Guid';
 import type { RootState } from '@/store/store';
 
-// ============= ТИПЫ =============
+// ============= КОНСТАНТЫ =============
 
 /**
- * Информация о вкладке
- * Хранит только список контекстов, участвующих в синхронизации
+ * ✅ КРИТИЧНО: Константы для пустых массивов
+ * Предотвращают создание новых массивов при каждом вызове селектора
  */
+const EMPTY_CONTEXT_IDS: readonly Guid[] = Object.freeze([]);
+
+// ============= ТИПЫ =============
+
 export interface TabInfo {
     readonly id: Guid;
     readonly name: string;
     readonly contextIds: readonly Guid[];
     readonly visibleContextIds: readonly Guid[];
-
-    // ========== СИНХРОНИЗАЦИЯ НА УРОВНЕ ВКЛАДКИ ==========
     readonly syncEnabled: boolean;
-    readonly syncContextIds: readonly Guid[]; // какие КОНТЕКСТЫ участвуют в синхронизации
+    readonly syncContextIds: readonly Guid[];
 }
 
-/**
- * Состояние вкладок
- */
 export interface TabsState {
     readonly byId: Record<Guid, TabInfo>;
     readonly allIds: readonly Guid[];
@@ -50,8 +50,6 @@ const tabsSlice = createSlice({
     name: 'tabs',
     initialState,
     reducers: {
-        // ========== УПРАВЛЕНИЕ ВКЛАДКАМИ ==========
-
         createTab(
             state,
             action: PayloadAction<{
@@ -98,7 +96,7 @@ const tabsSlice = createSlice({
             const tabId = action.payload;
 
             if (!(tabId in state.byId)) {
-                console.warn('[closeTab] Tab not found:', tabId);
+                console.error('[closeTab] Tab not found:', tabId);
                 return;
             }
 
@@ -127,10 +125,11 @@ const tabsSlice = createSlice({
                 return;
             }
 
-            state.byId[tabId] = { ...tab, name };
+            state.byId[tabId] = {
+                ...tab,
+                name,
+            };
         },
-
-        // ========== УПРАВЛЕНИЕ КОНТЕКСТАМИ ==========
 
         addContextToTab(
             state,
@@ -148,17 +147,14 @@ const tabsSlice = createSlice({
             }
 
             if (tab.contextIds.includes(contextId)) {
-                console.warn('[addContextToTab] Context already exists:', { tabId, contextId });
+                console.warn('[addContextToTab] Context already in tab:', { tabId, contextId });
                 return;
             }
 
-            const newContextIds = [...tab.contextIds, contextId];
-            const newVisibleIds = [...tab.visibleContextIds, contextId];
-
             state.byId[tabId] = {
                 ...tab,
-                contextIds: newContextIds,
-                visibleContextIds: newVisibleIds,
+                contextIds: [...tab.contextIds, contextId],
+                visibleContextIds: [...tab.visibleContextIds, contextId],
             };
 
             console.log('[addContextToTab] Added:', { tabId, contextId });
@@ -179,17 +175,11 @@ const tabsSlice = createSlice({
                 return;
             }
 
-            const newContextIds = tab.contextIds.filter((id) => id !== contextId);
-            const newVisibleIds = tab.visibleContextIds.filter((id) => id !== contextId);
-
-            // Удаляем контекст из синхронизации
-            const newSyncContextIds = tab.syncContextIds.filter((id) => id !== contextId);
-
             state.byId[tabId] = {
                 ...tab,
-                contextIds: newContextIds,
-                visibleContextIds: newVisibleIds,
-                syncContextIds: newSyncContextIds,
+                contextIds: tab.contextIds.filter((id) => id !== contextId),
+                visibleContextIds: tab.visibleContextIds.filter((id) => id !== contextId),
+                syncContextIds: tab.syncContextIds.filter((id) => id !== contextId),
             };
 
             console.log('[removeContextFromTab] Removed:', { tabId, contextId });
@@ -210,15 +200,8 @@ const tabsSlice = createSlice({
                 return;
             }
 
-            if (!tab.contextIds.includes(contextId)) {
-                console.error('[toggleContextVisibility] Context not in tab:', {
-                    tabId,
-                    contextId,
-                });
-                return;
-            }
-
             const isVisible = tab.visibleContextIds.includes(contextId);
+
             const newVisibleIds = isVisible
                 ? tab.visibleContextIds.filter((id) => id !== contextId)
                 : [...tab.visibleContextIds, contextId];
@@ -282,11 +265,6 @@ const tabsSlice = createSlice({
             };
         },
 
-        // ========== СИНХРОНИЗАЦИЯ ==========
-
-        /**
-         * Переключить режим синхронизации для вкладки
-         */
         toggleTabSync(state, action: PayloadAction<Guid>) {
             const tabId = action.payload;
             const tab = state.byId[tabId];
@@ -301,17 +279,12 @@ const tabsSlice = createSlice({
             state.byId[tabId] = {
                 ...tab,
                 syncEnabled: newSyncEnabled,
-                // Если отключаем синхронизацию - очищаем список контекстов
                 syncContextIds: newSyncEnabled ? tab.syncContextIds : [],
             };
 
             console.log('[toggleTabSync]', { tabId, syncEnabled: newSyncEnabled });
         },
 
-        /**
-         * Добавить контекст в синхронизацию вкладки
-         * Вызывается автоматически при добавлении первого поля контекста
-         */
         addSyncContext(
             state,
             action: PayloadAction<{
@@ -332,20 +305,14 @@ const tabsSlice = createSlice({
                 return;
             }
 
-            const newSyncContextIds = [...tab.syncContextIds, contextId];
-
             state.byId[tabId] = {
                 ...tab,
-                syncContextIds: newSyncContextIds,
+                syncContextIds: [...tab.syncContextIds, contextId],
             };
 
             console.log('[addSyncContext] Added:', { tabId, contextId });
         },
 
-        /**
-         * Удалить контекст из синхронизации вкладки
-         * Вызывается автоматически при удалении последнего поля контекста
-         */
         removeSyncContext(
             state,
             action: PayloadAction<{
@@ -361,19 +328,14 @@ const tabsSlice = createSlice({
                 return;
             }
 
-            const newSyncContextIds = tab.syncContextIds.filter((id) => id !== contextId);
-
             state.byId[tabId] = {
                 ...tab,
-                syncContextIds: newSyncContextIds,
+                syncContextIds: tab.syncContextIds.filter((id) => id !== contextId),
             };
 
             console.log('[removeSyncContext] Removed:', { tabId, contextId });
         },
 
-        /**
-         * Очистить все контексты синхронизации вкладки
-         */
         clearTabSyncContexts(state, action: PayloadAction<Guid>) {
             const tabId = action.payload;
             const tab = state.byId[tabId];
@@ -390,8 +352,6 @@ const tabsSlice = createSlice({
 
             console.log('[clearTabSyncContexts]', { tabId });
         },
-
-        // ========== ГЛОБАЛЬНАЯ ОЧИСТКА ==========
 
         clearAllTabs(state) {
             state.byId = {};
@@ -417,7 +377,6 @@ export const {
     hideAllContexts,
     clearTabContexts,
     clearAllTabs,
-    // Синхронизация
     toggleTabSync,
     addSyncContext,
     removeSyncContext,
@@ -443,14 +402,16 @@ export const selectTabName = createSelector(
     (tabInfo): string | undefined => tabInfo?.name
 );
 
+// ✅ ИСПРАВЛЕНИЕ: Используем константу вместо создания нового массива
 export const selectTabContextIds = createSelector(
     [selectTabInfo],
-    (tabInfo): readonly Guid[] => tabInfo?.contextIds ?? []
+    (tabInfo): readonly Guid[] => tabInfo?.contextIds ?? EMPTY_CONTEXT_IDS
 );
 
+// ✅ ИСПРАВЛЕНИЕ: Используем константу вместо создания нового массива
 export const selectVisibleContextIds = createSelector(
     [selectTabInfo],
-    (tabInfo): readonly Guid[] => tabInfo?.visibleContextIds ?? []
+    (tabInfo): readonly Guid[] => tabInfo?.visibleContextIds ?? EMPTY_CONTEXT_IDS
 );
 
 export const selectIsContextVisible = createSelector(
@@ -497,25 +458,17 @@ export const selectTabsCount = createSelector(
 
 // ========== СЕЛЕКТОРЫ СИНХРОНИЗАЦИИ ==========
 
-/**
- * Включена ли синхронизация для вкладки
- */
 export const selectTabSyncEnabled = createSelector(
     [selectTabInfo],
     (tabInfo): boolean => tabInfo?.syncEnabled ?? false
 );
 
-/**
- * Получить все контексты, участвующие в синхронизации
- */
+// ✅ ИСПРАВЛЕНИЕ: Используем константу вместо создания нового массива
 export const selectTabSyncContextIds = createSelector(
     [selectTabInfo],
-    (tabInfo): readonly Guid[] => tabInfo?.syncContextIds ?? []
+    (tabInfo): readonly Guid[] => tabInfo?.syncContextIds ?? EMPTY_CONTEXT_IDS
 );
 
-/**
- * Проверить, участвует ли контекст в синхронизации
- */
 export const selectIsContextSynced = createSelector(
     [
         selectTabInfo,
@@ -527,9 +480,6 @@ export const selectIsContextSynced = createSelector(
     }
 );
 
-/**
- * Количество синхронизированных контекстов
- */
 export const selectTabSyncContextsCount = createSelector(
     [selectTabSyncContextIds],
     (syncContextIds): number => syncContextIds.length

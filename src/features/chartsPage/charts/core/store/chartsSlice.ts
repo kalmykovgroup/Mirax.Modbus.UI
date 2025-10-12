@@ -88,6 +88,13 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, template } = action.payload;
 
+            // ✅ КРИТИЧНО: Проверяем, существует ли контекст
+            if (state.byContext[contextId] !== undefined) {
+                console.warn('[createContext] Context already exists, skipping:', contextId);
+                return; // НЕ создаём повторно!
+            }
+
+            // Создаём новый контекст
             state.byContext[contextId] = {
                 contextId: contextId,
                 template: template,
@@ -217,18 +224,27 @@ const contextsSlice = createSlice({
                 return;
             }
 
+            // Создаём пустой Record для серий
             const seriesLevel: Record<BucketsMs, SeriesTile[]> = {};
+
+            // Инициализируем каждый level пустым массивом
             for (const bucket of seriesLevels) {
                 seriesLevel[bucket] = [];
             }
 
+            // Создаём новый view
             context.view[field] = {
                 originalRange,
                 currentRange,
                 currentBucketsMs,
                 seriesLevel,
                 px,
-                loadingState: { active: false, type: LoadingType.Initial, progress: 0, startTime: 0 },
+                loadingState: {
+                    active: false,
+                    type: LoadingType.Initial,
+                    progress: 0,
+                    startTime: 0
+                },
                 error,
             };
 
