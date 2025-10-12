@@ -1,28 +1,36 @@
-import {useRef, useCallback, useEffect, useMemo} from 'react';
-import {batch, useSelector} from 'react-redux';
+// features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/FieldChartContainer.tsx
+// ОПТИМИЗАЦИЯ: currentRange передаётся ТОЛЬКО для синхронизированных графиков
+
+import { useRef, useCallback, useEffect, useMemo } from 'react';
+import { batch, useSelector } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
-import { useRequestManager } from "@chartsPage/charts/orchestration/hooks/useRequestManager.ts";
-import { setViewBucket, setViewRange, updateView } from "@chartsPage/charts/core/store/chartsSlice.ts";
-import { calculateBucket } from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
-import type { RootState } from "@/store/store.ts";
+import { useRequestManager } from '@chartsPage/charts/orchestration/hooks/useRequestManager.ts';
+import {
+    setViewBucket,
+    setViewRange,
+    updateView
+} from '@chartsPage/charts/core/store/chartsSlice.ts';
+import { calculateBucket } from '@chartsPage/charts/core/store/chartsSettingsSlice.ts';
+import type { RootState } from '@/store/store.ts';
 import {
     selectContextSyncFields,
     selectFieldCurrentBucketMs,
-} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
-import type { TimeRange } from "@chartsPage/charts/core/store/types/chart.types.ts";
-import type {Guid} from "@app/lib/types/Guid.ts";
+    selectFieldCurrentRange, // ← ДОБАВЛЕНО
+    selectIsContextFieldSynced // ← ДОБАВЛЕНО
+} from '@chartsPage/charts/core/store/selectors/base.selectors.ts';
+import type { TimeRange } from '@chartsPage/charts/core/store/types/chart.types.ts';
+import type { Guid } from '@app/lib/types/Guid.ts';
 import {
     selectActiveTabId,
     selectTabSyncContextIds,
     selectTabSyncEnabled
-} from "@chartsPage/charts/core/store/tabsSlice.ts";
-import type {FieldDto} from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
-import {
-    ViewFieldChart
-} from "@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ViewFieldChart.tsx";
-import {RequestManagerRegistry} from "@chartsPage/charts/orchestration/requests/RequestManagerRegistry.ts";
+} from '@chartsPage/charts/core/store/tabsSlice.ts';
+import type { FieldDto } from '@chartsPage/metaData/shared/dtos/FieldDto.ts';
+import { ViewFieldChart } from '@chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ViewFieldChart.tsx';
+import { RequestManagerRegistry } from '@chartsPage/charts/orchestration/requests/RequestManagerRegistry.ts';
 
 interface FieldChartContainerProps {
+    readonly contextId: Guid;
     readonly fieldName: string;
     readonly width: number;
 }
@@ -34,21 +42,12 @@ interface FieldChartContainerProps {
  * - UI обновляется мгновенно
  * - Синхронизация зума между выбранными графиками
  * - Защита от циклических обновлений при синхронизации
+ * - currentRange передаётся ТОЛЬКО для синхронизированных графиков
  */
-// src/features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/FieldChartContainer.tsx
-
-// src/features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/FieldChartContainer.tsx
-
-interface FieldChartContainerProps {
-    readonly contextId: Guid; // ← ДОБАВИЛИ
-    readonly fieldName: string;
-    readonly width: number;
-}
-
 export function FieldChartContainer({
-                                        contextId, // ← ДОБАВИЛИ
+                                        contextId,
                                         fieldName,
-                                        width,
+                                        width
                                     }: FieldChartContainerProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const dispatch = useAppDispatch();
@@ -71,6 +70,11 @@ export function FieldChartContainer({
         if (!activeTabId) return [];
         return selectTabSyncContextIds(state, activeTabId);
     });
+
+    // ========== ПРОВЕРКА: Участвует ли ТЕКУЩЕЕ поле в синхронизации ==========
+    const isCurrentFieldSynced = useSelector((state: RootState) =>
+        selectIsContextFieldSynced(state, contextId, fieldName)
+    );
 
     // Получаем синхронизированные поля ВСЕХ контекстов
     const allSyncFields = useSelector((state: RootState) => {
@@ -101,6 +105,17 @@ export function FieldChartContainer({
         selectFieldCurrentBucketMs(state, contextId, fieldName)
     );
 
+    // ========== КРИТИЧНО: currentRange ТОЛЬКО для синхронизированных ==========
+    const currentRange = useSelector((state: RootState) => {
+        // Передаём currentRange ТОЛЬКО если:
+        // 1. Синхронизация включена на уровне таба
+        // 2. Текущее поле участвует в синхронизации
+        if (syncEnabled && isCurrentFieldSynced) {
+            return selectFieldCurrentRange(state, contextId, fieldName);
+        }
+        return undefined; // Для несинхронизированных графиков - не передаём
+    });
+
     const currentBucketRef = useRef(currentBucket);
     const syncEnabledRef = useRef(syncEnabled);
     const otherSyncFieldsRef = useRef(otherSyncFields);
@@ -130,8 +145,6 @@ export function FieldChartContainer({
      * 2. Генерируем запросы (debounced):
      *    - 1 запрос для текущего контекста
      *    - 1 запрос для каждого ДРУГОГО синхронизированного контекста
-     *
-     * RequestManager.loadVisibleRange сам знает, какие поля загрузить для контекста
      */
     const handleOnZoomEnd = useCallback(
         (range: TimeRange) => {
@@ -168,8 +181,8 @@ export function FieldChartContainer({
                         field: fieldName,
                         range: {
                             fromMs: range.fromMs,
-                            toMs: range.toMs,
-                        },
+                            toMs: range.toMs
+                        }
                     })
                 );
 
@@ -180,7 +193,7 @@ export function FieldChartContainer({
                         setViewBucket({
                             contextId,
                             field: fieldName,
-                            bucketMs: newBucket,
+                            bucketMs: newBucket
                         })
                     );
                 }
@@ -200,8 +213,8 @@ export function FieldChartContainer({
                                 field: item.field.name,
                                 range: {
                                     fromMs: range.fromMs,
-                                    toMs: range.toMs,
-                                },
+                                    toMs: range.toMs
+                                }
                             })
                         );
 
@@ -216,15 +229,16 @@ export function FieldChartContainer({
                                 setViewBucket({
                                     contextId: item.contextId,
                                     field: item.field.name,
-                                    bucketMs: syncBucket,
+                                    bucketMs: syncBucket
                                 })
                             );
                         }
                     }
 
+                    // КРИТИЧНО: Таймаут синхронизирован с ChartCanvas (300ms)
                     setTimeout(() => {
                         isSyncUpdateRef.current = false;
-                    }, 100);
+                    }, 300);
                 }
             });
 
@@ -240,7 +254,7 @@ export function FieldChartContainer({
                     contextId,
                     fieldName,
                     range: { from: range.fromMs, to: range.toMs },
-                    bucket: newBucket,
+                    bucket: newBucket
                 });
 
                 void requestManager.loadVisibleRange(
@@ -253,7 +267,6 @@ export function FieldChartContainer({
 
                 // 2.2. Запросы для ДРУГИХ синхронизированных контекстов
                 if (shouldSync && otherSyncFieldsRef.current.length > 0) {
-                    // Группируем поля по контекстам
                     const fieldsByContext = new Map<Guid, FieldDto[]>();
 
                     for (const item of otherSyncFieldsRef.current) {
@@ -266,18 +279,15 @@ export function FieldChartContainer({
                         '[FieldChartContainer] Генерируем запросы для синхронизированных контекстов:',
                         Array.from(fieldsByContext.keys()).map((ctxId) => ({
                             contextId: ctxId,
-                            fields: fieldsByContext.get(ctxId)?.map((f) => f.name),
+                            fields: fieldsByContext.get(ctxId)?.map((f) => f.name)
                         }))
                     );
 
-                    // Для каждого контекста генерируем 1 запрос
                     for (const [otherContextId, fields] of fieldsByContext.entries()) {
-                        // Пропускаем текущий контекст (уже обработан выше)
                         if (otherContextId === contextId) {
                             continue;
                         }
 
-                        // Получаем менеджер контекста из реестра
                         const otherManager = RequestManagerRegistry.get(otherContextId);
 
                         if (!otherManager) {
@@ -289,14 +299,9 @@ export function FieldChartContainer({
                             continue;
                         }
 
-                        // Берем первое поле из контекста
-                        // RequestManager.loadVisibleRange сам определит все нужные поля
                         const firstField = fields[0];
                         if (!firstField) {
-                            console.warn(
-                                '[FieldChartContainer] No fields for context:',
-                                otherContextId
-                            );
+                            console.warn('[FieldChartContainer] No fields for context:', otherContextId);
                             continue;
                         }
 
@@ -306,12 +311,10 @@ export function FieldChartContainer({
                                 triggerField: firstField.name,
                                 allFieldsInContext: fields.map((f) => f.name),
                                 range: { from: range.fromMs, to: range.toMs },
-                                bucket: newBucket,
+                                bucket: newBucket
                             }
                         );
 
-                        // Вызываем loadVisibleRange для первого поля
-                        // Менеджер сам загрузит данные для всех полей контекста
                         void otherManager.loadVisibleRange(
                             firstField.name,
                             range.fromMs,
@@ -339,7 +342,6 @@ export function FieldChartContainer({
                 const { width } = entry.contentRect;
                 if (width > 100) {
                     const px = Math.floor(width);
-                    // ТОЛЬКО добавили contextId
                     dispatch(updateView({ contextId, field: fieldName, px }));
                 }
             }
@@ -372,6 +374,7 @@ export function FieldChartContainer({
                 fieldName={fieldName}
                 onZoomEnd={handleOnZoomEnd}
                 onRetry={handleRetry}
+                currentRange={currentRange}
             />
         </div>
     );

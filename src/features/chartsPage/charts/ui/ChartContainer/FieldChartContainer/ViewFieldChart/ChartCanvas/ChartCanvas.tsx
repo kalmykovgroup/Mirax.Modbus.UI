@@ -1,17 +1,17 @@
-// components/chart/ChartCanvas/ChartCanvas.tsx
-// Программное управление диапазоном для синхронизации
+// features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/ChartCanvas.tsx
+// ИСПРАВЛЕНИЕ: Усиленная защита от программных событий dataZoom
 
 import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts';
 import type { EChartsOption, EChartsType } from 'echarts';
-import type { TimeRange } from "@chartsPage/charts/core/store/types/chart.types.ts";
+import type { TimeRange } from '@chartsPage/charts/core/store/types/chart.types.ts';
 
 interface ChartCanvasProps {
     readonly options: EChartsOption;
     readonly totalPoints: number;
     readonly onZoomEnd?: ((range: TimeRange) => void) | undefined;
     readonly loading?: boolean | undefined;
-    readonly currentRange?: TimeRange | undefined; // Новый проп для синхронизации
+    readonly currentRange?: TimeRange | undefined;
 }
 
 export function ChartCanvas({
@@ -26,10 +26,12 @@ export function ChartCanvas({
     const onZoomEndRef = useRef(onZoomEnd);
     const totalPointsRef = useRef(totalPoints);
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const isInteractingRef = useRef(false); // Флаг: нажата ли кнопка мыши
-    const isProgrammaticUpdateRef = useRef(false); // Флаг: программное обновление
+    const isInteractingRef = useRef(false);
+    const isProgrammaticUpdateRef = useRef(false);
 
-    // Синхронизируем refs (без ре-рендера)
+    // Отслеживание последнего применённого range
+    const lastAppliedRangeRef = useRef<TimeRange | null>(null);
+
     totalPointsRef.current = totalPoints;
     onZoomEndRef.current = onZoomEnd;
 
@@ -48,14 +50,10 @@ export function ChartCanvas({
 
         chartRef.current = chart;
 
-        // Устанавливаем начальные options
         chart.setOption(options, { notMerge: true });
 
-        /**
-         * Вспомогательная функция для вызова callback
-         */
         const triggerZoomEnd = (): void => {
-            // Не вызываем callback если это программное обновление
+            // ========== ЗАЩИТА 1: Флаг программного обновления ==========
             if (isProgrammaticUpdateRef.current) {
                 console.log('[ChartCanvas] Пропускаем callback - программное обновление');
                 return;
@@ -65,40 +63,43 @@ export function ChartCanvas({
             const dataZoom = option.dataZoom?.[0];
 
             if (dataZoom?.startValue != null && dataZoom?.endValue != null) {
-                console.log('[ChartCanvas] Вызываем onZoomEnd:', {
-                    fromMs: dataZoom.startValue,
-                    toMs: dataZoom.endValue
-                });
-
-                onZoomEndRef.current?.({
+                const newRange: TimeRange = {
                     fromMs: dataZoom.startValue as number,
                     toMs: dataZoom.endValue as number
-                });
+                };
+
+                // ========== ЗАЩИТА 2: Сравнение с lastAppliedRange ==========
+                // Если это тот же range, который мы только что применили - игнорируем
+                if (
+                    lastAppliedRangeRef.current &&
+                    Math.abs(lastAppliedRangeRef.current.fromMs - newRange.fromMs) <= 1 &&
+                    Math.abs(lastAppliedRangeRef.current.toMs - newRange.toMs) <= 1
+                ) {
+                    console.log('[ChartCanvas] Range совпадает с lastApplied, игнорируем callback:', newRange);
+                    return;
+                }
+
+                // Обновляем lastAppliedRange
+                lastAppliedRangeRef.current = newRange;
+
+                console.log('[ChartCanvas] Вызываем onZoomEnd:', newRange);
+
+                onZoomEndRef.current?.(newRange);
             }
         };
 
-        /**
-         * КРИТИЧНО: Обработчик dataZoom
-         *
-         * Логика:
-         * 1. Если isProgrammaticUpdateRef.current === true (программное обновление) - игнорируем
-         * 2. Если isInteractingRef.current === true (пан с зажатой мышью) - игнорируем
-         * 3. Если isInteractingRef.current === false (зум колесом) - вызываем onZoomEnd с debounce
-         */
         const handleDataZoom = (_params: any): void => {
-
-            // Игнорируем программные обновления
+            // Защита от программных обновлений
             if (isProgrammaticUpdateRef.current) {
                 console.log('[ChartCanvas] Программное обновление, игнорируем dataZoom');
                 return;
             }
 
-            // Если пользователь в процессе пана (мышь зажата) - не вызываем callback
+            // Защита от пана
             if (isInteractingRef.current) {
                 console.log('[ChartCanvas] Пан в процессе, игнорируем dataZoom');
                 return;
             }
-
 
             if (debounceTimerRef.current) {
                 clearTimeout(debounceTimerRef.current);
@@ -109,9 +110,6 @@ export function ChartCanvas({
             }, 150);
         };
 
-        /**
-         * Отслеживаем начало взаимодействия (пан)
-         */
         const handleMouseDown = (e: MouseEvent): void => {
             if (e.button === 0) {
                 isInteractingRef.current = true;
@@ -123,9 +121,6 @@ export function ChartCanvas({
             }
         };
 
-        /**
-         * Отслеживаем окончание взаимодействия (пан)
-         */
         const handleMouseUp = (e: MouseEvent): void => {
             if (e.button === 0 && isInteractingRef.current) {
                 isInteractingRef.current = false;
@@ -140,7 +135,6 @@ export function ChartCanvas({
             }
         };
 
-        // Подписываемся на события
         chart.on('dataZoom', handleDataZoom);
         container.addEventListener('mousedown', handleMouseDown);
         document.addEventListener('mouseup', handleMouseUp);
@@ -161,10 +155,10 @@ export function ChartCanvas({
             chart.dispose();
             chartRef.current = null;
         };
-    }, []); // ← Пустые deps: инициализация 1 раз
+    }, []);
 
     // ============================================
-    // ОБНОВЛЕНИЕ OPTIONS (только при изменении данных)
+    // ОБНОВЛЕНИЕ OPTIONS
     // ============================================
     useEffect(() => {
         const chart = chartRef.current;
@@ -175,50 +169,81 @@ export function ChartCanvas({
             lazyUpdate: false,
             silent: false
         });
-
     }, [options]);
 
     // ============================================
-    // ПРОГРАММНОЕ ОБНОВЛЕНИЕ ДИАПАЗОНА (для синхронизации)
+    // УМНОЕ ПРОГРАММНОЕ ОБНОВЛЕНИЕ ДИАПАЗОНА
     // ============================================
     useEffect(() => {
         const chart = chartRef.current;
         if (!chart || !currentRange) return;
 
-        console.log('[ChartCanvas] Программное обновление диапазона:', currentRange);
+        // ========== ПРОВЕРКА: Сравниваем с текущим zoom ECharts ==========
+        const option = chart.getOption() as any;
+        const dataZoom = option.dataZoom?.[0];
+        const currentStart = dataZoom?.startValue;
+        const currentEnd = dataZoom?.endValue;
 
-        // Устанавливаем флаг программного обновления
-        isProgrammaticUpdateRef.current = true;
+        const TOLERANCE = 1;
+        const isAlreadySet =
+            currentStart != null &&
+            currentEnd != null &&
+            Math.abs(currentStart - currentRange.fromMs) <= TOLERANCE &&
+            Math.abs(currentEnd - currentRange.toMs) <= TOLERANCE;
 
-        // Обновляем dataZoom программно
-        chart.setOption({
-            dataZoom: [{
-                type: 'inside',
-                startValue: currentRange.fromMs,
-                endValue: currentRange.toMs,
-                zoomLock: false,
-                zoomOnMouseWheel: true,
-                moveOnMouseMove: true,
-                moveOnMouseWheel: false,
-                preventDefaultMouseMove: true
-            }]
-        }, {
-            replaceMerge: ['dataZoom'], // Заменяем только dataZoom
-            silent: true // КРИТИЧНО: не генерируем событие dataZoom
+        if (isAlreadySet) {
+            console.log('[ChartCanvas] ECharts zoom уже установлен, пропускаем:', {
+                current: { from: currentStart, to: currentEnd },
+                incoming: currentRange
+            });
+            // Обновляем lastAppliedRange
+            lastAppliedRangeRef.current = currentRange;
+            return;
+        }
+
+        // ========== ПРИМЕНЯЕМ ПРОГРАММНОЕ ОБНОВЛЕНИЕ ==========
+        console.log('[ChartCanvas] Применяем программное обновление:', {
+            from: { current: currentStart, new: currentRange.fromMs },
+            to: { current: currentEnd, new: currentRange.toMs }
         });
 
-        // Сбрасываем флаг после небольшой задержки
+        // КРИТИЧНО: Устанавливаем флаг ПЕРЕД обновлением
+        isProgrammaticUpdateRef.current = true;
+
+        chart.setOption(
+            {
+                dataZoom: [
+                    {
+                        type: 'inside',
+                        startValue: currentRange.fromMs,
+                        endValue: currentRange.toMs,
+                        zoomLock: false,
+                        zoomOnMouseWheel: true,
+                        moveOnMouseMove: true,
+                        moveOnMouseWheel: false,
+                        preventDefaultMouseMove: true
+                    }
+                ]
+            },
+            {
+                replaceMerge: ['dataZoom'],
+                silent: true
+            }
+        );
+
+        // Обновляем lastAppliedRange СРАЗУ после setOption
+        lastAppliedRangeRef.current = currentRange;
+
+        // КРИТИЧНО: Увеличиваем задержку до 300ms для надёжности
         const timer = setTimeout(() => {
             isProgrammaticUpdateRef.current = false;
             console.log('[ChartCanvas] Флаг программного обновления сброшен');
-        }, 100);
+        }, 300);
 
         return () => {
             clearTimeout(timer);
         };
     }, [currentRange]);
-
-    console.log('[ChartCanvas] Обновление options');
 
     // ============================================
     // LOADING STATE
