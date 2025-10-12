@@ -3,155 +3,202 @@
 .tabContent {
     display: flex;
     flex-direction: column;
-    gap: 24px;
-    width: 100%;
+    gap: 16px;
+    height: 100%;
+    position: relative;
 }
 
 /* ========== ФИЛЬТР КОНТЕКСТОВ ========== */
+
 .contextFilter {
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
+    background: #fafafa;
     border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
     overflow: hidden;
-    /* УБРАЛИ: position: sticky, top, z-index */
+    flex-shrink: 0;
 }
 
-/* Кнопка раскрытия */
 .filterToggle {
+    width: 100%;
     display: flex;
     align-items: center;
-    gap: 12px;
-    width: 100%;
+    gap: 8px;
     padding: 12px 16px;
-    border: none;
     background: transparent;
+    border: none;
     cursor: pointer;
     transition: background 0.2s ease;
+    text-align: left;
 }
 
 .filterToggle:hover {
-    background: #fafafa;
-}
-
-.filterToggle[aria-expanded='true'] {
-    background: #f5f5f5;
+    background: #f0f0f0;
 }
 
 .filterArrow {
     font-size: 12px;
-    color: #999;
+    color: #666;
     transition: transform 0.2s ease;
 }
 
 .filterTitle {
-    flex: 1;
-    text-align: left;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     color: #333;
 }
 
-/* Раскрывающийся контент */
 .filterContent {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 0 16px 12px 16px;
-    animation: slideDown 0.2s ease;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    border-top: 1px solid #e0e0e0;
+    padding: 12px 16px;
 }
 
 .filterActions {
     display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #f0f0f0;
+    gap: 8px;
+    margin-bottom: 12px;
 }
 
 .filterToggleAll {
-    padding: 4px 8px;
-    border: 1px solid #d9d9d9;
+    padding: 6px 12px;
+    border: 1px solid #d0d0d0;
     border-radius: 4px;
     background: #ffffff;
-    color: #555;
-    font-size: 12px;
+    color: #333;
+    font-size: 13px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .filterToggleAll:hover {
-    background: #fafafa;
-    border-color: #1890ff;
-    color: #1890ff;
+    background: #f5f5f5;
+    border-color: #1976d2;
+    color: #1976d2;
 }
 
 .contextList {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    max-height: 300px;
+    gap: 8px;
+}
+
+/* ========== КОНТЕКСТЫ ========== */
+
+.contextSections {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    flex: 1;
     overflow-y: auto;
+    padding-bottom: 24px;
 }
 
-.contextList::-webkit-scrollbar {
-    width: 6px;
+/* 🔥 КРИТИЧНО: НЕ unmount, а display: none */
+.contextWrapper {
+    /* Никаких transition для display - мгновенное переключение */
 }
 
-.contextList::-webkit-scrollbar-track {
-    background: #f5f5f5;
-    border-radius: 3px;
-}
+/* ========== ПУСТОЕ СОСТОЯНИЕ (OVERLAY) ========== */
 
-.contextList::-webkit-scrollbar-thumb {
-    background: #d9d9d9;
-    border-radius: 3px;
-}
-
-.contextList::-webkit-scrollbar-thumb:hover {
-    background: #bfbfbf;
-}
-
-
-
-/* ========== EMPTY STATE ========== */
 .emptyState {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    min-height: 300px;
+    gap: 8px;
     padding: 48px 24px;
-    color: #999;
-    font-size: 16px;
     text-align: center;
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
+    color: #999;
+}
+
+.emptyStateOverlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 48px 24px;
+    text-align: center;
+    color: #999;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+.emptyState p,
+.emptyStateOverlay p {
+    margin: 0;
+    font-size: 14px;
 }
 
 .hint {
-    font-size: 14px;
+    font-size: 12px;
     color: #bbb;
 }
 
-/* ========== СЕКЦИИ КОНТЕКСТОВ ========== */
-.contextSections {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
+/* ========== АДАПТИВНОСТЬ ========== */
+
+@media (max-width: 768px) {
+    .tabContent {
+        gap: 12px;
+    }
+
+    .filterToggle {
+        padding: 10px 12px;
+    }
+
+    .filterTitle {
+        font-size: 13px;
+    }
+
+    .contextSections {
+        gap: 16px;
+    }
 }
+
+/* ========== SYNC BUTTON CONTAINER ========== */
+.syncButtonContainer {
+    /* Базовые стили - кнопка в потоке */
+    transition: all 0.3s ease;
+
+}
+
+.syncButtonSticky {
+    /* Липкое позиционирование когда активна */
+    position: sticky;
+    /* Читаем высоту топбара из CSS переменной + отступ 16px */
+    top: calc(var(--topbar-height, 49px));
+    z-index: 100;
+
+    /* Визуальные эффекты для липкого состояния */
+
+
+    /* Анимация появления тени при "прилипании" */
+    animation: stickyAppear 0.3s ease;
+}
+
+@keyframes stickyAppear {
+    from {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    to {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+}
+
+/* Опциональный эффект "подсветки" границы */
+.syncButtonSticky::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 8px 8px 0 0;
+    opacity: 0.6;
+}
+

@@ -1,0 +1,119 @@
+/* src/features/chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartExportButton/ChartExportButton.module.css */
+
+.container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Триггер */
+.trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    background: linear-gradient(180deg, #fafbfc 0%, #f6f8fa 100%);
+    color: #24292f;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.trigger:hover {
+    background: linear-gradient(180deg, #f3f4f6 0%, #eaeef2 100%);
+    border-color: #1f883d;
+}
+
+.icon {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.label {
+    white-space: nowrap;
+}
+
+.arrow {
+    font-size: 10px;
+    color: #57606a;
+    transition: transform 0.2s ease;
+}
+
+.container:hover .arrow {
+    transform: rotate(180deg);
+}
+
+/* Меню (скрыто по умолчанию) */
+.menu {
+    position: absolute;
+    top: 100%; /* Вплотную */
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 6px 6px 6px; /* Увеличенный padding-top создает визуальный отступ */
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: all 0.2s ease;
+    z-index: 1000;
+    min-width: 180px;
+}
+
+.container:hover .menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* Остальное без изменений */
+.menuButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #24292f;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.menuButton:hover:not(:disabled) {
+    background: #f6f8fa;
+}
+
+.menuButton:active:not(:disabled) {
+    background: #eaeef2;
+}
+
+.menuButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.menuIcon {
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.menuLabel {
+    flex: 1;
+}

@@ -10,16 +10,16 @@ import {
     toggleContextVisibility,
     showAllContexts,
     hideAllContexts,
-    removeContextFromTab,
+    removeContextFromTab, selectTabSyncEnabled, selectActiveTabId,
 } from '@chartsPage/charts/core/store/tabsSlice.ts';
 import type { Guid } from '@app/lib/types/Guid';
 import type { RootState } from '@/store/store';
 import styles from './TabContent.module.css';
-import {ContextFilterItem} from "@chartsPage/charts/ui/TabContent/ContextFilterItem/ContextFilterItem.tsx";
-import {ContextSection} from "@chartsPage/charts/ui/TabContent/ContextSection/ContextSection.tsx";
+import { ContextFilterItem } from '@chartsPage/charts/ui/TabContent/ContextFilterItem/ContextFilterItem.tsx';
+import { ContextSection } from '@chartsPage/charts/ui/TabContent/ContextSection/ContextSection.tsx';
 import {
-    SyncButton
-} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton.tsx";
+    SyncButton,
+} from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton.tsx';
 
 interface TabContentProps {
     readonly tabId: Guid;
@@ -27,20 +27,35 @@ interface TabContentProps {
 
 /**
  * Контент вкладки: фильтр контекстов + список графиков
+ *
+ * АРХИТЕКТУРА "ЖИВЫХ КОНТЕКСТОВ":
+ * - Рендерит ВСЕ контексты одновременно (не unmount при скрытии)
+ * - Управляет видимостью через CSS (display: block/none)
+ * - RequestManager'ы остаются живыми → загрузка для всех контекстов
  */
 export function TabContent({ tabId }: TabContentProps) {
     const dispatch = useAppDispatch();
     const confirm = useConfirm();
 
+    // 🔥 КРИТИЧНО: allContextIds для рендеринга, visibleContextIds для видимости
     const allContextIds = useSelector((state: RootState) => selectTabContextIds(state, tabId));
     const visibleContextIds = useSelector((state: RootState) =>
         selectVisibleContextIds(state, tabId)
     );
 
-    // Состояние раскрытия фильтра
     const [filterOpen, setFilterOpen] = useState(false);
 
     const allVisible = allContextIds.length === visibleContextIds.length;
+
+
+    // Получаем активную вкладку
+    const activeTabId = useSelector(selectActiveTabId);
+
+    // Состояние синхронизации текущей вкладки
+    const syncEnabled = useSelector((state: RootState) => {
+        if (!activeTabId) return false;
+        return selectTabSyncEnabled(state, activeTabId);
+    });
 
     const handleToggleAll = () => {
         if (allVisible) {
@@ -73,9 +88,8 @@ export function TabContent({ tabId }: TabContentProps) {
 
     return (
         <div className={styles.tabContent}>
-            {/* Фильтр контекстов (collapsible) */}
+            {/* Фильтр контекстов */}
             <div className={styles.contextFilter}>
-                {/* Заголовок с кнопкой раскрытия */}
                 <button
                     className={styles.filterToggle}
                     onClick={() => setFilterOpen(!filterOpen)}
@@ -88,7 +102,6 @@ export function TabContent({ tabId }: TabContentProps) {
                     </span>
                 </button>
 
-                {/* Раскрывающийся контент */}
                 {filterOpen && (
                     <div className={styles.filterContent}>
                         <div className={styles.filterActions}>
@@ -103,7 +116,7 @@ export function TabContent({ tabId }: TabContentProps) {
                         </div>
 
                         <div className={styles.contextList}>
-                            {allContextIds.map(contextId => (
+                            {allContextIds.map((contextId) => (
                                 <ContextFilterItem
                                     key={contextId}
                                     tabId={tabId}
@@ -120,21 +133,39 @@ export function TabContent({ tabId }: TabContentProps) {
                 )}
             </div>
 
-            <SyncButton />
+            {/* Липкая обёртка для SyncButton */}
+            <div
+                className={`${styles.syncButtonContainer} ${syncEnabled ? styles.syncButtonSticky : ''}`}
+            >
+                <SyncButton />
+            </div>
 
-            {/* Графики */}
-            {visibleContextIds.length === 0 ? (
-                <div className={styles.emptyState}>
+            {/* 🔥 КРИТИЧНОЕ ИЗМЕНЕНИЕ: Рендерим ВСЕ контексты, управляем видимостью через CSS */}
+            <div className={styles.contextSections}>
+                {allContextIds.map((contextId) => {
+                    const isVisible = visibleContextIds.includes(contextId);
+
+                    return (
+                        <div
+                            key={contextId}
+                            className={styles.contextWrapper}
+                            style={{ display: isVisible ? 'block' : 'none' }}
+                        >
+                            <ContextSection contextId={contextId} />
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Пустое состояние показываем поверх скрытых контекстов */}
+            {visibleContextIds.length === 0 && (
+                <div className={styles.emptyStateOverlay}>
                     <p>Нет выбранных шаблонов для отображения</p>
                     <p className={styles.hint}>Используйте фильтр выше для выбора шаблонов</p>
-                </div>
-            ) : (
-                <div className={styles.contextSections}>
-                    {visibleContextIds.map(contextId => (
-                        <ContextSection key={contextId} contextId={contextId} />
-                    ))}
                 </div>
             )}
         </div>
     );
 }
+
+

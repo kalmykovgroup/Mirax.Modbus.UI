@@ -1,4 +1,4 @@
-/* components/chart/ViewFieldChart/ViewFieldChart.module.css */
+/* src/features/chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ViewFieldChart.module.css */
 
 .viewFieldChartContainer {
     display: flex;
@@ -12,9 +12,10 @@
 
 .header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .title {
@@ -22,9 +23,15 @@
     font-size: 18px;
     font-weight: 600;
     color: #212529;
+    flex-shrink: 0;
 }
 
-.chartData{
+/* Кнопка экспорта располагается после StatsBadge */
+.exportButton {
+    flex-shrink: 0;
+}
+
+.chartData {
     width: 100%;
     display: flex;
     align-items: center;
@@ -33,7 +40,7 @@
     font-weight: bold;
 }
 
-.chartData .label{
+.chartData .label {
     font-weight: normal;
 }
 
@@ -49,28 +56,6 @@
 .footer {
     padding-top: 8px;
     border-top: 1px solid #e0e0e0;
-}
-
-.chartData {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: 8px;
-    background: #f5f5f5;
-    border-radius: 4px;
-    font-size: 13px;
-    margin-bottom: 8px;
-}
-
-.chartData span {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.label {
-    color: #666;
-    font-weight: 500;
 }
 
 .indicationContainer {

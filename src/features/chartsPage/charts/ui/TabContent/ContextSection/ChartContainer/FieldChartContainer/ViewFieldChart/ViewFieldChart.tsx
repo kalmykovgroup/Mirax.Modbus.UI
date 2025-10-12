@@ -26,6 +26,9 @@ import { YAxisControls } from '@chartsPage/charts/ui/TabContent/ContextSection/C
 import type { TimeRange } from '@chartsPage/charts/core/store/types/chart.types.ts';
 import { SyncCheckbox } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncCheckbox/SyncCheckbox.tsx';
 import type { Guid } from '@app/lib/types/Guid.ts';
+import {
+    ChartExportButton
+} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/СhartDataExport/ChartExportButton.tsx";
 
 const GROUP_ID = 'ChartContainer';
 
@@ -35,7 +38,7 @@ interface ViewFieldChartProps {
     readonly onZoomEnd?: ((range: TimeRange) => void) | undefined;
     readonly onRetry?: (() => void) | undefined;
     readonly width: number;
-    readonly currentRange?: TimeRange | undefined; // ← НОВОЕ: Передаётся от FieldChartContainer
+    readonly currentRange?: TimeRange | undefined;
 }
 
 export const ViewFieldChart = memo(function ViewFieldChart({
@@ -157,6 +160,19 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                             isLoading={chartFieldStatus.isLoading}
                             fieldName={fieldName}
                         />
+
+                        <ChartExportButton
+                            avgPoints={chartData.avgPoints}
+                            minPoints={chartData.minPoints}
+                            maxPoints={chartData.maxPoints}
+                            fieldName={fieldName}
+                            contextId={contextId}
+                            bucketMs={chartData.bucketMs}
+                            dataQuality={chartData.quality}
+                            defaultFormat="excel"
+                            className={styles.exportButton}
+                        />
+
                         <YAxisControls control={yAxisControl} />
                     </div>
 

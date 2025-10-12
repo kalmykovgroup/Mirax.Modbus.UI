@@ -27,34 +27,43 @@ export function ChartsPage() {
     const dispatch = useAppDispatch();
     const confirm = useConfirm();
 
-    const [activeTopTab, setActiveTopTab] = useState<TopTab | Guid>('templates');
+    const [activeTopTab, setActiveTopTab] = useState<TopTab | Guid>('mirax');
+    const [topBarHeight, setTopBarHeight] = useState(49);
 
+    const topBarRef = useRef<HTMLDivElement>(null);
     const allTabIds = useSelector(selectAllTabIds);
 
-    // Запоминаем предыдущее количество вкладок
-    const prevTabsCountRef = useRef(allTabIds.length);
-
-    // Автопереключение на первую вкладку графиков при создании (0 → 1)
+    // ============================================
+    // ОТСЛЕЖИВАНИЕ ВЫСОТЫ topTabBar
+    // ============================================
     useEffect(() => {
-        const prevCount = prevTabsCountRef.current;
-        const currentCount = allTabIds.length;
+        const topBar = topBarRef.current;
+        if (!topBar) return;
 
-        if (prevCount === 0 && currentCount > 0) {
-            const firstTabId = allTabIds[0];
-            if (firstTabId) {
-                setActiveTopTab(firstTabId);
-                dispatch(setActiveTab(firstTabId));
-            }
-        }
+        const updateHeight = (): void => {
+            const height = topBar.getBoundingClientRect().height;
+            setTopBarHeight(height);
+        };
 
-        prevTabsCountRef.current = currentCount;
-    }, [allTabIds.length, allTabIds, dispatch]);
+        updateHeight();
+
+        const resizeObserver = new ResizeObserver(updateHeight);
+        resizeObserver.observe(topBar);
+
+        window.addEventListener('resize', updateHeight);
+
+        return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', updateHeight);
+        };
+    }, []);
+
+
 
     // Обработка переключения вкладок
     const handleTabChange = (tab: TopTab | Guid) => {
         setActiveTopTab(tab);
 
-        // Если это вкладка графика, обновляем activeTabId в store
         if (tab !== 'mirax' && tab !== 'templates') {
             dispatch(setActiveTab(tab as Guid));
         }
@@ -76,7 +85,6 @@ export function ChartsPage() {
 
         dispatch(closeTab(tabId));
 
-        // Если закрыли активную вкладку, переключаемся на другую
         if (activeTopTab === tabId) {
             const remaining = allTabIds.filter(id => id !== tabId);
             if (remaining.length > 0) {
@@ -121,9 +129,14 @@ export function ChartsPage() {
     };
 
     return (
-        <div className={styles.chartsPage}>
+        <div
+            className={styles.chartsPage}
+            style={{
+                '--topbar-height': `${topBarHeight}px`
+            } as React.CSSProperties}
+        >
             {/* ВЕРХНЯЯ ПАНЕЛЬ - все вкладки на одном уровне */}
-            <div className={styles.topTabBar}>
+            <div className={styles.topTabBar} ref={topBarRef}>
                 {/* Системные вкладки */}
                 <button
                     className={activeTopTab === 'mirax' ? styles.topTabActive : styles.topTab}
@@ -182,32 +195,32 @@ export function ChartsPage() {
                 )}
             </div>
 
-            {/* КОНТЕНТ */}
+            {/* 🔥 КРИТИЧНО: КОНТЕНТ - ВСЕ вкладки рендерятся одновременно */}
             <div className={styles.contentArea}>
-                {/* Mirax */}
-                {activeTopTab === 'mirax' && (
-                    <div className={styles.pageContent}>
-                        <MiraxContainer dbId={'77777777-0000-0000-0000-000000000011'} />
-                    </div>
-                )}
+                {/* Mirax - рендерится всегда, скрывается через display */}
+                <div
+                    style={{ display: activeTopTab === 'mirax' ? 'block' : 'none' }}
+                    className={styles.pageContent}
+                >
+                    <MiraxContainer dbId={'77777777-0000-0000-0000-000000000011'} />
+                </div>
 
-                {/* Шаблоны */}
-                {activeTopTab === 'templates' && (
-                    <div className={styles.pageContent}>
-                        <ChartTemplatesPanel />
-                        <CollapsibleSection>
-                            <DataSourcePanel />
-                        </CollapsibleSection>
-                    </div>
-                )}
+                {/* Шаблоны - рендерится всегда, скрывается через display */}
+                <div
+                    style={{ display: activeTopTab === 'templates' ? 'block' : 'none' }}
+                    className={styles.pageContent}
+                >
+                    <ChartTemplatesPanel />
+                    <CollapsibleSection>
+                        <DataSourcePanel />
+                    </CollapsibleSection>
+                </div>
 
-                {/* Вкладки графиков */}
+                {/* Вкладки графиков - рендерятся всегда, скрываются через display */}
                 {allTabIds.map(tabId => (
                     <div
                         key={tabId}
-                        style={{
-                            display: activeTopTab === tabId ? 'block' : 'none',
-                        }}
+                        style={{ display: activeTopTab === tabId ? 'block' : 'none' }}
                         className={styles.pageContent}
                     >
                         <TabContent tabId={tabId} />

@@ -4,7 +4,7 @@ import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/store/store';
 import type { Guid } from '@app/lib/types/Guid';
 import type { FieldDto } from '@chartsPage/metaData/shared/dtos/FieldDto';
-import {selectTabContextIds, selectTabInfo, type SyncFieldId} from "@chartsPage/charts/core/store/tabsSlice.ts";
+import {selectTabContextIds} from "@chartsPage/charts/core/store/tabsSlice.ts";
 
 // ============= ТИПЫ =============
 
@@ -52,35 +52,7 @@ export const selectAllTabFields = createSelector(
     }
 );
 
-/**
- * Получить синхронизированные поля с полной информацией
- */
-export const selectTabSyncFieldsInfo = createSelector(
-    [
-        (state: RootState, tabId: Guid) => selectTabInfo(state, tabId),
-        (state: RootState, tabId: Guid) => selectAllTabFields(state, tabId),
-    ],
-    (tabInfo, allFields): readonly TabSyncFieldInfo[] => {
-        if (!tabInfo || !tabInfo.syncEnabled || tabInfo.syncFields.length === 0) {
-            return [];
-        }
 
-        const syncFieldIds = tabInfo.syncFields;
-        const syncedFields: TabSyncFieldInfo[] = [];
-
-        for (const syncId of syncFieldIds) {
-            const fieldInfo = allFields.find(
-                (f) => f.contextId === syncId.contextId && f.fieldName === syncId.fieldName
-            );
-
-            if (fieldInfo) {
-                syncedFields.push(fieldInfo);
-            }
-        }
-
-        return Object.freeze(syncedFields);
-    }
-);
 
 /**
  * Получить группированные поля по контекстам для UI
@@ -125,39 +97,3 @@ export const selectTabFieldsGrouped = createSelector(
     }
 );
 
-/**
- * Проверить, синхронизировано ли поле
- */
-export const selectIsTabFieldSynced = (
-    state: RootState,
-    tabId: Guid,
-    contextId: Guid,
-    fieldName: string
-): boolean => {
-    const tabInfo = selectTabInfo(state, tabId);
-    if (!tabInfo || !tabInfo.syncEnabled) return false;
-
-    return tabInfo.syncFields.some(
-        (f) => f.contextId === contextId && f.fieldName === fieldName
-    );
-};
-
-/**
- * Получить все SyncFieldId для синхронизации (кроме текущего поля)
- * Используется для применения зума к остальным полям
- */
-export const selectOtherSyncFields = createSelector(
-    [
-        (state: RootState, tabId: Guid) => selectTabInfo(state, tabId),
-        (_state: RootState, _tabId: Guid, currentContextId: Guid) => currentContextId,
-        (_state: RootState, _tabId: Guid, _currentContextId: Guid, currentFieldName: string) =>
-            currentFieldName,
-    ],
-    (tabInfo, currentContextId, currentFieldName): readonly SyncFieldId[] => {
-        if (!tabInfo || !tabInfo.syncEnabled) return [];
-
-        return tabInfo.syncFields.filter(
-            (f) => !(f.contextId === currentContextId && f.fieldName === currentFieldName)
-        );
-    }
-);

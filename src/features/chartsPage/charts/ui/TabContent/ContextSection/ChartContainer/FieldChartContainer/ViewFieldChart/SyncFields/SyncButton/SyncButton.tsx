@@ -8,9 +8,9 @@ import {
     selectActiveTabId,
     selectTabSyncContextsCount,
     selectTabSyncEnabled,
-    toggleTabSync,
 } from '@chartsPage/charts/core/store/tabsSlice';
 import styles from './SyncButton.module.css';
+import {toggleTabSyncWithAutoFill} from "@chartsPage/charts/orchestration/thunks/syncAutoFillThunk.ts";
 
 /**
  * Кнопка включения/отключения синхронизации зума для всей вкладки
@@ -40,7 +40,7 @@ export function SyncButton() {
             return;
         }
 
-        dispatch(toggleTabSync(activeTabId));
+        void dispatch(toggleTabSyncWithAutoFill(activeTabId));
     }, [dispatch, activeTabId]);
 
     // Если нет активной вкладки - не показываем кнопку
