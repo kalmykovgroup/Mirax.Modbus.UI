@@ -3,9 +3,9 @@ import { persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 
 // DTO пользователя из твоих контрактов
-import type { RootState } from "@/store/types.ts";
 import {authApi} from "@login/shared/api/authApi.ts";
 import type {UserDto} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/UserDto.ts";
+import type {RootState} from "@/store/store.ts";
 
 export interface AuthState {
     user: UserDto | null;

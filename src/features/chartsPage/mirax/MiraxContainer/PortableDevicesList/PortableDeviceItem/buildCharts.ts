@@ -20,8 +20,11 @@ export async function buildCharts(
     allTemplates: readonly ChartReqTemplateDto[],
     defaultBaseTemplateId: string,
     defaultSensorTemplateId: string,
+    databaseId: Guid
 ): Promise<void> {
     console.group('📊 Построение графиков для устройства');
+
+
     try {
         // 1. Получить дефолтные шаблоны по ID
         const baseTemplate = allTemplates.find(t => t.id === defaultBaseTemplateId);
@@ -70,7 +73,7 @@ export async function buildCharts(
             technicalRunToStartId,
         };
 
-        const baseResolved = resolveTemplateForServer(baseTemplate, baseParams) as ResolvedCharReqTemplate;
+        const baseResolved = resolveTemplateForServer({...baseTemplate, databaseId: databaseId}, baseParams) as ResolvedCharReqTemplate;
         /*baseResolved.resolvedFromMs = fromMs;
         baseResolved.resolvedToMs = toMs;*/
 
@@ -99,7 +102,7 @@ export async function buildCharts(
             };
 
             const sensorResolved = resolveTemplateForServer(
-                sensorTemplate,
+                {...sensorTemplate, databaseId: databaseId},
                 sensorParams
             ) as ResolvedCharReqTemplate;
             /*sensorResolved.resolvedFromMs = fromMs;

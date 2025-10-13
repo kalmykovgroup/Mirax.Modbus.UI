@@ -65,12 +65,7 @@ export function TechnicalRunsPanel(): JSX.Element {
         }
 
         void dispatch(
-            fetchTechnicalRuns({
-                databaseId : database.id,
-                onProgress: (progress) => {
-                    console.log(`[TechnicalRuns] Progress: ${progress}%`);
-                },
-            })
+            fetchTechnicalRuns({databaseId : database.id})
         );
     }, [database, dispatch, isLoading, technicalRuns.length, error]);
 

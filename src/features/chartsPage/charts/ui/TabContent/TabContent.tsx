@@ -1,6 +1,6 @@
 // src/features/chartsPage/charts/ui/TabContent/TabContent.tsx
 
-import { useState } from 'react';
+import {useMemo, useState} from 'react';
 import { useSelector } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
 import { useConfirm } from '@ui/components/ConfirmProvider/ConfirmProvider';
@@ -10,7 +10,7 @@ import {
     toggleContextVisibility,
     showAllContexts,
     hideAllContexts,
-    removeContextFromTab, selectTabSyncEnabled, selectActiveTabId,
+    removeContextFromTab, selectTabSyncEnabled, selectActiveTabId, selectTabName,
 } from '@chartsPage/charts/core/store/tabsSlice.ts';
 import type { Guid } from '@app/lib/types/Guid';
 import type { RootState } from '@/store/store';
@@ -20,6 +20,8 @@ import { ContextSection } from '@chartsPage/charts/ui/TabContent/ContextSection/
 import {
     SyncButton,
 } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton.tsx';
+import {useDocumentTitle} from "@app/lib/hooks/DocumentTitleContext.tsx";
+
 
 interface TabContentProps {
     readonly tabId: Guid;
@@ -37,25 +39,44 @@ export function TabContent({ tabId }: TabContentProps) {
     const dispatch = useAppDispatch();
     const confirm = useConfirm();
 
-    // 🔥 КРИТИЧНО: allContextIds для рендеринга, visibleContextIds для видимости
+    //  КРИТИЧНО: allContextIds для рендеринга, visibleContextIds для видимости
     const allContextIds = useSelector((state: RootState) => selectTabContextIds(state, tabId));
     const visibleContextIds = useSelector((state: RootState) =>
         selectVisibleContextIds(state, tabId)
     );
 
+
+ 
     const [filterOpen, setFilterOpen] = useState(false);
 
     const allVisible = allContextIds.length === visibleContextIds.length;
-
-
+    
     // Получаем активную вкладку
     const activeTabId = useSelector(selectActiveTabId);
 
+    const isActiveTab = tabId === activeTabId;
     // Состояние синхронизации текущей вкладки
     const syncEnabled = useSelector((state: RootState) => {
         if (!activeTabId) return false;
         return selectTabSyncEnabled(state, activeTabId);
     });
+
+    const tabName = useSelector((state: RootState) =>
+        selectTabName(state, tabId)
+    );
+
+    //  Формируем title
+    const pageTitle = useMemo(() => {
+        if (!isActiveTab) return 'Графики'; // Неактивная вкладка
+        return `Графики | ${tabName}`;
+    }, [isActiveTab, tabName]);
+
+    //  Регистрируем title ТОЛЬКО если это активная вкладка
+    useDocumentTitle(
+        pageTitle,
+        0, // Приоритет
+        isActiveTab // КЛЮЧЕВОЙ ПАРАМЕТР: enabled только для активной вкладки
+    );
 
     const handleToggleAll = () => {
         if (allVisible) {
@@ -140,10 +161,14 @@ export function TabContent({ tabId }: TabContentProps) {
                 <SyncButton />
             </div>
 
-            {/* 🔥 КРИТИЧНОЕ ИЗМЕНЕНИЕ: Рендерим ВСЕ контексты, управляем видимостью через CSS */}
+            {/*  КРИТИЧНОЕ ИЗМЕНЕНИЕ: Рендерим ВСЕ контексты, управляем видимостью через CSS */}
             <div className={styles.contextSections}>
                 {allContextIds.map((contextId) => {
                     const isVisible = visibleContextIds.includes(contextId);
+
+                    if(isVisible){
+
+                    }
 
                     return (
                         <div

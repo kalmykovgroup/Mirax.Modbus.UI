@@ -13,6 +13,7 @@ import type {LoginResponse} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Use
 import {mapServerErrorsToForm, mapServerPayloadErrorsToForm} from "@login/lib/serverErrorMapper.ts";
 import Logo from "@ui/components/Logo/Logo.tsx";
 import {selectIsAuthenticated, setCredentials} from "@login/store/authSlice.ts";
+import {useDocumentTitle} from "@app/lib/hooks/DocumentTitleContext.tsx";
 
 const loginSchema = z.object({
     email: z.string().min(1, 'Введите имя пользователя'),
@@ -22,7 +23,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 export const LoginPage = () => {
-
+    useDocumentTitle('Вход');
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
 

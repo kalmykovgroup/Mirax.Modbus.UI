@@ -95,7 +95,7 @@ export function resolveTemplateForServer(
     tpl: ChartReqTemplateDto,
     values: Record<string, unknown>
 ): ChartReqTemplateDto {
-    // @ts-ignore
+
     const params: SqlParam[] | undefined = (tpl as any).params
 
     const filledParams: SqlParam[] | undefined = params?.map(p => {

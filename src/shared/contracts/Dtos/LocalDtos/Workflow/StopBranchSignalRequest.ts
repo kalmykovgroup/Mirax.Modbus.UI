@@ -1,6 +1,6 @@
 // StopBranchSignalRequest.ts
-import {ScenarioStopMode} from "@shared/contracts/Types/Api.Shared/ScenarioEngine/ScenarioStopMode.ts";
-import type {Guid} from "@shared/contracts/Dtos/Helpers/Guid.ts";
+import type {Guid} from "@app/lib/types/Guid.ts";
+import type {ScenarioStopMode} from "@shared/contracts/Types/ScenarioEngine/ScenarioStopMode.ts";
 
 export interface StopBranchSignalRequest {
     runId?: string;

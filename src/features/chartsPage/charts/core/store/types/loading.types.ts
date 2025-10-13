@@ -2,7 +2,6 @@
 
 import type {FieldDto} from "@chartsPage/metaData/shared/dtos/FieldDto.ts";
 import type {MultiSeriesResponse} from "@chartsPage/charts/core/dtos/responses/MultiSeriesResponse.ts";
-import type {BucketsMs} from "@chartsPage/charts/core/store/types/chart.types.ts";
 import type {GetMultiSeriesRequest} from "@chartsPage/charts/core/dtos/requests/GetMultiSeriesRequest.ts";
 
 export interface LoadingState {
@@ -22,24 +21,6 @@ export enum LoadingType {
     Zoom = 'zoom',
     Pan = 'pan',
     Refresh = 'refresh'
-}
-
-export interface InitResult {
-    readonly response: MultiSeriesResponse;
-    readonly bucketLevels: readonly number[];
-}
-
-export interface SyncLoadRequest {
-    readonly primaryField: FieldDto;
-    bucketMs: BucketsMs;
-    readonly from: number;
-    readonly to: number;
-    readonly px: number;
-}
-
-export interface SyncLoadResult {
-    readonly loadedFields: readonly string[];
-    readonly skippedFields: readonly string[];
 }
 
 

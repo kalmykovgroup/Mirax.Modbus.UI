@@ -101,7 +101,7 @@ void,
                     });
                 }
 
-                console.log('[toggleTabSyncWithAutoFill] ✅ Auto-fill completed for tab:', tabId);
+                console.log('[toggleTabSyncWithAutoFill]  Auto-fill completed for tab:', tabId);
             } else {
                 console.log('[toggleTabSyncWithAutoFill] Sync disabled, no auto-fill needed');
             }

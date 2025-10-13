@@ -1,12 +1,12 @@
 // CreateModbusDeviceActionRequest.ts
 
-import type {
-    CreateModbusDeviceActionParameterRequest
-} from "@shared/contracts/Dtos/RemoteDtos/ModbusDtos/ModbusDeviceActions/CreateModbusDeviceActionParameterRequest.ts";
 import type {ModbusActionType} from "@shared/contracts/Types/Api.Shared/ModbusActionType.ts";
 import type {
     ScriptUsingFeatureDto
 } from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/ScriptUsingFeatures/ScriptUsingFeatureDto.ts";
+import type {
+    CreateModbusDeviceActionParameterRequest
+} from "@shared/contracts/Dtos/RemoteDtos/ModbusDtos/ModbusDeviceActionParameters/CreateModbusDeviceActionParameterRequest.ts";
 
 export interface CreateModbusDeviceActionRequest {
     /** Название действия. */

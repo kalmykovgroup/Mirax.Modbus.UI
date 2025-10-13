@@ -7,7 +7,11 @@ import {
     selectCurrentDatabase,
     selectDevicesLoading,
     selectIsDevicesLoading,
-    selectDevicesError, selectTechnicalRunById, selectDevicesByTechnicalRunId,
+    selectDevicesError,
+    selectTechnicalRunById,
+    selectDevicesByTechnicalRunId,
+    selectDefaultBaseTemplateId,
+    selectDefaultSensorTemplateId,
 } from '@chartsPage/mirax/miraxSlice';
 import { fetchPortableDevices } from '@chartsPage/mirax/miraxThunks';
 import { DeviceSortDropdown } from '@chartsPage/mirax/MiraxContainer/DevicesPanel/DeviceSortDropdown/DeviceSortDropdown';
@@ -22,7 +26,7 @@ import {
     type DeviceSortType as DeviceSortTypeValue,
 } from '@chartsPage/mirax/MiraxContainer/utils/miraxHelpers';
 import { SearchInput } from '@chartsPage/mirax/MiraxContainer/SearchInput/SearchInput';
-import type {DatabaseDto} from "@chartsPage/metaData/shared/dtos/DatabaseDto.ts";
+import type { DatabaseDto } from '@chartsPage/metaData/shared/dtos/DatabaseDto';
 
 interface Props {
     readonly technicalRunId: Guid;
@@ -30,16 +34,21 @@ interface Props {
 
 export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
     const dispatch = useAppDispatch();
-    const database : DatabaseDto | undefined = useAppSelector(selectCurrentDatabase);
+    const database: DatabaseDto | undefined = useAppSelector(selectCurrentDatabase);
     const loadingState = useAppSelector((state) => selectDevicesLoading(state, technicalRunId));
     const isLoading = useAppSelector((state) => selectIsDevicesLoading(state, technicalRunId));
     const error = useAppSelector((state) => selectDevicesError(state, technicalRunId));
 
-    //  Получаем данные испытания через селектор
+    // Получаем данные испытания через селектор
     const technicalRun = useAppSelector((state) => selectTechnicalRunById(state, technicalRunId));
 
-    //  Получаем устройства из slice через селектор
+    // Получаем устройства из slice через селектор
     const devices = useAppSelector((state) => selectDevicesByTechnicalRunId(state, technicalRunId));
+
+    // Получаем все шаблоны для построения графиков
+    const allTemplates = useAppSelector((state) => state.chartsTemplates.items);
+    const defaultBaseTemplateId = useAppSelector(selectDefaultBaseTemplateId);
+    const defaultSensorTemplateId = useAppSelector(selectDefaultSensorTemplateId);
 
     const [deviceSearchQuery, setDeviceSearchQuery] = useState('');
     const [selectedPort, setSelectedPort] = useState<string | undefined>(undefined);
@@ -99,7 +108,7 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
 
     const handleRetry = useCallback(() => {
         if (database?.id !== undefined) {
-            void dispatch(fetchPortableDevices({databaseId: database.id, technicalRunId }));
+            void dispatch(fetchPortableDevices({ databaseId: database.id, technicalRunId }));
         }
     }, [dispatch, database, technicalRunId]);
 
@@ -107,7 +116,7 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
         (deviceSearchQuery.trim() || selectedPort !== undefined) &&
         filteredAndSortedDevices.length === 0;
 
-    //  Проверка: нет данных испытания
+    // Проверка: нет данных испытания
     if (technicalRun === undefined) {
         return (
             <div className={styles.container}>
@@ -159,12 +168,20 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
                 </div>
             )}
 
-            {/* Фильтр по COM-портам */}
-            <ComPortsFilter
-                devices={devices}
-                selectedPort={selectedPort}
-                onPortChange={handlePortChange}
-            />
+            {/* Фильтр по COM-портам с кнопкой построения графиков */}
+            {database?.id !== undefined && (
+                <ComPortsFilter
+                    devices={devices}
+                    selectedPort={selectedPort}
+                    onPortChange={handlePortChange}
+                    technicalRun={technicalRun}
+                    databaseId={database.id}
+                    dispatch={dispatch}
+                    allTemplates={allTemplates}
+                    defaultBaseTemplateId={defaultBaseTemplateId}
+                    defaultSensorTemplateId={defaultSensorTemplateId}
+                />
+            )}
 
             <div className={styles.list}>
                 {devices.length === 0 ? (

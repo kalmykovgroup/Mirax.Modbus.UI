@@ -9,6 +9,7 @@ export type DatabaseDto = {
     id: Guid;
     name: string;
     databaseVersion: string;
+    description?: string | undefined;
     connectionString: string;
     provider: DbProviderType;
     databaseStatus: DatabaseStatus;

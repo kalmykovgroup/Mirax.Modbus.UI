@@ -24,7 +24,7 @@ import type { RootState } from '@/store/store.ts';
  */
 export interface ContextState {
     readonly contextId: Guid;
-    syncFields: readonly FieldDto[];
+    syncFields: FieldDto[];
     template: ResolvedCharReqTemplate | undefined;
     readonly view: Record<FieldName, FieldView>;
     isDataLoaded: boolean;
@@ -376,9 +376,10 @@ const contextsSlice = createSlice({
                 contextId: Guid;
                 field: FieldName;
                 type: LoadingType;
+                message?: string | undefined;
             }>
         ) {
-            const { contextId, field, type } = action.payload;
+            const { contextId, field, type, message } = action.payload;
 
             const context = state.byContext[contextId];
             if (!context) return;
@@ -390,6 +391,7 @@ const contextsSlice = createSlice({
                     type,
                     progress: 0,
                     startTime: Date.now(),
+                    message
                 };
             }
         },
@@ -433,9 +435,10 @@ const contextsSlice = createSlice({
                 contextId: Guid;
                 field: FieldName;
                 progress: number;
+                message?: string | undefined;
             }>
         ) {
-            const { contextId, field, progress } = action.payload;
+            const { contextId, field, progress, message } = action.payload;
 
             const context = state.byContext[contextId];
             if (!context) return;
@@ -445,6 +448,7 @@ const contextsSlice = createSlice({
                 view.loadingState = {
                     ...view.loadingState,
                     progress: Math.min(progress, 100),
+                    message: message
                 };
             }
         },
@@ -453,23 +457,25 @@ const contextsSlice = createSlice({
             state,
             action: PayloadAction<{
                 contextId: Guid;
-                fields: readonly FieldName[];
+                fields: readonly FieldDto[];
+                success: boolean
             }>
         ) {
-            const { contextId, fields } = action.payload;
+            const { contextId, fields, success } = action.payload;
 
             const context = state.byContext[contextId];
             if (!context) return;
 
             fields.forEach((field) => {
-                const view = context.view[field];
+                const view = context.view[field.name];
                 if (view) {
                     view.loadingState = {
                         active: false,
                         type: LoadingType.Initial,
                         progress: 100,
                         startTime: 0,
-                    };
+                        success: success
+                    } as LoadingState;
                 }
             });
         },
@@ -479,10 +485,11 @@ const contextsSlice = createSlice({
             action: PayloadAction<{
                 contextId: Guid;
                 field: FieldName;
+                success: boolean,
                 message?: string | undefined;
             }>
         ) {
-            const { contextId, field, message } = action.payload;
+            const { contextId, field, message, success } = action.payload;
 
             const context = state.byContext[contextId];
             if (!context) return;
@@ -495,7 +502,8 @@ const contextsSlice = createSlice({
                     progress: message ? 100 : 0,
                     startTime: 0,
                     message: message,
-                };
+                    success: success
+                } as LoadingState;
             }
         },
 

@@ -92,7 +92,7 @@
     padding-bottom: 24px;
 }
 
-/* 🔥 КРИТИЧНО: НЕ unmount, а display: none */
+/*  КРИТИЧНО: НЕ unmount, а display: none */
 .contextWrapper {
     /* Никаких transition для display - мгновенное переключение */
 }

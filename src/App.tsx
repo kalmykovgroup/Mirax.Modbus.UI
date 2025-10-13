@@ -9,6 +9,7 @@ import {ThemeProvider} from "@app/providers/theme/ThemeProvider.tsx";
 import LoadingOverlay from "@ui/components/LoadingOverlay/LoadingOverlay.tsx";
 import { ConfirmProvider } from "./ui/components/ConfirmProvider/ConfirmProvider";
 import {AppToaster} from "@ui/components/AppToaster/AppToaster.tsx";
+import {DocumentTitleProvider} from "@app/lib/hooks/DocumentTitleContext.tsx";
 
 
 /**
@@ -25,24 +26,27 @@ import {AppToaster} from "@ui/components/AppToaster/AppToaster.tsx";
  * - ConfirmProvider окно подтверждения, по типу alert
  * - Toaster уведомления
  * - LoadingOverlay заморозка окна
+ * - HelmetProvider для title
  */
 class App extends Component {
 
     render() {
         return (
-            <ThemeProvider>
-                <ErrorBoundary fallback={<ErrorPage/>}>
-                    <NavigateProvider />
-                    <UserActivityTracker />
-                    <DeviceProvider>
-                        <ConfirmProvider>
-                            <AppRouter/>
-                            <AppToaster/>
-                            <LoadingOverlay />
-                        </ConfirmProvider>
-                    </DeviceProvider>
-                </ErrorBoundary>
-            </ThemeProvider>
+            <DocumentTitleProvider>
+                <ThemeProvider>
+                    <ErrorBoundary fallback={<ErrorPage/>}>
+                        <NavigateProvider />
+                        <UserActivityTracker />
+                        <DeviceProvider>
+                            <ConfirmProvider>
+                                <AppRouter/>
+                                <AppToaster/>
+                                <LoadingOverlay />
+                            </ConfirmProvider>
+                        </DeviceProvider>
+                    </ErrorBoundary>
+                </ThemeProvider>
+           </DocumentTitleProvider>
         )
     }
 }

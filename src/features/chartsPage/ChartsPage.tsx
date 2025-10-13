@@ -1,6 +1,6 @@
 // src/features/chartsPage/ChartsPage.tsx
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, {useEffect, useState, useRef, useMemo} from 'react';
 import { useSelector } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
 import { MiraxContainer } from '@chartsPage/mirax/MiraxContainer/MiraxContainer.tsx';
@@ -19,10 +19,20 @@ import type { Guid } from '@app/lib/types/Guid';
 import type { RootState } from '@/store/store';
 import styles from './ChartsPage.module.css';
 import classNames from "classnames";
+import {useDocumentTitle} from "@app/lib/hooks/DocumentTitleContext.tsx";
 
 type TopTab = 'mirax' | 'templates';
 
+//  Type guard функция
+function isTopTab(value: unknown): value is TopTab {
+    return (
+        typeof value === 'string' &&
+        ['mirax', 'templates'].includes(value)
+    );
+}
+
 export function ChartsPage() {
+
     const dispatch = useAppDispatch();
     const confirm = useConfirm();
 
@@ -31,6 +41,15 @@ export function ChartsPage() {
 
     const topBarRef = useRef<HTMLDivElement>(null);
     const allTabIds = useSelector(selectAllTabIds);
+
+    const pageTitle = useMemo(() => {
+        if (isTopTab(activeTopTab)) {
+            return `${activeTopTab}`;
+        }
+        return 'Графики';
+    }, [activeTopTab]);
+
+    useDocumentTitle(pageTitle, 1, isTopTab(activeTopTab));
 
     // ============================================
     // ОТСЛЕЖИВАНИЕ ВЫСОТЫ topTabBar
@@ -194,7 +213,7 @@ export function ChartsPage() {
                 )}
             </div>
 
-            {/* 🔥 КРИТИЧНО: КОНТЕНТ - ВСЕ вкладки рендерятся одновременно */}
+            {/*  КРИТИЧНО: КОНТЕНТ - ВСЕ вкладки рендерятся одновременно */}
             <div className={styles.contentArea}>
                 {/* Mirax - рендерится всегда, скрывается через display */}
                 <div
@@ -210,7 +229,6 @@ export function ChartsPage() {
                     className={classNames(styles.pageContent)}
                 >
                     <ChartTemplatesPanel />
-
                 </div>
 
                 {/* Вкладки графиков - рендерятся всегда, скрываются через display */}

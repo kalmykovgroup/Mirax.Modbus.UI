@@ -1,8 +1,8 @@
 import type {ModbusActionType} from "@shared/contracts/Types/Api.Shared/ModbusActionType.ts";
+import type {BaseActionDto} from "@shared/contracts/Dtos/RemoteDtos/CommonDtos/BaseActionDto.ts";
 import type {
     ModbusDeviceActionParameterDto
-} from "@shared/contracts/Dtos/RemoteDtos/ModbusDtos/ModbusDeviceActions/ModbusDeviceActionParameterDto.ts";
-import type {BaseActionDto} from "@shared/contracts/Dtos/RemoteDtos/CommonDtos/BaseActionDto.ts";
+} from "@shared/contracts/Dtos/RemoteDtos/ModbusDtos/ModbusDeviceActionParameters/ModbusDeviceActionParameterDto.ts";
 
 export interface ModbusDeviceActionDto extends BaseActionDto {
     /** Тип modbus-действия (None, IdentificationCheck, SerialNumber, ...). */

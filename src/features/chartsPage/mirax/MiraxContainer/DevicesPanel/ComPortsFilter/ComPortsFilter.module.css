@@ -37,6 +37,14 @@
     gap: 4px;
 }
 
+/* Обертка вкладки с кнопкой */
+.tabWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
 /* Вкладка порта */
 .tab {
     display: flex;
@@ -103,6 +111,53 @@
     opacity: 0.8;
 }
 
+/* Кнопка построения графиков */
+.buildButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: #1976d2;
+    border: 1px solid #1565c0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 16px;
+    animation: fadeIn 0.2s ease;
+}
+
+.buildButton:hover:not(:disabled) {
+    background: #1565c0;
+    transform: scale(1.05);
+}
+
+.buildButton:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.buildButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.buildButton:focus-visible {
+    outline: 2px solid #1976d2;
+    outline-offset: 2px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
     .container {
@@ -121,5 +176,11 @@
 
     .tabCount {
         font-size: 11px;
+    }
+
+    .buildButton {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
     }
 }

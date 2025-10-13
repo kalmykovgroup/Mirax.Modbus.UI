@@ -39,6 +39,13 @@ export function MiraxContainer(): JSX.Element {
         }
     }, [dispatch, databasesLoaded, databasesLoading]);
 
+    useEffect(() => {
+        if (!databasesLoading && databasesLoaded && databases?.length > 0 && currentDatabase == undefined) {
+            const d = databases.find(d => d.name == 'default')
+            if(d)  dispatch(setCurrentDatabase(d));
+        }
+    }, [dispatch, databasesLoading, databasesLoaded, databases]);
+
     // Обработчик изменения выбранной базы данных
     const handleDatabaseChange = (event: ChangeEvent<HTMLSelectElement>): void => {
 

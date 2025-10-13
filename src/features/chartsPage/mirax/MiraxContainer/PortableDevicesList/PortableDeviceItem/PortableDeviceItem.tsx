@@ -24,15 +24,13 @@ import type { LoadSensorsRequest } from '@chartsPage/mirax/miraxThunk.types';
 import {useSelector} from "react-redux";
 import {buildCharts} from "@chartsPage/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/buildCharts.ts";
 import type {DatabaseDto} from "@chartsPage/metaData/shared/dtos/DatabaseDto.ts";
+import {notify} from "@app/lib/notify.ts";
 
 interface Props {
     readonly device: PortableDeviceDto;
     readonly technicalRun: TechnicalRunDto;
     readonly isFirst: boolean;
 }
-
-
-
 
 
 export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JSX.Element {
@@ -55,11 +53,17 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
 
     const dispatch = useAppDispatch();
     const database : DatabaseDto | undefined = useAppSelector(selectCurrentDatabase);
+    const databaseRef = useRef(database);
+
     const factoryNumber = device.factoryNumber ?? '';
     const isExpanded = useAppSelector((state) => selectIsDeviceExpanded(state, factoryNumber));
     const isSelected = useAppSelector(selectSelectedDeviceFactoryNumber) === factoryNumber;
     const abortControllerRef = useRef<AbortController | undefined>(undefined);
     const firstLoadTriggeredRef = useRef(false);
+
+    useEffect(() => {
+        databaseRef.current = database;
+    }, [database]);
 
     //  Получаем все шаблоны для построения графиков
     const allTemplates = useAppSelector((state) => state.chartsTemplates.items);
@@ -157,6 +161,7 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
         [dispatch, factoryNumber, isExpanded, sensors.length, database, technicalRun.id]
     );
 
+
     /**
      * Обработчик кнопки для вывода данных в консоль и построения графика
      */
@@ -164,14 +169,20 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
         async (e: React.MouseEvent) => {
             e.stopPropagation();
 
+            if(databaseRef.current == undefined){
+                notify.error("Database is undefined");
+                return;
+            }
+
             let actualSensors = sensors;
 
             // Догружаем сенсоры только если их нет в кеше
-            if (sensors.length === 0 && database?.id !== undefined && factoryNumber) {
+            if (sensors.length === 0 && factoryNumber) {
                 try {
+                    console.log("databaseRef.current.id",databaseRef.current.id)
                     const result = await dispatch(
                         fetchSensors({
-                            databaseId : database.id,
+                            databaseId : databaseRef.current.id,
                             technicalRunId: technicalRun.id,
                             factoryNumber,
                             signal: new AbortController().signal,
@@ -185,9 +196,9 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
                 }
             }
 
-            await buildCharts(dispatch, technicalRun, device, actualSensors, allTemplates, defaultBaseTemplateId, defaultSensorTemplateId);
+            await buildCharts(dispatch, technicalRun, device, actualSensors, allTemplates, defaultBaseTemplateId, defaultSensorTemplateId, databaseRef.current.id);
         },
-        [technicalRun, device, sensors, database, factoryNumber, dispatch]
+        [technicalRun, device, sensors, databaseRef, factoryNumber, dispatch]
     );
 
     return (

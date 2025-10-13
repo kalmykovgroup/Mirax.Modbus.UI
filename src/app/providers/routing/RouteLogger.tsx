@@ -7,7 +7,7 @@
  */
 const RouteLogger = () => {
     useRouteChange((path, type) => {
-        //console.log(`[Route Change] ${type} -> ${path}`)
+         console.log(`[Route Change] ${type} -> ${path}`)
         // можно отправить в GA, Sentry, или сохранить в store
     })
 
