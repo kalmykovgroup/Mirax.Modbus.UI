@@ -5,6 +5,8 @@ import type { PortableDeviceDto } from '@chartsPage/mirax/contracts/PortableDevi
 import type { SensorDto } from '@chartsPage/mirax/contracts/SensorDto';
 import type {MiraxLoadingState} from "@chartsPage/mirax/miraxThunk.types.ts";
 import type {RootState} from "@/store/store.ts";
+import { ENV } from '@/env';
+import type {DatabaseDto} from "@chartsPage/metaData/shared/dtos/DatabaseDto.ts";
 
 /**
  * Вкладка испытания
@@ -59,9 +61,9 @@ export interface SensorTabsState {
  * Состояние Mirax модуля
  */
 export interface MiraxState {
-    readonly databaseId: Guid | undefined;
+    readonly currentDatabase: DatabaseDto | undefined;
     readonly openTabs: TechnicalRunTab[];
-    readonly activecontextId: Guid | undefined;
+    readonly activeContextId: Guid | undefined;
     readonly sensorTabs: Record<Guid, SensorTabsState>;
     readonly selectedDeviceFactoryNumber: string | undefined;
     readonly expandedTechnicalRunIds: readonly Guid[];
@@ -74,6 +76,8 @@ export interface MiraxState {
     readonly devicesByTechnicalRun: Record<Guid, PortableDeviceDto[]>;
     readonly sensorsBySensorKey: Record<SensorKey, SensorDto[]>; // key: `${technicalRunId}-${factoryNumber}`
 
+    readonly defaultBaseTemplateId: Guid;
+    readonly defaultSensorTemplateId: Guid;
 }
 
 const initialLoadingState: MiraxLoadingState = {
@@ -83,9 +87,9 @@ const initialLoadingState: MiraxLoadingState = {
 };
 
 const initialState: MiraxState = {
-    databaseId: undefined,
+    currentDatabase: undefined,
     openTabs: [],
-    activecontextId: undefined,
+    activeContextId: undefined,
     sensorTabs: {},
     selectedDeviceFactoryNumber: undefined,
     expandedTechnicalRunIds: [],
@@ -97,6 +101,9 @@ const initialState: MiraxState = {
     technicalRunsData: [],
     devicesByTechnicalRun: {},
     sensorsBySensorKey: {},
+
+    defaultBaseTemplateId: ENV.MIRAX_DEFAULT_BASE_TEMPLATE_ID as Guid,
+    defaultSensorTemplateId: ENV.MIRAX_DEFAULT_SENSOR_TEMPLATE_ID as Guid,
 };
 
 /**
@@ -110,10 +117,10 @@ export const miraxSlice = createSlice({
     name: 'mirax',
     initialState,
     reducers: {
-        setDatabaseId: (state, action: PayloadAction<Guid>) => {
-            state.databaseId = action.payload;
+        setCurrentDatabase: (state, action: PayloadAction<DatabaseDto>) => {
+            state.currentDatabase = action.payload;
             state.openTabs = [] as TechnicalRunTab[];
-            state.activecontextId = undefined;
+            state.activeContextId = undefined;
             state.sensorTabs = {};
             state.selectedDeviceFactoryNumber = undefined;
             state.expandedTechnicalRunIds = [];
@@ -127,9 +134,9 @@ export const miraxSlice = createSlice({
         },
 
         clearDatabase: (state) => {
-            state.databaseId = undefined;
+            state.currentDatabase = undefined;
             state.openTabs = [];
-            state.activecontextId = undefined;
+            state.activeContextId = undefined;
             state.sensorTabs = {};
             state.selectedDeviceFactoryNumber = undefined;
             state.expandedTechnicalRunIds = [];
@@ -140,6 +147,14 @@ export const miraxSlice = createSlice({
             state.technicalRunsData = [];
             state.devicesByTechnicalRun = {};
             state.sensorsBySensorKey = {};
+        },
+
+        setDefaultBaseTemplateId(state, action: PayloadAction<Guid>) {
+            state.defaultBaseTemplateId = action.payload;
+        },
+
+        setDefaultSensorTemplateId(state, action: PayloadAction<Guid>) {
+            state.defaultSensorTemplateId = action.payload;
         },
 
         //Сохранение данных испытаний
@@ -177,10 +192,10 @@ export const miraxSlice = createSlice({
             const existingTab = state.openTabs.find((tab) => tab.id === id);
 
             if (existingTab) {
-                state.activecontextId = id;
+                state.activeContextId = id;
             } else {
                 state.openTabs = [...state.openTabs, { id, name }];
-                state.activecontextId = id;
+                state.activeContextId = id;
                 state.sensorTabs[id] = {
                     openTabs: [],
                     activeTabKey: undefined,
@@ -196,12 +211,12 @@ export const miraxSlice = createSlice({
 
             state.openTabs = state.openTabs.filter((tab) => tab.id !== contextId);
 
-            if (state.activecontextId === contextId) {
+            if (state.activeContextId === contextId) {
                 if (state.openTabs.length > 0) {
                     const newActiveIndex = Math.max(0, tabIndex - 1);
-                    state.activecontextId = state.openTabs[newActiveIndex]?.id;
+                    state.activeContextId = state.openTabs[newActiveIndex]?.id;
                 } else {
-                    state.activecontextId = undefined;
+                    state.activeContextId = undefined;
                 }
             }
 
@@ -215,14 +230,14 @@ export const miraxSlice = createSlice({
         setActiveTab: (state, action: PayloadAction<Guid>) => {
             const contextId = action.payload;
             if (state.openTabs.some((tab) => tab.id === contextId)) {
-                state.activecontextId = contextId;
+                state.activeContextId = contextId;
                 state.selectedDeviceFactoryNumber = undefined;
             }
         },
 
         closeAllTabs: (state) => {
             state.openTabs = [];
-            state.activecontextId = undefined;
+            state.activeContextId = undefined;
             state.sensorTabs = {};
             state.selectedDeviceFactoryNumber = undefined;
             state.expandedDeviceFactoryNumbers = [];
@@ -561,7 +576,7 @@ export const miraxSlice = createSlice({
 });
 
 export const {
-    setDatabaseId,
+    setCurrentDatabase,
     clearDatabase,
     setTechnicalRunsData,
     setDevicesData,
@@ -607,17 +622,15 @@ export const selectTechnicalRunsData = (state: RootState): readonly TechnicalRun
     state.mirax.technicalRunsData;
 
 // Selectors
-export const selectDatabaseId = (state: RootState): Guid | undefined =>
-    state.mirax.databaseId;
+export const selectCurrentDatabase = (state: RootState): DatabaseDto | undefined =>
+    state.mirax.currentDatabase;
 
-export const selectHasDatabase = (state: RootState): boolean =>
-    state.mirax.databaseId !== undefined;
 
 export const selectOpenTabs = (state: RootState): readonly TechnicalRunTab[] =>
     state.mirax.openTabs;
 
-export const selectActivecontextId = (state: RootState): Guid | undefined =>
-    state.mirax.activecontextId;
+export const selectActiveContextId = (state: RootState): Guid | undefined =>
+    state.mirax.activeContextId;
 
 export const selectHasOpenTabs = (state: RootState): boolean =>
     state.mirax.openTabs.length > 0;
@@ -687,14 +700,14 @@ export const selectMiraxState = (state: RootState): MiraxState => state.mirax;
  * Используется в TechnicalRunItem для определения, выбрано ли текущее испытание
  */
 export const selectSelectedTechnicalRunId = (state: RootState): Guid | undefined =>
-    state.mirax.activecontextId;
+    state.mirax.activeContextId;
 
 /**
  * Проверка, является ли испытание выбранным
  * Альтернативный селектор (если нужен)
  */
 export const selectTechnicalRun = (state: RootState, technicalRunId: Guid): boolean =>
-    state.mirax.activecontextId === technicalRunId;
+    state.mirax.activeContextId === technicalRunId;
 
 
 
@@ -799,10 +812,10 @@ export const selectTechnicalRunById = createSelector(
  * Получить активное испытание (текущая вкладка) (мемоизированный)
  */
 export const selectActiveTechnicalRun = createSelector(
-    [selectTechnicalRunsData, selectActivecontextId],
-    (technicalRuns, activecontextId): TechnicalRunDto | undefined => {
-        if (activecontextId === undefined) return undefined;
-        return technicalRuns.find((run) => run.id === activecontextId);
+    [selectTechnicalRunsData, selectActiveContextId],
+    (technicalRuns, activeContextId): TechnicalRunDto | undefined => {
+        if (activeContextId === undefined) return undefined;
+        return technicalRuns.find((run) => run.id === activeContextId);
     }
 );
 
@@ -824,11 +837,11 @@ export const selectDevicesByTechnicalRunId = createSelector(
 export const selectDevicesForActiveRun = createSelector(
     [
         (state: RootState) => state.mirax.devicesByTechnicalRun,
-        selectActivecontextId,
+        selectActiveContextId,
     ],
-    (devicesByRun, activecontextId): readonly PortableDeviceDto[] => {
-        if (activecontextId === undefined) return EMPTY_DEVICES_ARRAY;
-        return devicesByRun[activecontextId] ?? EMPTY_DEVICES_ARRAY;
+    (devicesByRun, activeContextId): readonly PortableDeviceDto[] => {
+        if (activeContextId === undefined) return EMPTY_DEVICES_ARRAY;
+        return devicesByRun[activeContextId] ?? EMPTY_DEVICES_ARRAY;
     }
 );
 
@@ -847,5 +860,11 @@ export const selectDevicesCountForRun = createSelector(
     [selectDevicesByTechnicalRunId],
     (devices): number => devices.length
 );
+
+export const selectDefaultBaseTemplateId = (state: RootState): Guid =>
+    state.mirax.defaultBaseTemplateId;
+
+export const selectDefaultSensorTemplateId = (state: RootState): Guid =>
+    state.mirax.defaultSensorTemplateId;
 
 export const miraxReducer = miraxSlice.reducer;

@@ -1,24 +1,27 @@
 .chartTemplatePanelContainer{
-    width: 230px;
+
     padding: 5px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    flex-direction: row;
+    gap: 10px;
 
     /* ключевое: не растягиваться, а занимать min-height */
     align-self: flex-start;    /* по поперечной оси (высота, если row-родитель) */
-    flex: 0 0 auto;            /* не grow, не shrink, высота по контенту */
     height: auto;              /* на всякий случай */
 
     color: var(--color-text);
 }
 
-.header{
-    height: 50px;
+.templates{
+    width: 200px;
     display: flex;
-    padding-left: 10px;
+    flex-wrap: wrap;
 }
 
+.dataSourcePanel{
+    grid-column: 2;
+}
 
 
 .container[data-theme="dark"] {

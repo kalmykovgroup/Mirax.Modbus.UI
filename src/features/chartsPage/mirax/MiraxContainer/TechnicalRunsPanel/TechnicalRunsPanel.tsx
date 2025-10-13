@@ -5,12 +5,12 @@ import classNames from 'classnames';
 import styles from './TechnicalRunsPanel.module.css';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-    selectDatabaseId,
+    selectCurrentDatabase,
     selectIsTechnicalRunsLoading,
     selectTechnicalRunsError,
     selectTechnicalRunsLoading,
     openTechnicalRunTab,
-    selectActivecontextId,
+    selectActiveContextId,
     selectTechnicalRunsData,
 } from '@chartsPage/mirax/miraxSlice';
 import { fetchTechnicalRuns } from '@chartsPage/mirax/miraxThunks';
@@ -26,14 +26,15 @@ import {
 import { SearchInput } from '@chartsPage/mirax/MiraxContainer/SearchInput/SearchInput';
 import { LoadingProgress } from '@chartsPage/mirax/MiraxContainer/LoadingProgress/LoadingProgress';
 import {CopyButton} from "@chartsPage/components/CopyButton/CopyButton.tsx";
+import type {DatabaseDto} from "@chartsPage/metaData/shared/dtos/DatabaseDto.ts";
 
 export function TechnicalRunsPanel(): JSX.Element {
     const dispatch = useAppDispatch();
-    const databaseId = useAppSelector(selectDatabaseId);
+    const database: DatabaseDto | undefined = useAppSelector(selectCurrentDatabase);
     const loadingState = useAppSelector(selectTechnicalRunsLoading);
     const isLoading = useAppSelector(selectIsTechnicalRunsLoading);
     const error = useAppSelector(selectTechnicalRunsError);
-    const activecontextId = useAppSelector(selectActivecontextId);
+    const activeContextId = useAppSelector(selectActiveContextId);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [sortType, setSortType] = useState<TechnicalRunSortTypeValue>(
@@ -44,7 +45,7 @@ export function TechnicalRunsPanel(): JSX.Element {
 
     //  Автозагрузка при монтировании
     useEffect(() => {
-        if (databaseId === undefined) {
+        if (database === undefined) {
             console.error('Database id is undefined');
             return;
         }
@@ -65,13 +66,13 @@ export function TechnicalRunsPanel(): JSX.Element {
 
         void dispatch(
             fetchTechnicalRuns({
-                databaseId,
+                databaseId : database.id,
                 onProgress: (progress) => {
                     console.log(`[TechnicalRuns] Progress: ${progress}%`);
                 },
             })
         );
-    }, [databaseId, dispatch, isLoading, technicalRuns.length, error]);
+    }, [database, dispatch, isLoading, technicalRuns.length, error]);
 
     const filteredAndSortedRuns = useMemo(() => {
         let result = technicalRuns;
@@ -95,9 +96,9 @@ export function TechnicalRunsPanel(): JSX.Element {
     }, [technicalRuns, searchQuery, sortType]);
 
     const handleRetry = useCallback(() => {
-        if (databaseId === undefined) return;
-        void dispatch(fetchTechnicalRuns({ databaseId }));
-    }, [dispatch, databaseId]);
+        if (database?.id === undefined) return;
+        void dispatch(fetchTechnicalRuns({ databaseId : database.id }));
+    }, [dispatch, database]);
 
     const handleSearchChange = useCallback((value: string) => {
         setSearchQuery(value);
@@ -176,7 +177,7 @@ export function TechnicalRunsPanel(): JSX.Element {
                                 key={run.id}
                                 className={classNames(
                                     styles.item,
-                                    activecontextId === run.id && styles.itemActive
+                                    activeContextId === run.id && styles.itemActive
                                 )}
                                 onClick={() => handleRunClick(run)}
                             >

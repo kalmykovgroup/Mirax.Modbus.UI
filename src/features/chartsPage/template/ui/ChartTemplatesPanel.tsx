@@ -41,6 +41,7 @@ import {
 
 import styles from './ChartTemplatesPanel.module.css';
 import { SelectTabModal } from '@chartsPage/charts/ui/SelectTabModal/SelectTabModal';
+import {DataSourcePanel} from "@chartsPage/metaData/ui/DataSourcePanel.tsx";
 
 export default function ChartTemplatesPanel() {
     const dispatch = useAppDispatch();
@@ -236,17 +237,22 @@ export default function ChartTemplatesPanel() {
 
     return (
         <div className={styles.chartTemplatePanelContainer} data-theme={theme}>
-            <div className={styles.header}>
-                <div style={{ fontWeight: 600 }}>Шаблоны</div>
+
+            <div className={styles.templates}>
+                <TemplatesList
+                    items={items}
+                    onPick={onPick}
+                    onDelete={handleDelete}
+                    onExecute={handleExecute}
+                    onExecuteShow={onExecuteShow}
+                />
+            </div>
+            <div className={styles.dataSourcePanel}>
+                <DataSourcePanel />
             </div>
 
-            <TemplatesList
-                items={items}
-                onPick={onPick}
-                onDelete={handleDelete}
-                onExecute={handleExecute}
-                onExecuteShow={onExecuteShow}
-            />
+
+
 
             {execTpl && hasParams && (
                 <ExecuteTemplateModal

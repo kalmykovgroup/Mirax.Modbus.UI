@@ -18,7 +18,7 @@ import { StatsBadge } from '@chartsPage/charts/ui/TabContent/ContextSection/Char
 import { ChartFooter } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartFooter/ChartFooter.tsx';
 import { ChartHeader } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ChartHeader/ChartHeader.tsx';
 import LoadingIndicator from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/LoadingIndicator/LoadingIndicator.tsx';
-import CollapsibleSection from '@chartsPage/components/Collapse/CollapsibleSection.tsx';
+
 import { ResizableContainer } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/ResizableContainer/ResizableContainer.tsx';
 import { createOptions } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/createEChartsOptions.ts';
 import { useYAxisRange } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/useYAxisRange.ts';
@@ -41,6 +41,10 @@ interface ViewFieldChartProps {
     readonly currentRange?: TimeRange | undefined;
 }
 
+import { ENV } from '@/env';
+import {ChevronDown, ChevronUp} from "lucide-react";
+const CHART_DEFAULT_CHART_HEIGHT_PX = ENV.CHART_DEFAULT_CHART_HEIGHT_PX;
+
 export const ViewFieldChart = memo(function ViewFieldChart({
                                                                contextId,
                                                                fieldName,
@@ -61,8 +65,12 @@ export const ViewFieldChart = memo(function ViewFieldChart({
         selectFieldOriginalRange(state, contextId, fieldName)
     );
     const timeSettings = useSelector((state: RootState) => selectTimeSettings(state));
+    const [isHeaderVisible, setIsHeaderVisible] = useState<boolean>(false);
+    const toggleHeaderVisibility = useCallback(() => {
+        setIsHeaderVisible((prev) => !prev);
+    }, []);
 
-    const [containerHeight, setContainerHeight] = useState<number>(600);
+    const [containerHeight, setContainerHeight] = useState<number>(CHART_DEFAULT_CHART_HEIGHT_PX);
 
     const handleZoomEnd = useCallback(
         (range: TimeRange) => {
@@ -130,10 +138,11 @@ export const ViewFieldChart = memo(function ViewFieldChart({
     );
 
     return (
-        <>
-            <CollapsibleSection>
+        <div>
+            {/* Обёртка для ChartHeader с анимацией */}
+            <div className={`${styles.chartHeaderWrapper} ${isHeaderVisible ? styles.headerVisible : styles.headerHidden}`}>
                 <ChartHeader fieldName={fieldName} width={width} contextId={contextId} />
-            </CollapsibleSection>
+            </div>
 
             <ResizableContainer
                 key={fieldName}
@@ -145,6 +154,21 @@ export const ViewFieldChart = memo(function ViewFieldChart({
             >
                 <div className={styles.viewFieldChartContainer} style={{ height: containerHeight }}>
                     <div className={styles.header}>
+                        {/* Кнопка toggle для ChartHeader */}
+                        <button
+                            type="button"
+                            className={styles.toggleHeaderButton}
+                            onClick={toggleHeaderVisibility}
+                            aria-label={isHeaderVisible ? 'Скрыть заголовок' : 'Показать заголовок'}
+                            title={isHeaderVisible ? 'Скрыть заголовок' : 'Показать заголовок'}
+                        >
+                            {isHeaderVisible ? (
+                                <ChevronUp size={16} className={styles.toggleIcon} />
+                            ) : (
+                                <ChevronDown size={16} className={styles.toggleIcon} />
+                            )}
+                        </button>
+
                         <SyncCheckbox fieldName={fieldName} contextId={contextId} />
 
                         <h3 className={styles.title}>{fieldName}</h3>
@@ -169,7 +193,6 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                             contextId={contextId}
                             bucketMs={chartData.bucketMs}
                             dataQuality={chartData.quality}
-                            defaultFormat="excel"
                             className={styles.exportButton}
                         />
 
@@ -200,6 +223,6 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                     <ChartFooter fieldName={fieldName} contextId={contextId} />
                 </div>
             </ResizableContainer>
-        </>
+        </div>
     );
 });

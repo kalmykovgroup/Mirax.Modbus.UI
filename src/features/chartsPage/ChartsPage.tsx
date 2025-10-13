@@ -5,8 +5,6 @@ import { useSelector } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
 import { MiraxContainer } from '@chartsPage/mirax/MiraxContainer/MiraxContainer.tsx';
 import ChartTemplatesPanel from '@chartsPage/template/ui/ChartTemplatesPanel.tsx';
-import CollapsibleSection from '@chartsPage/components/Collapse/CollapsibleSection.tsx';
-import { DataSourcePanel } from '@chartsPage/metaData/ui/DataSourcePanel.tsx';
 import { TabContent } from '@chartsPage/charts/ui/TabContent/TabContent.tsx';
 import {
     selectAllTabIds,
@@ -20,6 +18,7 @@ import { useConfirm } from '@ui/components/ConfirmProvider/ConfirmProvider';
 import type { Guid } from '@app/lib/types/Guid';
 import type { RootState } from '@/store/store';
 import styles from './ChartsPage.module.css';
+import classNames from "classnames";
 
 type TopTab = 'mirax' | 'templates';
 
@@ -202,18 +201,16 @@ export function ChartsPage() {
                     style={{ display: activeTopTab === 'mirax' ? 'block' : 'none' }}
                     className={styles.pageContent}
                 >
-                    <MiraxContainer dbId={'77777777-0000-0000-0000-000000000011'} />
+                    <MiraxContainer />
                 </div>
 
                 {/* Шаблоны - рендерится всегда, скрывается через display */}
                 <div
                     style={{ display: activeTopTab === 'templates' ? 'block' : 'none' }}
-                    className={styles.pageContent}
+                    className={classNames(styles.pageContent)}
                 >
                     <ChartTemplatesPanel />
-                    <CollapsibleSection>
-                        <DataSourcePanel />
-                    </CollapsibleSection>
+
                 </div>
 
                 {/* Вкладки графиков - рендерятся всегда, скрываются через display */}

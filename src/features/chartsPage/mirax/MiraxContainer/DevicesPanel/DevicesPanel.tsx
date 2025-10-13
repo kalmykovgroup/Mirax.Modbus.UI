@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect, type JSX } from 'react';
 import styles from './DevicesPanel.module.css';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-    selectDatabaseId,
+    selectCurrentDatabase,
     selectDevicesLoading,
     selectIsDevicesLoading,
     selectDevicesError, selectTechnicalRunById, selectDevicesByTechnicalRunId,
@@ -22,6 +22,7 @@ import {
     type DeviceSortType as DeviceSortTypeValue,
 } from '@chartsPage/mirax/MiraxContainer/utils/miraxHelpers';
 import { SearchInput } from '@chartsPage/mirax/MiraxContainer/SearchInput/SearchInput';
+import type {DatabaseDto} from "@chartsPage/metaData/shared/dtos/DatabaseDto.ts";
 
 interface Props {
     readonly technicalRunId: Guid;
@@ -29,7 +30,7 @@ interface Props {
 
 export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
     const dispatch = useAppDispatch();
-    const databaseId = useAppSelector(selectDatabaseId);
+    const database : DatabaseDto | undefined = useAppSelector(selectCurrentDatabase);
     const loadingState = useAppSelector((state) => selectDevicesLoading(state, technicalRunId));
     const isLoading = useAppSelector((state) => selectIsDevicesLoading(state, technicalRunId));
     const error = useAppSelector((state) => selectDevicesError(state, technicalRunId));
@@ -48,10 +49,10 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
 
     // Загрузка устройств при монтировании (через thunk)
     useEffect(() => {
-        if (databaseId !== undefined && devices.length === 0 && !isLoading && error === undefined) {
-            void dispatch(fetchPortableDevices({ databaseId, technicalRunId }));
+        if (database?.id !== undefined && devices.length === 0 && !isLoading && error === undefined) {
+            void dispatch(fetchPortableDevices({ databaseId: database.id, technicalRunId }));
         }
-    }, [dispatch, databaseId, technicalRunId, devices.length, isLoading, error]);
+    }, [dispatch, database, technicalRunId, devices.length, isLoading, error]);
 
     const filteredAndSortedDevices = useMemo(() => {
         let result = devices;
@@ -97,10 +98,10 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
     }, []);
 
     const handleRetry = useCallback(() => {
-        if (databaseId !== undefined) {
-            void dispatch(fetchPortableDevices({ databaseId, technicalRunId }));
+        if (database?.id !== undefined) {
+            void dispatch(fetchPortableDevices({databaseId: database.id, technicalRunId }));
         }
-    }, [dispatch, databaseId, technicalRunId]);
+    }, [dispatch, database, technicalRunId]);
 
     const showNoResults =
         (deviceSearchQuery.trim() || selectedPort !== undefined) &&

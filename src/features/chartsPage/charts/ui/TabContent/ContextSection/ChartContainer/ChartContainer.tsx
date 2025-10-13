@@ -11,7 +11,8 @@ import {FieldChartContainer} from "@chartsPage/charts/ui/TabContent/ContextSecti
 import {useRequestManager} from "@chartsPage/charts/orchestration/hooks/useRequestManager.ts";
 
 
-const MIN_CONTAINER_WIDTH = 640;
+import { ENV } from '@/env';
+const CHART_MIN_CONTAINER_WIDTH = ENV.CHART_MIN_CONTAINER_WIDTH;
 
 export function ChartContainer() {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -35,7 +36,7 @@ export function ChartContainer() {
 
             const width = containerRef.current.offsetWidth;
             if (width > 0) {
-                const normalizedWidth = Math.max(MIN_CONTAINER_WIDTH, Math.round(width));
+                const normalizedWidth = Math.max(CHART_MIN_CONTAINER_WIDTH, Math.round(width));
 
                 setContainerWidth(prev => {
                     // Обновляем только если ширина действительно изменилась
@@ -55,7 +56,7 @@ export function ChartContainer() {
             for (const entry of entries) {
                 const { width } = entry.contentRect;
                 if (width > 0) {
-                    const normalizedWidth = Math.max(MIN_CONTAINER_WIDTH, Math.round(width));
+                    const normalizedWidth = Math.max(CHART_MIN_CONTAINER_WIDTH, Math.round(width));
 
                     setContainerWidth(prev => {
                         if (prev !== normalizedWidth) {
