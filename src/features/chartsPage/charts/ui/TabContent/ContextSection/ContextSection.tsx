@@ -1,6 +1,6 @@
 import type {Guid} from "@app/lib/types/Guid.ts";
 import {useSelector} from "react-redux";
-import type {RootState} from "@/store/store.ts";
+import type {RootState} from "@/baseStore/store.ts";
 import {selectTemplate} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 import styles from "./ContextSection.module.css";
 import {RequestManagerProvider} from "@chartsPage/charts/orchestration/requests/RequestManagerProvider.tsx";

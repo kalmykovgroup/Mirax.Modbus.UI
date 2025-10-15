@@ -1,15 +1,15 @@
 import {createSelector, createSlice, type EntityState, type PayloadAction,} from '@reduxjs/toolkit';
-import type {ScenarioDto} from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/ScenarioDto.ts';
 
 import {scenarioApi} from '@/features/scenarioEditor/shared/api/scenarioApi.ts';
 import {extractErr} from '@app/lib/types/extractErr.ts';
 import type {Guid} from '@app/lib/types/Guid.ts';
-import {ScenarioLoadOptions} from "@shared/contracts/Types/Api.Shared/RepositoryOptions/ScenarioLoadOptions.ts";
-import type {ScenarioOperationDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/ScenarioOperationDto.ts";
-import type {SaveScenarioBatchResult} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/SaveScenarioBatchResult.ts";
+import {ScenarioLoadOptions} from "@scenario/shared/contracts/server/types/Api.Shared/RepositoryOptions/ScenarioLoadOptions.ts";
 import {persistReducer} from "redux-persist";
 import sessionStorage from "redux-persist/lib/storage/session";
-import type {AppDispatch, RootState} from "@/store/store";
+import type {AppDispatch, RootState} from "@/baseStore/store.ts";
+import type {
+    ScenarioDto
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Scenarios/ScenarioDto.ts";
 
 // Enum загрузки
 // @ts-ignore
@@ -31,7 +31,6 @@ export interface ScenarioState extends EntityState<ScenarioDetailsEntry, Guid> {
     errorLoadList?: string | null;
     activeScenarioId?: Guid | null;
     lastFetchedAt: number | null;
-    pendingChanges: Record<Guid, ScenarioOperationDto[]>;
 }
 
 // Начальное состояние
@@ -41,7 +40,6 @@ const initialState: ScenarioState = {
     errorLoadList: null,
     activeScenarioId: null,
     lastFetchedAt: null,
-    pendingChanges: {},
 };
 
 // Обновить список (инициируем без подписки, с форс-рефетчем по флагу)
@@ -104,33 +102,6 @@ export const refreshScenarioById =
             }
         };
 
-
-
-// +++ отправка накопленных изменений текущего сценария +++
-// returns SaveScenarioBatchResult | null, пробрасывает ошибку наверх
-export const applyScenarioPendingChanges =
-    (id: Guid) =>
-        async (dispatch: AppDispatch, getState: () => RootState): Promise<SaveScenarioBatchResult | null> => {
-            const ops = getState().scenario.pendingChanges[id] ?? [];
-            if (!ops.length) return null;
-
-            try {
-                const res = await dispatch(
-                    scenarioApi.endpoints.applyScenarioChanges.initiate({ scenarioId: id, operations: ops })
-                ).unwrap();
-
-                // Успех: очищаем буфер и перечитываем детали
-                dispatch(scenariosSlice.actions.clearPendingChanges(id));
-                await dispatch(refreshScenarioById(id, true));
-                return res;
-            } catch (e) {
-                const msg = extractErr(e);
-                // Важно: буфер НЕ чистим — пользователь может повторить отправку
-                dispatch(scenariosSlice.actions.setScenarioError({ id, error: msg }));
-                // Пробрасываем выше, чтобы UI показал тост/ошибку
-                throw new Error(msg);
-            }
-        };
 
 
 
@@ -212,25 +183,13 @@ const scenariosSlice = createSlice({
             };
         },
 
-        // +++ добавить операцию в буфер по scenarioId +++
-        enqueuePendingChange(state, action: PayloadAction<{ scenarioId: Guid; op: ScenarioOperationDto }>) {
-            const { scenarioId, op } = action.payload;
-            if (!state.pendingChanges[scenarioId]) state.pendingChanges[scenarioId] = [];
-            state.pendingChanges[scenarioId].push(op);
-        },
 
-        // +++ очистить буфер изменений для scenarioId +++
-        clearPendingChanges(state, action: PayloadAction<Guid>) {
-            const id = action.payload;
-            state.pendingChanges[id] = [];
-        },
     },
     extraReducers: () => {},
 });
 
 // ===== Selectors =====
 // базовые
-export const selectScenarioSlice = (s: RootState) => s.scenario;
 export const selectActiveScenarioId = (s: RootState) => s.scenario.activeScenarioId;
 export const selectScenarioIds = (s: RootState) => s.scenario.ids as Guid[];
 export const selectScenarioEntities = (s: RootState) => s.scenario.entities;
@@ -241,15 +200,7 @@ export const selectScenariosEntries = createSelector(
     (ids, entities): ScenarioDetailsEntry[] => ids.map(id => entities[id]!).filter(Boolean)
 );
 
-// фабрика: одна запись по id (мемо на уровне аргументов)
-export const makeSelectScenarioEntryById = () =>
-    createSelector(
-        [selectScenarioEntities, (_: RootState, id: Guid | null) => id],
-        (entities, id) => (id ? entities[id] ?? null : null)
-    );
 
-// прочие простые поля
-export const selectScenariosLastFetchedAt = (s: RootState) => s.scenario.lastFetchedAt;
 export const selectScenariosListError = (s: RootState) => s.scenario.errorLoadList;
 
 // ===== Exports =====
@@ -262,8 +213,6 @@ export const {
     upsertScenario,
     markScenarioLoading,
     setScenarioError,
-    enqueuePendingChange,
-    clearPendingChanges,
 } = scenariosSlice.actions;
 
 

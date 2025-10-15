@@ -1,6 +1,6 @@
 // ChartHeader.tsx
 import React, { useMemo } from 'react';
-import { useAppSelector } from '@/store/hooks';
+import { useAppSelector } from '@/baseStore/hooks.ts';
 import type {
     BucketsMs,
     CoverageInterval,
@@ -11,7 +11,7 @@ import {
     selectFieldView
 } from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 import { useSelector } from "react-redux";
-import type { RootState } from "@/store/store.ts";
+import type { RootState } from "@/baseStore/store.ts";
 import styles from "./ChartHeader.module.css";
 import { LevelRow } from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ChartHeader/LevelRow/LevelRow.tsx";
 import type {Guid} from "@app/lib/types/Guid.ts";

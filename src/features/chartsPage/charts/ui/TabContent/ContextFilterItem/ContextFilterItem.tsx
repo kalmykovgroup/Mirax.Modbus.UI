@@ -1,7 +1,7 @@
 // src/features/chartsPage/charts/ui/TabContent/ContextFilterItem/ContextFilterItem.tsx
 
 import { useState, useCallback } from 'react';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/baseStore/hooks.ts';
 import type { Guid } from '@app/lib/types/Guid';
 import { selectTemplateById, updateChartReqTemplate } from '@chartsPage/template/store/chartsTemplatesSlice';
 import type { UpdateChartReqTemplateRequest } from '@chartsPage/template/shared/dtos/requests/UpdateChartReqTemplateRequest';
@@ -12,7 +12,7 @@ import type {ResolvedCharReqTemplate} from "@chartsPage/template/shared/dtos/Res
 import type {ChartReqTemplateDto} from "@chartsPage/template/shared/dtos/ChartReqTemplateDto.ts";
 import {useSelector} from "react-redux";
 import {selectTemplate} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
-import type {RootState} from "@/store/store.ts";
+import type {RootState} from "@/baseStore/store.ts";
 
 interface ContextFilterItemProps {
     readonly tabId: Guid;

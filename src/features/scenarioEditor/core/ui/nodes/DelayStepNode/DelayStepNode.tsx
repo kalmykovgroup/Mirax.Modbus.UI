@@ -3,7 +3,7 @@ import styles from "./DelayStepNode.module.css";
 import {formatWithMode} from "@app/lib/utils/format.ts";
 import  {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
 import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
-import type {DelayStepDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Steps/StepBaseDto.ts";
+import type {DelayStepDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 import DelayTimeInput from "@scenario/core/ui/nodes/DelayStepNode/DelayTimeInput/DelayTimeInput.tsx";
 
 const onChangeDto = (dto: DelayStepDto) =>{

@@ -1,13 +1,14 @@
 // chartsBaseQuery.ts
 import type { BaseQueryFn } from '@reduxjs/toolkit/query/react'
 import type { AxiosError, AxiosRequestConfig, AxiosResponse, Method } from 'axios'
-import { decPending, incPending } from '@/store/uiSlice.ts'
+import { decPending, incPending } from '@/baseStore/uiSlice.ts'
 import { chartsClient } from '@chartsPage/baseApi/chartsClient.ts'
-import type {ApiResponse} from "@shared/contracts/Dtos/RemoteDtos/CommonDtos/ApiResponse.ts";
-import type {ApiError} from "@shared/api/base/helpers/ApiError.ts";
-import {isApiResponse} from "@shared/api/base/helpers/isApiResponse.ts";
-import {fail} from "@shared/api/base/helpers/fail.ts";
-import {ok} from "@shared/api/base/helpers/ok.ts";
+import type {ApiResponse} from "@/baseShared/dtos/ApiResponse.ts";
+import type {ApiError} from "@/baseShared/api/helpers/ApiError.ts";
+import {isApiResponse} from "@/baseShared/api/helpers/isApiResponse.ts";
+import {fail} from "@/baseShared/api/helpers/fail.ts";
+import {ok} from "@/baseShared/api/helpers/ok.ts";
+import {parseDatesInObject} from "@app/lib/utils/parseDatesInObject.ts";
 
 export type AxiosChartsBaseQueryArgs = {
     url: string
@@ -17,41 +18,6 @@ export type AxiosChartsBaseQueryArgs = {
     headers?: AxiosRequestConfig['headers']
     lockUi?: boolean
     parseDates?: boolean
-}
-
-/**
- * Рекурсивно преобразует строки ISO дат в Date объекты
- */
-function parseDatesInObject(obj: any): any {
-    if (obj === null || obj === undefined) return obj
-    if (obj instanceof Date) return obj
-
-    if (typeof obj === 'string') {
-        const isoDatePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/
-        if (isoDatePattern.test(obj)) {
-            const parsed = new Date(obj)
-            if (!isNaN(parsed.getTime())) {
-                return parsed
-            }
-        }
-        return obj
-    }
-
-    if (Array.isArray(obj)) {
-        return obj.map(item => parseDatesInObject(item))
-    }
-
-    if (typeof obj === 'object') {
-        const result: any = {}
-        for (const key in obj) {
-            if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                result[key] = parseDatesInObject(obj[key])
-            }
-        }
-        return result
-    }
-
-    return obj
 }
 
 export const axiosChartsBaseQuery =

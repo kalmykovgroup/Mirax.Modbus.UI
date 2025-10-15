@@ -1,7 +1,7 @@
 import React from "react";
 import { useSelector } from "react-redux";
 
-import { useAppDispatch } from "@/store/hooks.ts";
+import { useAppDispatch } from "@/baseStore/hooks.ts";
 import { selectChartsMetaLoading, selectErrors } from "@chartsPage/metaData/store/chartsMetaSlice.ts";
 import {
     selectFields,

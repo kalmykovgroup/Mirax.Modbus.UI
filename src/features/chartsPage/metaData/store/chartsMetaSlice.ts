@@ -2,7 +2,7 @@ import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/tool
 import { persistReducer } from 'redux-persist'
 import storage from 'redux-persist/lib/storage'
 
-import type { RootState } from '@/store/store'
+import type { RootState } from '@/baseStore/store.ts'
 import { notify } from '@app/lib/notify'
 import { metadataApi } from '@chartsPage/metaData/shared/api/metadataApi'
 import type { DatabaseDto } from '@chartsPage/metaData/shared/dtos/DatabaseDto'

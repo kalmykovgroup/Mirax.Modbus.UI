@@ -3,7 +3,7 @@ import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/tool
 import type {Guid} from "@app/lib/types/Guid.ts";
 import {persistReducer} from "redux-persist";
 import storage from "redux-persist/lib/storage";
-import type {RootState} from "@/store/store.ts";
+import type {RootState} from "@/baseStore/store.ts";
 import {notify} from "@app/lib/notify.ts";
 import type {ChartReqTemplateDto} from "@chartsPage/template/shared//dtos/ChartReqTemplateDto.ts";
 import type {DatabaseDto} from "@chartsPage/metaData/shared/dtos/DatabaseDto.ts";

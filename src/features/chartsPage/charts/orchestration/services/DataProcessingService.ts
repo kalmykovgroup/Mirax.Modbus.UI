@@ -10,7 +10,7 @@ import type {
 } from '@chartsPage/charts/core/store/types/chart.types';
 import { batchUpdateTiles } from '@chartsPage/charts/core/store/chartsSlice';
 import { selectFieldView } from '@chartsPage/charts/core/store/selectors/base.selectors';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 import type { MultiSeriesResponse } from "@chartsPage/charts/core/dtos/responses/MultiSeriesResponse.ts";
 import type { SeriesBinDto } from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
 import type { GetMultiSeriesRequest } from "@chartsPage/charts/core/dtos/requests/GetMultiSeriesRequest.ts";

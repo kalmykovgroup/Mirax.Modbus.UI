@@ -1,7 +1,7 @@
 ﻿
 import { useNavigate } from 'react-router-dom'
 import styles from './LogoutButton.module.css'
-import {useAppDispatch} from "@/store/hooks.ts";
+import {useAppDispatch} from "@/baseStore/hooks.ts";
 import {useLogoutMutation} from "@login/shared/api/authApi.ts";
 import {ROUTES} from "@app/constants/routes.ts";
 import {resetAuthState} from "@login/store/authSlice.ts";

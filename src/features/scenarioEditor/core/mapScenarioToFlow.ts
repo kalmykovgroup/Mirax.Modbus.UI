@@ -1,6 +1,6 @@
 // src/features/scenarioEditor/core/mapScenarioToFlow.ts
-import type { ScenarioDto } from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/ScenarioDto";
-import type { BranchDto } from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Branch/BranchDto";
+import type { ScenarioDto } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Scenarios/ScenarioDto";
+import type { BranchDto } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto";
 import { FlowType } from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
 import type { FlowEdge, FlowNode } from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
  

@@ -2,7 +2,7 @@
 // THUNK ИНИЦИАЛИЗАЦИИ: первая загрузка данных с инициализацией view
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 import { notify } from '@app/lib/notify';
 
 import {

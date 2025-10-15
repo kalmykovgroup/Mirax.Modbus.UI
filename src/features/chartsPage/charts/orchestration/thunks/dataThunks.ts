@@ -2,7 +2,7 @@
 // THUNK ЗАГРУЗКИ ДАННЫХ: загружает данные для конкретного диапазона и bucket
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 
 
 

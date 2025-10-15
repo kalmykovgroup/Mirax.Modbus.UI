@@ -2,7 +2,7 @@
 import {type ChangeEvent, type JSX, useEffect} from 'react';
 
 import styles from './MiraxContainer.module.css';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/baseStore/hooks.ts';
 import {
     selectCurrentDatabase,
     selectActiveContextId, setCurrentDatabase,

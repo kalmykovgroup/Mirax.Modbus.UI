@@ -1,7 +1,7 @@
 // src/features/chartsPage/charts/core/store/selectors/tabSyncSelectors.ts
 
 import { createSelector } from '@reduxjs/toolkit';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 import type { Guid } from '@app/lib/types/Guid';
 import type { FieldDto } from '@chartsPage/metaData/shared/dtos/FieldDto';
 import {selectTabContextIds} from "@chartsPage/charts/core/store/tabsSlice.ts";

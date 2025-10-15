@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useSelector } from 'react-redux';
-import { useAppDispatch } from "@/store/hooks.ts";
+import { useAppDispatch } from "@/baseStore/hooks.ts";
 import type { SqlParam } from "@chartsPage/template/shared/dtos/SqlParam.ts";
 import {
     selectActiveTemplate,

@@ -2,7 +2,7 @@
 import { useCallback, type JSX } from 'react';
 
 import styles from './TabBar_PortableDevices.module.css';
-import { useAppDispatch, useAppSelector } from '@/store/hooks.ts';
+import { useAppDispatch, useAppSelector } from '@/baseStore/hooks.ts';
 import {
     selectOpenTabs,
     selectActiveContextId,

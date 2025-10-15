@@ -1,10 +1,10 @@
 ﻿import { useEffect } from 'react';
 import { debounce } from 'lodash';
-import { useAppDispatch } from '@/store/hooks';
 import { useSelector } from 'react-redux';
 import { selectLastActive, updateLastActive } from '@/features/user/store/userSlice';
 import { resetAuthState, selectIsAuthenticated } from '@login/store/authSlice';
 import { ENV } from '@/env';
+import {useAppDispatch} from "@/baseStore/hooks.ts";
 
 /**
  * Компонент для отслеживания активности пользователя

@@ -1,27 +1,27 @@
 // src/shared/baseApi/scenarioApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react'
-import { axiosBaseQuery } from '@shared/api/base/baseQuery.ts'
+import { axiosBaseQuery } from '@/baseShared/api/baseQuery.ts'
 
 // Контракты (развёрнутые типы, без ApiResponse<T> — baseQuery уже разворачивает):
 import { API } from '@app/providers/endpoints.ts'
 import type {
     GetScenarioByIdRequest
-} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/GetScenarioByIdRequest.ts";
-import type {ScenarioDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/ScenarioDto.ts";
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Scenarios/GetScenarioByIdRequest.ts";
+import type {ScenarioDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Scenarios/ScenarioDto.ts";
 import type {
     CreateScenarioRequest
-} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/CreateScenarioRequest.ts";
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Scenarios/CreateScenarioRequest.ts";
 import type {
     GetAllScenariosRequest
-} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/GetAllScenariosRequest.ts";
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Scenarios/GetAllScenariosRequest.ts";
 import type {
     UpdateScenarioRequest
-} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/UpdateScenarioRequest.ts";
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Scenarios/UpdateScenarioRequest.ts";
 import type {Guid} from "@app/lib/types/Guid.ts";
-import type {SaveScenarioBatchResult} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/SaveScenarioBatchResult.ts";
+import type {SaveScenarioBatchResult} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/SaveScenarioBatchResult.ts";
 import type {
     ScenarioBatchOperationsRequest
-} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/ScenarioBatchOperationsRequest.ts";
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/ScenarioBatchOperationsRequest.ts";
 
 export const scenarioApi = createApi({
     reducerPath: 'scenarioApi',

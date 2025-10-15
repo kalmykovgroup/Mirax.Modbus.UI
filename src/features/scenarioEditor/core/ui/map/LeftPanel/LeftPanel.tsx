@@ -7,20 +7,20 @@ import {
     setActiveScenarioId,
 } from '@/features/scenarioEditor/store/scenarioSlice.ts';
 import { refreshScenariosList } from '@/features/scenarioEditor/store/scenarioSlice.ts';
-import type { ScenarioDto } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/ScenarioDto.ts';
+import type { ScenarioDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Scenarios/ScenarioDto.ts';
 import {
     usePauseScenarioMutation,
     useResumeScenarioMutation,
     useRunScenarioMutation,
     useStopScenarioMutation,
 } from '@/features/scenarioEditor/shared/api/workflowApi.ts';
-import type { RunScenarioResponse } from '@shared/contracts/Dtos/LocalDtos/ScenarioEngine/RunScenarioResponse.ts';
+import type { RunScenarioResponse } from '@scenario/shared/contracts/server/localDtos/ScenarioEngine/RunScenarioResponse.ts';
 import { addRunningScenario, removeRunningScenario } from '@/features/scenarioEditor/store/workflowSlice.ts';
 import {
     SimpleMenu
 } from "@scenario/core/ui/map/LeftPanel/HoverActionMenu/SimpleMenu.tsx";
-import type {ScenarioStopMode} from "@shared/contracts/Types/ScenarioEngine/ScenarioStopMode.ts";
-import type {AppDispatch} from "@/store/store.ts";
+import type {ScenarioStopMode} from "@scenario/shared/contracts/server/types/ScenarioEngine/ScenarioStopMode.ts";
+import type {AppDispatch} from "@/baseStore/store.ts";
 
 export function LeftPanel() {
     const dispatch = useDispatch<AppDispatch>();

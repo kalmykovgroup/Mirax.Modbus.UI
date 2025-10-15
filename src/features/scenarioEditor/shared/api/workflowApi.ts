@@ -1,17 +1,17 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
-import { axiosBaseQuery } from "@shared/api/base/baseQuery.ts";
+import { axiosBaseQuery } from "@/baseShared/api/baseQuery.ts";
 
 // Общие типы
 import { API } from "@app/providers/endpoints.ts";
-import type {PauseScenarioSignalRequest} from "@shared/contracts/Dtos/LocalDtos/Workflow/PauseScenarioSignalRequest.ts";
+import type {PauseScenarioSignalRequest} from "@scenario/shared/contracts/server/localDtos/Workflow/PauseScenarioSignalRequest.ts";
 import type {
     ResumeScenarioSignalRequest
-} from "@shared/contracts/Dtos/LocalDtos/Workflow/ResumeScenarioSignalRequest.ts";
-import type {StopScenarioSignalRequest} from "@shared/contracts/Dtos/LocalDtos/Workflow/StopScenarioSignalRequest.ts";
-import type {PauseBranchSignalRequest} from "@shared/contracts/Dtos/LocalDtos/Workflow/PauseBranchSignalRequest.ts";
-import type {ResumeBranchSignalRequest} from "@shared/contracts/Dtos/LocalDtos/Workflow/ResumeBranchSignalRequest.ts";
-import type {StopBranchSignalRequest} from "@shared/contracts/Dtos/LocalDtos/Workflow/StopBranchSignalRequest.ts";
-import type {RunScenarioResponse} from "@shared/contracts/Dtos/LocalDtos/ScenarioEngine/RunScenarioResponse.ts";
+} from "@scenario/shared/contracts/server/localDtos/Workflow/ResumeScenarioSignalRequest.ts";
+import type {StopScenarioSignalRequest} from "@scenario/shared/contracts/server/localDtos/Workflow/StopScenarioSignalRequest.ts";
+import type {PauseBranchSignalRequest} from "@scenario/shared/contracts/server/localDtos/Workflow/PauseBranchSignalRequest.ts";
+import type {ResumeBranchSignalRequest} from "@scenario/shared/contracts/server/localDtos/Workflow/ResumeBranchSignalRequest.ts";
+import type {StopBranchSignalRequest} from "@scenario/shared/contracts/server/localDtos/Workflow/StopBranchSignalRequest.ts";
+import type {RunScenarioResponse} from "@scenario/shared/contracts/server/localDtos/ScenarioEngine/RunScenarioResponse.ts";
 
 
 export const workflowApi = createApi({

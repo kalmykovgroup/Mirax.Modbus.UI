@@ -1,7 +1,7 @@
 ﻿
 import { Navigate } from 'react-router-dom'
 import type {JSX} from "react";
-import {useAppSelector} from "@/store/hooks.ts";
+import {useAppSelector} from "@/baseStore/hooks.ts";
 import {ROUTES} from "@app/constants/routes.ts";
 
 interface Props {

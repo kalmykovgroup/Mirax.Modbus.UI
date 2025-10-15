@@ -2,7 +2,7 @@
 
 import {useMemo, useState, useCallback} from 'react';
 import { useSelector } from 'react-redux';
-import {useAppDispatch, useAppSelector} from '@/store/hooks';
+import {useAppDispatch, useAppSelector} from '@/baseStore/hooks.ts';
 import { useConfirm } from '@ui/components/ConfirmProvider/ConfirmProvider';
 import {
     selectTabContextIds,
@@ -16,7 +16,7 @@ import {
     selectTabName,
 } from '@chartsPage/charts/core/store/tabsSlice';
 import type { Guid } from '@app/lib/types/Guid';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 import styles from './TabContent.module.css';
 import { ContextFilterItem } from '@chartsPage/charts/ui/TabContent/ContextFilterItem/ContextFilterItem';
 import { ContextSection } from '@chartsPage/charts/ui/TabContent/ContextSection/ContextSection';

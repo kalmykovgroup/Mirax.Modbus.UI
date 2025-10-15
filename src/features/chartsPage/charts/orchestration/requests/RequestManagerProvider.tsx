@@ -1,8 +1,8 @@
 // src/features/chartsPage/charts/orchestration/requests/RequestManagerProvider.tsx
 
-import { useAppDispatch } from '@/store/hooks';
+import { useAppDispatch } from '@/baseStore/hooks.ts';
 import { useStore } from 'react-redux';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 import type { Guid } from '@app/lib/types/Guid';
 import { RequestManager } from '@chartsPage/charts/orchestration/requests/RequestManager';
 import { type ReactNode, useEffect, useRef } from 'react';

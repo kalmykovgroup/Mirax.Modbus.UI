@@ -1,4 +1,4 @@
-import {useAppDispatch} from "@/store/hooks.ts";
+import {useAppDispatch} from "@/baseStore/hooks.ts";
 import {useSelector} from "react-redux";
 import React from "react";
 import type {FilterClause} from "@chartsPage/template/shared/dtos/FilterClause.ts";

@@ -3,7 +3,7 @@
 
 import { useSelector } from 'react-redux';
 import {useCallback, useMemo, memo, useState, useRef} from 'react';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 import {
     type ChartStats,
     selectChartRenderData,

@@ -1,8 +1,8 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { RunningScenarioData } from "@shared/contracts/Dtos/LocalDtos/ScenarioEngine/RunningScenarioData.ts";
+import type { RunningScenarioData } from "@scenario/shared/contracts/server/localDtos/ScenarioEngine/RunningScenarioData.ts";
 import {persistReducer} from "redux-persist";
 import sessionStorage from "redux-persist/lib/storage/session";
-import type {RootState} from "@/store/store.ts";
+import type {RootState} from "@/baseStore/store.ts";
 
 /** Локальное UI-состояние для Workflow */
 export interface WorkflowState {

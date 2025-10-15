@@ -3,7 +3,7 @@
 
 import { createSlice, type PayloadAction, createSelector } from '@reduxjs/toolkit';
 import type { Guid } from '@app/lib/types/Guid';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 
 // ============= КОНСТАНТЫ =============
 

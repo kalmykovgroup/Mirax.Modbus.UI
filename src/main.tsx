@@ -4,11 +4,11 @@ import "@ui/styles/index.css"
 import App from './App.tsx'
 import {Provider} from "react-redux";
 import { PersistGate } from 'redux-persist/integration/react';
-import {persistor, store} from "@/store/store.ts";
+import {persistor, store} from "@/baseStore/store.ts";
 import SplashScreen from "@ui/components/SplashScreen/SplashScreen.tsx";
 import {BrowserRouter} from "react-router-dom";
-import {apiClient} from "@shared/api/base/apiClient.ts";
-import {setStoreForInterceptors, setupInterceptors} from "@shared/api/base/interceptors.ts";
+import {apiClient} from "@/baseShared/api/apiClient.ts";
+import {setStoreForInterceptors, setupInterceptors} from "@/baseShared/api/interceptors.ts";
 
 
 

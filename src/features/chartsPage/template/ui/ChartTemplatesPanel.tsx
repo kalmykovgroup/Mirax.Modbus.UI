@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import { useAppDispatch } from '@/store/hooks';
+import { useAppDispatch } from '@/baseStore/hooks.ts';
 import { useConfirm } from '@ui/components/ConfirmProvider/ConfirmProvider';
 import { useTheme } from '@app/providers/theme/useTheme';
 import { Guid } from '@app/lib/types/Guid';

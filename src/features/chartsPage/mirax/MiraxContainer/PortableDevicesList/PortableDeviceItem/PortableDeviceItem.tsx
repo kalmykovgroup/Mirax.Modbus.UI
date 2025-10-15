@@ -3,7 +3,7 @@ import React, { useCallback, useRef, useMemo, useEffect, type JSX } from 'react'
 import classNames from 'classnames';
 
 import styles from './PortableDeviceItem.module.css';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/baseStore/hooks.ts';
 import type { PortableDeviceDto } from '@chartsPage/mirax/contracts/PortableDeviceDto';
 import type { TechnicalRunDto } from '@chartsPage/mirax/contracts/TechnicalRunDto';
 

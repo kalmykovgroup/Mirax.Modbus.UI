@@ -1,7 +1,7 @@
 // StatsBadge.tsx
-import { useAppDispatch } from "@/store/hooks.ts";
+import { useAppDispatch } from "@/baseStore/hooks.ts";
 import { useSelector } from "react-redux";
-import type { RootState } from "@/store/store.ts";
+import type { RootState } from "@/baseStore/store.ts";
 import {
     selectFieldCurrentBucketMs
 } from "@chartsPage/charts/core/store/selectors/base.selectors.ts";

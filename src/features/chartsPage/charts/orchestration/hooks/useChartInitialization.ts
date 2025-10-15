@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { selectAllViews, selectTemplate } from '@chartsPage/charts/core/store/selectors/base.selectors';
 import { fetchMultiSeriesInit } from '@chartsPage/charts/orchestration/thunks/initThunks';
 import { InitializationService } from '@chartsPage/charts/orchestration/services/InitializationService';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/baseStore/hooks.ts';
 import { selectBucketing } from '@chartsPage/charts/core/store/chartsSettingsSlice';
 import { initialViews } from '@chartsPage/charts/core/store/chartsSlice';
 import type { MultiSeriesResponse } from '@chartsPage/charts/core/dtos/responses/MultiSeriesResponse';

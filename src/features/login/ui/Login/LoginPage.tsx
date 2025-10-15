@@ -4,16 +4,16 @@ import * as z from 'zod'
 import styles from './LoginPage.module.css'
 import {nameof} from "@app/lib/utils/nameof.ts";
 import {useSelector} from "react-redux";
-import {useAppDispatch} from "@/store/hooks.ts";
 import {useNavigate} from "react-router-dom";
 import {ROUTES} from "@app/constants/routes.ts";
 import {useEffect} from "react";
 import {useLoginMutation} from "@login/shared/api/authApi.ts";
-import type {LoginResponse} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/Login/LoginResponse.ts";
+import type {LoginResponse} from "@/features/user/shared/dtos/Users/Login/LoginResponse.ts";
 import {mapServerErrorsToForm, mapServerPayloadErrorsToForm} from "@login/lib/serverErrorMapper.ts";
 import Logo from "@ui/components/Logo/Logo.tsx";
 import {selectIsAuthenticated, setCredentials} from "@login/store/authSlice.ts";
 import {useDocumentTitle} from "@app/lib/hooks/DocumentTitleContext.tsx";
+import {useAppDispatch} from "@/baseStore/hooks.ts";
 
 const loginSchema = z.object({
     email: z.string().min(1, 'Введите имя пользователя'),

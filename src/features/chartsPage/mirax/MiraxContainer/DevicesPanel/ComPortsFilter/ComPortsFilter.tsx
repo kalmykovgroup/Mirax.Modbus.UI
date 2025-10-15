@@ -6,7 +6,7 @@ import type { PortableDeviceDto } from '@chartsPage/mirax/contracts/PortableDevi
 import type { TechnicalRunDto } from '@chartsPage/mirax/contracts/TechnicalRunDto';
 import type { SensorDto } from '@chartsPage/mirax/contracts/SensorDto';
 import type { LoadSensorsRequest } from '@chartsPage/mirax/miraxThunk.types';
-import type { AppDispatch } from '@/store/store';
+import type { AppDispatch } from '@/baseStore/store.ts';
 import type { Guid } from '@app/lib/types/Guid';
 import { fetchSensors } from '@chartsPage/mirax/miraxThunks';
 import { buildCharts } from '@chartsPage/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/buildCharts';

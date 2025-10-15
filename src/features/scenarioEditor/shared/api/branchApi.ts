@@ -1,14 +1,14 @@
 // src/shared/baseApi/branchApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
-import { axiosBaseQuery } from '@shared/api/base/baseQuery.ts';
+import { axiosBaseQuery } from '@/baseShared/api/baseQuery.ts';
 
 import { API } from '@app/providers/endpoints.ts';
 import type { Guid } from '@app/lib/types/Guid.ts';
 
-import type { BranchDto } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Branch/BranchDto.ts';
-import type { CreateBranchRequest } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Branch/CreateBranchRequest.ts';
-import type { UpdateBranchRequest } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Branch/UpdateBranchRequest.ts';
-import type {GetBranchByIdRequest} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Branch/GetBranchByIdRequest.ts";
+import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto.ts';
+import type { CreateBranchRequest } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/CreateBranchRequest.ts';
+import type { UpdateBranchRequest } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/UpdateBranchRequest.ts';
+import type {GetBranchByIdRequest} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/GetBranchByIdRequest.ts";
 
 export const branchApi = createApi({
     reducerPath: 'branchApi',

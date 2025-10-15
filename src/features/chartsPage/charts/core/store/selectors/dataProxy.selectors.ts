@@ -1,7 +1,7 @@
 // src/features/chartsPage/charts/core/store/selectors/dataProxy.selectors.ts
 
 import { createSelector } from '@reduxjs/toolkit';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 
 import {
     DataProxyService,

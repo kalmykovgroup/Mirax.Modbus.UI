@@ -1,13 +1,13 @@
 // src/shared/baseApi/stepApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
-import { axiosBaseQuery } from '@shared/api/base/baseQuery.ts';
+import { axiosBaseQuery } from '@/baseShared/api/baseQuery.ts';
 
 import { API } from '@app/providers/endpoints.ts';
 import type { Guid } from '@app/lib/types/Guid.ts';
 
-import type { StepBaseDto } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Steps/StepBaseDto.ts';
-import type { CreateStepRequest } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Steps/CreateStepRequest.ts';
-import type { UpdateStepRequest } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Steps/UpdateStepRequest.ts';
+import type { StepBaseDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts';
+import type { CreateStepRequest } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/CreateStepRequest.ts';
+import type { UpdateStepRequest } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/UpdateStepRequest.ts';
 // Delete по контроллеру идёт через URL id, так что отдельный DeleteStepRequest не обязателен,
 // но если у тебя он есть — можешь импортнуть и использовать в типизации параметров мутации.
 

@@ -1,6 +1,6 @@
 // src/store/chartsSettingsSlice.ts
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type {RootState} from "@/store/store.ts";
+import type {RootState} from "@/baseStore/store.ts";
 
 export type ChartBucketingConfig = {
     /** Сколько "целей" (ведер/поинтов) на пиксель хотим видеть */

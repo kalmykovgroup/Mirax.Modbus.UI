@@ -6,7 +6,7 @@ import type { Guid } from '@app/lib/types/Guid';
 import { addContextSyncField } from '@chartsPage/charts/core/store/chartsSlice';
 import { addSyncContext, selectTabContextIds, toggleTabSync } from '@chartsPage/charts/core/store/tabsSlice';
 import { selectContextSyncFields, selectTemplate } from '@chartsPage/charts/core/store/selectors/base.selectors';
-import type { RootState } from '@/store/store.ts';
+import type { RootState } from '@/baseStore/store.ts';
 
 /**
  * Включает/выключает синхронизацию для вкладки с автоматическим заполнением полей

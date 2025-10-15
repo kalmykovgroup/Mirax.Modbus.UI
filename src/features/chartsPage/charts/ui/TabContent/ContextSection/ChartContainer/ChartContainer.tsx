@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 import { selectTemplate } from '@chartsPage/charts/core/store/selectors/base.selectors';
 import styles from './ChartContainer.module.css';
 import {useChartInitialization} from "@chartsPage/charts/orchestration/hooks/useChartInitialization.ts";

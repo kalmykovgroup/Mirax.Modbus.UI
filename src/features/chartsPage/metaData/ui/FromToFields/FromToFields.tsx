@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useAppSelector } from '@/store/hooks';
+import { useAppSelector } from '@/baseStore/hooks.ts';
 import s from "./FromToFields.module.css"
 import {selectTimeSettings} from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
 import type {TimeRangeBounds} from "@chartsPage/charts/core/store/types/chart.types.ts";

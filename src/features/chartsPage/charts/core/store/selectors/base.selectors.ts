@@ -1,7 +1,7 @@
 // src/features/chartsPage/charts/core/store/selectors/base.selectors.ts
 
 import { createSelector } from '@reduxjs/toolkit';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 import type { LoadingState } from '@chartsPage/charts/core/store/types/loading.types';
 import { LoadingType } from '@chartsPage/charts/core/store/types/loading.types';
 import type { ResolvedCharReqTemplate } from '@chartsPage/template/shared/dtos/ResolvedCharReqTemplate.ts';

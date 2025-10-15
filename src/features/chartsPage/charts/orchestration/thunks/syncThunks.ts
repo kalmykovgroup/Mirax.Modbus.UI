@@ -3,7 +3,7 @@
 // THUNK СИНХРОНИЗАЦИИ: координация загрузки для синхронизированных полей
 
 import {createAsyncThunk} from '@reduxjs/toolkit';
-import type {RootState} from '@/store/store';
+import type {RootState} from '@/baseStore/store.ts';
 
 import {fetchMultiSeriesData} from './dataThunks';
 import {LoadingType, type SyncLoadRequest, type SyncLoadResult} from "@chartsPage/charts/core/store/types/loading.types.ts";

@@ -2,7 +2,7 @@
 
 import React, {useEffect, useState, useRef, useMemo} from 'react';
 import { useSelector } from 'react-redux';
-import { useAppDispatch } from '@/store/hooks';
+import { useAppDispatch } from '@/baseStore/hooks.ts';
 import { MiraxContainer } from '@chartsPage/mirax/MiraxContainer/MiraxContainer.tsx';
 import ChartTemplatesPanel from '@chartsPage/template/ui/ChartTemplatesPanel.tsx';
 import { TabContent } from '@chartsPage/charts/ui/TabContent/TabContent.tsx';
@@ -16,7 +16,7 @@ import {
 import { clearAll } from '@chartsPage/charts/core/store/chartsSlice';
 import { useConfirm } from '@ui/components/ConfirmProvider/ConfirmProvider';
 import type { Guid } from '@app/lib/types/Guid';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 import styles from './ChartsPage.module.css';
 import classNames from "classnames";
 import {useDocumentTitle} from "@app/lib/hooks/DocumentTitleContext.tsx";

@@ -3,8 +3,8 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import { useAppDispatch } from '@/store/hooks';
-import type { RootState } from '@/store/store';
+import { useAppDispatch } from '@/baseStore/hooks.ts';
+import type { RootState } from '@/baseStore/store.ts';
 import type { Guid } from '@app/lib/types/Guid';
 import type { FieldDto } from '@chartsPage/metaData/shared/dtos/FieldDto';
 import {

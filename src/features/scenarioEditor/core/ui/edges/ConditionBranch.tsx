@@ -1,6 +1,6 @@
 import React, {useState} from "react";
 import {Position} from "@xyflow/react";
-import type {BranchDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Branch/BranchDto.ts";
+import type {BranchDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto.ts";
 import {
     ConditionExpressionTextarea
 } from "@scenario/core/ui/edges/ConditionExpressionTextarea/ConditionExpressionTextarea.tsx";

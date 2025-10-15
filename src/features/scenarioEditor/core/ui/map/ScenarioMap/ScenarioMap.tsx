@@ -42,7 +42,7 @@ import { omitNodeProps } from '@scenario/core/utils/omitNodeProps.ts'
 
 // состояние + загрузка
 import { useDispatch, useSelector } from 'react-redux'
-import type { AppDispatch, RootState } from "@/store/store";
+import type { AppDispatch, RootState } from "@/baseStore/store.ts";
 import { mapScenarioToFlow } from '@scenario/core/mapScenarioToFlow.ts'
 import {useSelection} from "@scenario/core/hooks/useSelection.ts";
 import {useConnectContext} from "@scenario/core/hooks/useConnectContext.ts";
@@ -52,15 +52,16 @@ import {
     pickDeepestBranchByTopLeft,
     rectOf
 } from "@scenario/core/utils/dropUtils.ts";
-import {ScenarioChangeCenter} from "@scenario/core/ScenarioChangeCenter.ts";
+import {ScenarioChangeCenter} from "@scenario/core/scenarioChangeCenter/scenarioChangeCenter.ts";
 import type {Guid} from "@app/lib/types/Guid.ts";
-import type {ScenarioOperationDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/ScenarioOperationDto.ts";
-import {DbEntityType} from "@shared/contracts/Types/Api.Shared/Scenario/DbEntityType.ts";
-import {DbActionType} from "@shared/contracts/Types/Api.Shared/Scenario/DbActionType.ts";
+import type {ScenarioOperationDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/ScenarioOperationDto.ts";
+import {DbEntityType} from "@scenario/shared/contracts/server/types/Api.Shared/Scenario/DbEntityType.ts";
+import {DbActionType} from "@scenario/shared/contracts/server/types/Api.Shared/Scenario/DbActionType.ts";
 import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
 import {useRightMousePan} from "@scenario/core/hooks/useRightMousePan.ts";
 import {refreshScenarioById, ScenarioLoadState, selectActiveScenarioId} from "@/features/scenarioEditor/store/scenarioSlice.ts";
 import {useTheme} from "@app/providers/theme/useTheme.ts";
+import {ScenarioChangesViewer} from "@scenario/core/scenarioChangeCenter/ScenarioChangesViewer.tsx";
 
 
 
@@ -89,7 +90,8 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const activeScenario = activeEntry?.scenario
 
     const changeCenter = useMemo(
-        () => (activeId ? new ScenarioChangeCenter(activeId) : null), [activeId]
+        () => (activeId ? new ScenarioChangeCenter(activeId, dispatch) : null),
+        [activeId, dispatch]  // ← добавили dispatch
     )
 
     const onEdgesChangeWithCenter = useCallback((changes: EdgeChange[]) => {
@@ -377,7 +379,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
             onMouseDown={onRmbDown}
             data-theme={theme}
             className={styles.containerScenarioMap}
-            style={{ height: '100vh'}}>
+            style={{ height: '70vh'}}>
             <ReactFlow<FlowNode, FlowEdge>
                 nodes={nodes}
                 edges={edges}
@@ -427,6 +429,10 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
             >
                 <Panel position="top-left">
                     <LeftPanel />
+                </Panel>
+
+                <Panel position="bottom-right">
+                    <ScenarioChangesViewer />
                 </Panel>
 
                 <Panel position="top-right">

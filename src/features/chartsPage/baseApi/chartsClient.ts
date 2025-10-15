@@ -1,7 +1,7 @@
 import axios from 'axios'
 import axiosRetry from 'axios-retry'
-import {serializeParams} from "@shared/api/base/paramsSerializer.ts";
-import {API_TIMEOUT} from "@shared/api/base/config.ts";
+import {serializeParams} from "@/baseShared/api/paramsSerializer.ts";
+import {API_TIMEOUT} from "@/baseShared/api/config.ts";
 import {retryConfig} from "./retryConfig.ts";
 
 import { ENV } from '@/env';

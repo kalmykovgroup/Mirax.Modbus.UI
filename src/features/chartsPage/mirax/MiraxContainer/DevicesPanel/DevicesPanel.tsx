@@ -2,7 +2,7 @@
 import { useState, useMemo, useCallback, useEffect, type JSX } from 'react';
 
 import styles from './DevicesPanel.module.css';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/baseStore/hooks.ts';
 import {
     selectCurrentDatabase,
     selectDevicesLoading,

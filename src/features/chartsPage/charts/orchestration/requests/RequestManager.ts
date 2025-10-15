@@ -1,6 +1,6 @@
 // src/features/chartsPage/charts/orchestration/requests/RequestManager.ts
 
-import type { AppDispatch, RootState } from '@/store/store';
+import type { AppDispatch, RootState } from '@/baseStore/store.ts';
 import type { Guid } from '@app/lib/types/Guid';
 import { fetchMultiSeriesData } from '../thunks/dataThunks';
 import { LoadingType } from '@chartsPage/charts/core/store/types/loading.types';

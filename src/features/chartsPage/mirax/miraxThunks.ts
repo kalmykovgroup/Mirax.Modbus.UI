@@ -1,7 +1,7 @@
 // src/features/mirax/store/thunks/miraxThunks.ts
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import type { RootState } from '@/store/store';
+import type { RootState } from '@/baseStore/store.ts';
 import { miraxApi } from '@chartsPage/mirax/miraxApi';
 import { withDb } from '@chartsPage/baseApi/types';
 import type {

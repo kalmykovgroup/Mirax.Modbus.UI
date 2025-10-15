@@ -2,8 +2,8 @@
 
 /*import { useEffect, useRef } from 'react';
 import { useStore } from 'react-redux';
-import { useAppDispatch } from '@/store/hooks';
-import type { RootState } from '@/store/store';
+import { useAppDispatch } from '@/baseStore/hooks.ts';
+import type { RootState } from '@/baseStore/store.ts';
 import {RequestManager} from "@chartsPage/charts/orchestration/requests/RequestManager.ts";*/
 
 /**

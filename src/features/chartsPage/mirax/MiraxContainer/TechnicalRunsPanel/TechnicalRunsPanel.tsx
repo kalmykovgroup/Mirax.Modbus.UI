@@ -3,7 +3,7 @@ import { useMemo, useState, useCallback, type JSX, useEffect } from 'react';
 import classNames from 'classnames';
 
 import styles from './TechnicalRunsPanel.module.css';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/baseStore/hooks.ts';
 import {
     selectCurrentDatabase,
     selectIsTechnicalRunsLoading,

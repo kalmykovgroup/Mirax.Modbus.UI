@@ -1,4 +1,4 @@
-import type {useAppDispatch} from "@/store/hooks.ts";
+import type {useAppDispatch} from "@/baseStore/hooks.ts";
 import type {TechnicalRunDto} from "@chartsPage/mirax/contracts/TechnicalRunDto.ts";
 import type {PortableDeviceDto} from "@chartsPage/mirax/contracts/PortableDeviceDto.ts";
 import type {ChartReqTemplateDto} from "@chartsPage/template/shared/dtos/ChartReqTemplateDto.ts";

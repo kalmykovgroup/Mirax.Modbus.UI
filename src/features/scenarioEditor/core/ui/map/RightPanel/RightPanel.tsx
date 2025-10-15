@@ -15,8 +15,8 @@ import {
     ParallelStepDto,
     SignalStepDto,
     SystemActivityStepDto
-} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Steps/StepBaseDto.ts";
-import {BranchDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Branch/BranchDto.ts";
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
+import {BranchDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto.ts";
 import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
 import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
 import type {StepNodeData} from "@/features/scenarioEditor/shared/contracts/models/StepNodeData.ts";
@@ -24,11 +24,11 @@ import type {StepNodeData} from "@/features/scenarioEditor/shared/contracts/mode
 // NEW: сценарий, операции, типы
 import {useSelector} from "react-redux";
 import {selectActiveScenarioId} from "@/features/scenarioEditor/store/scenarioSlice.ts";
-import {ScenarioChangeCenter} from "@scenario/core/ScenarioChangeCenter.ts";
+import {ScenarioChangeCenter} from "@scenario/core/scenarioChangeCenter/scenarioChangeCenter.ts";
 import type {Guid} from "@app/lib/types/Guid.ts";
-import type {ScenarioOperationDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/ScenarioOperationDto.ts";
-import {DbEntityType} from "@shared/contracts/Types/Api.Shared/Scenario/DbEntityType.ts";
-import {DbActionType} from "@shared/contracts/Types/Api.Shared/Scenario/DbActionType.ts";
+import type {ScenarioOperationDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/ScenarioOperationDto.ts";
+import {DbEntityType} from "@scenario/shared/contracts/server/types/Api.Shared/Scenario/DbEntityType.ts";
+import {DbActionType} from "@scenario/shared/contracts/server/types/Api.Shared/Scenario/DbActionType.ts";
 
 function createByFlowType(type: FlowType, p: any) {
     switch (type) {

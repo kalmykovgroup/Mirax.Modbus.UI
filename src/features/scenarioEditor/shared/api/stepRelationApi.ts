@@ -1,13 +1,13 @@
 // src/shared/baseApi/stepRelationApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
-import { axiosBaseQuery } from '@shared/api/base/baseQuery.ts';
+import { axiosBaseQuery } from '@/baseShared/api/baseQuery.ts';
 
 import { API } from '@app/providers/endpoints.ts';
 import type { Guid } from '@app/lib/types/Guid.ts';
 
-import type { StepRelationDto } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/StepRelations/StepRelationDto.ts';
-import type { CreateStepRelationRequest } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/StepRelations/CreateStepRelationRequest.ts';
-import type { UpdateStepRelationRequest } from '@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/StepRelations/UpdateStepRelationRequest.ts';
+import type { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto.ts';
+import type { CreateStepRelationRequest } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/CreateStepRelationRequest.ts';
+import type { UpdateStepRelationRequest } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/UpdateStepRelationRequest.ts';
 
 export const stepRelationApi = createApi({
     reducerPath: 'stepRelationApi',

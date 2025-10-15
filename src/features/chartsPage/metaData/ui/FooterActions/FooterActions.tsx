@@ -1,5 +1,5 @@
 import {useSelector} from "react-redux";
-import {useAppDispatch} from "@/store/hooks.ts";
+import {useAppDispatch} from "@/baseStore/hooks.ts";
 import {
     clearBoundActiveTemplate,
     createChartReqTemplate,

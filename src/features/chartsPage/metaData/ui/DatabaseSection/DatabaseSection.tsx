@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux'
 
 import { useEffect } from 'react'
 
-import { useAppDispatch } from '@/store/hooks.ts'
+import { useAppDispatch } from '@/baseStore/hooks.ts'
 import {
     fetchDatabases,
     selectChartsMetaLoading,

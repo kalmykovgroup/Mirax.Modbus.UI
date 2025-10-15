@@ -1,5 +1,5 @@
 
-import {useAppDispatch} from "@/store/hooks.ts";
+import {useAppDispatch} from "@/baseStore/hooks.ts";
 import {selectChartsMetaLoading} from "@chartsPage/metaData/store/chartsMetaSlice.ts";
 import {useSelector} from "react-redux";
 import {

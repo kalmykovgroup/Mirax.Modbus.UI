@@ -4,7 +4,7 @@ import type { TechnicalRunDto } from '@chartsPage/mirax/contracts/TechnicalRunDt
 import type { PortableDeviceDto } from '@chartsPage/mirax/contracts/PortableDeviceDto';
 import type { SensorDto } from '@chartsPage/mirax/contracts/SensorDto';
 import type {MiraxLoadingState} from "@chartsPage/mirax/miraxThunk.types.ts";
-import type {RootState} from "@/store/store.ts";
+import type {RootState} from "@/baseStore/store.ts";
 import { ENV } from '@/env';
 import type {DatabaseDto} from "@chartsPage/metaData/shared/dtos/DatabaseDto.ts";
 

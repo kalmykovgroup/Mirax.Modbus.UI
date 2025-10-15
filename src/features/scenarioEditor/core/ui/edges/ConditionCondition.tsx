@@ -1,8 +1,8 @@
 import React, {useState} from "react";
 import {Position} from "@xyflow/react";
 
-import type {ConditionStepDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Steps/StepBaseDto.ts";
-import type {StepRelationDto} from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/StepRelations/StepRelationDto.ts";
+import type {ConditionStepDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
+import type {StepRelationDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto.ts";
 import {
     ConditionExpressionTextarea
 } from "@scenario/core/ui/edges/ConditionExpressionTextarea/ConditionExpressionTextarea.tsx";

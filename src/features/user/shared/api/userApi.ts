@@ -1,18 +1,18 @@
 // src/shared/baseApi/userApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
-import { axiosBaseQuery } from '@shared/api/base/baseQuery.ts';
+import { axiosBaseQuery } from '@/baseShared/api/baseQuery.ts';
 
 // Типы
 
 import {API} from "@app/providers/endpoints.ts";
-import type {CreateUserRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/CreateUserRequest.ts";
-import type {ApiResponse} from "@shared/contracts/Dtos/RemoteDtos/CommonDtos/ApiResponse.ts";
-import type {UserExistsRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/UserExistsRequest.ts";
-import type {UpdateUserRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/UpdateUserRequest.ts";
-import type {GetUserByEmailRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/GetUserByEmailRequest.ts";
-import type {UserDto} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/UserDto.ts";
-import type {GetUserByIdRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/GetUserByIdRequest.ts";
-import type {GetAllUsersRequest} from "@shared/contracts/Dtos/RemoteDtos/UserDtos/Users/GetAllUsersRequest.ts";
+import type {CreateUserRequest} from "@/features/user/shared/dtos/Users/CreateUserRequest.ts";
+import type {ApiResponse} from "@/baseShared/dtos/ApiResponse.ts";
+import type {UserExistsRequest} from "@/features/user/shared/dtos/Users/UserExistsRequest.ts";
+import type {UpdateUserRequest} from "@/features/user/shared/dtos/Users/UpdateUserRequest.ts";
+import type {GetUserByEmailRequest} from "@/features/user/shared/dtos/Users/GetUserByEmailRequest.ts";
+import type {UserDto} from "@/features/user/shared/dtos/Users/UserDto.ts";
+import type {GetUserByIdRequest} from "@/features/user/shared/dtos/Users/GetUserByIdRequest.ts";
+import type {GetAllUsersRequest} from "@/features/user/shared/dtos/Users/GetAllUsersRequest.ts";
 
 export const userApi = createApi({
     reducerPath: 'userApi',

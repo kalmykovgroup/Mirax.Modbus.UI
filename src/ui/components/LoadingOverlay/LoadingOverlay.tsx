@@ -1,7 +1,6 @@
 import { createPortal } from 'react-dom';
-import { useAppSelector } from '@/store/hooks';
-import { selectUiLocked } from '@/store/uiSlice';
-
+import { useAppSelector } from '@/baseStore/hooks.ts';
+import {selectUiLocked} from "@/baseStore/uiSlice.ts";
 export default function LoadingOverlay() {
     const locked = useAppSelector(selectUiLocked);
     if (!locked) return null;
