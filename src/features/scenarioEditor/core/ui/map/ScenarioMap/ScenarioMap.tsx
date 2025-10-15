@@ -60,15 +60,16 @@ import {DbActionType} from "@shared/contracts/Types/Api.Shared/Scenario/DbAction
 import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
 import {useRightMousePan} from "@scenario/core/hooks/useRightMousePan.ts";
 import {refreshScenarioById, ScenarioLoadState, selectActiveScenarioId} from "@/features/scenarioEditor/store/scenarioSlice.ts";
+import {useTheme} from "@app/providers/theme/useTheme.ts";
+
 
 
 export interface ScenarioEditorProps {}
 
 export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const dispatch = useDispatch<AppDispatch>()
-
     const makeGuid = () => (crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)) as Guid
-
+   const {theme} = useTheme()
 
     // --- состояние графа ---
     const [nodes, setNodes] = useState<FlowNode[]>([])
@@ -374,7 +375,9 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         <div
             ref={containerRef}
             onMouseDown={onRmbDown}
-            style={{ width: '100%', height: '600px', background: '#121212' }}>
+            data-theme={theme}
+            className={styles.containerScenarioMap}
+            style={{ height: '100vh'}}>
             <ReactFlow<FlowNode, FlowEdge>
                 nodes={nodes}
                 edges={edges}
@@ -407,7 +410,11 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     animated: true,
                     type: 'step' as const,
                     markerEnd: { type: MarkerType.ArrowClosed },
-                    style: { stroke: '#ffffff', strokeWidth: 1, opacity: 1 },
+                    style: {
+                        stroke: 'var(--edge-default-color, #ffffff)',
+                        strokeWidth: 'var(--edge-width, 1.5)',
+                        opacity: 1
+                    },
                 }}
                 connectionLineType={ConnectionLineType.Step}
                 selectionOnDrag
@@ -438,8 +445,20 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 </Panel>
 
                 <Controls className={`${styles.flowControls}`} position="top-left" />
-                <Background id="1" gap={7} lineWidth={0.1} color="#464646" variant={BackgroundVariant.Lines} />
-                <Background id="2" gap={28} lineWidth={0.1} color="#767676" variant={BackgroundVariant.Lines} />
+                <Background
+                    id="1"
+                    gap={7}
+                    lineWidth={0.1}
+                    color="var(--grid-color-primary, #464646)"
+                    variant={BackgroundVariant.Lines}
+                />
+                <Background
+                    id="2"
+                    gap={28}
+                    lineWidth={0.1}
+                    color="var(--grid-color-secondary, #767676)"
+                    variant={BackgroundVariant.Lines}
+                />
             </ReactFlow>
         </div>
     )

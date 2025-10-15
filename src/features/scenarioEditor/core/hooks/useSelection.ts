@@ -1,3 +1,4 @@
+// src/features/scenarioEditor/core/hooks/useSelection.ts
 import React, { useCallback, useEffect, useState } from 'react'
 import type { Edge } from '@xyflow/react'
 import type { FlowEdge, FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode.ts'
@@ -11,6 +12,7 @@ type Props = {
     getEdges: () => FlowEdge[]
 
     // опциональный колбэк: сообщаем наружу, какие ноды/рёбра реально удалены
+    //  ВАЖНО: передаём только ПЕРСИСТЕНТНЫЕ элементы (которые уже в БД)
     onDeleted?: (payload: { nodes: FlowNode[]; edges: FlowEdge[] }) => void
 }
 
@@ -50,8 +52,21 @@ export function useSelection({ setNodes, setEdges, getNodes, getEdges, onDeleted
         )
         setNodes((nds) => nds.filter((n) => !toDeleteNodeIds.has(n.id)))
 
-        // 3) сообщаем наружу, что именно удалили (для ScenarioChangeCenter)
-        onDeleted?.({ nodes: nodesDeleted, edges: edgesDeleted })
+        // 3)  ФИЛЬТРУЕМ: сообщаем наружу только ПЕРСИСТЕНТНЫЕ элементы (которые уже в БД)
+        // Новые элементы (созданные drag-and-drop, но ещё не сохранённые) не отправляем на DELETE
+        const persistedNodesDeleted = nodesDeleted.filter((n) => {
+            const data = n.data as any
+            return data?.__persisted === true
+        })
+
+        // Для рёбер проверка __persisted обычно не нужна, т.к. они создаются сразу при соединении
+        // НО если у вас edge тоже может быть неперсистентным - добавьте аналогичную проверку:
+        // const persistedEdgesDeleted = edgesDeleted.filter(e => (e.data as any)?.__persisted === true)
+
+        onDeleted?.({
+            nodes: persistedNodesDeleted,
+            edges: edgesDeleted  // или persistedEdgesDeleted, если нужна проверка
+        })
 
         // 4) очищаем выделение
         setSelectedNodeIds(new Set())

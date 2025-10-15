@@ -1,11 +1,13 @@
 @import '@ui/styles/colors.css';
 
-.container{
+.rightPanelContainer{
     height: 500px;
     display: flex;
     flex-direction: column;
     gap: 5px;
     padding: 5px;
+    background-color: var(--right-panel-container-background-color);
+    color: var(--right-panel-container-color);
 }
 
 .btn{
@@ -19,7 +21,7 @@
     align-items: center;
     font-size: 12px;
     text-align: center;
-    color: white;
+
 }
 
 .btn:hover{
@@ -28,36 +30,40 @@
 
 .activityModbusBtnAdd{
     border: 1px solid var(--color-activity-modbus);
+    background-color: var(--right-panel-btn-activity-modbus-background);
 }
 
 .activitySystemBtnAdd{
     border: 1px solid var(--color-activity-system);
+    background-color: var(--right-panel-btn-system-background);
 }
 
 .branchBtnAdd{
     border: 1px solid var(--color-branch);
+    background-color: var(--right-panel-btn-branch-background);
 }
 
 .conditionBtnAdd{
     border: 1px solid var(--color-condition);
+    background-color: var(--right-panel-btn-condition-background);
 }
 
 .jumpBtnAdd{
     border: 1px solid var(--color-jump);
+    background-color: var(--right-panel-btn-jump-background);
 }
 
 .parallelBtnAdd{
     border: 1px solid var(--color-parallel);
+    background-color: var(--right-panel-btn-parallel-background);
 }
 
 .delayBtnAdd{
     border: 1px solid var(--color-delay);
+    background-color: var(--right-panel-btn-delay-background);
 }
 
 .signalBtnAdd{
     border: 1px solid var(--color-signal);
+    background-color: var(--right-panel-btn-signal-background);
 }
-
-
-
-

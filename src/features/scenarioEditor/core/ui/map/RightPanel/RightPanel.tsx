@@ -199,7 +199,7 @@ export const RightPanel = () => {
     };
 
     return (
-        <div className={styles.container}>
+        <div className={styles.rightPanelContainer}>
             <div onMouseDown={startCreateNode(FlowType.activityModbusNode)} className={`${styles.activityModbusBtnAdd} ${styles.btn}`}>Действие с modbus устр.</div>
             <div onMouseDown={startCreateNode(FlowType.activitySystemNode)} className={`${styles.activitySystemBtnAdd} ${styles.btn}`}>Системное действие</div>
             <div onMouseDown={startCreateNode(FlowType.branchNode)} className={`${styles.branchBtnAdd} ${styles.btn}`}><span>Новая</span> ветка</div>

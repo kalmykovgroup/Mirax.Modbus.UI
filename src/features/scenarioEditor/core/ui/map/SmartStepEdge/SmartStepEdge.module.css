@@ -11,16 +11,17 @@
     border-color: #fff;
 }
 
-.baseEdge{
-    stroke-width: 1.5px !important;
+
+.baseEdge {
+    stroke-width: var(--edge-width, 1.5px) !important;
 }
 
 .baseEdge[aria-selected="true"] {
-    stroke: red !important;
-    filter: drop-shadow(0 0 4px rgb(255, 0, 0));
+    stroke: var(--edge-selected-color, red) !important;
+    filter: drop-shadow(0 0 4px var(--edge-selected-color, red));
 }
 
-.hovered{
-    stroke: #6cc4ff  !important;
-    filter: drop-shadow(0 0 4px #6cc4ff);
+.hovered {
+    stroke: var(--edge-hovered-color, #6cc4ff) !important;
+    filter: drop-shadow(0 0 4px var(--edge-hovered-color, #6cc4ff));
 }

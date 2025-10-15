@@ -15,6 +15,10 @@ interface ImportMetaEnv {
     readonly VITE_DEFAULT_CHART_PX: string;
     readonly VITE_MIN_CONTAINER_WIDTH: string;
 
+    // Авторизация и безопасность
+    readonly VITE_AUTO_LOGOUT_ENABLED: string;
+    readonly VITE_AUTO_LOGOUT_TIMEOUT_MINUTES: string;
+
     // Дебаг и мониторинг
     readonly VITE_ENABLE_DEBUG_LOGS: string;
     readonly VITE_ENABLE_PERFORMANCE_MONITORING: string;

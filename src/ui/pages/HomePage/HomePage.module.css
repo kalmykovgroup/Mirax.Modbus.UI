@@ -1,6 +1,16 @@
-﻿.container {
+﻿.homePageContainer {
     width: 100%;
     height: 100%;
-    background: #000;
-    border: 1px solid black;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}
+
+
+.homePageContainer[data-theme="dark"] {
+    --color-bg: #242424;
+    --color-text: rgba(255,255,255,.87);
+}
+.homePageContainer[data-theme="light"] {
+    --color-bg: rgba(255,255,255,.87);
+    --color-text: #242424;
 }

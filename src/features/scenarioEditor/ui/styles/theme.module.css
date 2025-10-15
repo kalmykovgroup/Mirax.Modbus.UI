@@ -1,0 +1,100 @@
+/* src/features/scenarioEditor/ui/styles/themes.css */
+/*
+ * Изолированные CSS-переменные только для scenarioEditor
+ * Переменные видны только детям .scenarioEditor контейнера
+ */
+
+/* ============================================
+   ТЁМНАЯ ТЕМА (по умолчанию)
+   ============================================ */
+.scenarioEditorPage,
+.scenarioEditorPage[data-theme="dark"] {
+    /* ===== Цвета типов нод ===== */
+    --color-jump: #ff0000;
+    --color-condition: #00ff48;
+    --color-delay: #ffffff;
+    --color-parallel: #8E24AA;
+    --color-activity-modbus: #1976D2;
+    --color-activity-system: #00f7ff;
+    --color-branch: #F57C00;
+    --color-signal: #FBC02D;
+
+    /* ===== Хендлы (точки соединения) ===== */
+    /* Source (исходящие) */
+    --source-active-styles-bkg: #00ff00;
+    --source-active-styles-box-shadow: 0 0 10px 2px #40ff00;
+
+    /* Target (входящие) */
+    --target-active-styles-bkg: #00ff00;
+    --target-active-styles-box-shadow: 0 0 10px 2px #40ff00;
+
+    /* ===== Рёбра (линии соединения) ===== */
+    --edge-default-color: #ffffff;
+    --edge-selected-color: #ff3b30;
+    --edge-hovered-color: #2f9aff;
+    --edge-width: 1.5px;
+
+    /* ===== Фон карты и сетка ===== */
+    --map-background: #121212;
+    --map-color: #ffffff;
+    --grid-color-primary: #464646;
+    --grid-color-secondary: #767676;
+
+    /* ===== Координаты на нодах ===== */
+    --coordinates-color: #515151;
+}
+
+/* ============================================
+   СВЕТЛАЯ ТЕМА
+   ============================================ */
+.scenarioEditorPage[data-theme="light"] {
+    /* ===== Цвета типов нод (приглушённые для светлого фона) ===== */
+    --color-jump: #cc0000;
+    --color-condition: #00b338;
+    --color-delay: #333333;
+    --color-parallel: #6a1b9a;
+    --color-activity-modbus: #0d47a1;
+    --color-activity-system: #00838f;
+    --color-branch: #e65100;
+    --color-signal: #f9a825;
+
+    /* ===== Хендлы (точки соединения) ===== */
+    /* Source (исходящие) */
+    --source-active-styles-bkg: #4caf50;
+    --source-active-styles-box-shadow: 0 0 10px 2px #81c784;
+
+    /* Target (входящие) */
+    --target-active-styles-bkg: #4caf50;
+    --target-active-styles-box-shadow: 0 0 10px 2px #81c784;
+
+    /* ===== Рёбра (линии соединения) ===== */
+    --edge-default-color: #333333;
+    --edge-selected-color: #d32f2f;
+    --edge-hovered-color: #1976d2;
+    --edge-width: 2px;
+
+    /* ===== Фон карты и сетка ===== */
+    --map-background: #ffffff;
+    --map-color: #000000;
+    --grid-color-primary: #e0e0e0;
+    --grid-color-secondary: #bdbdbd;
+
+    /* ===== Координаты на нодах ===== */
+    --coordinates-color: #9e9e9e;
+
+    /*RIGHT PANEL*/
+
+    --right-panel-container-background-color: transparent;
+    --right-panel-container-color: black;
+    --right-panel-btn-signal-background: rgba(249, 168, 37, 0.41);
+    --right-panel-btn-delay-background: rgba(51, 51, 51, 0.41);
+    --right-panel-btn-parallel-background: rgba(106, 27, 154, 0.41);
+    --right-panel-btn-jump-background: rgba(204, 0, 0, 0.41);
+    --right-panel-btn-condition-background: rgba(0, 179, 56, 0.41);
+    --right-panel-btn-branch-background: rgba(230, 81, 0, 0.41);
+    --right-panel-btn-system-background: rgba(0, 131, 143, 0.41);
+    --right-panel-btn-activity-modbus-background: rgba(13, 71, 161, 0.41);
+
+
+    /*LEFT PANEL*/
+}

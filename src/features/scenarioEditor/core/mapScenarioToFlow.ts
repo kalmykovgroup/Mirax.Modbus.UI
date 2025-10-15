@@ -1,8 +1,10 @@
-// src/app/scenario-designer/adapters/mapScenarioToFlow.ts
+// src/features/scenarioEditor/core/mapScenarioToFlow.ts
 import type { ScenarioDto } from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Scenarios/ScenarioDto";
 import type { BranchDto } from "@shared/contracts/Dtos/RemoteDtos/ScenarioDtos/Branch/BranchDto";
-import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
-import type {FlowEdge, FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
+import { FlowType } from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
+import type { FlowEdge, FlowNode } from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
+ 
+
 const stepTypeToFlow: Record<number, FlowType> = {
     1: FlowType.activityModbusNode,
     2: FlowType.delayStepNode,
@@ -11,6 +13,7 @@ const stepTypeToFlow: Record<number, FlowType> = {
     5: FlowType.signalStepNode,
     6: FlowType.jumpStepNode,
 };
+
 const flowFromDb = (t: unknown): FlowType =>
     stepTypeToFlow[Number(t)] ?? FlowType.activitySystemNode;
 
@@ -26,7 +29,6 @@ const getBranches = (s: ScenarioDto): BranchDto[] => {
 
 const handleFromOrder = (order: unknown): string | undefined => {
     const n = Number(order);
-    // если у Condition определены 3 исходящих хендла s1..s3
     return n >= 1 && n <= 3 ? `s${n}` : undefined;
 };
 
@@ -41,31 +43,36 @@ export function mapScenarioToFlow(s: ScenarioDto): { nodes: FlowNode[]; edges: F
     const branches = getBranches(s);
 
     for (const br of branches) {
-        // строго из БД
         const bx = Number((br as any).x ?? 0);
         const by = Number((br as any).y ?? 0);
-
 
         const wDb = Number((br as any).width);
         const hDb = Number((br as any).height);
         const bw = Number.isFinite(wDb) && wDb > 0 ? wDb : DEFAULT_BRANCH_W;
         const bh = Number.isFinite(hDb) && hDb > 0 ? hDb : DEFAULT_BRANCH_H;
 
+        //  ВАЖНО: устанавливаем __persisted: true для веток, загруженных с сервера
         const branchNode: FlowNode = {
             id: br.id,
             type: FlowType.branchNode,
             position: { x: bx, y: by },
-            style: { width: bw, height: bh, zIndex: 0 }, //  ветка ниже
-            data: { object: br, x: bx, y: by },
+            style: { width: bw, height: bh, zIndex: 0 },
+            data: {
+                object: br,
+                x: bx,
+                y: by,
+                __persisted: true  //  ДОБАВЛЕНО: ветка уже в БД
+            },
         };
         nodes.push(branchNode);
         nodesById.set(branchNode.id, branchNode);
 
-        // шаги строго из БД
+        // Шаги в ветке
         (br as any).steps?.forEach((st: any) => {
             const px = Number(st?.x ?? 0);
             const py = Number(st?.y ?? 0);
 
+        
             const node: FlowNode = {
                 id: st.id,
                 type: flowFromDb(st?.type),
@@ -73,9 +80,16 @@ export function mapScenarioToFlow(s: ScenarioDto): { nodes: FlowNode[]; edges: F
                 position: { x: px, y: py },
                 extent: "parent",
                 expandParent: true,
-                // шаг – выше ветки
-                style: { ...(typeof (st?.style) === 'object' ? st.style : {}), zIndex: 1 },
-                data: { object: st, x: px, y: py },
+                style: {
+                    ...(typeof (st?.style) === 'object' ? st.style : {}),
+                    zIndex: 1
+                },
+                data: {
+                    object: st,
+                    x: px,
+                    y: py,
+                    __persisted: true  //шаг уже в БД
+                },
             };
             nodes.push(node);
             nodesById.set(node.id, node);
@@ -110,7 +124,6 @@ export function mapScenarioToFlow(s: ScenarioDto): { nodes: FlowNode[]; edges: F
                 id: `bl:cond:${ownerCondition}->${br.id}`,
                 source: ownerCondition,
                 target: br.id,
-                // ВАЖНО: не допускаем undefined при exactOptionalPropertyTypes
                 sourceHandle: handleFromOrder(condOrder) ?? null,
                 targetHandle: "t1",
                 type: "branchLink",
@@ -135,7 +148,6 @@ export function mapScenarioToFlow(s: ScenarioDto): { nodes: FlowNode[]; edges: F
             id: `sr:${rel.parentStepId}->${rel.childStepId}`,
             source: rel.parentStepId,
             target: rel.childStepId,
-            // Если handle не вычислился — просто не указываем свойство
             ...(maybeHandle != null ? { sourceHandle: maybeHandle } : {}),
             type: "step",
             data: { order: rel.order ?? undefined },

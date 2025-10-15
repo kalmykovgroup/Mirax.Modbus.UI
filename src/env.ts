@@ -14,6 +14,88 @@
  * - 'production' - при сборке через npm run build
  */
 
+
+// ============= КОНФИГУРАЦИЯ =============
+
+/**
+ * Конфигурация приложения
+ *
+ * Все значения типобезопасны и имеют defaults
+ */
+export const ENV = {
+    // ========== СИСТЕМНЫЕ ==========
+
+    /** Текущий режим: 'development' | 'production' */
+    MODE: import.meta.env.MODE as 'development' | 'production',
+
+    /** true если development режим */
+    DEV: import.meta.env.DEV,
+
+    /** true если production режим */
+    PROD: import.meta.env.PROD,
+
+    /** Base URL приложения */
+    BASE_URL: import.meta.env.BASE_URL,
+
+    // ========== ПРИЛОЖЕНИЕ ==========
+
+    APP_NAME: getEnvString('VITE_APP_NAME', 'MyApp'),
+    APP_VERSION: getEnvString('VITE_APP_VERSION', '1.0.0'),
+
+    // ========== API ==========
+
+    API_URL: getEnvString('VITE_API_URL', 'https://localhost:5001'),
+    CHARTS_URL: getEnvString('VITE_CHARTS_URL', 'https://localhost:7094'),
+
+    // ========== ГРАФИКИ ==========
+
+    CHART_DEFAULT_CHART_HEIGHT_PX: getEnvNumber('VITE_CHART_DEFAULT_CHART_HEIGHT_PX', 800),
+    CHART_MIN_CONTAINER_WIDTH: getEnvNumber('VITE_CHART_MIN_CONTAINER_WIDTH', 640),
+
+    // ========== АВТОРИЗАЦИЯ И БЕЗОПАСНОСТЬ ==========
+
+    /** Включить автоматический логаут при неактивности */
+    AUTO_LOGOUT_ENABLED: getEnvBoolean('VITE_AUTO_LOGOUT_ENABLED', true),
+
+    /** Время неактивности в минутах до автоматического логаута */
+    AUTO_LOGOUT_TIMEOUT_MINUTES: getEnvNumber('VITE_AUTO_LOGOUT_TIMEOUT_MINUTES', 10),
+
+
+    // ========== ДЕБАГ И МОНИТОРИНГ ==========
+
+    ENABLE_DEBUG_LOGS: getEnvBoolean('VITE_ENABLE_DEBUG_LOGS', false),
+    ENABLE_PERFORMANCE_MONITORING: getEnvBoolean('VITE_ENABLE_PERFORMANCE_MONITORING', false),
+    ENABLE_MOCK_DATA: getEnvBoolean('VITE_ENABLE_MOCK_DATA', false),
+    ENABLE_DEVTOOLS: getEnvBoolean('VITE_ENABLE_DEVTOOLS', false),
+
+    //========== MIRAX - ДЕФОЛТНЫЕ ШАБЛОНЫ ==========
+    MIRAX_DEFAULT_BASE_TEMPLATE_ID: getEnvString(
+        'VITE_MIRAX_DEFAULT_BASE_TEMPLATE_ID',
+        '77777777-0000-0000-0000-000000000223'
+    ),
+    MIRAX_DEFAULT_SENSOR_TEMPLATE_ID: getEnvString(
+        'VITE_MIRAX_DEFAULT_SENSOR_TEMPLATE_ID',
+        '77777777-0000-0000-0000-000000000222')
+
+
+} as const;
+
+// ============= ЛОГИРОВАНИЕ =============
+
+/**
+ * Логируем конфигурацию при старте (только в dev режиме)
+ */
+if (ENV.DEV) {
+    console.group('🔧 [ENV] Configuration');
+    console.log('Mode:', ENV.MODE);
+    console.log('API URL:', ENV.API_URL);
+    console.log('Debug Logs:', ENV.ENABLE_DEBUG_LOGS);
+    console.log('Performance Monitoring:', ENV.ENABLE_PERFORMANCE_MONITORING);
+    console.log('Mirax Base Template:', ENV.MIRAX_DEFAULT_BASE_TEMPLATE_ID);
+    console.log('Mirax Sensor Template:', ENV.MIRAX_DEFAULT_SENSOR_TEMPLATE_ID);
+    console.groupEnd();
+}
+
 // ============= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =============
 
 /**
@@ -80,77 +162,6 @@ function getEnvBoolean(key: keyof ImportMetaEnv, defaultValue: boolean): boolean
     return defaultValue;
 }
 
-// ============= КОНФИГУРАЦИЯ =============
-
-/**
- * Конфигурация приложения
- *
- * Все значения типобезопасны и имеют defaults
- */
-export const ENV = {
-    // ========== СИСТЕМНЫЕ ==========
-
-    /** Текущий режим: 'development' | 'production' */
-    MODE: import.meta.env.MODE as 'development' | 'production',
-
-    /** true если development режим */
-    DEV: import.meta.env.DEV,
-
-    /** true если production режим */
-    PROD: import.meta.env.PROD,
-
-    /** Base URL приложения */
-    BASE_URL: import.meta.env.BASE_URL,
-
-    // ========== ПРИЛОЖЕНИЕ ==========
-
-    APP_NAME: getEnvString('VITE_APP_NAME', 'MyApp'),
-    APP_VERSION: getEnvString('VITE_APP_VERSION', '1.0.0'),
-
-    // ========== API ==========
-
-    API_URL: getEnvString('VITE_API_URL', 'https://localhost:5001'),
-    CHARTS_URL: getEnvString('VITE_CHARTS_URL', 'https://localhost:7094'),
-
-    // ========== ГРАФИКИ ==========
-
-    CHART_DEFAULT_CHART_HEIGHT_PX: getEnvNumber('VITE_CHART_DEFAULT_CHART_HEIGHT_PX', 800),
-    CHART_MIN_CONTAINER_WIDTH: getEnvNumber('VITE_CHART_MIN_CONTAINER_WIDTH', 640),
-
-    // ========== ДЕБАГ И МОНИТОРИНГ ==========
-
-    ENABLE_DEBUG_LOGS: getEnvBoolean('VITE_ENABLE_DEBUG_LOGS', false),
-    ENABLE_PERFORMANCE_MONITORING: getEnvBoolean('VITE_ENABLE_PERFORMANCE_MONITORING', false),
-    ENABLE_MOCK_DATA: getEnvBoolean('VITE_ENABLE_MOCK_DATA', false),
-    ENABLE_DEVTOOLS: getEnvBoolean('VITE_ENABLE_DEVTOOLS', false),
-
-    //========== MIRAX - ДЕФОЛТНЫЕ ШАБЛОНЫ ==========
-    MIRAX_DEFAULT_BASE_TEMPLATE_ID: getEnvString(
-        'VITE_MIRAX_DEFAULT_BASE_TEMPLATE_ID',
-        '77777777-0000-0000-0000-000000000223'
-    ),
-    MIRAX_DEFAULT_SENSOR_TEMPLATE_ID: getEnvString(
-        'VITE_MIRAX_DEFAULT_SENSOR_TEMPLATE_ID',
-        '77777777-0000-0000-0000-000000000222')
-
-
-} as const;
-
-// ============= ЛОГИРОВАНИЕ =============
-
-/**
- * Логируем конфигурацию при старте (только в dev режиме)
- */
-if (ENV.DEV) {
-    console.group('🔧 [ENV] Configuration');
-    console.log('Mode:', ENV.MODE);
-    console.log('API URL:', ENV.API_URL);
-    console.log('Debug Logs:', ENV.ENABLE_DEBUG_LOGS);
-    console.log('Performance Monitoring:', ENV.ENABLE_PERFORMANCE_MONITORING);
-    console.log('Mirax Base Template:', ENV.MIRAX_DEFAULT_BASE_TEMPLATE_ID);
-    console.log('Mirax Sensor Template:', ENV.MIRAX_DEFAULT_SENSOR_TEMPLATE_ID);
-    console.groupEnd();
-}
 
 // ============= ЭКСПОРТЫ =============
 

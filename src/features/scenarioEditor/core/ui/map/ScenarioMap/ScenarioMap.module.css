@@ -12,3 +12,11 @@
 .rmb-panning {
     cursor: grabbing !important;
 }
+
+
+.containerScenarioMap{
+    width: 100%;
+    background-color: var(--map-background);
+    color: var(--map-color);
+}
+

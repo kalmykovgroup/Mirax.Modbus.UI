@@ -50,7 +50,11 @@ export default function SmartStepEdge(props: EdgeProps) {
     const hovered = Boolean((data as any)?.__hovered);
 
     // единый цвет для хвоста и головы
-    const color = selected ? '#ff3b30' : hovered ? '#2f9aff' : (style?.stroke as string ?? '#ffffff');
+    const color = selected
+        ? 'var(--edge-selected-color, #ff3b30)'
+        : hovered
+            ? 'var(--edge-hovered-color, #2f9aff)'
+            : (style?.stroke as string ?? 'var(--edge-default-color, #ffffff)');
 
     // свой маркер с уникальным id (чтобы цвет не кэшировался браузером)
     const markerId = `smart-edge-arrow-${id}-${selected ? 's' : hovered ? 'h' : 'n'}`;
