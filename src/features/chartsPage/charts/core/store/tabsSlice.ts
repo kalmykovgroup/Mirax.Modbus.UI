@@ -156,8 +156,6 @@ const tabsSlice = createSlice({
                 contextIds: [...tab.contextIds, contextId],
                 visibleContextIds: [...tab.visibleContextIds, contextId],
             };
-
-            console.log('[addContextToTab] Added:', { tabId, contextId });
         },
 
         removeContextFromTab(

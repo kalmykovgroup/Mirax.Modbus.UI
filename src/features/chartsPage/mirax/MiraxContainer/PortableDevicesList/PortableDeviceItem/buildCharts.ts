@@ -24,7 +24,6 @@ export async function buildCharts(
 ): Promise<void> {
     console.group('📊 Построение графиков для устройства');
 
-
     try {
         // 1. Получить дефолтные шаблоны по ID
         const baseTemplate = allTemplates.find(t => t.id === defaultBaseTemplateId);
@@ -65,7 +64,6 @@ export async function buildCharts(
         );
         dispatch(setActiveTab(newTabId));
 
-        console.log(' Создана вкладка:', { tabId: newTabId });
 
         // 5. Запустить базовый шаблон (BatteryVoltage, BatteryLevel, Temperature)
         const baseParams = {
@@ -85,13 +83,6 @@ export async function buildCharts(
             })
         );
         dispatch(addContextToTab({ tabId: newTabId, contextId: baseContextId }));
-
-        console.log(' Базовый шаблон запущен:', {
-            templateId: baseTemplate.id,
-            templateName: baseTemplate.name,
-            contextId: baseContextId,
-            params: baseParams,
-        });
 
         // 6. Запустить шаблоны для каждого сенсора (Concentration)
         for (const sensor of sensors) {
@@ -120,17 +111,7 @@ export async function buildCharts(
             );
             dispatch(addContextToTab({ tabId: newTabId, contextId: sensorContextId }));
 
-            console.log(' Шаблон сенсора запущен:', {
-                templateId: sensorTemplate.id,
-                templateName: sensorResolved.name,
-                contextId: sensorContextId,
-                channelNumber: sensor.channelNumber,
-                gas: sensor.gas,
-            });
         }
-
-        console.log('🎉 Все графики успешно созданы!');
-        console.log('📈 Всего контекстов:', 1 + sensors.length);
 
     } catch (error) {
         console.error(' Ошибка при построении графиков:', error);

@@ -13,6 +13,8 @@ export type UpdateChartReqTemplateRequest = {
     originalFromMs?: number | undefined
     originalToMs?: number | undefined
 
+    visualOrder: number
+
     // настройки графиков
     databaseId: Guid
     entity: EntityDto

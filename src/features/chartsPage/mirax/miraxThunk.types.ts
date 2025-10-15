@@ -16,7 +16,9 @@ export interface MiraxBaseRequest {
 /**
  * Запрос на загрузку испытаний
  */
-export interface LoadTechnicalRunsRequest extends MiraxBaseRequest {}
+export interface LoadTechnicalRunsRequest extends MiraxBaseRequest {
+    factoryNumber?: string | undefined;
+}
 
 /**
  * Запрос на загрузку устройств

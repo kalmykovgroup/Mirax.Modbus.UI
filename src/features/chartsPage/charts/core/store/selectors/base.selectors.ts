@@ -37,7 +37,9 @@ const EMPTY_FIELDS: readonly FieldDto[] = [];
 // ============================================
 
 export const selectContextState = (state: RootState, contextId: Guid): ContextState | undefined =>
-    state.contexts.byContext[contextId];
+    state.contexts.chartContexts[contextId];
+
+export const selectChartContexts = (state: RootState): Record<Guid, ContextState> => state.contexts.chartContexts;
 
 // ============================================
 // ГЛОБАЛЬНЫЕ СЕЛЕКТОРЫ (для конкретного контекста)
@@ -51,10 +53,8 @@ export const selectTemplate = (
     return context?.template;
 };
 
-export const selectIsDataLoaded = (state: RootState, contextId: Guid): boolean => {
-    const context = selectContextState(state, contextId);
-    return context?.isDataLoaded ?? false;
-};
+ 
+
 
 
 // ============================================
@@ -84,17 +84,7 @@ export const selectIsContextFieldSynced = (
     return syncFields.some((f) => f.name === fieldName);
 };
 
-/**
- * Количество синхронизированных полей контекста
- */
-export const selectContextSyncFieldsCount = (
-    state: RootState,
-    contextId: Guid
-): number => {
-    const syncFields = selectContextSyncFields(state, contextId);
-    return syncFields.length;
-};
-
+ 
 export const selectAllViews = (state: RootState, contextId: Guid): Record<FieldName, FieldView> => {
     const context = selectContextState(state, contextId);
     return context?.view ?? {};
@@ -140,15 +130,7 @@ export const selectFieldCurrentBucketMs = (
     return view?.currentBucketsMs;
 };
 
-export const selectFieldPx = (
-    state: RootState,
-    contextId: Guid,
-    fieldName: FieldName
-): number | undefined => {
-    const view = selectFieldView(state, contextId, fieldName);
-    return view?.px;
-};
-
+ 
 export const selectFieldSeriesLevels = (
     state: RootState,
     contextId: Guid,
@@ -167,15 +149,7 @@ export const selectFieldLoadingState = (
     return view?.loadingState ?? DEFAULT_LOADING_STATE;
 };
 
-export const selectFieldError = (
-    state: RootState,
-    contextId: Guid,
-    fieldName: FieldName
-): string | undefined => {
-    const view = selectFieldView(state, contextId, fieldName);
-    return view?.error;
-};
-
+ 
 // ============================================
 // TILES СЕЛЕКТОРЫ
 // ============================================
@@ -223,30 +197,8 @@ export const selectContextFields = createSelector(
         return template?.selectedFields ?? EMPTY_FIELDS;
     }
 );
-
-/**
- *  МЕМОИЗИРОВАННЫЙ: Получить количество полей
- */
-export const selectContextFieldsCount = createSelector(
-    [selectContextFields],
-    (fields): number => fields.length
-);
-
-/**
- *  МЕМОИЗИРОВАННЫЙ: Проверка, есть ли данные для поля
- */
-export const selectHasFieldData = createSelector(
-    [
-        (state: RootState, contextId: Guid, fieldName: FieldName) =>
-            selectFieldView(state, contextId, fieldName),
-    ],
-    (view): boolean => {
-        if (!view) return false;
-
-        // Проверяем наличие тайлов в любом bucket
-        return Object.values(view.seriesLevel).some((tiles) => tiles.length > 0);
-    }
-);
+ 
+ 
 
 /**
  *  МЕМОИЗИРОВАННЫЙ: Получить все загружающиеся поля
@@ -262,24 +214,4 @@ export const selectLoadingFields = createSelector(
     }
 );
 
-/**
- *  МЕМОИЗИРОВАННЫЙ: Проверка, идёт ли загрузка в контексте
- */
-export const selectIsContextLoading = createSelector(
-    [selectLoadingFields],
-    (loadingFields): boolean => loadingFields.length > 0
-);
-
-/**
- *  МЕМОИЗИРОВАННЫЙ: Получить поля с ошибками
- */
-export const selectFieldsWithErrors = createSelector(
-    [(state: RootState, contextId: Guid) => selectAllViews(state, contextId)],
-    (views): readonly FieldName[] => {
-        const errorFields = Object.entries(views)
-            .filter(([_, view]) => view.error !== undefined)
-            .map(([fieldName]) => fieldName);
-
-        return Object.freeze(errorFields);
-    }
-);
+ 

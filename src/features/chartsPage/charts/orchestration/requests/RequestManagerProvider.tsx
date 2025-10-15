@@ -32,7 +32,6 @@ export function RequestManagerProvider({ contextId, children }: RequestManagerPr
     // Создание менеджера для контекста
     if (!managerRef.current) {
         managerRef.current = new RequestManager(dispatch, () => store.getState(), contextId);
-        console.log(`[RequestManagerProvider] Created manager for context: ${contextId}`);
     }
 
     // Регистрация в реестре + cleanup при unmount контекста
@@ -40,11 +39,9 @@ export function RequestManagerProvider({ contextId, children }: RequestManagerPr
         const manager = managerRef.current;
         if (!manager) return;
 
-        console.log(`[RequestManagerProvider] Registering manager for context: ${contextId}`);
         RequestManagerRegistry.register(contextId, manager);
 
         return () => {
-            console.log(`[RequestManagerProvider] Unregistering and disposing manager for context: ${contextId}`);
             RequestManagerRegistry.unregister(contextId);
             manager.dispose();
         };

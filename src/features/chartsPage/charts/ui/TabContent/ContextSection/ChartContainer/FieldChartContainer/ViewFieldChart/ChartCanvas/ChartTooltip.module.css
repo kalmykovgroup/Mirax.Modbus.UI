@@ -1,0 +1,69 @@
+/* features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/ChartTooltip.module.css */
+
+/* Глобальный класс для tooltip ECharts */
+:global(.echarts-tooltip) {
+    background-color: rgba(255, 255, 255, 0.33) !important;
+    border: 1px solid #ccc !important;
+    border-radius: 6px !important;
+    padding: 0px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    min-width: 290px !important;
+    pointer-events: none !important;
+}
+
+/* Контейнер tooltip */
+:global(.echarts-tooltip-container) {
+    padding: 4px;
+}
+
+/* Время */
+:global(.echarts-tooltip-time) {
+    margin-bottom: 8px;
+    font-weight: bold;
+    font-size: 20px;
+    color: #333;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 6px;
+}
+
+/* Строка значения */
+:global(.echarts-tooltip-row) {
+    display: flex;
+    align-items: center;
+    margin: 6px 0;
+    font-size: 17px;
+    color: #333;
+}
+
+/* Строка счетчика */
+:global(.echarts-tooltip-count) {
+    margin-top: 10px;
+    padding-top: 6px;
+    border-top: 1px solid #e0e0e0;
+    font-size: 17px;
+    color: #000;
+}
+
+/* Маркер */
+:global(.echarts-tooltip-marker) {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+/* Метка */
+:global(.echarts-tooltip-label) {
+    margin-right: 6px;
+}
+
+/* Значение */
+:global(.echarts-tooltip-value) {
+    font-size: 22px;
+    font-weight: 600;
+    margin-left: auto;
+    color: #333;
+}

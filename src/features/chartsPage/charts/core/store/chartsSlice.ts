@@ -1,6 +1,6 @@
 // src/features/chartsPage/charts/core/store/chartsSlice.ts
 
-import { createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { type LoadingState, LoadingType } from '@chartsPage/charts/core/store/types/loading.types';
 import type { FieldDto } from '@chartsPage/metaData/shared/dtos/FieldDto.ts';
 import type { ResolvedCharReqTemplate } from '@chartsPage/template/shared/dtos/ResolvedCharReqTemplate.ts';
@@ -14,8 +14,7 @@ import type {
     SeriesTile,
     TimeRange,
 } from '@chartsPage/charts/core/store/types/chart.types.ts';
-import type { Guid } from '@app/lib/types/Guid';
-import type { RootState } from '@/store/store.ts';
+import type { Guid } from '@app/lib/types/Guid'; 
 
 // ============= ТИПЫ =============
 
@@ -23,10 +22,10 @@ import type { RootState } from '@/store/store.ts';
  * Состояние графиков для одного контекста (прежнее TabChartsState)
  */
 export interface ContextState {
-    readonly contextId: Guid;
+    contextId: Guid;
     syncFields: FieldDto[];
     template: ResolvedCharReqTemplate | undefined;
-    readonly view: Record<FieldName, FieldView>;
+    view: Record<FieldName, FieldView>;
     isDataLoaded: boolean;
 }
 
@@ -34,7 +33,7 @@ export interface ContextState {
  * Глобальное состояние с поддержкой множественных контекстов
  */
 export interface ContextsState {
-    readonly byContext: Record<Guid, ContextState>;
+    readonly chartContexts: Record<Guid, ContextState>;
 }
 
 // ============= НАЧАЛЬНОЕ СОСТОЯНИЕ =============
@@ -47,7 +46,7 @@ const initialContextState: Omit<ContextState, 'contextId'> = {
 };
 
 const initialState: ContextsState = {
-    byContext: {},
+    chartContexts: {},
 };
 
 // ============= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =============
@@ -56,8 +55,8 @@ const initialState: ContextsState = {
  * Безопасное получение состояния контекста с автоинициализацией
  */
 function getOrCreateContext(state: ContextsState, contextId: Guid): ContextState {
-    if (!(contextId in state.byContext)) {
-        state.byContext[contextId] = {
+    if (!(contextId in state.chartContexts)) {
+        state.chartContexts[contextId] = {
             contextId,
             syncFields: [],
             template: undefined,
@@ -65,8 +64,10 @@ function getOrCreateContext(state: ContextsState, contextId: Guid): ContextState
             isDataLoaded: false,
         };
     }
-    return state.byContext[contextId]!;
+    return state.chartContexts[contextId]!;
 }
+
+
 
 // ============= SLICE =============
 
@@ -89,21 +90,19 @@ const contextsSlice = createSlice({
             const { contextId, template } = action.payload;
 
             //  КРИТИЧНО: Проверяем, существует ли контекст
-            if (state.byContext[contextId] !== undefined) {
+            if (state.chartContexts[contextId] !== undefined) {
                 console.warn('[createContext] Context already exists, skipping:', contextId);
                 return; // НЕ создаём повторно!
             }
 
             // Создаём новый контекст
-            state.byContext[contextId] = {
+            state.chartContexts[contextId] = {
                 contextId: contextId,
                 template: template,
                 view: {},
                 syncFields: [],
                 isDataLoaded: false,
             };
-
-            console.log('[createContext] Created:', contextId);
         },
 
         /**
@@ -111,7 +110,7 @@ const contextsSlice = createSlice({
          */
         deleteContext(state, action: PayloadAction<Guid>) {
             const contextId = action.payload;
-            delete state.byContext[contextId];
+            delete state.chartContexts[contextId];
             console.log('[deleteContext] Deleted:', contextId);
         },
 
@@ -121,47 +120,21 @@ const contextsSlice = createSlice({
         clearContext(state, action: PayloadAction<Guid>) {
             const contextId = action.payload;
 
-            if (state.byContext[contextId] === undefined) {
+            if (state.chartContexts[contextId] === undefined) {
                 console.error('[clearContext] Context not found:', contextId);
                 return;
             }
 
-            state.byContext[contextId] = {
+            state.chartContexts[contextId] = {
                 contextId,
                 ...initialContextState,
             };
         },
 
-        // ========== ИНИЦИАЛИЗАЦИЯ ==========
-
-        /**
-         * Устанавливает resolved template и создаёт/обновляет контекст
-         * Используется при выполнении шаблона из ChartTemplatesPanel
-         */
-        setResolvedCharReqTemplate(state, action: PayloadAction<ResolvedCharReqTemplate>) {
-            const template = action.payload;
-            const contextId = template.id; // ID шаблона = ID контекста
-
-            console.log('[setResolvedCharReqTemplate] Создаём/обновляем контекст:', contextId);
-
-            // Создаём контекст если его нет
-            if (!(contextId in state.byContext)) {
-                state.byContext[contextId] = {
-                    contextId: contextId,
-                    template: template,
-                    view: {},
-                    syncFields: [],
-                    isDataLoaded: false,
-                };
-            } else {
-                // Обновляем template существующего контекста
-                state.byContext[contextId]!.template = template;
-            }
-        },
 
         // ========== УПРАВЛЕНИЕ ТАЙЛАМИ ==========
 
-        IniTopTile(
+        iniTopTile(
             state,
             action: PayloadAction<{
                 contextId: Guid;
@@ -172,7 +145,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, field, bucketMs, tile } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) {
                 console.error('[IniTopTile] Context not found:', contextId);
                 return;
@@ -185,6 +158,20 @@ const contextsSlice = createSlice({
             }
 
             view.seriesLevel[bucketMs]?.push(tile);
+        },
+
+        // ========== УПРАВЛЕНИЕ ШАБЛОНОМ ==========
+
+        updateResolvedCharReqTemplate(state, action: PayloadAction<{template: ResolvedCharReqTemplate, contextId : Guid}>) {
+            const { contextId, template } = action.payload;
+
+            if(state.chartContexts[contextId]) {
+                state.chartContexts[contextId].template = template;
+                console.log('[updateResolvedCharReqTemplate] Updated:', contextId, template);
+            }
+            else{
+                console.error("Контекст не найден", contextId);
+            }
         },
 
         // ========== УПРАВЛЕНИЕ VIEW ==========
@@ -218,7 +205,7 @@ const contextsSlice = createSlice({
                 return;
             }
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) {
                 console.error('[initialDataView] Context not found:', contextId);
                 return;
@@ -266,7 +253,7 @@ const contextsSlice = createSlice({
                 return;
             }
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) {
                 console.error('[initialViews] Context not found:', contextId);
                 return;
@@ -302,7 +289,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, field, px } = action.payload;
 
-            const context = state.byContext[contextId];  // ← БЫЛО: state.byTab[tabId]
+            const context = state.chartContexts[contextId];  // ← БЫЛО: state.byTab[tabId]
             if (!context) return;
 
             const view = context.view[field];
@@ -321,7 +308,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, field, range } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) return;
 
             const view = context.view[field];
@@ -340,7 +327,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, field, bucketMs } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) return;
 
             const view = context.view[field];
@@ -361,7 +348,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, field, loadingState } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) return;
 
             const view = context.view[field];
@@ -381,7 +368,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, field, type, message } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) return;
 
             const view = context.view[field];
@@ -407,7 +394,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, fields, type, messageError } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) {
                 console.error('[startLoadingFields] Context not found:', contextId);
                 return;
@@ -440,7 +427,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, field, progress, message } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) return;
 
             const view = context.view[field];
@@ -463,7 +450,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, fields, success } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) return;
 
             fields.forEach((field) => {
@@ -491,7 +478,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, field, message, success } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) return;
 
             const view = context.view[field];
@@ -519,7 +506,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, fieldName, errorMessage } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) return;
 
             const view = context.view[fieldName];
@@ -537,7 +524,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, fieldName } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) return;
 
             const view = context.view[fieldName];
@@ -587,7 +574,7 @@ const contextsSlice = createSlice({
             }>
         ) {
             const { contextId, field, bucketMs, requestId, bins } = action.payload;
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) return;
 
             const view = context.view[field];
@@ -616,7 +603,7 @@ const contextsSlice = createSlice({
             }>
         ) {
             const { contextId, field, bucketMs, requestId, error } = action.payload;
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) return;
 
             const view = context.view[field];
@@ -700,7 +687,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, isLoaded } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (context) {
                 context.isDataLoaded = isLoaded;
             }
@@ -715,7 +702,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, px } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) return;
 
             Object.values(context.view).forEach((view) => {
@@ -734,7 +721,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, fieldName } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (context) {
                 delete context.view[fieldName];
             }
@@ -742,7 +729,7 @@ const contextsSlice = createSlice({
 
         // clearAll остаётся — очищает ВСЕ контексты
         clearAll(state) {
-            state.byContext = {};
+            state.chartContexts = {};
         },
 
         // ========== BATCH ОПЕРАЦИИ ==========
@@ -760,7 +747,7 @@ const contextsSlice = createSlice({
         ) {
             const { contextId, updates } = action.payload;
 
-            const context = state.byContext[contextId];
+            const context = state.chartContexts[contextId];
             if (!context) {
                 console.error('[batchUpdateTiles] Context not found:', contextId);
                 return;
@@ -777,6 +764,7 @@ const contextsSlice = createSlice({
                 view.seriesLevel[update.bucketMs] = update.tiles;
             });
         },
+
     },
 });
 
@@ -790,11 +778,11 @@ export const {
     deleteContext,
     clearContext,
 
-    // Инициализация
-    setResolvedCharReqTemplate,
-
     // Управление тайлами
-    IniTopTile,
+    iniTopTile,
+
+    //шаблоны
+    updateResolvedCharReqTemplate,
 
     // Управление view
     initialDataView,
@@ -838,30 +826,4 @@ export const {
     batchUpdateTiles,
 } = contextsSlice.actions;
 
-// ============= ДОПОЛНИТЕЛЬНЫЕ СЕЛЕКТОРЫ =============
-
-/**
- *  МЕМОИЗИРОВАННЫЙ: Получить все ID открытых контекстов
- */
-export const selectAllContextIds = createSelector(
-    [(state: RootState) => state.contexts.byContext],
-    (byContext): readonly Guid[] => {
-        const ids = Object.keys(byContext) as Guid[];
-        return Object.freeze(ids);
-    }
-);
-
-/**
- *  МЕМОИЗИРОВАННЫЙ: Получить информацию о контексте
- */
-export const selectContextInfo = createSelector(
-    [(state: RootState, contextId: Guid) => state.contexts.byContext[contextId]],
-    (context) => {
-        if (!context || !context.template) return undefined;
-
-        return {
-            template: context.template,
-            fieldsCount: context.template.selectedFields.length,
-        };
-    }
-);
+ 

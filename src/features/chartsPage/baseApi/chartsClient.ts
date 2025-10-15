@@ -4,7 +4,8 @@ import {serializeParams} from "@shared/api/base/paramsSerializer.ts";
 import {API_TIMEOUT} from "@shared/api/base/config.ts";
 import {retryConfig} from "./retryConfig.ts";
 
-const chartsClientUrl = () => import.meta.env.VITE_CHARTS_URL ?? 'https://localhost:7040'
+import { ENV } from '@/env';
+const chartsClientUrl = () => ENV.CHARTS_URL
 
 export const chartsClient = axios.create({
     baseURL: chartsClientUrl(),

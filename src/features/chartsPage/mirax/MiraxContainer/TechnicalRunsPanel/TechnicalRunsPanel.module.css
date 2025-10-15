@@ -1,8 +1,8 @@
 /* src/features/chartsPage/charts/mirax/MiraxContainer/TechnicalRunsPanel/TechnicalRunsPanel.module.css */
-.container {
+.containerTechnicalRunsPanel {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    width: 500px;
     background-color: #fafafa;
     border-right: 1px solid #e0e0e0;
     overflow: hidden;
@@ -24,7 +24,7 @@
     color: #212121;
 }
 
-.info{
+.info {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -32,13 +32,13 @@
     color: #999;
 }
 
-.btnCopyFactoryNumber{
+.btnCopyFactoryNumber {
     width: 20px;
     height: 20px;
     opacity: 0.2;
 }
 
-.btnCopyFactoryNumber:hover{
+.btnCopyFactoryNumber:hover {
     opacity: 1;
 }
 
@@ -58,6 +58,21 @@
     padding: 12px 16px;
     background-color: #ffffff;
     border-bottom: 1px solid #e0e0e0;
+}
+
+.activeFilterBadge {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #f57c00;
+    background-color: #fff3e0;
+    border: 1px solid #ffb74d;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.activeFilterBadge strong {
+    font-weight: 600;
+    color: #e65100;
 }
 
 .list {

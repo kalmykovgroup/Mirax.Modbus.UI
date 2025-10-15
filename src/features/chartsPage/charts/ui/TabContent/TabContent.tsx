@@ -1,8 +1,8 @@
 // src/features/chartsPage/charts/ui/TabContent/TabContent.tsx
 
-import {useMemo, useState} from 'react';
+import {useMemo, useState, useCallback} from 'react';
 import { useSelector } from 'react-redux';
-import { useAppDispatch } from '@/store/hooks';
+import {useAppDispatch, useAppSelector} from '@/store/hooks';
 import { useConfirm } from '@ui/components/ConfirmProvider/ConfirmProvider';
 import {
     selectTabContextIds,
@@ -10,52 +10,43 @@ import {
     toggleContextVisibility,
     showAllContexts,
     hideAllContexts,
-    removeContextFromTab, selectTabSyncEnabled, selectActiveTabId, selectTabName,
-} from '@chartsPage/charts/core/store/tabsSlice.ts';
+    removeContextFromTab,
+    selectTabSyncEnabled,
+    selectActiveTabId,
+    selectTabName,
+} from '@chartsPage/charts/core/store/tabsSlice';
 import type { Guid } from '@app/lib/types/Guid';
 import type { RootState } from '@/store/store';
 import styles from './TabContent.module.css';
-import { ContextFilterItem } from '@chartsPage/charts/ui/TabContent/ContextFilterItem/ContextFilterItem.tsx';
-import { ContextSection } from '@chartsPage/charts/ui/TabContent/ContextSection/ContextSection.tsx';
-import {
-    SyncButton,
-} from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton.tsx';
-import {useDocumentTitle} from "@app/lib/hooks/DocumentTitleContext.tsx";
-
+import { ContextFilterItem } from '@chartsPage/charts/ui/TabContent/ContextFilterItem/ContextFilterItem';
+import { ContextSection } from '@chartsPage/charts/ui/TabContent/ContextSection/ContextSection';
+import { SyncButton } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton';
+import { useDocumentTitle } from '@app/lib/hooks/DocumentTitleContext';
+import {selectChartContexts} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 
 interface TabContentProps {
     readonly tabId: Guid;
 }
 
-/**
- * Контент вкладки: фильтр контекстов + список графиков
- *
- * АРХИТЕКТУРА "ЖИВЫХ КОНТЕКСТОВ":
- * - Рендерит ВСЕ контексты одновременно (не unmount при скрытии)
- * - Управляет видимостью через CSS (display: block/none)
- * - RequestManager'ы остаются живыми → загрузка для всех контекстов
- */
 export function TabContent({ tabId }: TabContentProps) {
     const dispatch = useAppDispatch();
     const confirm = useConfirm();
 
-    //  КРИТИЧНО: allContextIds для рендеринга, visibleContextIds для видимости
-    const allContextIds = useSelector((state: RootState) => selectTabContextIds(state, tabId));
+    const allContextIds = useSelector((state: RootState) =>
+        selectTabContextIds(state, tabId)
+    );
     const visibleContextIds = useSelector((state: RootState) =>
         selectVisibleContextIds(state, tabId)
     );
+    const chartContexts = useAppSelector(selectChartContexts);
 
-
- 
     const [filterOpen, setFilterOpen] = useState(false);
 
     const allVisible = allContextIds.length === visibleContextIds.length;
-    
-    // Получаем активную вкладку
-    const activeTabId = useSelector(selectActiveTabId);
 
+    const activeTabId = useSelector(selectActiveTabId);
     const isActiveTab = tabId === activeTabId;
-    // Состояние синхронизации текущей вкладки
+
     const syncEnabled = useSelector((state: RootState) => {
         if (!activeTabId) return false;
         return selectTabSyncEnabled(state, activeTabId);
@@ -65,39 +56,59 @@ export function TabContent({ tabId }: TabContentProps) {
         selectTabName(state, tabId)
     );
 
-    //  Формируем title
+
+    const sortedContextIds = useMemo(() => {
+        return [...allContextIds].sort((contextIdA: Guid, contextIdB: Guid) => {
+            const template1 = chartContexts[contextIdA]?.template;
+            const template2 = chartContexts[contextIdB]?.template;
+
+            if (!template1) {
+                console.error(`Шаблон не найден для contextId: ${contextIdA}`);
+                return 0;
+            }
+
+            if (!template2) {
+                console.error(`Шаблон не найден для contextId: ${contextIdB}`);
+                return 0;
+            }
+
+            const orderA = template1.visualOrder ?? 0;
+            const orderB = template2.visualOrder ?? 0;
+            return orderA - orderB;
+        });
+    }, [allContextIds, chartContexts]);
+    
     const pageTitle = useMemo(() => {
-        if (!isActiveTab) return 'Графики'; // Неактивная вкладка
+        if (!isActiveTab) return 'Графики';
         return `Графики | ${tabName}`;
     }, [isActiveTab, tabName]);
 
-    //  Регистрируем title ТОЛЬКО если это активная вкладка
-    useDocumentTitle(
-        pageTitle,
-        0, // Приоритет
-        isActiveTab // КЛЮЧЕВОЙ ПАРАМЕТР: enabled только для активной вкладки
-    );
+    useDocumentTitle(pageTitle, 0, isActiveTab);
 
-    const handleToggleAll = () => {
+    const handleToggleAll = useCallback(() => {
         if (allVisible) {
             dispatch(hideAllContexts(tabId));
         } else {
             dispatch(showAllContexts(tabId));
         }
-    };
+    }, [allVisible, dispatch, tabId]);
 
-    const handleRemoveContext = async (contextId: Guid) => {
-        const ok = await confirm({
-            title: 'Удалить контекст?',
-            description: 'Контекст будет удалён из вкладки',
-            confirmText: 'Удалить',
-            cancelText: 'Отмена',
-            danger: true,
-        });
-        if (ok) {
-            dispatch(removeContextFromTab({ tabId, contextId }));
-        }
-    };
+    const handleRemoveContext = useCallback(
+        async (contextId: Guid) => {
+            const ok = await confirm({
+                title: 'Удалить контекст?',
+                description: 'Контекст будет удалён из вкладки',
+                confirmText: 'Удалить',
+                cancelText: 'Отмена',
+                danger: true,
+            });
+            if (ok) {
+                dispatch(removeContextFromTab({ tabId, contextId }));
+            }
+        },
+        [confirm, dispatch, tabId]
+    );
+
 
     if (allContextIds.length === 0) {
         return (
@@ -117,9 +128,12 @@ export function TabContent({ tabId }: TabContentProps) {
                     type="button"
                     aria-expanded={filterOpen}
                 >
-                    <span className={styles.filterArrow}>{filterOpen ? '▼' : '▶'}</span>
+                    <span className={styles.filterArrow}>
+                        {filterOpen ? '▼' : '▶'}
+                    </span>
                     <span className={styles.filterTitle}>
-                        Фильтр шаблонов ({visibleContextIds.length} из {allContextIds.length})
+                        Фильтр шаблонов ({visibleContextIds.length} из{' '}
+                        {allContextIds.length})
                     </span>
                 </button>
 
@@ -137,18 +151,23 @@ export function TabContent({ tabId }: TabContentProps) {
                         </div>
 
                         <div className={styles.contextList}>
-                            {allContextIds.map((contextId) => (
-                                <ContextFilterItem
-                                    key={contextId}
-                                    tabId={tabId}
-                                    contextId={contextId}
-                                    isVisible={visibleContextIds.includes(contextId)}
-                                    onToggle={() =>
-                                        dispatch(toggleContextVisibility({ tabId, contextId }))
-                                    }
-                                    onRemove={() => handleRemoveContext(contextId)}
-                                />
-                            ))}
+                            {sortedContextIds.map((contextId) => {
+
+                                return (
+                                    <ContextFilterItem
+                                        key={contextId}
+                                        tabId={tabId}
+                                        contextId={contextId}
+                                        isVisible={visibleContextIds.includes(contextId)}
+                                        onToggle={() =>
+                                            dispatch(
+                                                toggleContextVisibility({ tabId, contextId })
+                                            )
+                                        }
+                                        onRemove={() => handleRemoveContext(contextId)}
+                                    />
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -156,19 +175,17 @@ export function TabContent({ tabId }: TabContentProps) {
 
             {/* Липкая обёртка для SyncButton */}
             <div
-                className={`${styles.syncButtonContainer} ${syncEnabled ? styles.syncButtonSticky : ''}`}
+                className={`${styles.syncButtonContainer} ${
+                    syncEnabled ? styles.syncButtonSticky : ''
+                }`}
             >
                 <SyncButton />
             </div>
 
-            {/*  КРИТИЧНОЕ ИЗМЕНЕНИЕ: Рендерим ВСЕ контексты, управляем видимостью через CSS */}
+            {/* Рендерим ВСЕ контексты, управляем видимостью через CSS */}
             <div className={styles.contextSections}>
-                {allContextIds.map((contextId) => {
+                {sortedContextIds.map((contextId) => {
                     const isVisible = visibleContextIds.includes(contextId);
-
-                    if(isVisible){
-
-                    }
 
                     return (
                         <div
@@ -186,11 +203,11 @@ export function TabContent({ tabId }: TabContentProps) {
             {visibleContextIds.length === 0 && (
                 <div className={styles.emptyStateOverlay}>
                     <p>Нет выбранных шаблонов для отображения</p>
-                    <p className={styles.hint}>Используйте фильтр выше для выбора шаблонов</p>
+                    <p className={styles.hint}>
+                        Используйте фильтр выше для выбора шаблонов
+                    </p>
                 </div>
             )}
         </div>
     );
 }
-
-

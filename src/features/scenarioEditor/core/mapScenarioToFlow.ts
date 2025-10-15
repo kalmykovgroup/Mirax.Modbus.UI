@@ -55,7 +55,7 @@ export function mapScenarioToFlow(s: ScenarioDto): { nodes: FlowNode[]; edges: F
             id: br.id,
             type: FlowType.branchNode,
             position: { x: bx, y: by },
-            style: { width: bw, height: bh, zIndex: 0 }, // 👈 ветка ниже
+            style: { width: bw, height: bh, zIndex: 0 }, //  ветка ниже
             data: { object: br, x: bx, y: by },
         };
         nodes.push(branchNode);

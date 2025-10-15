@@ -12,6 +12,8 @@ export type CreateChartReqTemplateRequest = {
     name: string
     description?: string | undefined
 
+    visualOrder?: number | undefined
+
     originalFromMs?: number | undefined
     originalToMs?: number | undefined
 

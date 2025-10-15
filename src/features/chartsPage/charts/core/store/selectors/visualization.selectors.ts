@@ -3,7 +3,6 @@ import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/store/store';
 import { selectOptimalData } from './dataProxy.selectors';
 import {
-    selectAllViews,
     selectFieldCurrentBucketMs,
     selectFieldCurrentRange, selectFieldView,
 } from "@chartsPage/charts/core/store/selectors/base.selectors.ts";

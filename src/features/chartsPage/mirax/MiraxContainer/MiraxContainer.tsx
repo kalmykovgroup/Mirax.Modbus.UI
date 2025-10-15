@@ -18,7 +18,6 @@ import {
 import {useSelector} from "react-redux";
 import type {Guid} from "@app/lib/types/Guid.ts";
 import type {DatabaseDto} from "@chartsPage/metaData/shared/dtos/DatabaseDto.ts";
-import { ConnectionStringDisplay } from "./ConnectionStringDisplay/ConnectionStringDisplay.tsx";
 
 
 export function MiraxContainer(): JSX.Element {
@@ -86,10 +85,10 @@ export function MiraxContainer(): JSX.Element {
                         <>
                         <div className={styles.databaseInfoBlock}>
 
-                            <ConnectionStringDisplay
+                           {/* <ConnectionStringDisplay
                                 connectionString={currentDatabase.connectionString}
                                 showDbTypeIcon={true}
-                            />
+                            />*/}
 
                         </div>
                         </>

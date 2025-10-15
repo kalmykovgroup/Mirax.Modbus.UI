@@ -18,10 +18,12 @@ export type ResolvedCharReqTemplate = {
 
     readonly entity: EntityDto
     readonly timeField: FieldDto
-    readonly selectedFields: ReadonlyArray<FieldDto>
+    selectedFields: FieldDto[]
 
-    readonly where?: ReadonlyArray<FilterClause> | undefined
-    readonly params?: ReadonlyArray<SqlParam> | undefined
+    readonly where?: Array<FilterClause> | undefined
+    readonly params?: Array<SqlParam> | undefined
 
     readonly sql?: SqlFilter | undefined
+
+    readonly visualOrder: number;
 }

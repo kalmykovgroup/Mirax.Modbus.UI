@@ -453,6 +453,7 @@ export const selectChartReqTemplates        = (s: RootState) => s.chartsTemplate
 export const selectChartReqTemplatesLoading = (s: RootState) => s.chartsTemplates.loading
 export const selectChartReqTemplatesErrors  = (s: RootState) => s.chartsTemplates.errors
 export const selectChartReqTemplatesLoaded  = (s: RootState) => s.chartsTemplates.listLoaded
+export const selectTemplateById  = (s: RootState) => s.chartsTemplates.getTemplateById
 
 
 // Config: localStorage для persistent (items), transform фильтрует transient

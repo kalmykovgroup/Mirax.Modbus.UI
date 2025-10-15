@@ -1,20 +1,30 @@
-/* components/ChartContainer/ChartContainer.module.css */
-
 .container {
     padding: 24px;
     background-color: #f5f5f5;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+    overflow: hidden;
 }
 
-
-
-/* Сетка графиков */
 .chartsGrid {
     display: flex;
     flex-direction: column;
     gap: 24px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
-/* Состояния */
+/* КРИТИЧНО: Гарантируем что все дочерние элементы не создают overflow */
+.chartsGrid > * {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
 .loading,
 .error,
 .empty {
@@ -27,6 +37,9 @@
     background-color: white;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .loading p,
@@ -81,9 +94,32 @@
     background-color: #2E6DA4;
 }
 
-/* Адаптивность */
 @media (max-width: 1200px) {
     .chartsGrid {
         grid-template-columns: 1fr;
+    }
+
+    .container {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 12px;
+    }
+
+    .chartsGrid {
+        gap: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 8px;
+    }
+
+    .chartsGrid {
+        gap: 12px;
     }
 }

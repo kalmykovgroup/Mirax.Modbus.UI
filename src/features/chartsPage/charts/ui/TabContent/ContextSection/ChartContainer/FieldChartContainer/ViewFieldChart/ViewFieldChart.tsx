@@ -1,8 +1,8 @@
 // features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/ViewFieldChart/ViewFieldChart.tsx
-// ИЗМЕНЕНИЯ: currentRange передаётся через props (только для синхронизированных графиков)
+// ИСПРАВЛЕНИЕ: Правильная передача currentRange с учетом состояния синхронизации
 
 import { useSelector } from 'react-redux';
-import { useCallback, useMemo, memo, useState } from 'react';
+import {useCallback, useMemo, memo, useState, useRef} from 'react';
 import type { RootState } from '@/store/store';
 import {
     type ChartStats,
@@ -13,12 +13,14 @@ import {
 import styles from './ViewFieldChart.module.css';
 import { selectFieldOriginalRange } from '@chartsPage/charts/core/store/selectors/base.selectors.ts';
 import { selectTimeSettings } from '@chartsPage/charts/core/store/chartsSettingsSlice.ts';
-import { ChartCanvas } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/ChartCanvas.tsx';
+import {
+    ChartCanvas,
+    type ChartCanvasRef
+} from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/ChartCanvas.tsx';
 import { StatsBadge } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/StatsBadge/StatsBadge.tsx';
 import { ChartFooter } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartFooter/ChartFooter.tsx';
 import { ChartHeader } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ChartHeader/ChartHeader.tsx';
 import LoadingIndicator from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/LoadingIndicator/LoadingIndicator.tsx';
-
 import { ResizableContainer } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/ResizableContainer/ResizableContainer.tsx';
 import { createOptions } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/createEChartsOptions.ts';
 import { useYAxisRange } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ChartCanvas/YAxisControls/useYAxisRange.ts';
@@ -29,8 +31,14 @@ import type { Guid } from '@app/lib/types/Guid.ts';
 import {
     ChartExportButton
 } from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/СhartDataExport/ChartExportButton.tsx";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { ENV } from '@/env';
+import {
+    ResetZoomButton
+} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ResetZoomButton/ResetZoomButton.tsx";
 
 const GROUP_ID = 'ChartContainer';
+const CHART_DEFAULT_CHART_HEIGHT_PX = ENV.CHART_DEFAULT_CHART_HEIGHT_PX;
 
 interface ViewFieldChartProps {
     readonly contextId: Guid;
@@ -41,17 +49,18 @@ interface ViewFieldChartProps {
     readonly currentRange?: TimeRange | undefined;
 }
 
-import { ENV } from '@/env';
-import {ChevronDown, ChevronUp} from "lucide-react";
-const CHART_DEFAULT_CHART_HEIGHT_PX = ENV.CHART_DEFAULT_CHART_HEIGHT_PX;
-
 export const ViewFieldChart = memo(function ViewFieldChart({
                                                                contextId,
                                                                fieldName,
                                                                onZoomEnd,
                                                                width,
-                                                               currentRange // ← НОВОЕ
+                                                               currentRange // ← Получаем от родителя (только если синхронизация включена)
                                                            }: ViewFieldChartProps) {
+
+
+    const chartRef = useRef<ChartCanvasRef>(null);
+
+
     const chartData = useSelector((state: RootState) =>
         selectChartRenderData(state, contextId, fieldName)
     );
@@ -65,6 +74,7 @@ export const ViewFieldChart = memo(function ViewFieldChart({
         selectFieldOriginalRange(state, contextId, fieldName)
     );
     const timeSettings = useSelector((state: RootState) => selectTimeSettings(state));
+
     const [isHeaderVisible, setIsHeaderVisible] = useState<boolean>(false);
     const toggleHeaderVisibility = useCallback(() => {
         setIsHeaderVisible((prev) => !prev);
@@ -74,6 +84,8 @@ export const ViewFieldChart = memo(function ViewFieldChart({
 
     const handleZoomEnd = useCallback(
         (range: TimeRange) => {
+            // КРИТИЧНО: Всегда вызываем onZoomEnd, независимо от синхронизации
+            // Родитель сам решит, нужно ли синхронизировать другие графики
             onZoomEnd?.(range);
         },
         [onZoomEnd]
@@ -137,8 +149,19 @@ export const ViewFieldChart = memo(function ViewFieldChart({
         ]
     );
 
+    // КРИТИЧНО: Логируем состояние синхронизации для отладки
+    // Можно убрать после проверки
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`[ViewFieldChart] ${fieldName}:`, {
+            hasSyncRange: !!currentRange,
+            currentRange: currentRange ?
+                { from: currentRange.fromMs, to: currentRange.toMs } :
+                undefined
+        });
+    }
+
     return (
-        <div>
+        <>
             {/* Обёртка для ChartHeader с анимацией */}
             <div className={`${styles.chartHeaderWrapper} ${isHeaderVisible ? styles.headerVisible : styles.headerHidden}`}>
                 <ChartHeader fieldName={fieldName} width={width} contextId={contextId} />
@@ -197,10 +220,17 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                         />
 
                         <YAxisControls control={yAxisControl} />
+
+                        <div style={{ marginLeft: 'auto' }}>
+                            <ResetZoomButton
+                                onClick={() => chartRef.current?.resetZoom()}
+                            />
+                        </div>
                     </div>
 
                     <div className={styles.chartWrapper}>
                         <ChartCanvas
+                            ref={chartRef}
                             options={options}
                             totalPoints={
                                 chartData.avgPoints.length +
@@ -210,6 +240,12 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                             onZoomEnd={handleZoomEnd}
                             loading={chartFieldStatus.isLoading}
                             currentRange={currentRange}
+                            originalRange={originalRange}
+                            /*
+                              КРИТИЧНО: currentRange передаётся напрямую
+                              - undefined = синхронизация отключена → график сохраняет свой zoom
+                              - TimeRange = синхронизация включена → график применяет этот диапазон
+                            */
                         />
                     </div>
 
@@ -223,6 +259,6 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                     <ChartFooter fieldName={fieldName} contextId={contextId} />
                 </div>
             </ResizableContainer>
-        </div>
+        </>
     );
 });

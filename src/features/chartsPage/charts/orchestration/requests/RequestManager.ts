@@ -59,8 +59,6 @@ export class RequestManager {
             cancelledRequests: 0,
             averageLoadTime: 0,
         };
-
-        console.log(`[RequestManager] Created for context: ${contextId}`);
     }
 
     /**

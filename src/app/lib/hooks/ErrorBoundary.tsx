@@ -2,7 +2,7 @@ import React, { type ErrorInfo, type ReactNode } from 'react'
 
 interface ErrorBoundaryState {
     hasError: boolean
-    error?: Error
+    error?: Error | undefined
 }
 
 interface ErrorBoundaryProps {
@@ -13,9 +13,9 @@ interface ErrorBoundaryProps {
 
     /**
      * Компонент-заглушка, отображаемый при ошибке
-     * Получает объект ошибки в пропсах
+     * Получает объект ошибки в пропсах (может быть undefined)
      */
-    fallback: React.ReactElement<{ error?: Error }>
+    fallback: React.ReactElement<{ error?: Error | undefined }>
 }
 
 /**
@@ -41,11 +41,11 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     /**
      * Хук для логирования ошибки — можно отправить в Sentry, LogRocket и т.д.
      */
-    componentDidCatch(error: Error, info: ErrorInfo) {
+    componentDidCatch(error: Error, info: ErrorInfo): void {
         console.error('ErrorBoundary caught:', error, info)
     }
 
-    render() {
+    render(): ReactNode {
         if (this.state.hasError) {
             return React.cloneElement(this.props.fallback, {
                 error: this.state.error,

@@ -27,13 +27,13 @@ export interface TabSyncFieldInfo {
 export const selectAllTabFields = createSelector(
     [
         (state: RootState, tabId: Guid) => selectTabContextIds(state, tabId),
-        (state: RootState) => state.contexts.byContext,
+        (state: RootState) => state.contexts.chartContexts,
     ],
-    (contextIds, byContext): readonly TabSyncFieldInfo[] => {
+    (contextIds, chartContexts): readonly TabSyncFieldInfo[] => {
         const allFields: TabSyncFieldInfo[] = [];
 
         for (const contextId of contextIds) {
-            const context = byContext[contextId];
+            const context = chartContexts[contextId];
             if (!context?.template) continue;
 
             const templateName = context.template.name;

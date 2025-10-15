@@ -6,4 +6,5 @@ export type FieldDto = {
     isNumeric: boolean;
     isTime: boolean;
     sqlParamType: SqlParamType
+    visualOrder: number;
 }

@@ -25,8 +25,9 @@ import {
 } from '@chartsPage/mirax/MiraxContainer/utils/miraxHelpers';
 import { SearchInput } from '@chartsPage/mirax/MiraxContainer/SearchInput/SearchInput';
 import { LoadingProgress } from '@chartsPage/mirax/MiraxContainer/LoadingProgress/LoadingProgress';
-import {CopyButton} from "@chartsPage/components/CopyButton/CopyButton.tsx";
-import type {DatabaseDto} from "@chartsPage/metaData/shared/dtos/DatabaseDto.ts";
+import { CopyButton } from '@chartsPage/components/CopyButton/CopyButton.tsx';
+import type { DatabaseDto } from '@chartsPage/metaData/shared/dtos/DatabaseDto.ts';
+import { FactoryNumberSearch } from '@chartsPage/mirax/MiraxContainer/TechnicalRunsPanel/FactoryNumberSearch/FactoryNumberSearch';
 
 export function TechnicalRunsPanel(): JSX.Element {
     const dispatch = useAppDispatch();
@@ -37,20 +38,21 @@ export function TechnicalRunsPanel(): JSX.Element {
     const activeContextId = useAppSelector(selectActiveContextId);
 
     const [searchQuery, setSearchQuery] = useState('');
+    const [activeFactoryNumber, setActiveFactoryNumber] = useState<string | undefined>(undefined);
     const [sortType, setSortType] = useState<TechnicalRunSortTypeValue>(
         TechnicalRunSortType.DATE_END_DESC
     );
 
     const technicalRuns = useAppSelector(selectTechnicalRunsData);
 
-    //  Автозагрузка при монтировании
+    // Автозагрузка при монтировании
     useEffect(() => {
         if (database === undefined) {
             console.error('Database id is undefined');
             return;
         }
 
-        //  Ключевая проверка: если уже загружается или есть данные - не стартуем
+        // Ключевая проверка: если уже загружается или есть данные - не стартуем
         if (isLoading) {
             console.warn('Данные уже загружаются');
             return;
@@ -65,7 +67,7 @@ export function TechnicalRunsPanel(): JSX.Element {
         }
 
         void dispatch(
-            fetchTechnicalRuns({databaseId : database.id})
+            fetchTechnicalRuns({ databaseId: database.id })
         );
     }, [database, dispatch, isLoading, technicalRuns.length, error]);
 
@@ -92,8 +94,14 @@ export function TechnicalRunsPanel(): JSX.Element {
 
     const handleRetry = useCallback(() => {
         if (database?.id === undefined) return;
-        void dispatch(fetchTechnicalRuns({ databaseId : database.id }));
-    }, [dispatch, database]);
+        const factoryNumber = activeFactoryNumber;
+        void dispatch(
+            fetchTechnicalRuns({
+                databaseId: database.id,
+                factoryNumber,
+            })
+        );
+    }, [dispatch, database, activeFactoryNumber]);
 
     const handleSearchChange = useCallback((value: string) => {
         setSearchQuery(value);
@@ -119,6 +127,30 @@ export function TechnicalRunsPanel(): JSX.Element {
         [dispatch]
     );
 
+    const handleFactoryNumberSearch = useCallback(
+        (factoryNumber: string) => {
+            if (database?.id === undefined) return;
+            setActiveFactoryNumber(factoryNumber);
+            void dispatch(
+                fetchTechnicalRuns({
+                    databaseId: database.id,
+                    factoryNumber,
+                })
+            );
+        },
+        [dispatch, database]
+    );
+
+    const handleFactoryNumberClear = useCallback(() => {
+        if (database?.id === undefined) return;
+        setActiveFactoryNumber(undefined);
+        void dispatch(
+            fetchTechnicalRuns({
+                databaseId: database.id,
+            })
+        );
+    }, [dispatch, database]);
+
     if (isLoading) {
         return (
             <div className={styles.container}>
@@ -138,7 +170,7 @@ export function TechnicalRunsPanel(): JSX.Element {
     const showNoResults = searchQuery.trim() && filteredAndSortedRuns.length === 0;
 
     return (
-        <div className={styles.container}>
+        <div className={styles.containerTechnicalRunsPanel}>
             <div className={styles.header}>
                 <h2 className={styles.title}>Испытания</h2>
                 <span className={styles.count}>
@@ -149,6 +181,18 @@ export function TechnicalRunsPanel(): JSX.Element {
             </div>
 
             <div className={styles.controls}>
+                {activeFactoryNumber !== undefined && (
+                    <div className={styles.activeFilterBadge}>
+                        Фильтр: устройство <strong>{activeFactoryNumber}</strong>
+                    </div>
+                )}
+
+                <FactoryNumberSearch
+                    onSearch={handleFactoryNumberSearch}
+                    onClear={handleFactoryNumberClear}
+                    isActive={activeFactoryNumber !== undefined}
+                />
+
                 <SearchInput
                     value={searchQuery}
                     onChange={handleSearchChange}
@@ -160,7 +204,11 @@ export function TechnicalRunsPanel(): JSX.Element {
 
             <div className={styles.list}>
                 {technicalRuns.length === 0 ? (
-                    <div className={styles.placeholder}>Нет доступных испытаний</div>
+                    <div className={styles.placeholder}>
+                        {activeFactoryNumber !== undefined
+                            ? `Не найдено испытаний для устройства ${activeFactoryNumber}`
+                            : 'Нет доступных испытаний'}
+                    </div>
                 ) : showNoResults ? (
                     <div className={styles.placeholder}>
                         Ничего не найдено по запросу "{searchQuery}"
@@ -180,7 +228,11 @@ export function TechnicalRunsPanel(): JSX.Element {
                                     <h3 className={styles.itemName}>{run.name ?? 'Без названия'}</h3>
                                     <div className={styles.info}>
                                         <span>ID:{run.id}</span>
-                                        <CopyButton className={styles.btnCopyFactoryNumber} text={run.id} label="Копировать ID устройства" />
+                                        <CopyButton
+                                            className={styles.btnCopyFactoryNumber}
+                                            text={run.id}
+                                            label="Копировать ID устройства"
+                                        />
                                     </div>
                                     <div className={styles.itemDates}>
                                         <span className={styles.itemDate}>

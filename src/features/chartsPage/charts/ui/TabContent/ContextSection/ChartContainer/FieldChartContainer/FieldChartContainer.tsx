@@ -1,5 +1,5 @@
 // src/features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/FieldChartContainer.tsx
-// ФИНАЛЬНАЯ ВЕРСИЯ с исправлением ВСЕХ проблем
+// ИСПРАВЛЕНИЕ: Устранение рассинхронизации при включении/выключении sync
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
@@ -23,7 +23,7 @@ import { ViewFieldChart } from './ViewFieldChart/ViewFieldChart';
 import { useRequestManager } from '@chartsPage/charts/orchestration/hooks/useRequestManager';
 import { RequestManagerRegistry } from '@chartsPage/charts/orchestration/requests/RequestManagerRegistry';
 import type { TimeRange } from '@chartsPage/charts/core/store/types/chart.types';
-import {calculateBucket} from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
+import { calculateBucket } from '@chartsPage/charts/core/store/chartsSettingsSlice.ts';
 
 interface FieldChartContainerProps {
     readonly contextId: Guid;
@@ -37,20 +37,16 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
 
     const activeTabId = useSelector(selectActiveTabId);
 
-    // ==========  ИСПРАВЛЕНИЕ #1: Стабильный boolean ==========
     const syncEnabled = useSelector((state: RootState) => {
         if (!activeTabId) return false;
         return selectTabSyncEnabled(state, activeTabId);
     });
 
-    // ==========  ИСПРАВЛЕНИЕ #2: Мемоизация через useMemo ==========
-    // Получаем RAW массив (стабильная ссылка из Redux)
     const syncContextIdsRaw = useSelector((state: RootState) => {
-        if (!activeTabId) return undefined; // undefined вместо []
+        if (!activeTabId) return undefined;
         return selectTabSyncContextIds(state, activeTabId);
     });
 
-    // Мемоизируем преобразование в массив
     const syncContextIds = useMemo((): readonly Guid[] => {
         return syncContextIdsRaw ?? [];
     }, [syncContextIdsRaw]);
@@ -59,9 +55,6 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
         selectIsContextFieldSynced(state, contextId, fieldName)
     );
 
-    // ==========  ИСПРАВЛЕНИЕ #3: Мемоизация allSyncFields ==========
-
-    // Получаем данные для всех контекстов (Object с ключами contextId)
     const allContextSyncFieldsMap = useSelector((state: RootState) => {
         const result: Record<string, readonly FieldDto[]> = {};
         for (const ctxId of syncContextIds) {
@@ -69,43 +62,32 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
         }
         return result;
     }, (a, b) => {
-        //  Кастомное сравнение: сравниваем ключи и значения
         const aKeys = Object.keys(a);
         const bKeys = Object.keys(b);
-
         if (aKeys.length !== bKeys.length) return false;
-
         for (const key of aKeys) {
-            if (a[key] !== b[key]) return false; // Сравниваем ссылки на массивы
+            if (a[key] !== b[key]) return false;
         }
-
         return true;
     });
 
-    // Мемоизируем создание плоского массива
     const allSyncFields = useMemo(() => {
         const result: Array<{ contextId: Guid; field: FieldDto }> = [];
-
         for (const ctxId of syncContextIds) {
             const fields = allContextSyncFieldsMap[ctxId];
             if (!fields) continue;
-
             for (const field of fields) {
                 result.push({ contextId: ctxId, field });
             }
         }
-
         return result;
     }, [syncContextIds, allContextSyncFieldsMap]);
 
-    // Фильтруем через useMemo
     const otherSyncFields = useMemo(() => {
         return allSyncFields.filter(
             (item) => !(item.contextId === contextId && item.field.name === fieldName)
         );
     }, [allSyncFields, contextId, fieldName]);
-
-    // ========== ТЕКУЩЕЕ СОСТОЯНИЕ ПОЛЯ ==========
 
     const currentBucket = useSelector((state: RootState) =>
         selectFieldCurrentBucketMs(state, contextId, fieldName)
@@ -118,14 +100,18 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
         return undefined;
     });
 
-    // ==========  ИСПРАВЛЕНИЕ #4: useRef с initialValue ==========
-
+    // ========== КРИТИЧНО: Все динамические значения в ref ==========
     const currentBucketRef = useRef<typeof currentBucket>(currentBucket);
     const syncEnabledRef = useRef<boolean>(syncEnabled);
+    const isCurrentFieldSyncedRef = useRef<boolean>(isCurrentFieldSynced); // ← ДОБАВЛЕНО
     const otherSyncFieldsRef = useRef<typeof otherSyncFields>(otherSyncFields);
     const widthRef = useRef<number>(width);
     const loadDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+    // ========== УЛУЧШЕННАЯ СИСТЕМА ЗАЩИТЫ ОТ ЦИКЛОВ ==========
     const isSyncUpdateRef = useRef<boolean>(false);
+    const syncUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const lastUserZoomRef = useRef<{ fromMs: number; toMs: number } | null>(null);
 
     useEffect(() => {
         currentBucketRef.current = currentBucket;
@@ -136,6 +122,10 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
     }, [syncEnabled]);
 
     useEffect(() => {
+        isCurrentFieldSyncedRef.current = isCurrentFieldSynced; // ← ДОБАВЛЕНО
+    }, [isCurrentFieldSynced]);
+
+    useEffect(() => {
         otherSyncFieldsRef.current = otherSyncFields;
     }, [otherSyncFields]);
 
@@ -143,13 +133,42 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
         widthRef.current = width;
     }, [width]);
 
-    // ========== ОБРАБОТЧИК ЗУМА ==========
+    // Cleanup при unmount
+    useEffect(() => {
+        return () => {
+            if (loadDebounceRef.current !== undefined) {
+                clearTimeout(loadDebounceRef.current);
+            }
+            if (syncUpdateTimerRef.current !== undefined) {
+                clearTimeout(syncUpdateTimerRef.current);
+            }
+        };
+    }, []);
 
+    // ========== ОБРАБОТЧИК ЗУМА С УЛУЧШЕННОЙ ЗАЩИТОЙ ==========
     const handleZoomEnd = useCallback(
         (range: TimeRange) => {
-            const newBucket = calculateBucket(range.fromMs, range.toMs, widthRef.current);
+            // КРИТИЧНО: Берём актуальные значения из ref
             const shouldSync =
-                syncEnabledRef.current && isCurrentFieldSynced && !isSyncUpdateRef.current;
+                syncEnabledRef.current &&
+                isCurrentFieldSyncedRef.current &&
+                !isSyncUpdateRef.current;
+
+            // Проверка на повторный зум с теми же значениями
+            const TOLERANCE = 1; // 1ms допуск
+            if (
+                lastUserZoomRef.current &&
+                Math.abs(lastUserZoomRef.current.fromMs - range.fromMs) <= TOLERANCE &&
+                Math.abs(lastUserZoomRef.current.toMs - range.toMs) <= TOLERANCE
+            ) {
+                console.log('[FieldChartContainer] Игнорируем повторный зум с теми же значениями');
+                return;
+            }
+
+            // Сохраняем последний user zoom
+            lastUserZoomRef.current = { fromMs: range.fromMs, toMs: range.toMs };
+
+            const newBucket = calculateBucket(range.fromMs, range.toMs, widthRef.current);
 
             console.log('[FieldChartContainer] Zoom ended:', {
                 contextId,
@@ -157,6 +176,9 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
                 range: { from: range.fromMs, to: range.toMs },
                 newBucket,
                 shouldSync,
+                syncEnabled: syncEnabledRef.current,
+                isFieldSynced: isCurrentFieldSyncedRef.current,
+                isSyncUpdate: isSyncUpdateRef.current,
             });
 
             // 1. Обновляем Redux state
@@ -180,8 +202,14 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
                 }
 
                 // Синхронизируем другие поля
-                if (shouldSync) {
+                if (shouldSync && otherSyncFieldsRef.current.length > 0) {
+                    // КРИТИЧНО: Устанавливаем флаг ПЕРЕД диспатчами
                     isSyncUpdateRef.current = true;
+
+                    // Очищаем предыдущий таймер, если есть
+                    if (syncUpdateTimerRef.current !== undefined) {
+                        clearTimeout(syncUpdateTimerRef.current);
+                    }
 
                     console.log(
                         `[FieldChartContainer] Синхронизация зума с ${otherSyncFieldsRef.current.length} полями`
@@ -213,9 +241,12 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
                         }
                     }
 
-                    setTimeout(() => {
+                    // КРИТИЧНО: Увеличенное время + сохранение в ref для cleanup
+                    syncUpdateTimerRef.current = setTimeout(() => {
                         isSyncUpdateRef.current = false;
-                    }, 300);
+                        syncUpdateTimerRef.current = undefined;
+                        console.log('[FieldChartContainer] Флаг синхронизации сброшен');
+                    }, 500); // Увеличено до 500ms для надёжности
                 }
             });
 
@@ -242,29 +273,26 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
 
                 // Запросы для ДРУГИХ синхронизированных контекстов
                 if (shouldSync && otherSyncFieldsRef.current.length > 0) {
-                    const fieldsByContext = new Map<Guid, FieldDto[]>();
+                    const fieldschartContexts = new Map<Guid, FieldDto[]>();
 
                     for (const item of otherSyncFieldsRef.current) {
-                        const fields = fieldsByContext.get(item.contextId) ?? [];
+                        const fields = fieldschartContexts.get(item.contextId) ?? [];
                         fields.push(item.field);
-                        fieldsByContext.set(item.contextId, fields);
+                        fieldschartContexts.set(item.contextId, fields);
                     }
 
                     console.log(
                         '[FieldChartContainer] Генерируем запросы для синхронизированных контекстов:',
-                        Array.from(fieldsByContext.keys()).map((ctxId) => ({
+                        Array.from(fieldschartContexts.keys()).map((ctxId) => ({
                             contextId: ctxId,
-                            fields: fieldsByContext.get(ctxId)?.map((f) => f.name),
+                            fields: fieldschartContexts.get(ctxId)?.map((f) => f.name),
                         }))
                     );
 
-                    for (const [otherContextId, fields] of fieldsByContext.entries()) {
-                        if (otherContextId === contextId) {
-                            continue;
-                        }
+                    for (const [otherContextId, fields] of fieldschartContexts.entries()) {
+                        if (otherContextId === contextId) continue;
 
                         const otherManager = RequestManagerRegistry.get(otherContextId);
-
                         if (!otherManager) {
                             console.warn(
                                 '[FieldChartContainer] Manager not found for context:',
@@ -300,7 +328,8 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
                 }
             }, 150);
         },
-        [dispatch, contextId, fieldName, requestManager, isCurrentFieldSynced]
+        [dispatch, contextId, fieldName, requestManager]
+        // КРИТИЧНО: isCurrentFieldSynced УБРАН из dependencies, т.к. используется ref
     );
 
     const handleRetry = useCallback(() => {

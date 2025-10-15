@@ -1,9 +1,8 @@
-
 import type { FieldValues, Path, UseFormSetError } from 'react-hook-form'
 
 /** Универсальная форма серверной ошибки по полю */
 export type ServerFieldError = {
-    field?: string | null
+    field?: string | null | undefined
     message: string
 }
 
@@ -18,8 +17,8 @@ export type FieldMap<TFieldValues extends FieldValues> =
  * 3) если пусто — возвращаем null
  */
 export function normalizeServerField<TFieldValues extends FieldValues>(
-    serverField?: string | null,
-    map?: FieldMap<TFieldValues>
+    serverField?: string | null | undefined,
+    map?: FieldMap<TFieldValues> | undefined
 ): string | null {
     if (!serverField) return null
     const mapped = map?.[serverField as keyof typeof map]
@@ -38,11 +37,11 @@ export function normalizeServerField<TFieldValues extends FieldValues>(
  */
 export function mapServerErrorsToForm<TFieldValues extends FieldValues>(
     params: {
-        errors?: ServerFieldError[] | null
+        errors?: ServerFieldError[] | null | undefined
         setError: UseFormSetError<TFieldValues>
         knownFields: Array<Path<TFieldValues>>
-        fieldMap?: FieldMap<TFieldValues>
-        defaultMessage?: string
+        fieldMap?: FieldMap<TFieldValues> | undefined
+        defaultMessage?: string | undefined
     }
 ): { fieldErrors: number; commonMessage: string | null } {
     const { errors, setError, knownFields, fieldMap, defaultMessage } = params
@@ -84,16 +83,18 @@ export function mapServerPayloadErrorsToForm<TFieldValues extends FieldValues>(
     payload: unknown,
     setError: UseFormSetError<TFieldValues>,
     knownFields: Array<Path<TFieldValues>>,
-    fieldMap?: FieldMap<TFieldValues>,
-    defaultMessage?: string
-) {
-    const p = (payload ?? {}) as { errors?: ServerFieldError[]; errorMessage?: string }
+    fieldMap?: FieldMap<TFieldValues> | undefined,
+    defaultMessage?: string | undefined
+): string | null {
+    const p = (payload ?? {}) as { errors?: ServerFieldError[] | undefined; errorMessage?: string | undefined }
+
     const { commonMessage } = mapServerErrorsToForm<TFieldValues>({
-        errors: p.errors,
+        errors: p.errors ?? null,
         setError: setError,
         knownFields,
         fieldMap,
         defaultMessage: p.errorMessage ?? defaultMessage
     })
+
     return commonMessage
 }

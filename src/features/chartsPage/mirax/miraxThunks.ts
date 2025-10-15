@@ -37,15 +37,21 @@ export const fetchTechnicalRuns = createAsyncThunk<
     { state: RootState }
 >(
     'mirax/fetchTechnicalRuns',
-    async ({ databaseId, signal, onProgress }, { dispatch, rejectWithValue }) => {
+    async ({ databaseId, factoryNumber, signal, onProgress }, { dispatch, rejectWithValue }) => {
         if (signal?.aborted) {
             return { data: [], wasAborted: true };
         }
 
         dispatch(startTechnicalRunsLoading());
 
+        const requestBody = factoryNumber !== undefined
+            ? { factoryNumber }
+            : undefined;
+
         const subscription = dispatch(
-            miraxApi.endpoints.getTechnicalRuns.initiate(withDb(undefined, databaseId))
+            miraxApi.endpoints.getTechnicalRuns.initiate(
+                withDb(requestBody, databaseId)
+            )
         );
 
         try {
@@ -62,12 +68,20 @@ export const fetchTechnicalRuns = createAsyncThunk<
                 }, 100);
             }
 
+            const loadingMessage = factoryNumber !== undefined
+                ? `Загрузка испытаний для устройства ${factoryNumber}...`
+                : 'Загрузка списка испытаний...';
+
+            const successMessage = factoryNumber !== undefined
+                ? `Найдено испытаний для устройства ${factoryNumber}`
+                : 'Испытания загружены';
+
             const response = (await notify.run(
                 subscription.unwrap(),
                 {
-                    loading: { text: 'Загрузка списка испытаний...' },
+                    loading: { text: loadingMessage },
                     success: {
-                        text: 'Испытания загружены',
+                        text: successMessage,
                         toastOptions: { duration: 700 },
                     },
                     error: {

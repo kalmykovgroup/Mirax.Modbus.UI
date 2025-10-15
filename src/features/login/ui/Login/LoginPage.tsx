@@ -29,8 +29,6 @@ export const LoginPage = () => {
 
     const [loginRequest] = useLoginMutation()
 
-
-
     const {
         register,
         handleSubmit,
@@ -48,42 +46,47 @@ export const LoginPage = () => {
 
     const FIELD_MAP = { username: 'email' } as const
 
-    const onSubmit = async (data: LoginFormData) => {
-
+    const onSubmit = async (data: LoginFormData): Promise<void> => {
         try {
-            const response: LoginResponse = await loginRequest({ email: data.email, password: data.password }).unwrap()
+            const response: LoginResponse = await loginRequest({
+                email: data.email,
+                password: data.password
+            }).unwrap()
 
-            // успех: resp — это LoginResponse (уже без ApiResponse-обёртки)
-            // здесь делай редирект/тост и т.п.
             if(response.success){
                 if(response.user == null){
+                    setError('root', {
+                        type: 'server',
+                        message: 'Ошибка: данные пользователя отсутствуют'
+                    })
                     return;
                 }
 
                 dispatch(setCredentials(response.user))
                 navigate(ROUTES.HOME);
-            }else{
+            } else {
+                // Исправлено: setError вместо setChartTemplatesError
                 mapServerErrorsToForm<LoginFormData>({
-                    errors: response.errors,
-                    setChartTemplatesError: setError,
+                    errors: response.errors ?? null,
+                    setError: setError,
                     knownFields: ['email', 'password'],
                     fieldMap: FIELD_MAP,
                     defaultMessage: 'Неверные учётные данные'
                 })
             }
 
-        } catch (err: any) {
-            // HTTP/сетевая ошибка ИЛИ (если решишь) логическая ошибка, если будешь бросать её в transformResponse
+        } catch (err: unknown) {
+            // HTTP/сетевая ошибка
+            const errorData = (err as { data?: unknown })?.data
+
             mapServerPayloadErrorsToForm<LoginFormData>(
-                err?.data,
+                errorData,
                 setError,
                 ['email', 'password'],
                 FIELD_MAP,
                 'Ошибка авторизации'
             )
         }
-
-
     };
 
     useEffect(() => {
@@ -101,7 +104,7 @@ export const LoginPage = () => {
                     <input
                         className={styles.email}
                         placeholder="Email"
-                        {...register(nameof<LoginFormData>('email'))} // Using nameof to ensure type safety
+                        {...register(nameof<LoginFormData>('email'))}
                     />
                     {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
                 </div>
@@ -129,9 +132,7 @@ export const LoginPage = () => {
                         <p className="text-red-500 text-sm">{errors.root.message as string}</p>
                     )}
                 </div>
-
             </form>
-
         </div>
     )
 }

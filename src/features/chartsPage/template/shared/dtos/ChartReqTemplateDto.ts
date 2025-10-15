@@ -16,6 +16,8 @@ export type ChartReqTemplateDto = {
     originalFromMs?: number | undefined
     originalToMs?: number | undefined
 
+    visualOrder: number
+
     // настройки графиков
     databaseId : Guid
     database: DatabaseDto

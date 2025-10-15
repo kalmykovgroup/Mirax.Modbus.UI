@@ -24,7 +24,6 @@ class RequestManagerRegistryClass {
         }
 
         this.managers.set(contextId, manager);
-        console.log('[RequestManagerRegistry] Registered manager for context:', contextId);
     }
 
     /**

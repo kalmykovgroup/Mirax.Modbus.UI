@@ -1,0 +1,72 @@
+/* src/features/chartsPage/charts/ui/TabContent/ContextFilterItem/FieldsOrderEditor/FieldsOrderEditor.module.css */
+
+.fieldsOrderEditor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    margin-top: 8px;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+}
+
+.empty {
+    padding: 16px;
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+}
+
+.fieldList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.fieldItem {
+    padding: 8px 10px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.fieldItem:hover {
+    border-color: #1976d2;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.fieldName {
+    font-size: 13px;
+    color: #333;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .fieldsOrderEditor {
+        padding: 10px;
+    }
+
+    .fieldItem {
+        padding: 6px 8px;
+    }
+
+    .fieldName {
+        font-size: 12px;
+    }
+}

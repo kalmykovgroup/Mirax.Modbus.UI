@@ -26,7 +26,7 @@ export enum LoadingType {
 
 export interface DataLoadRequest {
     readonly request: GetMultiSeriesRequest;
-    readonly fields: readonly FieldDto[]; // поля для загрузки (может быть > 1 при sync)
+    fields: FieldDto[]; // поля для загрузки (может быть > 1 при sync)
     readonly loadingType: LoadingType;
     readonly signal?: AbortSignal | undefined;
     readonly onProgress?: ((progress: number) => void) | undefined;

@@ -16,11 +16,11 @@ import {
 } from '@/features/scenarioEditor/shared/api/workflowApi.ts';
 import type { RunScenarioResponse } from '@shared/contracts/Dtos/LocalDtos/ScenarioEngine/RunScenarioResponse.ts';
 import { addRunningScenario, removeRunningScenario } from '@/features/scenarioEditor/store/workflowSlice.ts';
-import type { AppDispatch } from '@/store/types.ts';
 import {
     SimpleMenu
 } from "@scenario/core/ui/map/LeftPanel/HoverActionMenu/SimpleMenu.tsx";
 import type {ScenarioStopMode} from "@shared/contracts/Types/ScenarioEngine/ScenarioStopMode.ts";
+import type {AppDispatch} from "@/store/store.ts";
 
 export function LeftPanel() {
     const dispatch = useDispatch<AppDispatch>();

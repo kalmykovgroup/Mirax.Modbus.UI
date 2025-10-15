@@ -15,6 +15,12 @@ const MIRAX_ENDPOINTS = {
         `/mirax/technical-runs/${technicalRunId}/devices/${encodeURIComponent(factoryNumber)}/sensors`,
 } as const;
 
+/**
+ * Параметры для получения списка испытаний
+ */
+export interface GetTechnicalRunsParams {
+    readonly factoryNumber?: string | undefined;
+}
 
 /**
  * Параметры для получения устройств
@@ -36,15 +42,26 @@ export const miraxApi = createApi({
     baseQuery: axiosChartsBaseQuery(),
     tagTypes: ['TechnicalRun', 'PortableDevice', 'Sensor'],
     endpoints: (builder) => ({
+        getTechnicalRuns: builder.query<TechnicalRunDto[], RequestWithDb<GetTechnicalRunsParams | void>>({
+            query: ({ body, dbId }) => {
+                const hasFactoryNumber = body !== undefined && body !== null && 'factoryNumber' in body && body.factoryNumber !== undefined;
 
+                const url = hasFactoryNumber
+                    ? `${MIRAX_ENDPOINTS.TECHNICAL_RUNS}?factoryNumber=${encodeURIComponent(body?.factoryNumber)}`
+                    : MIRAX_ENDPOINTS.TECHNICAL_RUNS;
 
-        getTechnicalRuns: builder.query<TechnicalRunDto[], RequestWithDb<void>>({
-            query: ({ dbId }) => ({
-                url: MIRAX_ENDPOINTS.TECHNICAL_RUNS,
-                method: 'get',
-                headers: { 'X-Db': String(dbId) },
-            }),
-            providesTags: ['TechnicalRun'],
+                return {
+                    url,
+                    method: 'get',
+                    headers: { 'X-Db': String(dbId) },
+                };
+            },
+            providesTags: (_result, _error, { body }) => {
+                const factoryNumber = body !== undefined && 'factoryNumber' in body ? body.factoryNumber : undefined;
+                return factoryNumber !== undefined
+                    ? [{ type: 'TechnicalRun', id: `factory-${factoryNumber}` }]
+                    : [{ type: 'TechnicalRun', id: 'LIST' }];
+            },
             keepUnusedDataFor: 300, // 5 минут
         }),
 
@@ -53,32 +70,32 @@ export const miraxApi = createApi({
          */
         getPortableDevices: builder.query<
             PortableDeviceDto[],
-        RequestWithDb<GetPortableDevicesParams>
-    >({
-        query: ({ body, dbId }) => ({
-            url: MIRAX_ENDPOINTS.DEVICES(body.technicalRunId),
-            method: 'get',
-            headers: { 'X-Db': String(dbId) },
+            RequestWithDb<GetPortableDevicesParams>
+        >({
+            query: ({ body, dbId }) => ({
+                url: MIRAX_ENDPOINTS.DEVICES(body.technicalRunId),
+                method: 'get',
+                headers: { 'X-Db': String(dbId) },
+            }),
+            providesTags: (_res, _err, { body }) => [
+                { type: 'PortableDevice', id: body.technicalRunId },
+            ],
+            keepUnusedDataFor: 180, // 3 минуты
         }),
-        providesTags: (_res, _err, { body }) => [
-            { type: 'PortableDevice', id: body.technicalRunId },
-        ],
-        keepUnusedDataFor: 180, // 3 минуты
-    }),
 
         /**
          * Получить список сенсоров для устройства
          */
         getSensors: builder.query<SensorDto[], RequestWithDb<GetSensorsParams>>({
-        query: ({ body, dbId }) => ({
-            url: MIRAX_ENDPOINTS.SENSORS(body.technicalRunId, body.factoryNumber),
-            method: 'get',
-            headers: { 'X-Db': String(dbId) },
+            query: ({ body, dbId }) => ({
+                url: MIRAX_ENDPOINTS.SENSORS(body.technicalRunId, body.factoryNumber),
+                method: 'get',
+                headers: { 'X-Db': String(dbId) },
+            }),
+            providesTags: (_res, _err, { body }) => [
+                { type: 'Sensor', id: `${body.technicalRunId}-${body.factoryNumber}` },
+            ],
+            keepUnusedDataFor: 120, // 2 минуты
         }),
-        providesTags: (_res, _err, { body }) => [
-            { type: 'Sensor', id: `${body.technicalRunId}-${body.factoryNumber}` },
-        ],
-        keepUnusedDataFor: 120, // 2 минуты
-    }),
-  })
+    })
 });

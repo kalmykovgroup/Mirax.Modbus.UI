@@ -6,7 +6,7 @@ import type {
     SeriesTile,
     TimeRange
 } from '@chartsPage/charts/core/store/types/chart.types';
-import {initialDataView, IniTopTile} from '@chartsPage/charts/core/store/chartsSlice';
+import {initialDataView, iniTopTile} from '@chartsPage/charts/core/store/chartsSlice';
 import type {MultiSeriesResponse} from "@chartsPage/charts/core/dtos/responses/MultiSeriesResponse.ts";
 import type {SeriesBinDto} from "@chartsPage/charts/core/dtos/SeriesBinDto.ts";
 import type {Guid} from "@app/lib/types/Guid.ts";
@@ -53,7 +53,7 @@ export class InitializationService {
             );
             const tile: SeriesTile = this.createReadyTile(snappedInterval, s.bins);
 
-            dispatch(IniTopTile({
+            dispatch(iniTopTile({
                 contextId: contextId,
                 field: s.field.name,
                 bucketMs: s.bucketMs,

@@ -9,6 +9,7 @@ interface ImportMetaEnv {
 
     // API
     readonly VITE_API_URL: string;
+    readonly VITE_CHARTS_URL: string;
 
     // Настройки графиков
     readonly VITE_DEFAULT_CHART_PX: string;

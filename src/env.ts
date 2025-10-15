@@ -110,6 +110,7 @@ export const ENV = {
     // ========== API ==========
 
     API_URL: getEnvString('VITE_API_URL', 'https://localhost:5001'),
+    CHARTS_URL: getEnvString('VITE_CHARTS_URL', 'https://localhost:7094'),
 
     // ========== ГРАФИКИ ==========
 

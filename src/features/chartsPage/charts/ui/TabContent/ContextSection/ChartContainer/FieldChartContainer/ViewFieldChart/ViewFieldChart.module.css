@@ -1,13 +1,15 @@
-/* src/features/chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ViewFieldChart.module.css */
-
 .viewFieldChartContainer {
     display: flex;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     flex-direction: column;
     gap: 12px;
     padding: 16px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .header {
@@ -16,46 +18,64 @@
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
-}
-
-.title {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #212529;
-    flex-shrink: 0;
-}
-
-/* Кнопка экспорта располагается после StatsBadge */
-.exportButton {
-    flex-shrink: 0;
-}
-
-.chartData {
     width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    font-size: 13px;
-    font-weight: bold;
-}
-
-.chartData .label {
-    font-weight: normal;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .chartWrapper {
     position: relative;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     height: 100%;
     background-color: #fafafa;
     border-radius: 4px;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* КРИТИЧНО: Стили для ECharts контейнера внутри chartWrapper */
+.chartWrapper > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* КРИТИЧНО: Стили для canvas внутри ECharts */
+.chartWrapper canvas {
+    max-width: 100% !important;
+    height: auto !important;
+    display: block !important;
+}
+
+.chartData {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+    font-weight: bold;
     overflow: hidden;
 }
 
 .footer {
     padding-top: 8px;
     border-top: 1px solid #e0e0e0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.chartHeaderWrapper {
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out, margin-bottom 0.3s ease-in-out;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .indicationContainer {
@@ -68,12 +88,6 @@
     z-index: 50;
 }
 
-/* Обёртка для ChartHeader с анимацией */
-.chartHeaderWrapper {
-    overflow: hidden;
-    transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out, margin-bottom 0.3s ease-in-out;
-}
-
 .headerHidden {
     max-height: 0;
     opacity: 0;
@@ -81,30 +95,11 @@
 }
 
 .headerVisible {
-    max-height: 500px; /* достаточно большое значение для любого header */
+    max-height: 500px;
     opacity: 1;
     margin-bottom: 12px;
 }
 
-.viewFieldChartContainer {
-    display: flex;
-    width: 100%;
-    flex-direction: column;
-    gap: 12px;
-    padding: 16px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.header {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-/* Кнопка toggle для ChartHeader */
 .toggleHeaderButton {
     display: inline-flex;
     align-items: center;
@@ -139,52 +134,45 @@
     color: #333;
 }
 
-.title {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #212529;
-    flex-shrink: 0;
+@media (max-width: 1024px) {
+    .viewFieldChartContainer {
+        padding: 12px;
+    }
+
+    .header {
+        gap: 8px;
+    }
 }
 
-/* Кнопка экспорта располагается после StatsBadge */
-.exportButton {
-    flex-shrink: 0;
+@media (max-width: 768px) {
+    .viewFieldChartContainer {
+        padding: 8px;
+        min-width: 280px;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .title {
+        font-size: 16px;
+    }
+
+    .chartWrapper {
+        min-height: 200px;
+    }
 }
 
-.chartData {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    font-size: 13px;
-    font-weight: bold;
-}
+@media (max-width: 480px) {
+    .viewFieldChartContainer {
+        padding: 6px;
+        gap: 8px;
+        min-width: 240px;
+    }
 
-.chartData .label {
-    font-weight: normal;
-}
-
-.chartWrapper {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background-color: #fafafa;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.footer {
-    padding-top: 8px;
-    border-top: 1px solid #e0e0e0;
-}
-
-.indicationContainer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    z-index: 50;
+    .title {
+        font-size: 14px;
+    }
 }

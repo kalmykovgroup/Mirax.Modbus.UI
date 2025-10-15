@@ -1,56 +1,112 @@
-.contextItem {
+/* src/features/chartsPage/charts/ui/TabContent/ContextFilterItem/ContextFilterItem.module.css */
+
+.contextFilterItem {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.contextFilterItem:hover {
+    border-color: #1976d2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.itemHeader {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 6px 8px;
-    border-radius: 4px;
-    transition: background 0.2s ease;
+    gap: 12px;
 }
 
-.contextItem:hover {
-    background: #fafafa;
-}
-
-.contextCheckbox {
+.checkboxLabel {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex: 1;
     cursor: pointer;
-    font-size: 13px;
+    flex: 1;
+    min-width: 0;
+}
+
+.checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.templateName {
+    font-size: 14px;
     color: #333;
-}
-
-.contextCheckbox input[type='checkbox'] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-}
-
-.contextName {
-    flex: 1;
+    font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.contextRemove {
-    padding: 0;
-    width: 20px;
-    height: 20px;
-    border: none;
-    background: transparent;
-    color: #999;
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s ease;
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     flex-shrink: 0;
 }
 
-.contextRemove:hover {
-    background: rgba(244, 67, 54, 0.1);
-    color: #f44336;
+.fieldsToggle {
+    padding: 4px 10px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #666;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fieldsToggle:hover {
+    background: #f0f0f0;
+    border-color: #1976d2;
+    color: #1976d2;
+}
+
+.fieldsToggleActive {
+    background: #e6f7ff;
+    border-color: #1976d2;
+    color: #1976d2;
+}
+
+.removeButton {
+    padding: 2px 8px;
+    border: 1px solid #ffccc7;
+    border-radius: 4px;
+    background: #fff1f0;
+    color: #ff4d4f;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.removeButton:hover {
+    background: #ff4d4f;
+    border-color: #ff4d4f;
+    color: #ffffff;
+}
+
+@media (max-width: 768px) {
+    .contextFilterItem {
+        padding: 8px 10px;
+    }
+
+    .templateName {
+        font-size: 13px;
+    }
+
+    .fieldsToggle {
+        padding: 3px 6px;
+        font-size: 14px;
+    }
 }
