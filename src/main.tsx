@@ -9,6 +9,7 @@ import SplashScreen from "@ui/components/SplashScreen/SplashScreen.tsx";
 import {BrowserRouter} from "react-router-dom";
 import {apiClient} from "@/baseShared/api/apiClient.ts";
 import {setStoreForInterceptors, setupInterceptors} from "@/baseShared/api/interceptors.ts";
+import {initHistorySystem} from "@scenario/core/features/historySystem/initHistory.ts";
 
 
 
@@ -16,6 +17,8 @@ import {setStoreForInterceptors, setupInterceptors} from "@/baseShared/api/inter
 setStoreForInterceptors(store);
 setupInterceptors(apiClient);
 
+// ВАЖНО: инициализировать до рендера приложения
+initHistorySystem();
 
 // Функциональный компонент для инициализации Persist (сброс transient полей после rehydrate)
 

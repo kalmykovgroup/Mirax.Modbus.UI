@@ -1,12 +1,14 @@
+// src/features/scenarioEditor/core/ui/map/RightPanel/RightPanel.tsx
+
 import styles from "./RightPanel.module.css";
-import React, {useMemo, useRef} from "react";
-import {useReactFlow} from "@xyflow/react";
+import React, { useRef } from "react";
+import { useReactFlow } from "@xyflow/react";
 import {
     commitDropToBranch,
     getAll,
     pickDeepestBranchByTopLeft,
     setHoverBranch
-} from "@scenario/core/utils/dropUtils.ts";
+} from "@scenario/core/utils/dropUtils";
 import {
     ConditionStepDto,
     DelayStepDto,
@@ -15,20 +17,18 @@ import {
     ParallelStepDto,
     SignalStepDto,
     SystemActivityStepDto
-} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
-import {BranchDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto.ts";
-import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
-import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
-import type {StepNodeData} from "@/features/scenarioEditor/shared/contracts/models/StepNodeData.ts";
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto";
+import { BranchDto } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto";
+import { FlowType } from "@/features/scenarioEditor/shared/contracts/types/FlowType";
+import type { FlowNode } from "@/features/scenarioEditor/shared/contracts/models/FlowNode";
+import type { StepNodeData } from "@/features/scenarioEditor/shared/contracts/models/StepNodeData";
 
-// NEW: сценарий, операции, типы
-import {useSelector} from "react-redux";
-import {selectActiveScenarioId} from "@/features/scenarioEditor/store/scenarioSlice.ts";
-import {ScenarioChangeCenter} from "@scenario/core/scenarioChangeCenter/scenarioChangeCenter.ts";
-import type {Guid} from "@app/lib/types/Guid.ts";
-import type {ScenarioOperationDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/ScenarioOperationDto.ts";
-import {DbEntityType} from "@scenario/shared/contracts/server/types/Api.Shared/Scenario/DbEntityType.ts";
-import {DbActionType} from "@scenario/shared/contracts/server/types/Api.Shared/Scenario/DbActionType.ts";
+// ⚡ NEW: Командная система (заменяет ScenarioChangeCenter)
+import { useSelector } from "react-redux";
+import { selectActiveScenarioId } from "@scenario/store/scenarioSelectors";
+import type { Guid } from "@app/lib/types/Guid";
+import {useCommandDispatcher} from "@scenario/core/features/scenarioChangeCenter/useCommandDispatcher.ts";
+import {BranchCommands, StepCommands} from "@scenario/core/features/scenarioChangeCenter/commandBuilders.ts";
 
 function createByFlowType(type: FlowType, p: any) {
     switch (type) {
@@ -45,7 +45,7 @@ function createByFlowType(type: FlowType, p: any) {
     }
 }
 
-// какие flow-типами считаем «шагами» для Create Step
+// Какие flow-типами считаем «шагами» для Create Step
 const STEP_FLOW_TYPES: Set<FlowType> = new Set<FlowType>([
     FlowType.activityModbusNode,
     FlowType.activitySystemNode,
@@ -56,23 +56,19 @@ const STEP_FLOW_TYPES: Set<FlowType> = new Set<FlowType>([
     FlowType.conditionStepNode,
 ]);
 
-export const RightPanel = () => {
+export const RightPanel: React.FC = () => {
     const rf = useReactFlow<FlowNode>();
     const activeId = useSelector(selectActiveScenarioId);
 
-    // NEW: change center и генератор guid
-    const changeCenter = useMemo(
-        () => (activeId ? new ScenarioChangeCenter(activeId) : null),
-        [activeId]
-    );
-    const makeGuid = () => (crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)) as Guid;
+    // ⚡ NEW: Command dispatcher вместо change center
+    const commandDispatcher = useCommandDispatcher(activeId);
 
     const hoverBranchIdRef = useRef<string | null>(null);
 
     const setHover = (id: string | null) => {
         if (hoverBranchIdRef.current === id) return;
         hoverBranchIdRef.current = id;
-        setHoverBranch(rf.setNodes as any, id); // тип совпадает: (updater) => void
+        setHoverBranch(rf.setNodes as any, id);
     };
 
     const startCreateNode = (type: FlowType) => (e: React.MouseEvent) => {
@@ -82,7 +78,7 @@ export const RightPanel = () => {
         const move = (ev: MouseEvent) => {
             const pos = rf.screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
 
-            // подсветка цели — тот же алгоритм
+            // Подсветка цели
             const all = getAll(rf);
             const target = pickDeepestBranchByTopLeft(all, pos, id);
             setHover(target?.id ?? null);
@@ -103,13 +99,13 @@ export const RightPanel = () => {
                     );
                 }
 
-                // создаём DTO для shared.object (как и раньше)
-                const object = createByFlowType(type, { id }); // по возможности пробрасываем id внутрь dto
+                // Создаём DTO для shared.object
+                const object = createByFlowType(type, { id });
 
                 const newNode: FlowNode = {
                     id,
                     type,
-                    position: pos,         // абсолютные координаты (в RF)
+                    position: pos,
                     data: {
                         object,
                         x: 0,
@@ -135,62 +131,77 @@ export const RightPanel = () => {
             const all = getAll(rf);
             const target = pickDeepestBranchByTopLeft(all, drop, id);
 
-            // снять подсветку
+            // Снять подсветку
             setHover(null);
 
             if (!target) {
-                // Без ветки: визуально — как было; операции не шлём (строгая политика «всегда внутри ветки»
-                // может быть включена позднее: тогда просто удаляйте временную ноду и не создавайте оп).
+                // Без ветки: визуально — как было; операции не шлём
                 return;
             }
 
-            // единый коммит в граф (как раньше)
+            // Единый коммит в граф
             commitDropToBranch(rf.setNodes as any, all, target, id, drop, /*growBranch*/ true);
 
+            // Помечаем как персистентный локально
             rf.setNodes((nds) =>
                 nds.map(n => n.id === id ? { ...n, data: { ...n.data, __persisted: true } } : n)
             );
-            // NEW: шлём операцию в центр изменений
-            if (!changeCenter) return;
+
+            // ⚡ NEW: Шлём операцию через командный диспетчер
+            if (!commandDispatcher || !activeId) return;
 
             // Если это ветка → создаём Branch
             if (type === FlowType.branchNode) {
-                const width  = 300;
+                const width = 300;
                 const height = 100;
 
-                const op: ScenarioOperationDto = {
-                    opId: makeGuid(),
-                    entity: DbEntityType.Branch,
-                    action: DbActionType.Create,
-                    payload: {
-                        id: id as Guid,
-                        // абсолютные координаты места дропа
-                        x: drop.x,
-                        y: drop.y,
-                        width,
-                        height
-                    }
-                };
-                changeCenter.create(op);
+                const branch = BranchDto.create({
+                    id: id as Guid,
+                    scenarioId: activeId,
+                    x: drop.x,
+                    y: drop.y,
+                    width,
+                    height,
+                    name: 'Новая ветка',
+                    stepIds: [],
+                });
+
+                commandDispatcher.execute(
+                    BranchCommands.create(
+                        activeId,
+                        { branch, parentStepId: null },
+                        'Создать ветку'
+                    )
+                );
                 return;
             }
 
-            // Если это шаг → создаём Step с branchId ветки + абсолютные координаты
+            // Если это шаг → создаём Step с branchId ветки
             if (STEP_FLOW_TYPES.has(type)) {
-                const op: ScenarioOperationDto = {
-                    opId: makeGuid(),
-                    entity: DbEntityType.Step,
-                    action: DbActionType.Create,
-                    payload: {
-                        id: id as Guid,
-                        branchId: target.id as Guid,
-                        x: drop.x,
-                        y: drop.y,
-                        // Можно передать тип шага, если серверу нужно отличать:
-                        // flowType: type
-                    }
+                // Получаем созданный DTO
+                const nodes = rf.getNodes();
+                const node = nodes.find(n => n.id === id);
+                if (!node) return;
+
+                const stepDto = (node.data as any).object;
+                if (!stepDto) return;
+
+                // Обновляем позицию и branchId в DTO
+                const step = {
+                    ...stepDto,
+                    id: id as Guid,
+                    branchId: target.id as Guid,
+                    x: drop.x,
+                    y: drop.y,
                 };
-                changeCenter.create(op);
+
+                commandDispatcher.execute(
+                    StepCommands.create(
+                        activeId,
+                        { step, branchId: target.id as Guid },
+                        `Создать шаг "${step.name ?? type}"`
+                    )
+                );
             }
         };
 
@@ -200,14 +211,54 @@ export const RightPanel = () => {
 
     return (
         <div className={styles.rightPanelContainer}>
-            <div onMouseDown={startCreateNode(FlowType.activityModbusNode)} className={`${styles.activityModbusBtnAdd} ${styles.btn}`}>Действие с modbus устр.</div>
-            <div onMouseDown={startCreateNode(FlowType.activitySystemNode)} className={`${styles.activitySystemBtnAdd} ${styles.btn}`}>Системное действие</div>
-            <div onMouseDown={startCreateNode(FlowType.branchNode)} className={`${styles.branchBtnAdd} ${styles.btn}`}><span>Новая</span> ветка</div>
-            <div onMouseDown={startCreateNode(FlowType.parallelStepNode)} className={`${styles.parallelBtnAdd} ${styles.btn}`}>Параллел. шаг</div>
-            <div onMouseDown={startCreateNode(FlowType.conditionStepNode)} className={`${styles.conditionBtnAdd} ${styles.btn}`}>Условие</div>
-            <div onMouseDown={startCreateNode(FlowType.delayStepNode)} className={`${styles.delayBtnAdd} ${styles.btn}`}>Время ожидания</div>
-            <div onMouseDown={startCreateNode(FlowType.jumpStepNode)} className={`${styles.jumpBtnAdd} ${styles.btn}`}>Переход</div>
-            <div onMouseDown={startCreateNode(FlowType.signalStepNode)} className={`${styles.signalBtnAdd} ${styles.btn}`}>Сигнал</div>
+            <div
+                onMouseDown={startCreateNode(FlowType.activityModbusNode)}
+                className={`${styles.activityModbusBtnAdd} ${styles.btn}`}
+            >
+                Действие с modbus устр.
+            </div>
+            <div
+                onMouseDown={startCreateNode(FlowType.activitySystemNode)}
+                className={`${styles.activitySystemBtnAdd} ${styles.btn}`}
+            >
+                Системное действие
+            </div>
+            <div
+                onMouseDown={startCreateNode(FlowType.branchNode)}
+                className={`${styles.branchBtnAdd} ${styles.btn}`}
+            >
+                <span>Новая</span> ветка
+            </div>
+            <div
+                onMouseDown={startCreateNode(FlowType.parallelStepNode)}
+                className={`${styles.parallelBtnAdd} ${styles.btn}`}
+            >
+                Параллел. шаг
+            </div>
+            <div
+                onMouseDown={startCreateNode(FlowType.conditionStepNode)}
+                className={`${styles.conditionBtnAdd} ${styles.btn}`}
+            >
+                Условие
+            </div>
+            <div
+                onMouseDown={startCreateNode(FlowType.delayStepNode)}
+                className={`${styles.delayBtnAdd} ${styles.btn}`}
+            >
+                Время ожидания
+            </div>
+            <div
+                onMouseDown={startCreateNode(FlowType.jumpStepNode)}
+                className={`${styles.jumpBtnAdd} ${styles.btn}`}
+            >
+                Переход
+            </div>
+            <div
+                onMouseDown={startCreateNode(FlowType.signalStepNode)}
+                className={`${styles.signalBtnAdd} ${styles.btn}`}
+            >
+                Сигнал
+            </div>
         </div>
     );
 };

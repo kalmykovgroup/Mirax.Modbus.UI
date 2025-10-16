@@ -37,7 +37,11 @@ export const store = configureStore({
                         // Добавьте новые actions
                         'charts/initField',
                         'charts/addData',
-                        'charts/updateWindow'
+                        'charts/updateWindow',
+
+                        //Сценарий
+                       'history/pushCommand', 'history/addToBatch',
+
                     ],
                     ignoredPaths: [
                         'chartsTemplates.errors',
@@ -45,6 +49,9 @@ export const store = configureStore({
                         'chartsTemplates.activeTemplate.toMs',
                         // Игнорируем пути с большими массивами данных
                         'charts.view',
+
+                        //Сценарий
+                        'history.contexts'
                     ],
                     // Увеличиваем время предупреждения для больших состояний
                     warnAfter: 128, // вместо 32ms по умолчанию

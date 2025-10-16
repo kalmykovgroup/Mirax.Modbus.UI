@@ -1,0 +1,110 @@
+/* src/features/scenarioEditor/ui/PendingChangesViewer/PendingChangesViewer.module.css */
+
+.container {
+    background: var(--panel-bg, #1e1e1e);
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+    min-width: 220px;
+    border: 1px solid var(--warning-border, #ff9800);
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color, #3d3d3d);
+}
+
+.icon {
+    color: var(--warning-color, #ff9800);
+}
+
+.title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary, #e0e0e0);
+}
+
+.stats {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.statItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+}
+
+.statLabel {
+    color: var(--text-secondary, #999);
+}
+
+.statValue {
+    font-weight: 600;
+    color: var(--text-primary, #e0e0e0);
+    background: var(--badge-bg, #2d2d2d);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.saveBtn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--success-bg, #4caf50);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saveBtn:hover {
+    background: var(--success-hover, #45a049);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.discardBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: var(--danger-bg, #f44336);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.discardBtn:hover {
+    background: var(--danger-hover, #da190b);
+    transform: scale(1.05);
+}
+
+.historyInfo {
+    font-size: 11px;
+    color: var(--text-tertiary, #666);
+    text-align: center;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color, #3d3d3d);
+}
