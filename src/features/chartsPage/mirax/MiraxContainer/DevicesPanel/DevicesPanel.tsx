@@ -11,7 +11,7 @@ import {
     selectTechnicalRunById,
     selectDevicesByTechnicalRunId,
     selectDefaultBaseTemplateId,
-    selectDefaultSensorTemplateId,
+    selectDefaultSensorTemplateId, selectActiveFactoryNumber,
 } from '@chartsPage/mirax/miraxSlice';
 import { fetchPortableDevices } from '@chartsPage/mirax/miraxThunks';
 import { DeviceSortDropdown } from '@chartsPage/mirax/MiraxContainer/DevicesPanel/DeviceSortDropdown/DeviceSortDropdown';
@@ -39,13 +39,9 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
     const isLoading = useAppSelector((state) => selectIsDevicesLoading(state, technicalRunId));
     const error = useAppSelector((state) => selectDevicesError(state, technicalRunId));
 
-    // Получаем данные испытания через селектор
     const technicalRun = useAppSelector((state) => selectTechnicalRunById(state, technicalRunId));
-
-    // Получаем устройства из slice через селектор
     const devices = useAppSelector((state) => selectDevicesByTechnicalRunId(state, technicalRunId));
 
-    // Получаем все шаблоны для построения графиков
     const allTemplates = useAppSelector((state) => state.chartsTemplates.items);
     const defaultBaseTemplateId = useAppSelector(selectDefaultBaseTemplateId);
     const defaultSensorTemplateId = useAppSelector(selectDefaultSensorTemplateId);
@@ -56,7 +52,8 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
         DeviceSortType.FACTORY_NUMBER_ASC
     );
 
-    // Загрузка устройств при монтировании (через thunk)
+    const activeFactoryNumber = useAppSelector(selectActiveFactoryNumber);
+
     useEffect(() => {
         if (database?.id !== undefined && devices.length === 0 && !isLoading && error === undefined) {
             void dispatch(fetchPortableDevices({ databaseId: database.id, technicalRunId }));
@@ -69,8 +66,12 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
         // Фильтрация по COM-порту
         if (selectedPort !== undefined) {
             result = result.filter((device) => {
+                if (!('comPortName' in device)) {
+                    return false;
+                }
                 const portName = device.comPortName;
-                return portName !== undefined && portName === selectedPort;
+                // ИСПРАВЛЕНО: проверка на строку вместо !== undefined
+                return typeof portName === 'string' && portName.trim() === selectedPort;
             });
         }
 
@@ -79,14 +80,19 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
             const query = deviceSearchQuery.toLowerCase().trim();
 
             result = result.filter((device) => {
-                const nameMatch = device.name?.toLowerCase().includes(query) ?? false;
-                const factoryNumberMatch = device.factoryNumber?.toLowerCase().includes(query) ?? false;
+                // ИСПРАВЛЕНО: проверка на строку вместо !== undefined и null
+                const nameMatch = ('name' in device && typeof device.name === 'string')
+                    ? device.name.toLowerCase().includes(query)
+                    : false;
+
+                const factoryNumberMatch = ('factoryNumber' in device && typeof device.factoryNumber === 'string')
+                    ? device.factoryNumber.toLowerCase().includes(query)
+                    : false;
 
                 return nameMatch || factoryNumberMatch;
             });
         }
 
-        // Сортировка
         return sortDevices(result, sortType);
     }, [devices, selectedPort, deviceSearchQuery, sortType]);
 
@@ -116,7 +122,6 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
         (deviceSearchQuery.trim() || selectedPort !== undefined) &&
         filteredAndSortedDevices.length === 0;
 
-    // Проверка: нет данных испытания
     if (technicalRun === undefined) {
         return (
             <div className={styles.container}>
@@ -125,7 +130,6 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
         );
     }
 
-    // Ошибка загрузки
     if (error !== undefined) {
         return (
             <div className={styles.container}>
@@ -134,7 +138,6 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
         );
     }
 
-    // Загрузка
     if (isLoading) {
         return (
             <div className={styles.container}>
@@ -168,7 +171,6 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
                 </div>
             )}
 
-            {/* Фильтр по COM-портам с кнопкой построения графиков */}
             {database?.id !== undefined && (
                 <ComPortsFilter
                     devices={devices}
@@ -196,6 +198,7 @@ export function DevicesPanel({ technicalRunId }: Props): JSX.Element {
                     <PortableDevicesList
                         devices={filteredAndSortedDevices}
                         technicalRun={technicalRun}
+                        activeFactoryNumber={activeFactoryNumber}
                     />
                 )}
             </div>

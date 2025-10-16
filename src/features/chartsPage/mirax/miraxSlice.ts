@@ -78,6 +78,8 @@ export interface MiraxState {
 
     readonly defaultBaseTemplateId: Guid;
     readonly defaultSensorTemplateId: Guid;
+
+    activeFactoryNumber?: string | undefined;
 }
 
 const initialLoadingState: MiraxLoadingState = {
@@ -104,6 +106,8 @@ const initialState: MiraxState = {
 
     defaultBaseTemplateId: ENV.MIRAX_DEFAULT_BASE_TEMPLATE_ID as Guid,
     defaultSensorTemplateId: ENV.MIRAX_DEFAULT_SENSOR_TEMPLATE_ID as Guid,
+
+    activeFactoryNumber: undefined,
 };
 
 /**
@@ -157,6 +161,11 @@ export const miraxSlice = createSlice({
             state.defaultSensorTemplateId = action.payload;
         },
 
+        setActiveFactoryNumber: (state, action: PayloadAction<string | undefined>) => {
+            state.activeFactoryNumber = action.payload;
+        },
+
+
         //Сохранение данных испытаний
         setTechnicalRunsData: (state, action: PayloadAction<TechnicalRunDto[]>) => {
             state.technicalRunsData = action.payload;
@@ -201,6 +210,7 @@ export const miraxSlice = createSlice({
                     activeTabKey: undefined,
                 };
             }
+
         },
 
         closeTechnicalRunTab: (state, action: PayloadAction<Guid>) => {
@@ -582,6 +592,7 @@ export const {
     setDevicesData,
     setSensorsData,
     openTechnicalRunTab,
+    setActiveFactoryNumber,
     closeTechnicalRunTab,
     setActiveTab,
     closeAllTabs,
@@ -866,5 +877,9 @@ export const selectDefaultBaseTemplateId = (state: RootState): Guid =>
 
 export const selectDefaultSensorTemplateId = (state: RootState): Guid =>
     state.mirax.defaultSensorTemplateId;
+
+export const selectActiveFactoryNumber = (state: RootState): string | undefined =>
+    state.mirax.activeFactoryNumber;
+
 
 export const miraxReducer = miraxSlice.reducer;

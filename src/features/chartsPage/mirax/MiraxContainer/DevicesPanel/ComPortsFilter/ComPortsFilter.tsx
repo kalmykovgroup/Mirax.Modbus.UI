@@ -12,7 +12,7 @@ import { fetchSensors } from '@chartsPage/mirax/miraxThunks';
 import { buildCharts } from '@chartsPage/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/buildCharts';
 import { notify } from '@app/lib/notify';
 import styles from './ComPortsFilter.module.css';
-import type {ChartReqTemplateDto} from "@chartsPage/template/shared/dtos/ChartReqTemplateDto.ts";
+import type { ChartReqTemplateDto } from '@chartsPage/template/shared/dtos/ChartReqTemplateDto.ts';
 
 interface Props {
     readonly devices: readonly PortableDeviceDto[];
@@ -26,10 +26,6 @@ interface Props {
     readonly defaultSensorTemplateId: Guid | undefined;
 }
 
-/**
- * Фильтр по COM-портам с возможностью построения графиков для всех устройств порта.
- * Вкладки портов, зафиксированные в header панели устройств.
- */
 export function ComPortsFilter({
                                    devices,
                                    selectedPort,
@@ -50,30 +46,45 @@ export function ComPortsFilter({
     }, [databaseId]);
 
     /**
-     * Извлечь уникальные COM-порты и отсортировать их
+     * Извлечь уникальные COM-порты с корректной проверкой при exactOptionalPropertyTypes
      */
     const uniquePorts = useMemo((): readonly string[] => {
         const portsSet = new Set<string>();
 
         for (const device of devices) {
-            const portName = device.comPortName;
-            if (portName !== undefined && portName.trim() !== '') {
-                portsSet.add(portName);
+            if (!('comPortName' in device)) {
+                continue;
             }
+
+            const portName = device.comPortName;
+
+            // ИСПРАВЛЕНО: проверка на строку вместо !== undefined/null
+            if (typeof portName !== 'string' || portName.trim() === '') {
+                continue;
+            }
+
+            portsSet.add(portName.trim());
         }
 
-        // Сортировка: COM1, COM2, ..., COM10, COM11
-        return Array.from(portsSet).sort((a, b) => {
-            const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
-            const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+        const portsArray = Array.from(portsSet);
+        return portsArray.sort((a, b) => {
+            const numA = parseInt(a.replace(/\D/g, ''), 10);
+            const numB = parseInt(b.replace(/\D/g, ''), 10);
+
+            if (Number.isNaN(numA) && Number.isNaN(numB)) {
+                return a.localeCompare(b);
+            }
+            if (Number.isNaN(numA)) {
+                return 1;
+            }
+            if (Number.isNaN(numB)) {
+                return -1;
+            }
+
             return numA - numB;
         });
     }, [devices]);
 
-    /**
-     * Обработчик клика на вкладку порта.
-     * Повторный клик на активный порт сбрасывает фильтр.
-     */
     const handlePortClick = useCallback(
         (port: string): void => {
             onPortChange(selectedPort === port ? undefined : port);
@@ -81,22 +92,20 @@ export function ComPortsFilter({
         [selectedPort, onPortChange]
     );
 
-    /**
-     * Получить устройства для конкретного порта
-     */
     const getDevicesForPort = useCallback(
         (port: string): readonly PortableDeviceDto[] => {
             return devices.filter((d) => {
+                if (!('comPortName' in d)) {
+                    return false;
+                }
                 const portName = d.comPortName;
-                return portName !== undefined && portName === port;
+                // ИСПРАВЛЕНО: проверка на строку
+                return typeof portName === 'string' && portName.trim() === port;
             });
         },
         [devices]
     );
 
-    /**
-     * Подсчёт устройств для конкретного порта
-     */
     const getPortDeviceCount = useCallback(
         (port: string): number => {
             return getDevicesForPort(port).length;
@@ -104,9 +113,6 @@ export function ComPortsFilter({
         [getDevicesForPort]
     );
 
-    /**
-     * Построение графиков для всех устройств порта
-     */
     const handleBuildChartsForPort = useCallback(
         async (e: React.MouseEvent, port: string): Promise<void> => {
             e.stopPropagation();
@@ -125,27 +131,29 @@ export function ComPortsFilter({
             setBuildingPort(port);
 
             try {
-                // Обрабатываем каждое устройство последовательно
                 for (const device of portDevices) {
-                    const factoryNumber = device.factoryNumber ?? '';
+                    // ИСПРАВЛЕНО: проверка на строку вместо ?? ''
+                    const factoryNumber = ('factoryNumber' in device && typeof device.factoryNumber === 'string')
+                        ? device.factoryNumber
+                        : '';
+
                     if (factoryNumber === '') {
                         console.warn('Устройство без factoryNumber:', device);
                         continue;
                     }
 
                     if (defaultBaseTemplateId === undefined) {
-                        notify.error(`defaultBaseTemplateId is undefined | ${device.factoryNumber} | ${device.id}`);
+                        notify.error(`defaultBaseTemplateId is undefined | ${factoryNumber} | ${device.id}`);
                         continue;
                     }
 
                     if (defaultSensorTemplateId === undefined) {
-                        notify.error(`defaultSensorTemplateId is undefined | ${device.factoryNumber} | ${device.id}`);
+                        notify.error(`defaultSensorTemplateId is undefined | ${factoryNumber} | ${device.id}`);
                         continue;
                     }
 
                     let actualSensors: readonly SensorDto[] = [];
 
-                    // Всегда загружаем сенсоры через API
                     try {
                         const result = await dispatch(
                             fetchSensors({
@@ -162,11 +170,9 @@ export function ComPortsFilter({
                             `Ошибка загрузки сенсоров для устройства ${factoryNumber}:`,
                             error
                         );
-                        // Продолжаем со следующим устройством
                         continue;
                     }
 
-                    // Строим графики для устройства
                     await buildCharts(
                         dispatch,
                         technicalRun,
@@ -197,8 +203,13 @@ export function ComPortsFilter({
         ]
     );
 
-    // Не показываем фильтр, если портов меньше 2
-    if (uniquePorts.length < 2) {
+    if (uniquePorts.length === 0) {
+        if (import.meta.env.DEV) {
+            console.warn('ComPortsFilter: нет портов для отображения', {
+                devicesCount: devices.length,
+                devicesWithPorts: devices.filter(d => 'comPortName' in d && typeof d.comPortName === 'string').length,
+            });
+        }
         return null;
     }
 
@@ -238,9 +249,10 @@ export function ComPortsFilter({
                                 <button
                                     type="button"
                                     className={styles.buildButton}
-                                    onClick={(e) => handleBuildChartsForPort(e, port)}
+                                    onClick={(e) => void handleBuildChartsForPort(e, port)}
                                     disabled={isBuilding}
                                     title={`Построить графики для всех устройств на ${port}`}
+                                    aria-label={`Построить графики для ${port}`}
                                 >
                                     {isBuilding ? '⏳' : '📈'}
                                 </button>

@@ -106,19 +106,27 @@
 .gasesContainer {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
 .gasBadge {
-    display: inline-block;
+    position: relative;
+    display: flex;
     padding: 2px 6px;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 500;
     color: #1976d2;
     background: #e3f2fd;
     border-radius: 4px;
     white-space: nowrap;
+}
+
+.gasBadge .displayUnit{
+    position: absolute;
+    right: -10px;
+    top: -10px;
+    font-size: 8px;
 }
 
 /* Кнопка построения графика */
@@ -158,4 +166,30 @@
     text-align: center;
     color: #999;
     font-size: 13px;
+}
+
+/* Подсветка самого элемента устройства, когда он активен */
+.item {
+    padding: 12px;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+/* Когда устройство подсвечено через родителя */
+.deviceWrapperActive .item {
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.item:hover {
+    background-color: #f5f5f5;
+    border-color: #64b5f6;
+}
+
+.selected {
+    background-color: #e3f2fd;
+    border-color: #1976d2;
 }

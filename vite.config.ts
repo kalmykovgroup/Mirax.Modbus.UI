@@ -86,7 +86,7 @@ export default defineConfig(({ mode }): UserConfig => {
         compress: {
             drop_console: true,
             drop_debugger: true,
-            pure_funcs: ['console.log', 'console.info'],
+         //   pure_funcs: ['console.log', 'console.info'],
         },
         format: {
             comments: false,

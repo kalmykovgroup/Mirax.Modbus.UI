@@ -1,19 +1,61 @@
 /* src/features/chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDevicesList.module.css */
 
-/* Список устройств */
 .list {
-    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     padding: 0;
+    margin: 0;
+    list-style: none;
 }
 
-/* Пустое состояние */
+.deviceWrapper {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 8px;
+}
+
+/* Активное устройство - яркая подсветка */
+.deviceWrapperActive {
+    background: linear-gradient(135deg, #fff9e6 0%, #fff3d4 100%);
+    border: 2px solid #ffd54f;
+    padding: 8px;
+    box-shadow:
+            0 4px 12px rgba(255, 193, 7, 0.25),
+            0 0 0 4px rgba(255, 193, 7, 0.1);
+    animation: pulseHighlight 2s ease-in-out infinite;
+}
+
+/* Пульсирующая анимация для привлечения внимания */
+@keyframes pulseHighlight {
+    0%, 100% {
+        box-shadow:
+                0 4px 12px rgba(255, 193, 7, 0.25),
+                0 0 0 4px rgba(255, 193, 7, 0.1);
+    }
+    50% {
+        box-shadow:
+                0 6px 20px rgba(255, 193, 7, 0.4),
+                0 0 0 6px rgba(255, 193, 7, 0.2);
+    }
+}
+
+/* Состояния ошибки и пустого списка */
+.errorState,
 .emptyState {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 120px;
-    padding: 24px;
-    color: #999;
-    font-size: 14px;
+    padding: 32px 16px;
     text-align: center;
+    font-size: 14px;
+    color: #757575;
+    border-radius: 8px;
+}
+
+.errorState {
+    background-color: #fef2f2;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+}
+
+.emptyState {
+    background-color: #f9fafb;
+    border: 1px dashed #d1d5db;
 }

@@ -100,7 +100,7 @@ export async function buildCharts(
             sensorResolved.resolvedToMs = toMs;*/
 
             // Изменяем имя шаблона для удобства (добавляем номер канала и газ)
-            sensorResolved.name = `${sensorTemplate.name} - Канал ${sensor.channelNumber} (${sensor.gas ?? 'N/A'})`;
+            sensorResolved.name = `${sensorTemplate.name} - Канал ${sensor.channelNumber} (${sensor.gas ?? 'N/A'}) ${sensor.displayUnits ?? ''}(${sensor.mainUnits ?? ''})`;
 
             const sensorContextId = Guid.NewGuid();
             dispatch(

@@ -1,5 +1,5 @@
 // src/features/chartsPage/charts/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/PortableDeviceItem.tsx
-import React, { useCallback, useRef, useMemo, useEffect, type JSX } from 'react';
+import React, { useCallback, useRef, useEffect, type JSX } from 'react';
 import classNames from 'classnames';
 
 import styles from './PortableDeviceItem.module.css';
@@ -14,32 +14,33 @@ import {
     selectSelectedDeviceFactoryNumber,
     selectCurrentDatabase,
     selectSensorsData,
-    selectSensorsLoading, selectDefaultBaseTemplateId, selectDefaultSensorTemplateId,
+    selectSensorsLoading,
+    selectDefaultBaseTemplateId,
+    selectDefaultSensorTemplateId,
 } from '@chartsPage/mirax/miraxSlice';
 import { fetchSensors } from '@chartsPage/mirax/miraxThunks';
 import { CopyButton } from '@chartsPage/components/CopyButton/CopyButton';
 import { SensorsList } from '@chartsPage/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/SensorsList/SensorsList';
 import type { LoadSensorsRequest } from '@chartsPage/mirax/miraxThunk.types';
 
-import {useSelector} from "react-redux";
-import {buildCharts} from "@chartsPage/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/buildCharts.ts";
-import type {DatabaseDto} from "@chartsPage/metaData/shared/dtos/DatabaseDto.ts";
-import {notify} from "@app/lib/notify.ts";
+import { useSelector } from 'react-redux';
+import { buildCharts } from '@chartsPage/mirax/MiraxContainer/PortableDevicesList/PortableDeviceItem/buildCharts.ts';
+import type { DatabaseDto } from '@chartsPage/metaData/shared/dtos/DatabaseDto.ts';
+import { notify } from '@app/lib/notify.ts';
 
 interface Props {
     readonly device: PortableDeviceDto;
     readonly technicalRun: TechnicalRunDto;
     readonly isFirst: boolean;
+    readonly isHighlighted: boolean;
 }
 
-
-export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JSX.Element {
-
+export function PortableDeviceItem({ device, technicalRun, isFirst, isHighlighted }: Props): JSX.Element {
     const defaultBaseTemplateId = useSelector(selectDefaultBaseTemplateId);
     const defaultSensorTemplateId = useSelector(selectDefaultSensorTemplateId);
 
-    //  Runtime-защита: проверяем обязательные данные
-    if (!technicalRun || !device) {
+    // Runtime-защита: проверяем обязательные данные
+    if (technicalRun === undefined || device === undefined) {
         console.error('PortableDeviceItem: отсутствуют обязательные данные', {
             technicalRun,
             device,
@@ -52,10 +53,14 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
     }
 
     const dispatch = useAppDispatch();
-    const database : DatabaseDto | undefined = useAppSelector(selectCurrentDatabase);
+    const database: DatabaseDto | undefined = useAppSelector(selectCurrentDatabase);
     const databaseRef = useRef(database);
 
-    const factoryNumber = device.factoryNumber ?? '';
+    // ИСПРАВЛЕНО: корректная типизация для exactOptionalPropertyTypes
+    const factoryNumber = ('factoryNumber' in device && typeof device.factoryNumber === 'string')
+        ? device.factoryNumber
+        : '';
+
     const isExpanded = useAppSelector((state) => selectIsDeviceExpanded(state, factoryNumber));
     const isSelected = useAppSelector(selectSelectedDeviceFactoryNumber) === factoryNumber;
     const abortControllerRef = useRef<AbortController | undefined>(undefined);
@@ -65,15 +70,15 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
         databaseRef.current = database;
     }, [database]);
 
-    //  Получаем все шаблоны для построения графиков
+    // Получаем все шаблоны для построения графиков
     const allTemplates = useAppSelector((state) => state.chartsTemplates.items);
 
-    //  Получаем данные сенсоров из slice
+    // Получаем данные сенсоров из slice
     const sensors = useAppSelector((state) =>
         selectSensorsData(state, technicalRun.id, factoryNumber)
     );
 
-    //  Получаем статус загрузки сенсоров
+    // Получаем статус загрузки сенсоров
     const sensorsLoadingState = useAppSelector((state) =>
         selectSensorsLoading(state, technicalRun.id, factoryNumber)
     );
@@ -106,17 +111,6 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
             );
         }
     }, [isFirst, database, technicalRun.id, factoryNumber, sensors.length, isLoading, dispatch]);
-
-    // Собираем уникальные газы из сенсоров
-    const uniqueGases = useMemo(() => {
-        const gasSet = new Set<string>();
-        for (const sensor of sensors) {
-            if (sensor.gas) {
-                gasSet.add(sensor.gas);
-            }
-        }
-        return Array.from(gasSet).sort();
-    }, [sensors]);
 
     const handleSelect = useCallback(() => {
         if (factoryNumber) {
@@ -161,7 +155,6 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
         [dispatch, factoryNumber, isExpanded, sensors.length, database, technicalRun.id]
     );
 
-
     /**
      * Обработчик кнопки для вывода данных в консоль и построения графика
      */
@@ -169,8 +162,8 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
         async (e: React.MouseEvent) => {
             e.stopPropagation();
 
-            if(databaseRef.current == undefined){
-                notify.error("Database is undefined");
+            if (databaseRef.current === undefined) {
+                notify.error('Database is undefined');
                 return;
             }
 
@@ -179,10 +172,10 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
             // Догружаем сенсоры только если их нет в кеше
             if (sensors.length === 0 && factoryNumber) {
                 try {
-                    console.log("databaseRef.current.id",databaseRef.current.id)
+                    console.log('databaseRef.current.id', databaseRef.current.id);
                     const result = await dispatch(
                         fetchSensors({
-                            databaseId : databaseRef.current.id,
+                            databaseId: databaseRef.current.id,
                             technicalRunId: technicalRun.id,
                             factoryNumber,
                             signal: new AbortController().signal,
@@ -196,13 +189,37 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
                 }
             }
 
-            await buildCharts(dispatch, technicalRun, device, actualSensors, allTemplates, defaultBaseTemplateId, defaultSensorTemplateId, databaseRef.current.id);
+            await buildCharts(
+                dispatch,
+                technicalRun,
+                device,
+                actualSensors,
+                allTemplates,
+                defaultBaseTemplateId,
+                defaultSensorTemplateId,
+                databaseRef.current.id
+            );
         },
-        [technicalRun, device, sensors, databaseRef, factoryNumber, dispatch]
+        [
+            technicalRun,
+            device,
+            sensors,
+            factoryNumber,
+            dispatch,
+            allTemplates,
+            defaultBaseTemplateId,
+            defaultSensorTemplateId,
+        ]
     );
 
     return (
-        <li className={classNames(styles.item, isSelected && styles.selected)}>
+        <li
+            className={classNames(
+                styles.item,
+                isSelected && styles.selected,
+                isHighlighted && styles.highlighted // ДОБАВЛЕНО: применяем класс подсветки
+            )}
+        >
             <div className={styles.header} onClick={handleSelect}>
                 <button
                     className={styles.expandButton}
@@ -220,25 +237,32 @@ export function PortableDeviceItem({ device, technicalRun, isFirst }: Props): JS
                 <div className={styles.content}>
                     <div className={styles.nameContainer}>
                         <h4 className={styles.name}>{device.factoryNumber}</h4>
-                        <CopyButton className={styles.btnCopyFactoryNumber} text={device.factoryNumber} label="Копировать factoryNumber устройства" />
+                        <CopyButton
+                            className={styles.btnCopyFactoryNumber}
+                            text={device.factoryNumber}
+                            label="Копировать factoryNumber устройства"
+                        />
                     </div>
 
                     <div className={styles.metaRow}>
                         {device.factoryNumber && (
                             <>
                                 <span className={styles.factoryNumber}>ID:{device.id}</span>
-                                <CopyButton className={styles.btnCopyFactoryNumber} text={device.id} label="Копировать ID устройства" />
+                                <CopyButton
+                                    className={styles.btnCopyFactoryNumber}
+                                    text={device.id}
+                                    label="Копировать ID устройства"
+                                />
                             </>
-
-
                         )}
 
-                        {!isLoading && uniqueGases.length > 0 && (
+                        {!isLoading && sensors.length > 0 && (
                             <div className={styles.gasesContainer}>
-                                {uniqueGases.map((gas) => (
-                                    <span key={gas} className={styles.gasBadge}>
-                                        {gas}
-                                    </span>
+                                {sensors.map((sensor) => (
+                                    <div key={sensor.gas} className={styles.gasBadge}>
+                                        {sensor.gas}{' '}
+                                        <div className={styles.displayUnit}>{sensor.displayUnits}</div>
+                                    </div>
                                 ))}
                             </div>
                         )}

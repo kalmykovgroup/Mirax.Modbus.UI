@@ -12,6 +12,7 @@ import {
     openTechnicalRunTab,
     selectActiveContextId,
     selectTechnicalRunsData,
+    setActiveFactoryNumber, // ДОБАВЛЕНО
 } from '@chartsPage/mirax/miraxSlice';
 import { fetchTechnicalRuns } from '@chartsPage/mirax/miraxThunks';
 import { ErrorMessage } from '@chartsPage/mirax/MiraxContainer/ErrorMessage/ErrorMessage';
@@ -38,21 +39,19 @@ export function TechnicalRunsPanel(): JSX.Element {
     const activeContextId = useAppSelector(selectActiveContextId);
 
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeFactoryNumber, setActiveFactoryNumber] = useState<string | undefined>(undefined);
+    const [activeFactoryNumber, setActiveFactoryNumberLocal] = useState<string | undefined>(undefined);
     const [sortType, setSortType] = useState<TechnicalRunSortTypeValue>(
         TechnicalRunSortType.DATE_END_DESC
     );
 
     const technicalRuns = useAppSelector(selectTechnicalRunsData);
 
-    // Автозагрузка при монтировании
     useEffect(() => {
         if (database === undefined) {
             console.error('Database id is undefined');
             return;
         }
 
-        // Ключевая проверка: если уже загружается или есть данные - не стартуем
         if (isLoading) {
             console.warn('Данные уже загружаются');
             return;
@@ -74,12 +73,11 @@ export function TechnicalRunsPanel(): JSX.Element {
     const filteredAndSortedRuns = useMemo(() => {
         let result = technicalRuns;
 
-        // Фильтрация по поисковому запросу
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase().trim();
 
             result = technicalRuns.filter((run) => {
-                const nameMatch = run.name?.toLowerCase().includes(query);
+                const nameMatch = typeof run.name === 'string' && run.name.toLowerCase().includes(query);
                 const startDate = new Date(run.dateStarTime).toLocaleDateString('ru-RU');
                 const endDate = new Date(run.dateEndTime).toLocaleDateString('ru-RU');
                 const dateMatch = startDate.includes(query) || endDate.includes(query);
@@ -88,7 +86,6 @@ export function TechnicalRunsPanel(): JSX.Element {
             });
         }
 
-        // Сортировка
         return sortTechnicalRuns(result, sortType);
     }, [technicalRuns, searchQuery, sortType]);
 
@@ -115,6 +112,7 @@ export function TechnicalRunsPanel(): JSX.Element {
         setSortType(newSortType);
     }, []);
 
+    // НЕ ИЗМЕНЕНО: оставляем как было
     const handleRunClick = useCallback(
         (run: TechnicalRunDto) => {
             dispatch(
@@ -130,7 +128,9 @@ export function TechnicalRunsPanel(): JSX.Element {
     const handleFactoryNumberSearch = useCallback(
         (factoryNumber: string) => {
             if (database?.id === undefined) return;
-            setActiveFactoryNumber(factoryNumber);
+            setActiveFactoryNumberLocal(factoryNumber);
+            // ДОБАВЛЕНО: сохраняем в Redux отдельным экшеном
+            dispatch(setActiveFactoryNumber(factoryNumber));
             void dispatch(
                 fetchTechnicalRuns({
                     databaseId: database.id,
@@ -143,7 +143,9 @@ export function TechnicalRunsPanel(): JSX.Element {
 
     const handleFactoryNumberClear = useCallback(() => {
         if (database?.id === undefined) return;
-        setActiveFactoryNumber(undefined);
+        setActiveFactoryNumberLocal(undefined);
+        // ДОБАВЛЕНО: очищаем в Redux отдельным экшеном
+        dispatch(setActiveFactoryNumber(undefined));
         void dispatch(
             fetchTechnicalRuns({
                 databaseId: database.id,
@@ -225,7 +227,9 @@ export function TechnicalRunsPanel(): JSX.Element {
                                 onClick={() => handleRunClick(run)}
                             >
                                 <div className={styles.itemContent}>
-                                    <h3 className={styles.itemName}>{run.name ?? 'Без названия'}</h3>
+                                    <h3 className={styles.itemName}>
+                                        {typeof run.name === 'string' ? run.name : 'Без названия'}
+                                    </h3>
                                     <div className={styles.info}>
                                         <span>ID:{run.id}</span>
                                         <CopyButton

@@ -15,7 +15,7 @@ export function SensorItem({ sensor }: Props): JSX.Element {
                 <span className={styles.gas}>{sensor.gas}</span>
                 <span className={styles.channel}>Канал {sensor.channelNumber}</span>
                 {sensor.modification && (
-                    <span className={styles.modification}>{sensor.modification}</span>
+                    <span className={styles.modification}>{sensor.modification} {sensor.displayUnits} ({sensor.mainUnits})</span>
                 )}
             </div>
         </li>

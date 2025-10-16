@@ -72,9 +72,44 @@ export function createOptions(params: CreateOptionsParams): EChartsOption {
     const shouldAnimate = animationConfig.enabled && avgPoints.length < 2000;
 
     // ============================================
-    // РАСЧЁТ ГРАНИЦ Y-ОСИ
+    // РАСЧЁТ ГРАНИЦ Y-ОСИ (ИСПРАВЛЕНО)
     // ============================================
-    const yAxisBounds = calculateYAxisBounds(avgPoints, customYAxisRange);
+    // Собираем ВСЕ точки из всех трёх серий для правильного расчёта границ
+    const allPoints: EChartsPoint[] = [];
+
+    avgPoints.forEach(point => {
+        if (Array.isArray(point) && point.length >= 2 && typeof point[1] === 'number' && Number.isFinite(point[1])) {
+            allPoints.push(point);
+        }
+    });
+
+    minPoints.forEach(point => {
+        if (Array.isArray(point) && point.length >= 2 && typeof point[1] === 'number' && Number.isFinite(point[1])) {
+            allPoints.push(point);
+        }
+    });
+
+    maxPoints.forEach(point => {
+        if (Array.isArray(point) && point.length >= 2 && typeof point[1] === 'number' && Number.isFinite(point[1])) {
+            allPoints.push(point);
+        }
+    });
+
+    // Если нет валидных точек вообще
+    if (allPoints.length === 0) {
+        return {
+            title: { text: fieldName, left: 'center' },
+            xAxis: {
+                type: 'time' as const,
+                ...(xAxisMin !== undefined && { min: xAxisMin }),
+                ...(xAxisMax !== undefined && { max: xAxisMax })
+            },
+            yAxis: { type: 'value' as const },
+            series: []
+        };
+    }
+
+    const yAxisBounds = calculateYAxisBounds(allPoints, customYAxisRange);
     const yMin = yAxisBounds.min;
     const yMax = yAxisBounds.max;
 
