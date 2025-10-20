@@ -25,13 +25,26 @@ import { RequestManagerRegistry } from '@chartsPage/charts/orchestration/request
 import type { TimeRange } from '@chartsPage/charts/core/store/types/chart.types';
 import { calculateBucket } from '@chartsPage/charts/core/store/chartsSettingsSlice.ts';
 
+interface NavigationInfo {
+    readonly currentIndex: number;
+    readonly totalFields: number;
+    readonly onPrevious: () => void;
+    readonly onNext: () => void;
+}
+
 interface FieldChartContainerProps {
     readonly contextId: Guid;
     readonly fieldName: string;
     readonly width: number;
+    readonly navigationInfo?: NavigationInfo | undefined;
 }
 
-export function FieldChartContainer({ contextId, fieldName, width }: FieldChartContainerProps) {
+export function FieldChartContainer({
+                                        contextId,
+                                        fieldName,
+                                        width,
+                                        navigationInfo
+                                    }: FieldChartContainerProps) {
     const dispatch = useAppDispatch();
     const requestManager = useRequestManager();
 
@@ -103,7 +116,7 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
     // ========== КРИТИЧНО: Все динамические значения в ref ==========
     const currentBucketRef = useRef<typeof currentBucket>(currentBucket);
     const syncEnabledRef = useRef<boolean>(syncEnabled);
-    const isCurrentFieldSyncedRef = useRef<boolean>(isCurrentFieldSynced); // ← ДОБАВЛЕНО
+    const isCurrentFieldSyncedRef = useRef<boolean>(isCurrentFieldSynced);
     const otherSyncFieldsRef = useRef<typeof otherSyncFields>(otherSyncFields);
     const widthRef = useRef<number>(width);
     const loadDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -122,7 +135,7 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
     }, [syncEnabled]);
 
     useEffect(() => {
-        isCurrentFieldSyncedRef.current = isCurrentFieldSynced; // ← ДОБАВЛЕНО
+        isCurrentFieldSyncedRef.current = isCurrentFieldSynced;
     }, [isCurrentFieldSynced]);
 
     useEffect(() => {
@@ -344,6 +357,7 @@ export function FieldChartContainer({ contextId, fieldName, width }: FieldChartC
             onRetry={handleRetry}
             width={width}
             currentRange={currentRange}
+            navigationInfo={navigationInfo}
         />
     );
 }

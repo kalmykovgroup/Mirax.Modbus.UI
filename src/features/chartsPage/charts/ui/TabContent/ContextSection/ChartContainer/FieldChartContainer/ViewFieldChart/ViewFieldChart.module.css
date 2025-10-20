@@ -1,3 +1,28 @@
+/* features/chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ViewFieldChart.module.css */
+
+/* НОВОЕ: Обёртка для fullscreen */
+.fullscreenWrapper {
+    position: relative;
+    width: 100%;
+}
+
+/* ИСПРАВЛЕНО: Убран 100vw, добавлен overflow */
+.fullscreenActive {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 9999 !important;
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: auto !important;
+}
+
+/* Существующие стили */
 .viewFieldChartContainer {
     display: flex;
     width: 100%;
@@ -35,7 +60,6 @@
     box-sizing: border-box;
 }
 
-/* КРИТИЧНО: Стили для ECharts контейнера внутри chartWrapper */
 .chartWrapper > div {
     width: 100% !important;
     max-width: 100% !important;
@@ -43,7 +67,6 @@
     box-sizing: border-box !important;
 }
 
-/* КРИТИЧНО: Стили для canvas внутри ECharts */
 .chartWrapper canvas {
     max-width: 100% !important;
     height: auto !important;
@@ -132,6 +155,20 @@
 
 .toggleHeaderButton:hover .toggleIcon {
     color: #333;
+}
+
+.title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.exportButton {
+    flex-shrink: 0;
 }
 
 @media (max-width: 1024px) {

@@ -1,31 +1,44 @@
 // components/ChartContainer/ChartContainer.tsx
-// Корневой контейнер для всех графиков
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store/store';
 import { selectTemplate } from '@chartsPage/charts/core/store/selectors/base.selectors';
 import styles from './ChartContainer.module.css';
-import {useChartInitialization} from "@chartsPage/charts/orchestration/hooks/useChartInitialization.ts";
-import {FieldChartContainer} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/FieldChartContainer.tsx";
-import {useRequestManager} from "@chartsPage/charts/orchestration/hooks/useRequestManager.ts";
-
-
+import { useChartInitialization } from "@chartsPage/charts/orchestration/hooks/useChartInitialization.ts";
+import { FieldChartContainer } from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/FieldChartContainer.tsx";
+import { useRequestManager } from "@chartsPage/charts/orchestration/hooks/useRequestManager.ts";
 import { ENV } from '@/env';
+
 const CHART_MIN_CONTAINER_WIDTH = ENV.CHART_MIN_CONTAINER_WIDTH;
 
 export function ChartContainer() {
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
+    const [_activeFieldIndex, setActiveFieldIndex] = useState<number>(0);
 
-    const manager = useRequestManager(); // Получаем менеджер из Context
-    const contextId = manager.getContextId(); // Менеджер знает свой contextId
+    const manager = useRequestManager();
+    const contextId = manager.getContextId();
 
     const template = useSelector((state: RootState) => selectTemplate(state, contextId));
 
+    // Мемоизированный массив имён полей
+    const fieldNames = useMemo(() => {
+        if (!template) return [];
+        return template.selectedFields.map(f => f.name);
+    }, [template]);
+
+    // Навигация между графиками
+    const handleNavigatePrevious = useCallback(() => {
+        setActiveFieldIndex(prev => Math.max(0, prev - 1));
+    }, []);
+
+    const handleNavigateNext = useCallback(() => {
+        setActiveFieldIndex(prev => Math.min(fieldNames.length - 1, prev + 1));
+    }, [fieldNames.length]);
+
     /**
      * Измерение ширины контейнера
-     * Запускается один раз при монтировании и при resize
      */
     useEffect(() => {
         const containerElement = containerRef.current;
@@ -39,7 +52,6 @@ export function ChartContainer() {
                 const normalizedWidth = Math.max(CHART_MIN_CONTAINER_WIDTH, Math.round(width));
 
                 setContainerWidth(prev => {
-                    // Обновляем только если ширина действительно изменилась
                     if (prev !== normalizedWidth) {
                         return normalizedWidth;
                     }
@@ -48,10 +60,8 @@ export function ChartContainer() {
             }
         };
 
-        // Начальное измерение
         measureWidth();
 
-        // Подписка на изменение размера
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 const { width } = entry.contentRect;
@@ -75,17 +85,14 @@ export function ChartContainer() {
         };
     }, []);
 
-
     /**
      * Инициализация графиков
-     * Запустится автоматически после измерения ширины
      */
     const { isInitializing, isInitialized, error, reinitialize } = useChartInitialization({
         contextId: contextId,
         px: containerWidth
     });
 
-    // Состояние: нет template
     if (!template) {
         return (
             <div ref={containerRef} className={styles.container}>
@@ -96,7 +103,6 @@ export function ChartContainer() {
         );
     }
 
-    // Состояние: измерение ширины контейнера
     if (containerWidth === undefined) {
         return (
             <div ref={containerRef} className={styles.container}>
@@ -108,7 +114,6 @@ export function ChartContainer() {
         );
     }
 
-    // Состояние: инициализация
     if (isInitializing) {
         return (
             <div className={styles.container}>
@@ -120,7 +125,6 @@ export function ChartContainer() {
         );
     }
 
-    // Состояние: ошибка инициализации
     if (error) {
         return (
             <div className={styles.container}>
@@ -138,7 +142,6 @@ export function ChartContainer() {
         );
     }
 
-    // Состояние: не инициализирован (не должно происходить, но для типобезопасности)
     if (!isInitialized) {
         return (
             <div className={styles.container}>
@@ -156,18 +159,22 @@ export function ChartContainer() {
         );
     }
 
-
-    // Основной контент: список графиков
     return (
         <div ref={containerRef} className={styles.container}>
             <div className={styles.chartsGrid}>
-                {template.selectedFields.map(field => (
-                        <FieldChartContainer
-                            contextId={contextId}
-                            key={field.name}
-                            fieldName={field.name}
-                            width={containerWidth}
-                        />
+                {template.selectedFields.map((field, index) => (
+                    <FieldChartContainer
+                        contextId={contextId}
+                        key={field.name}
+                        fieldName={field.name}
+                        width={containerWidth}
+                        navigationInfo={{
+                            currentIndex: index,
+                            totalFields: fieldNames.length,
+                            onPrevious: handleNavigatePrevious,
+                            onNext: handleNavigateNext
+                        }}
+                    />
                 ))}
             </div>
         </div>
