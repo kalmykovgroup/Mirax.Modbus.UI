@@ -7,13 +7,13 @@ import TopNav from "@ui/components/TopNav/TopNav.tsx";
 const MainLayout: React.FC = () => {
     return (
         <div className={style.mainLayout}>
-            <Header className={style.headerContainer}/>
+            <Header />
 
              <TopNav/>
              <main className={style.mainContainer}>
                 <Outlet />
              </main>
-            <Footer className={style.footerContainer}/>
+            <Footer/>
        </div>
     );
 };

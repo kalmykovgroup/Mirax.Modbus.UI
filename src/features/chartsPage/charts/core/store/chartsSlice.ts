@@ -14,7 +14,9 @@ import type {
     SeriesTile,
     TimeRange,
 } from '@chartsPage/charts/core/store/types/chart.types.ts';
-import type { Guid } from '@app/lib/types/Guid'; 
+import type { Guid } from '@app/lib/types/Guid';
+import {persistReducer} from "redux-persist";
+import localforage from "localforage";
 
 // ============= ТИПЫ =============
 
@@ -770,7 +772,28 @@ const contextsSlice = createSlice({
 
 // ============= ЭКСПОРТЫ =============
 
-export const contextsReducer = contextsSlice.reducer;
+const contextsReducer = contextsSlice.reducer;
+
+const chartsDB = localforage.createInstance({
+    name: 'ChartsDB',
+    storeName: 'charts_data',
+    description: 'Cached chart tiles data'
+});
+
+const chartsPersistConfig = {
+    key: 'charts',
+    storage: chartsDB,
+    version: 1, // Увеличиваем версию чтобы сбросить старые данные'
+    throttle: 2000,
+    debug: true,
+};
+
+export const persistedChartsReducer = persistReducer(
+    chartsPersistConfig,
+    contextsReducer
+);
+
+
 
 export const {
     // Управление контекстами

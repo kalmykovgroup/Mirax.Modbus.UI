@@ -364,7 +364,7 @@ export class DataProcessingService {
 
 
         // Формируем запрос
-        const template = state.charts.chartContexts[contextId]?.template;
+        const template = state.contexts.chartContexts[contextId]?.template;
         if (!template) {
             console.error('[analyzeLoadNeeds] No template');
             return false;
@@ -379,7 +379,7 @@ export class DataProcessingService {
 
         return {
             template: {...template,
-                selectedFields: [...state.charts.chartContexts[contextId]?.syncFields ?? [], field],
+                selectedFields: [...state.contexts.chartContexts[contextId]?.syncFields ?? [], field],
                 resolvedFromMs: optimizedInterval.fromMs,
                 resolvedToMs: optimizedInterval.toMs,
             },

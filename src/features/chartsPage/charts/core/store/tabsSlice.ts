@@ -4,6 +4,8 @@
 import { createSlice, type PayloadAction, createSelector } from '@reduxjs/toolkit';
 import type { Guid } from '@app/lib/types/Guid';
 import type { RootState } from '@/store/store';
+import sessionStorage from "redux-persist/lib/storage/session";
+import {persistReducer} from "redux-persist";
 
 // ============= КОНСТАНТЫ =============
 
@@ -361,7 +363,13 @@ const tabsSlice = createSlice({
 
 // ============= ЭКСПОРТЫ ACTIONS =============
 
-export const tabsReducer = tabsSlice.reducer;
+const tabsPersistConfig = {
+    key: 'charts-tabs',
+    storage: sessionStorage, // Временно: до закрытия браузера
+};
+
+export const tabsReducer = persistReducer(tabsPersistConfig, tabsSlice.reducer);
+
 
 export const {
     createTab,

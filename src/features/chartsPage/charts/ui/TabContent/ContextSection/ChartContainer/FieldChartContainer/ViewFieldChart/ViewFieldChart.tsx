@@ -117,19 +117,18 @@ export const ViewFieldChart = memo(function ViewFieldChart({
             document.body.style.top = '0';
             document.body.style.left = '0';
 
-            return () => {
-                // Восстанавливаем стили
-                document.body.style.overflow = originalOverflow;
-                document.body.style.position = originalPosition;
-                document.body.style.width = '';
-                document.body.style.top = '';
-                document.body.style.left = '';
 
-                // КРИТИЧНО: Форсируем пересчёт layout после выхода
-                requestAnimationFrame(() => {
-                    window.dispatchEvent(new Event('resize'));
-                });
-            };
+            // Восстанавливаем стили
+            document.body.style.overflow = originalOverflow;
+            document.body.style.position = originalPosition;
+            document.body.style.width = '';
+            document.body.style.top = '';
+            document.body.style.left = '';
+
+            // КРИТИЧНО: Форсируем пересчёт layout после выхода
+            requestAnimationFrame(() => {
+                window.dispatchEvent(new Event('resize'));
+            });
         }
     }, [isFullscreen]);
 

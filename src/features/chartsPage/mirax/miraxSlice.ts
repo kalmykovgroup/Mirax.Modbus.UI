@@ -7,6 +7,8 @@ import type {MiraxLoadingState} from "@chartsPage/mirax/miraxThunk.types.ts";
 import type {RootState} from "@/store/store.ts";
 import { ENV } from '@/env';
 import type {DatabaseDto} from "@chartsPage/metaData/shared/dtos/DatabaseDto.ts";
+import sessionStorage from "redux-persist/lib/storage/session";
+import {persistReducer} from "redux-persist";
 
 /**
  * Вкладка испытания
@@ -882,4 +884,10 @@ export const selectActiveFactoryNumber = (state: RootState): string | undefined 
     state.mirax.activeFactoryNumber;
 
 
-export const miraxReducer = miraxSlice.reducer;
+
+const miraxPersistConfig = {
+    key: 'mirax',
+    storage: sessionStorage, // Временно: до закрытия браузера
+};
+
+export const miraxReducer = persistReducer(miraxPersistConfig, miraxSlice.reducer);

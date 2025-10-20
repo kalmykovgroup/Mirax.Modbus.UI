@@ -20,12 +20,11 @@ import {metadataApi} from "@chartsPage/metaData/shared/api/metadataApi.ts";
 import {chartsTemplatesReducer} from "@chartsPage/template/store/chartsTemplatesSlice.ts";
 import {chartReqTemplatesApi} from "@chartsPage/template/shared//api/chartReqTemplatesApi.ts";
 import {chartsApi} from "@chartsPage/charts/core/api/chartsApi.ts";
-import { persistedChartsReducer } from '@chartsPage/charts/core/store/chartsPersistConfig';
 import {miraxApi} from "@chartsPage/mirax/miraxApi.ts";
 import {miraxReducer} from "@chartsPage/mirax/miraxSlice.ts";
 
 import {tabsReducer} from "@chartsPage/charts/core/store/tabsSlice.ts";
-import {contextsReducer} from "@chartsPage/charts/core/store/chartsSlice.ts";
+import {persistedChartsReducer} from "@chartsPage/charts/core/store/chartsSlice.ts";
 export const rootReducer = combineReducers({
     // Persisted slices
     auth: authReducer,
@@ -35,8 +34,7 @@ export const rootReducer = combineReducers({
     workflow: workflowReducer,
     chartsSettings: chartsSettingsReducer,
 
-    charts: persistedChartsReducer,
-    contexts: contextsReducer,
+    contexts: persistedChartsReducer,
     // In-memory
     chartsMeta: chartsMetaReducer,
 
