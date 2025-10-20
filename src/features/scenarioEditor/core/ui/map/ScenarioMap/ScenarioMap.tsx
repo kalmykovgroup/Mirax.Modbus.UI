@@ -16,8 +16,8 @@ import {
     ReactFlow,
     SelectionMode,
     useReactFlow,
-    applyNodeChanges, // ⚡ ВАЖНО: импортируем applyNodeChanges
-    applyEdgeChanges, // ⚡ ВАЖНО: импортируем applyEdgeChanges
+    applyNodeChanges,
+    applyEdgeChanges,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useDispatch, useSelector } from 'react-redux';
@@ -61,7 +61,6 @@ import {
     rectOf,
 } from '@scenario/core/utils/dropUtils';
 
-
 // Тема
 import { useTheme } from '@app/providers/theme/useTheme';
 
@@ -74,16 +73,18 @@ import {
     selectActiveScenarioId,
     selectDenormalizedScenario,
     selectScenarioById
-} from "@scenario/store/scenarioSelectors.ts";
-import {useCommandDispatcher} from "@scenario/core/features/scenarioChangeCenter/useCommandDispatcher.ts";
+} from '@scenario/store/scenarioSelectors.ts';
 import {
-    BranchCommands,
-    RelationCommands,
-    StepCommands
-} from "@scenario/core/features/scenarioChangeCenter/commandBuilders.ts";
-import {refreshScenarioById, ScenarioLoadState} from "@scenario/store/scenarioSlice.ts";
-import {HistoryControls} from "@scenario/core/features/historySystem/HistoryControls/HistoryControls.tsx";
-import {PendingChangesViewer} from "@scenario/core/features/scenarioChangeCenter/PendingChangesViewer.tsx";
+    refreshScenarioById,
+    ScenarioLoadState,
+    updateStep,
+    updateBranch,
+    deleteStep,
+    deleteBranch,
+    deleteRelation,
+    addRelation,
+    addStep,
+} from '@scenario/store/scenarioSlice.ts';
 
 export interface ScenarioEditorProps {}
 
@@ -115,20 +116,33 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         activeId ? selectDenormalizedScenario(state, activeId) : null
     );
 
-    // Command Dispatcher
-    const commandDispatcher = useCommandDispatcher(activeId);
-
-    // --- Отслеживание позиций для фиксации в истории ---
+    // --- Отслеживание позиций для фиксации изменений ---
     const dragStartPositionsRef = useRef<Map<string, { x: number; y: number; branchId: Guid }>>(new Map());
 
-    // ⚡ ИСПРАВЛЕНИЕ: Правильная обработка изменений edges
+    // ⚡ СИНХРОНИЗАЦИЯ: Redux → ReactFlow
+    useEffect(() => {
+        if (!activeScenario) {
+            setNodes([]);
+            setEdges([]);
+            dragStartPositionsRef.current.clear();
+            return;
+        }
+
+        console.log('[ScenarioMap] 🔄 Syncing Redux → ReactFlow');
+
+        const { nodes: newNodes, edges: newEdges } = mapScenarioToFlow(activeScenario);
+        setNodes(newNodes);
+        setEdges(newEdges);
+    }, [activeScenario]);
+
+    // Обработка изменений edges
     const onEdgesChangeHandler = useCallback(
         (changes: EdgeChange[]) => {
-            // 1. СНАЧАЛА применяем изменения к UI
+            // 1. Применяем изменения к UI
             setEdges((eds) => applyEdgeChanges(changes, eds));
 
-            // 2. ПОТОМ фиксируем удаление в истории
-            if (!commandDispatcher || !activeId) return;
+            // 2. Фиксируем удаление в Redux
+            if (!activeId) return;
 
             for (const ch of changes) {
                 if (ch.type === 'remove' && ch.id) {
@@ -139,87 +153,78 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     const relation = state.scenario.relations.entities[edge.id];
 
                     if (relation) {
-                        commandDispatcher.execute(
-                            RelationCommands.delete(activeId, {
-                                relationId: edge.id as Guid,
-                                previousState: relation,
-                            })
-                        );
+                        console.log('[ScenarioMap] Deleting relation:', edge.id);
+                        dispatch(deleteRelation(edge.id as Guid));
                     }
                 }
             }
         },
-        [commandDispatcher, activeId, edgesRef]
+        [dispatch, activeId, edgesRef]
     );
 
-    // ScenarioMap.tsx (ТОЛЬКО ИЗМЕНЕННАЯ ЧАСТЬ onNodesChangeHandler)
-
-    // ScenarioMap.tsx (ТОЛЬКО ИЗМЕНЕННАЯ ЧАСТЬ onNodesChangeHandler)
-
+    // Обработка изменений nodes
     const onNodesChangeHandler: OnNodesChange<FlowNode> = useCallback(
         (changes: NodeChange<FlowNode>[]) => {
-            // 1. СНАЧАЛА применяем ВСЕ стандартные изменения React Flow
+            // 1. Применяем изменения к UI
             setNodes((nds) => applyNodeChanges(changes, nds));
 
-            // 2. ПОТОМ обрабатываем специфичные для нашей логики вещи
+            // 2. Обрабатываем специфичную логику
             for (const change of changes) {
                 // Начало перетаскивания - запоминаем начальную позицию
                 if (change.type === 'position' && change.dragging === true) {
                     const node = nodesRef.current.find((n) => n.id === change.id);
                     if (!node) continue;
 
-                    // ⚡ ИСПРАВЛЕНИЕ: Проверяем что это НЕ ветка
                     const isBranch = node.type === 'branchNode' || node.type === FlowType.branchNode;
-                    if (isBranch) continue; // Ветки не записываем в dragStartPositions
+                    if (isBranch) continue;
 
                     const state = store.getState();
                     const step = state.scenario.steps.entities[change.id];
 
                     if (step && (step as any).__persisted) {
-                        // ⚡ ИСПРАВЛЕНИЕ: Записываем только ОДИН раз при первом dragging: true
                         if (!dragStartPositionsRef.current.has(change.id)) {
                             dragStartPositionsRef.current.set(change.id, {
                                 x: step.x ?? node.position.x,
                                 y: step.y ?? node.position.y,
                                 branchId: step.branchId,
                             });
-                            console.log('[ScenarioMap] Saved start position for:', change.id, dragStartPositionsRef.current.get(change.id));
+                            console.log('[ScenarioMap] Drag start:', change.id);
                         }
                     }
                 }
 
-                // Конец перетаскивания - фиксируем изменение в истории
+                // Конец перетаскивания - обновляем Redux
                 if (change.type === 'position' && change.dragging === false && change.position) {
                     const startPos = dragStartPositionsRef.current.get(change.id);
-
-                    if (!startPos) {
-                        // Это нормально для веток - они не должны записываться в историю через position change
-                        continue;
-                    }
+                    if (!startPos) continue;
 
                     const newX = Math.round(change.position.x);
                     const newY = Math.round(change.position.y);
 
-                    // Проверяем, изменилась ли позиция
                     if (startPos.x !== newX || startPos.y !== newY) {
-                        if (commandDispatcher && activeId) {
+                        if (activeId) {
                             const state = store.getState();
                             const step = state.scenario.steps.entities[change.id];
 
                             if (step && (step as any).__persisted) {
-                                console.log('[ScenarioMap] Recording position update in history');
-                                commandDispatcher.execute(
-                                    StepCommands.update(activeId, {
+                                console.log('[ScenarioMap] 🎯 Updating step position in Redux:', {
+                                    stepId: change.id,
+                                    oldX: step.x,
+                                    oldY: step.y,
+                                    newX,
+                                    newY,
+                                });
+
+                                dispatch(
+                                    updateStep({
                                         stepId: change.id as Guid,
                                         changes: { x: newX, y: newY },
-                                        previousState: step as any,
                                     })
                                 );
                             }
                         }
                     }
 
-                    // Очищаем из кеша
                     dragStartPositionsRef.current.delete(change.id);
                 }
 
@@ -228,14 +233,14 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     dragStartPositionsRef.current.delete(change.id);
                 }
 
-                // Изменение размеров (для веток) - ТОЛЬКО при resizing: false
+                // Изменение размеров веток
                 if (change.type === 'dimensions' && change.dimensions && change.resizing === false) {
                     const node = nodesRef.current.find((n) => n.id === change.id);
                     if (!node) continue;
 
                     const isBranch = node.type === 'branchNode' || node.type === FlowType.branchNode;
 
-                    if (isBranch && commandDispatcher && activeId) {
+                    if (isBranch && activeId) {
                         const state = store.getState();
                         const branch = state.scenario.branches.entities[change.id];
 
@@ -244,13 +249,14 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                             const newHeight = Math.round(change.dimensions.height);
 
                             if (branch.width !== newWidth || branch.height !== newHeight) {
-                                commandDispatcher.execute(
-                                    BranchCommands.resize(activeId, {
+                                console.log('[ScenarioMap] Resizing branch:', change.id);
+                                dispatch(
+                                    updateBranch({
                                         branchId: change.id as Guid,
-                                        width: newWidth,
-                                        height: newHeight,
-                                        previousWidth: branch.width,
-                                        previousHeight: branch.height,
+                                        changes: {
+                                            width: newWidth,
+                                            height: newHeight,
+                                        },
                                     })
                                 );
                             }
@@ -259,7 +265,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 }
             }
         },
-        [commandDispatcher, activeId]
+        [dispatch, activeId]
     );
 
     // Версия для пересборки
@@ -275,19 +281,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         }
     }, [dispatch, activeId, scenarioMeta?.loadState]);
 
-    // Пересборка графа при изменении версии
-    useEffect(() => {
-        if (!activeScenario) {
-            setNodes([]);
-            setEdges([]);
-            dragStartPositionsRef.current.clear();
-            return;
-        }
-        const { nodes: n, edges: e } = mapScenarioToFlow(activeScenario);
-        setNodes(n);
-        setEdges(e);
-    }, [scenarioVersion, activeScenario]);
-
     // Доступ к RF
     const rf = useReactFlow<FlowNode, FlowEdge>();
 
@@ -298,16 +291,14 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     // Helpers
     const getAll = useCallback(() => rf.getNodes() as FlowNode[], [rf]);
 
-    // Выбор/удаление через команды
+    // Выбор/удаление
     const { selectedNodeIds, selectedEdgeIds, onSelectionChange, deleteSelected } = useSelection({
         setNodes,
         setEdges,
         getNodes: () => nodesRef.current,
         getEdges: () => edgesRef.current,
         onDeleted: ({ nodes, edges }) => {
-            if (!commandDispatcher || !activeId) return;
-
-            commandDispatcher.startBatch();
+            if (!activeId) return;
 
             for (const n of nodes) {
                 const isBranch = n.type === 'branchNode' || n.type === FlowType.branchNode;
@@ -316,22 +307,12 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 if (isBranch) {
                     const branch = state.scenario.branches.entities[n.id];
                     if (branch) {
-                        commandDispatcher.execute(
-                            BranchCommands.delete(activeId, {
-                                branchId: n.id as Guid,
-                                previousState: branch as any,
-                            })
-                        );
+                        dispatch(deleteBranch({ branchId: n.id as Guid }));
                     }
                 } else {
                     const step = state.scenario.steps.entities[n.id];
                     if (step) {
-                        commandDispatcher.execute(
-                            StepCommands.delete(activeId, {
-                                stepId: n.id as Guid,
-                                previousState: step as any,
-                            })
-                        );
+                        dispatch(deleteStep({ branchId: step.branchId, stepId: n.id as Guid }));
                     }
                 }
 
@@ -342,23 +323,16 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 const state = store.getState();
                 const relation = state.scenario.relations.entities[e.id];
                 if (relation) {
-                    commandDispatcher.execute(
-                        RelationCommands.delete(activeId, {
-                            relationId: e.id as Guid,
-                            previousState: relation,
-                        })
-                    );
+                    dispatch(deleteRelation(e.id as Guid));
                 }
             }
-
-            commandDispatcher.commitBatch('Удалить выбранные элементы');
         },
     });
 
     // Drag-соединение
     const { onConnectStart, onConnectEnd, getNodeType } = useConnectContext({ rf, setNodes });
 
-    // --- Hover ветки-цели ---
+    // Hover ветки-цели
     const hover = useMemo(
         () =>
             new HoverBranchService(getAll, setNodes, {
@@ -371,7 +345,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const setHoverBranch = useCallback(hover.setHoverBranch, [hover]);
     const onNodeDrag = useCallback(hover.onNodeDrag, [hover]);
 
-    // --- Ctrl-drag ids ---
+    // Ctrl-drag ids
     const ctrlDragIdsRef = useRef<Set<string>>(new Set());
 
     // Старт перетаскивания
@@ -392,7 +366,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         [setNodes]
     );
 
-    // Финализация перетаскивания (для сложных случаев: присоединение к ветке)
+    // Финализация перетаскивания
     const dropHandler = useMemo(
         () =>
             new NodeDragStopHandler({
@@ -409,37 +383,30 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 },
                 callbacks: {
                     onStepAttachedToBranch: (stepId, branchId, x, y) => {
-                        if (!commandDispatcher || !activeId) return;
+                        if (!activeId) return;
 
                         const state = store.getState();
                         const step = state.scenario.steps.entities[stepId];
                         const isPersisted = !!(step && (step as any).__persisted);
 
                         if (isPersisted && step) {
-                            commandDispatcher.execute(
-                                StepCommands.move(activeId, {
+                            dispatch(
+                                updateStep({
                                     stepId: stepId as Guid,
-                                    branchId: branchId as Guid,
-                                    x,
-                                    y,
-                                    previousBranchId: step.branchId,
-                                    previousX: step.x,
-                                    previousY: step.y,
+                                    changes: { branchId, x, y },
                                 })
                             );
                         } else if (step) {
-                            commandDispatcher.execute(
-                                StepCommands.create(activeId, {
-                                    step: { ...step, branchId, x, y } as any,
+                            dispatch(
+                                addStep({
                                     branchId: branchId as Guid,
+                                    step: { ...step, branchId, x, y } as any,
                                 })
                             );
 
                             rf.setNodes((nds) =>
                                 nds.map((nn) =>
-                                    nn.id === stepId
-                                        ? { ...nn, data: { ...nn.data, __persisted: true } }
-                                        : nn
+                                    nn.id === stepId ? { ...nn, data: { ...nn.data, __persisted: true } } : nn
                                 )
                             );
                         }
@@ -450,19 +417,14 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     },
 
                     onStepDetachedFromBranch: (stepId) => {
-                        if (!commandDispatcher || !activeId) return;
+                        if (!activeId) return;
 
                         const state = store.getState();
                         const step = state.scenario.steps.entities[stepId];
                         const isPersisted = !!(step && (step as any).__persisted);
                         if (!isPersisted || !step) return;
 
-                        commandDispatcher.execute(
-                            StepCommands.delete(activeId, {
-                                stepId: stepId as Guid,
-                                previousState: step as any,
-                            })
-                        );
+                        dispatch(deleteStep({ branchId: step.branchId, stepId: stepId as Guid }));
 
                         rf.setNodes((nds) =>
                             nds.map((nn) =>
@@ -478,12 +440,12 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     },
                 },
             }),
-        [getAll, setNodes, setHoverBranch, commandDispatcher, activeId, rf]
+        [getAll, setNodes, setHoverBranch, dispatch, activeId, rf]
     );
 
     const onNodeDragStop = useCallback(dropHandler.onNodeDragStop, [dropHandler]);
 
-    // Соединения через команды
+    // Соединения
     const connectionHandler = useMemo(
         () => new ConnectionHandler(setEdges, onConnectEnd),
         [setEdges, onConnectEnd]
@@ -493,7 +455,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         (conn: Connection) => {
             connectionHandler.onConnect(conn);
 
-            if (!commandDispatcher || !activeId || !conn.source || !conn.target) return;
+            if (!activeId || !conn.source || !conn.target) return;
 
             const newRelation: StepRelationDto = {
                 id: crypto.randomUUID() as Guid,
@@ -503,13 +465,9 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 conditionOrder: 0,
             };
 
-            commandDispatcher.execute(
-                RelationCommands.create(activeId, {
-                    relation: newRelation,
-                })
-            );
+            dispatch(addRelation(newRelation));
         },
-        [connectionHandler, commandDispatcher, activeId]
+        [connectionHandler, dispatch, activeId]
     );
 
     // Валидатор соединений
@@ -550,7 +508,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     )
                 }
                 onSelectionChange={onSelectionChange}
-                // ⚡ ИСПРАВЛЕНО: Используем правильные обработчики
                 onNodesChange={onNodesChangeHandler}
                 onEdgesChange={onEdgesChangeHandler}
                 onNodeDrag={onNodeDrag}
@@ -583,14 +540,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
             >
                 <Panel position="top-left">
                     <LeftPanel />
-                </Panel>
-
-                <Panel position="top-center">
-                    {activeId && <HistoryControls contextId={activeId} />}
-                </Panel>
-
-                <Panel position="bottom-right">
-                    {activeId && <PendingChangesViewer scenarioId={activeId} />}
                 </Panel>
 
                 <Panel position="top-right">

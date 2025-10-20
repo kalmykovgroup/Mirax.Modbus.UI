@@ -1,72 +1,74 @@
-// src/features/history/historyMiddleware.ts
+// src/features/scenarioEditor/core/features/historySystem/historyMiddleware.ts
 
 import type { Middleware } from '@reduxjs/toolkit';
 
-import { undo, redo } from './historySlice';
+import { undoThunk, redoThunk } from './historySlice';
 import { historyRegistry } from './historyRegistry';
-import type { RootState } from '@/baseStore/store';
-import type { HistoryRecord } from './types.ts';
-import { isBatchCommand, isCreateCommand, isUpdateCommand, isDeleteCommand } from './types.ts';
+import type { HistoryRecord } from './types';
 
 /**
  * Middleware для автоматического применения команд при undo/redo
+ *
+ * ВАЖНО: Этот middleware обрабатывает ТОЛЬКО side-effects (вызовы handlers).
+ * Сама история (past/future) обновляется через reducer в historySlice.
  */
-export const historyMiddleware: Middleware<object, RootState> = (store) => (next) => (action) => {
-    // Пропускаем action в reducer сначала
+export const historyMiddleware: Middleware = (storeApi) => (next) => (action) => {
+    // 1. Сначала пропускаем action через reducer
     const result = next(action);
 
-    // Обрабатываем undo
-    if (undo.match(action)) {
-        const contextId = action.payload;
-        const state = store.getState();
-        const context = state.history.contexts[contextId];
+    // 2. ПОСЛЕ обновления state применяем side-effects
 
-        if (!context || !context.present) {
+    // Обрабатываем undo (проверяем fulfilled action от thunk)
+    if (undoThunk.fulfilled.match(action)) {
+        const { contextId } = action.meta.arg;
+        const state = storeApi.getState() as any;
+        const context = state.history?.contexts?.[contextId];
+
+        if (!context) {
+            console.warn('[historyMiddleware] Context not found for undo:', contextId);
             return result;
         }
 
-        const command = context.present;
+        // Получаем запись, которая была отменена (теперь в future[0])
+        const record = context.future?.[0];
+        if (!record) {
+            console.warn('[historyMiddleware] No record to undo');
+            return result;
+        }
+
+        console.log('[historyMiddleware] Executing undo for record:', record);
 
         try {
-            if (isBatchCommand(command)) {
-                // Для батча выполняем все команды в обратном порядке
-                for (let i = command.commands.length - 1; i >= 0; i--) {
-                    const cmd = command.commands[i];
-                    if (cmd) {
-                        executeUndo(cmd);
-                    }
-                }
-            } else {
-                executeUndo(command);
-            }
+            executeUndo(record);
         } catch (error) {
-            console.error('[HistoryMiddleware] Error executing undo:', error);
+            console.error('[historyMiddleware] Error executing undo:', error);
         }
     }
 
-    // Обрабатываем redo
-    if (redo.match(action)) {
-        const contextId = action.payload;
-        const state = store.getState();
-        const context = state.history.contexts[contextId];
+    // Обрабатываем redo (проверяем fulfilled action от thunk)
+    if (redoThunk.fulfilled.match(action)) {
+        const { contextId } = action.meta.arg;
+        const state = storeApi.getState() as any;
+        const context = state.history?.contexts?.[contextId];
 
-        if (!context || !context.present) {
+        if (!context) {
+            console.warn('[historyMiddleware] Context not found for redo:', contextId);
             return result;
         }
 
-        const command = context.present;
+        // Получаем запись, которая была повторена (теперь в past[last])
+        const record = context.past?.[context.past.length - 1];
+        if (!record) {
+            console.warn('[historyMiddleware] No record to redo');
+            return result;
+        }
+
+        console.log('[historyMiddleware] Executing redo for record:', record);
 
         try {
-            if (isBatchCommand(command)) {
-                // Для батча выполняем все команды в прямом порядке
-                for (const cmd of command.commands) {
-                    executeRedo(cmd);
-                }
-            } else {
-                executeRedo(command);
-            }
+            executeRedo(record);
         } catch (error) {
-            console.error('[HistoryMiddleware] Error executing redo:', error);
+            console.error('[historyMiddleware] Error executing redo:', error);
         }
     }
 
@@ -80,38 +82,42 @@ export const historyMiddleware: Middleware<object, RootState> = (store) => (next
 /**
  * Выполнить отмену команды
  */
-function executeUndo(command: HistoryRecord): void {
-    if (isBatchCommand(command)) {
-        // Рекурсивно для вложенных батчей (если они есть)
-        for (let i = command.commands.length - 1; i >= 0; i--) {
-            const cmd = command.commands[i];
-            if (cmd) {
-                executeUndo(cmd);
+function executeUndo(record: HistoryRecord): void {
+    // Проверяем тип записи по полю type
+    if (record.type === 'batch') {
+        // Для батча выполняем все команды в ОБРАТНОМ порядке
+        const batchRecord = record as any;
+        if (batchRecord.records && Array.isArray(batchRecord.records)) {
+            for (let i = batchRecord.records.length - 1; i >= 0; i--) {
+                const cmd = batchRecord.records[i];
+                if (cmd) {
+                    executeUndo(cmd);
+                }
             }
         }
         return;
     }
 
-    const handler = historyRegistry.getHandler(command.entityType);
+    const handler = historyRegistry.getHandler(record.entityType);
     if (!handler) {
-        console.warn(`[executeUndo] No handler for type "${command.entityType}"`);
+        console.warn(`[executeUndo] No handler for type "${record.entityType}"`);
         return;
     }
 
-    if (isCreateCommand(command)) {
+    if (record.type === 'create') {
         // Отменить создание = удалить сущность
-        if (command.after) {
-            handler.delete(command.entityId);
-        }
-    } else if (isUpdateCommand(command)) {
+        handler.delete(record.entityId);
+    } else if (record.type === 'update') {
         // Отменить обновление = восстановить previous состояние
-        if (command.before) {
-            handler.revert(command.before);
+        const before = (record as any).before;
+        if (before) {
+            handler.revert(before);
         }
-    } else if (isDeleteCommand(command)) {
+    } else if (record.type === 'delete') {
         // Отменить удаление = создать сущность заново
-        if (command.before) {
-            handler.create(command.before);
+        const before = (record as any).before;
+        if (before) {
+            handler.create(before);
         }
     }
 }
@@ -119,33 +125,39 @@ function executeUndo(command: HistoryRecord): void {
 /**
  * Выполнить повтор команды
  */
-function executeRedo(command: HistoryRecord): void {
-    if (isBatchCommand(command)) {
-        // Рекурсивно для вложенных батчей
-        for (const cmd of command.commands) {
-            executeRedo(cmd);
+function executeRedo(record: HistoryRecord): void {
+    // Проверяем тип записи по полю type
+    if (record.type === 'batch') {
+        // Для батча выполняем все команды в ПРЯМОМ порядке
+        const batchRecord = record as any;
+        if (batchRecord.records && Array.isArray(batchRecord.records)) {
+            for (const cmd of batchRecord.records) {
+                executeRedo(cmd);
+            }
         }
         return;
     }
 
-    const handler = historyRegistry.getHandler(command.entityType);
+    const handler = historyRegistry.getHandler(record.entityType);
     if (!handler) {
-        console.warn(`[executeRedo] No handler for type "${command.entityType}"`);
+        console.warn(`[executeRedo] No handler for type "${record.entityType}"`);
         return;
     }
 
-    if (isCreateCommand(command)) {
+    if (record.type === 'create') {
         // Повторить создание
-        if (command.after) {
-            handler.create(command.after);
+        const after = (record as any).after;
+        if (after) {
+            handler.create(after);
         }
-    } else if (isUpdateCommand(command)) {
+    } else if (record.type === 'update') {
         // Повторить обновление
-        if (command.after) {
-            handler.apply(command.after);
+        const after = (record as any).after;
+        if (after) {
+            handler.apply(after);
         }
-    } else if (isDeleteCommand(command)) {
+    } else if (record.type === 'delete') {
         // Повторить удаление
-        handler.delete(command.entityId);
+        handler.delete(record.entityId);
     }
 }

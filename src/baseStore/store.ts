@@ -1,4 +1,5 @@
-// store.ts - обновленная конфигурация
+// src/baseStore/store.ts
+
 import { configureStore } from '@reduxjs/toolkit';
 import { persistStore } from 'redux-persist';
 import { rootReducer } from './rootReducer';
@@ -8,125 +9,139 @@ import { scenarioApi } from '@/features/scenarioEditor/shared/api/scenarioApi';
 import { workflowApi } from '@/features/scenarioEditor/shared/api/workflowApi';
 import { branchApi } from '@/features/scenarioEditor/shared/api/branchApi';
 import { stepApi } from '@/features/scenarioEditor/shared/api/stepApi';
-import {chartReqTemplatesApi} from "@chartsPage/template/shared//api/chartReqTemplatesApi.ts";
-import {metadataApi} from "@chartsPage/metaData/shared/api/metadataApi.ts";
-import {chartsApi} from "@chartsPage/charts/core/api/chartsApi.ts";
-import {cleanupOldCharts} from "@chartsPage/charts/core/store/chartsCleanup.ts";
-import {miraxApi} from "@chartsPage/mirax/miraxApi.ts";
-
+import { chartReqTemplatesApi } from '@chartsPage/template/shared//api/chartReqTemplatesApi.ts';
+import { metadataApi } from '@chartsPage/metaData/shared/api/metadataApi.ts';
+import { chartsApi } from '@chartsPage/charts/core/api/chartsApi.ts';
+import { cleanupOldCharts } from '@chartsPage/charts/core/store/chartsCleanup.ts';
+import { miraxApi } from '@chartsPage/mirax/miraxApi.ts';
+import { historyMiddleware } from '@scenario/core/features/historySystem/historyMiddleware.ts';
 
 export const store = configureStore({
-        reducer: rootReducer,
-        middleware: (getDefaultMiddleware) =>
-            getDefaultMiddleware({
-                serializableCheck: {
-                    // Отключаем проверку для больших данных в charts
-                    ignoredActions: [
-                        'persist/PERSIST',
-                        'persist/REHYDRATE',
-                        'persist/REGISTER',
-                        // Игнорируем экшены с большими данными
-                        'charts/upsertTiles',
-                        'charts/beginLoadTiles',
-                        'charts/failLoadTiles',
-                        'charts/test/initializeMultipleLevels/fulfilled',
-                        'charts/test/incrementalLoad/fulfilled',
-                        'charts/test/switchLevel/fulfilled',
-                        'charts/test/loadingErrors/fulfilled',
-                        'charts/test/fullSuite/fulfilled',
-                        // Добавьте новые actions
-                        'charts/initField',
-                        'charts/addData',
-                        'charts/updateWindow',
-
-                        //Сценарий
-                       'history/pushCommand', 'history/addToBatch',
-
-                    ],
-                    ignoredPaths: [
-                        'chartsTemplates.errors',
-                        'chartsTemplates.activeTemplate.fromMs',
-                        'chartsTemplates.activeTemplate.toMs',
-                        // Игнорируем пути с большими массивами данных
-                        'charts.view',
-
-                        //Сценарий
-                        'history.contexts'
-                    ],
-                    // Увеличиваем время предупреждения для больших состояний
-                    warnAfter: 128, // вместо 32ms по умолчанию
-                    isSerializable: (value: any) => {
-                        if (value === undefined || value === null) return true;
-                        if (value instanceof Date) return true;
-                        const t = typeof value;
-                        if (t === 'string' || t === 'number' || t === 'boolean') return true;
-                        if (Array.isArray(value)) return value.every(v => typeof v !== 'function');
-                        if (t === 'object') return Object.getPrototypeOf(value) === Object.prototype;
-                        return false;
+    reducer: rootReducer,
+    middleware: (getDefaultMiddleware) =>
+        getDefaultMiddleware({
+            serializableCheck: {
+                ignoredActions: [
+                    'persist/PERSIST',
+                    'persist/REHYDRATE',
+                    'persist/REGISTER',
+                    // Игнорируем экшены с большими данными в charts
+                    'charts/upsertTiles',
+                    'charts/beginLoadTiles',
+                    'charts/failLoadTiles',
+                    'charts/test/initializeMultipleLevels/fulfilled',
+                    'charts/test/incrementalLoad/fulfilled',
+                    'charts/test/switchLevel/fulfilled',
+                    'charts/test/loadingErrors/fulfilled',
+                    'charts/test/fullSuite/fulfilled',
+                    'charts/initField',
+                    'charts/addData',
+                    'charts/updateWindow',
+                    // ⚡ История сценариев
+                    'history/undoThunk/pending',
+                    'history/undoThunk/fulfilled',
+                    'history/redoThunk/pending',
+                    'history/redoThunk/fulfilled',
+                    'history/recordCreate',
+                    'history/recordUpdate',
+                    'history/recordDelete',
+                ],
+                ignoredPaths: [
+                    'chartsTemplates.errors',
+                    'chartsTemplates.activeTemplate.fromMs',
+                    'chartsTemplates.activeTemplate.toMs',
+                    'charts.view',
+                    // ⚡ История может хранить большие снимки
+                    'history.contexts',
+                ],
+                warnAfter: 128,
+            },
+            immutableCheck: {
+                ignoredPaths: ['charts.view', 'history.contexts'],
+                warnAfter: 128,
+            },
+        }).concat(
+            authApi.middleware,
+            scenarioApi.middleware,
+            workflowApi.middleware,
+            branchApi.middleware,
+            stepApi.middleware,
+            chartsApi.middleware,
+            chartReqTemplatesApi.middleware,
+            metadataApi.middleware,
+            miraxApi.middleware,
+            // ⚡ КРИТИЧНО: middleware для undo/redo
+            historyMiddleware,
+        ),
+    devTools: {
+        maxAge: 50,
+        trace: false,
+        actionSanitizer: (action: any) => {
+            // Очищаем большие массивы в charts
+            if (action.type?.includes('charts/') && action.payload?.tiles) {
+                return {
+                    ...action,
+                    payload: {
+                        ...action.payload,
+                        tiles: `[${action.payload.tiles.length} tiles]`,
                     },
-                },
-                immutableCheck: {
-                    // Отключаем проверку иммутабельности для больших данных
-                    ignoredPaths: [
-                        'charts.view',
-                    ],
-                    warnAfter: 128, // вместо 32ms
-                },
-            }).concat(
-                authApi.middleware,
-                scenarioApi.middleware,
-                workflowApi.middleware,
-                branchApi.middleware,
-                stepApi.middleware,
-                chartsApi.middleware,
-                chartReqTemplatesApi.middleware,
-                metadataApi.middleware,
+                };
+            }
 
-                miraxApi.middleware,
-            ),
-        // Оптимизация для dev режима
-        devTools: {
-            // Ограничиваем историю действий для экономии памяти
-            maxAge: 50, // хранить только последние 50 действий
-            // Отключаем трассировку для производительности
-            trace: false,
-            // Ограничиваем глубину сериализации
-            actionSanitizer: (action: any) => {
-                // Очищаем большие массивы данных в действиях для DevTools
-                if (action.type?.includes('charts/') && action.payload?.tiles) {
-                    return {
-                        ...action,
-                        payload: {
-                            ...action.payload,
-                            tiles: `[${action.payload.tiles.length} tiles]`,
-                        },
-                    };
-                }
-                return action;
-            },
-            stateSanitizer: (state: any) => {
-                // Упрощаем отображение больших данных в DevTools
-                if (state.charts?.view) {
-                    const simplifiedView: any = {};
-                    Object.keys(state.charts.view).forEach(field => {
-                        const fieldView = state.charts.view[field];
-                        simplifiedView[field] = {
-                            ...fieldView,
-                            seriesLevel: `[${Object.keys(fieldView.seriesLevel || {}).length} levels]`,
-                        };
-                    });
-                    return {
-                        ...state,
-                        charts: {
-                            ...state.charts,
-                            view: simplifiedView,
-                        },
-                    };
-                }
-                return state;
-            },
+            // ⚡ Очищаем снимки в истории для DevTools
+            if (action.type?.includes('history/') && action.payload?.entity) {
+                return {
+                    ...action,
+                    type: action.type,
+                    payload: {
+                        ...action.payload,
+                        entity: '[Entity snapshot]',
+                    },
+                };
+            }
+
+            return action;
         },
-    });
+        stateSanitizer: (state: any) => {
+            const sanitized: any = { ...state };
+
+            // Упрощаем charts для DevTools
+            if (state.charts?.view) {
+                const simplifiedView: any = {};
+                Object.keys(state.charts.view).forEach((field) => {
+                    const fieldView = state.charts.view[field];
+                    simplifiedView[field] = {
+                        ...fieldView,
+                        seriesLevel: `[${Object.keys(fieldView.seriesLevel || {}).length} levels]`,
+                    };
+                });
+                sanitized.charts = {
+                    ...state.charts,
+                    view: simplifiedView,
+                };
+            }
+
+            // ⚡ Упрощаем историю для DevTools
+            if (state.history?.contexts) {
+                const simplifiedContexts: any = {};
+                Object.keys(state.history.contexts).forEach((contextId) => {
+                    const ctx = state.history.contexts[contextId];
+                    simplifiedContexts[contextId] = {
+                        pastCount: ctx.past?.length ?? 0,
+                        futureCount: ctx.future?.length ?? 0,
+                        isBatching: ctx.isBatching,
+                        batchBufferCount: ctx.batchBuffer?.length ?? 0,
+                    };
+                });
+                sanitized.history = {
+                    contexts: simplifiedContexts,
+                };
+            }
+
+            return sanitized;
+        },
+    },
+});
 
 cleanupOldCharts().catch(console.error);
 
@@ -134,9 +149,7 @@ export const persistor = persistStore(store);
 
 /**
  * ВАЖНО: типы объявляем и экспортируем прямо из store.ts
- * – это единая «точка правды».
- * В остальных файлах импортируйте их ТОЛЬКО как type-импорт:
- *   import type { RootState, AppDispatch } from '@/baseStore/store.ts';
+ * — это единая «точка правды».
  */
 
 // КРИТИЧЕСКИ ВАЖНО: экспортируем типы ПОСЛЕ создания store

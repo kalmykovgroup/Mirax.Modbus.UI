@@ -26,7 +26,6 @@ import {miraxReducer} from "@chartsPage/mirax/miraxSlice.ts";
 
 import {tabsReducer} from "@chartsPage/charts/core/store/tabsSlice.ts";
 import {contextsReducer} from "@chartsPage/charts/core/store/chartsSlice.ts";
-import persistedChangesReducer from "@scenario/store/scenarioChangesSlice.ts";
 import {uiReducer} from "@/baseStore/uiSlice.ts";
 import historySlice from "@scenario/core/features/historySystem/historySlice.ts";
 export const rootReducer = combineReducers({
@@ -36,7 +35,6 @@ export const rootReducer = combineReducers({
     chartsTemplates: chartsTemplatesReducer,
     scenario: scenarioReducer,
     workflow: workflowReducer,
-    scenarioChanges: persistedChangesReducer,
     chartsSettings: chartsSettingsReducer,
 
     charts: persistedChartsReducer,

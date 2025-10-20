@@ -421,11 +421,14 @@ const scenariosSlice = createSlice({
             action: PayloadAction<{ stepId: Guid; changes: Partial<NormalizedStep> }>
         ) => {
             const { stepId, changes } = action.payload;
-            const step = state.steps.entities[stepId];
 
-            if (step) {
-                Object.assign(step, changes);
-            }
+            console.log('[scenarioSlice] updateStep:', { stepId, changes });
+
+            // ✅ Используем adapter для правильного обновления
+            stepsAdapter.updateOne(state.steps, {
+                id: stepId,
+                changes: changes as any,
+            });
         },
 
         deleteStep(state, action: PayloadAction<{ branchId: Guid; stepId: Guid }>) {
