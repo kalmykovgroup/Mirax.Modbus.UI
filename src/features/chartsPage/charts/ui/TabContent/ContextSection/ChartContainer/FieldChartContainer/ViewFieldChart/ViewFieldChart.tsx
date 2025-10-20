@@ -1,7 +1,7 @@
 // features/chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ViewFieldChart.tsx
 
 import { useSelector } from 'react-redux';
-import { useCallback, useMemo, memo, useState, useRef, useEffect } from 'react';
+import React, { useCallback, useMemo, memo, useState, useRef, useEffect } from 'react';
 import type { RootState } from '@/store/store';
 import {
     type ChartStats,
@@ -46,6 +46,9 @@ import {
 import {
     useGlobalNavigation
 } from "@chartsPage/charts/ui/TabContent/GlobalNavigationContext/GlobalNavigationContext.tsx";
+import {
+    SyncButton
+} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton.tsx";
 
 
 const GROUP_ID = 'ChartContainer';
@@ -54,6 +57,7 @@ const CHART_DEFAULT_CHART_HEIGHT_PX = ENV.CHART_DEFAULT_CHART_HEIGHT_PX;
 interface ViewFieldChartProps {
     readonly contextId: Guid;
     readonly fieldName: string;
+    readonly templateName: string;
     readonly onZoomEnd?: ((range: TimeRange) => void) | undefined;
     readonly onRetry?: (() => void) | undefined;
     readonly width: number;
@@ -63,14 +67,14 @@ interface ViewFieldChartProps {
 export const ViewFieldChart = memo(function ViewFieldChart({
                                                                contextId,
                                                                fieldName,
+                                                               templateName,
                                                                onZoomEnd,
                                                                width,
                                                                currentRange,
                                                            }: ViewFieldChartProps) {
     const chartRef = useRef<ChartCanvasRef>(null);
-    const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+    const fullscreenContainerRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
 
-    // Используем глобальную навигацию
     const globalNav = useGlobalNavigation();
     const currentGlobalIndex = globalNav.getCurrentIndex(contextId, fieldName);
 
@@ -102,9 +106,15 @@ export const ViewFieldChart = memo(function ViewFieldChart({
         isSupported: isFullscreenSupported
     } = useFullscreen(fullscreenContainerRef);
 
+    // НОВОЕ: Вычисляем эффективную высоту
+    const effectiveHeight = useMemo(() => {
+        if (isFullscreen) {
+            return window.innerHeight;
+        }
+        return containerHeight;
+    }, [isFullscreen, containerHeight]);
 
-
-    // Keyboard navigation - работает ТОЛЬКО в fullscreen
+    // Keyboard navigation
     useEffect(() => {
         if (!isFullscreen) {
             return;
@@ -118,13 +128,17 @@ export const ViewFieldChart = memo(function ViewFieldChart({
 
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
+                console.log('[ViewFieldChart] ArrowLeft pressed, navigating previous');
                 globalNav.navigatePrevious();
             } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
+                console.log('[ViewFieldChart] ArrowRight pressed, navigating next');
                 globalNav.navigateNext();
             } else if (e.key === 'f' || e.key === 'F') {
                 e.preventDefault();
                 void toggleFullscreen();
+            } else if (e.key === 'Escape') {
+                console.log('[ViewFieldChart] Escape pressed');
             }
         };
 
@@ -205,7 +219,9 @@ export const ViewFieldChart = memo(function ViewFieldChart({
             hasSyncRange: !!currentRange,
             currentRange: currentRange ?
                 { from: currentRange.fromMs, to: currentRange.toMs } :
-                undefined
+                undefined,
+            isFullscreen,
+            effectiveHeight
         });
     }
 
@@ -215,7 +231,6 @@ export const ViewFieldChart = memo(function ViewFieldChart({
             className={classNames(styles.fullscreenWrapper, (isFullscreen ? styles.fullscreenActive : ''))}
             data-chart-id={`${contextId}-${fieldName}`}
         >
-            {/* Обёртка для ChartHeader с анимацией */}
             <div className={`${styles.chartHeaderWrapper} ${isHeaderVisible ? styles.headerVisible : styles.headerHidden}`}>
                 <ChartHeader fieldName={fieldName} width={width} contextId={contextId} />
             </div>
@@ -223,14 +238,15 @@ export const ViewFieldChart = memo(function ViewFieldChart({
             <ResizableContainer
                 key={fieldName}
                 groupId={GROUP_ID}
-                defaultHeight={containerHeight}
-                minHeight={300}
-                maxHeight={2000}
+                defaultHeight={effectiveHeight}
+                minHeight={isFullscreen ? window.innerHeight : 300}
+                maxHeight={isFullscreen ? window.innerHeight : 2000}
                 onHeightChange={setContainerHeight}
+                disabled={isFullscreen} // НОВОЕ: отключаем ресайз в fullscreen
             >
                 <div
                     className={styles.viewFieldChartContainer}
-                    style={{ height: isFullscreen ? '100vh' : containerHeight }}
+                    style={{ height: effectiveHeight }}
                 >
                     <div className={styles.header}>
                         <button
@@ -249,7 +265,12 @@ export const ViewFieldChart = memo(function ViewFieldChart({
 
                         <SyncCheckbox fieldName={fieldName} contextId={contextId} />
 
-                        <h3 className={styles.title}>{fieldName}</h3>
+                        <SyncButton />
+
+                        <div className={styles.title}>
+                            <span className={styles.templateName}>{templateName}</span>
+                            <span className={styles.fieldName}>{fieldName}</span>
+                        </div>
                         <StatsBadge
                             contextId={contextId}
                             totalPoints={
@@ -317,10 +338,8 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                 </div>
             </ResizableContainer>
 
-            {/* Навигатор - ТОЛЬКО в fullscreen, теперь глобальный */}
             {isFullscreen && (
                 <ChartNavigator
-                    currentFieldName={fieldName}
                     totalFields={globalNav.totalCharts}
                     currentIndex={currentGlobalIndex}
                     onPrevious={globalNav.navigatePrevious}

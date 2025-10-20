@@ -11,7 +11,6 @@ import {
     showAllContexts,
     hideAllContexts,
     removeContextFromTab,
-    selectTabSyncEnabled,
     selectActiveTabId,
     selectTabName,
 } from '@chartsPage/charts/core/store/tabsSlice';
@@ -20,7 +19,6 @@ import type { RootState } from '@/store/store';
 import styles from './TabContent.module.css';
 import { ContextFilterItem } from '@chartsPage/charts/ui/TabContent/ContextFilterItem/ContextFilterItem';
 import { ContextSection } from '@chartsPage/charts/ui/TabContent/ContextSection/ContextSection';
-import { SyncButton } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton';
 import { useDocumentTitle } from '@app/lib/hooks/DocumentTitleContext';
 import {selectChartContexts} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
 import {
@@ -50,10 +48,6 @@ export function TabContent({ tabId }: TabContentProps) {
     const activeTabId = useSelector(selectActiveTabId);
     const isActiveTab = tabId === activeTabId;
 
-    const syncEnabled = useSelector((state: RootState) => {
-        if (!activeTabId) return false;
-        return selectTabSyncEnabled(state, activeTabId);
-    });
 
     const tabName = useSelector((state: RootState) =>
         selectTabName(state, tabId)
@@ -177,14 +171,6 @@ export function TabContent({ tabId }: TabContentProps) {
                 )}
             </div>
 
-            {/* Липкая обёртка для SyncButton */}
-            <div
-                className={`${styles.syncButtonContainer} ${
-                    syncEnabled ? styles.syncButtonSticky : ''
-                }`}
-            >
-                <SyncButton />
-            </div>
 
             {/* Рендерим ВСЕ контексты, управляем видимостью через CSS */}
             <div className={styles.contextSections}>

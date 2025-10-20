@@ -28,12 +28,14 @@ import { calculateBucket } from '@chartsPage/charts/core/store/chartsSettingsSli
 interface FieldChartContainerProps {
     readonly contextId: Guid;
     readonly fieldName: string;
+    readonly templateName: string;
     readonly width: number;
 }
 
 export function FieldChartContainer({
                                         contextId,
                                         fieldName,
+                                        templateName,
                                         width,
                                     }: FieldChartContainerProps) {
     const dispatch = useAppDispatch();
@@ -344,6 +346,7 @@ export function FieldChartContainer({
         <ViewFieldChart
             contextId={contextId}
             fieldName={fieldName}
+            templateName={templateName}
             onZoomEnd={handleZoomEnd}
             onRetry={handleRetry}
             width={width}

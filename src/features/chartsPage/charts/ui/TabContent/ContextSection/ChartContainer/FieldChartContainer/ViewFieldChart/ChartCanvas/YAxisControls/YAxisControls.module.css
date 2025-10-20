@@ -15,7 +15,7 @@
     padding: 6px 12px;
     border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 6px;
-    background: white;
+    background: rgba(255, 255, 255, 0.49);
     cursor: pointer;
     font-size: 13px;
     transition: all 0.2s ease;
@@ -70,18 +70,18 @@
     color: #F44336;
 }
 
-/* Panel */
+/* Panel - КРИТИЧЕСКИ ВАЖНО: position: fixed для позиционирования относительно viewport */
 .panel {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
+    position: fixed;
     width: 380px;
+    max-width: calc(100vw - 32px);
     padding: 20px;
-    background: white;
+    background: rgba(0, 0, 0, 0.42);
     border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 10px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     animation: slideDown 0.2s ease;
+    z-index: 10000;
 }
 
 @keyframes slideDown {
@@ -100,7 +100,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
+    margin-bottom: 5px;
     padding-bottom: 16px;
     border-bottom: 2px solid rgba(0, 0, 0, 0.06);
 }
@@ -109,7 +109,8 @@
     margin: 0;
     font-size: 15px;
     font-weight: 700;
-    color: #333;
+    color: #000000;
+    font-family: "JetBrains Mono Light", monospace;
     letter-spacing: -0.3px;
 }
 
@@ -157,7 +158,7 @@
 .quickActions {
     display: flex;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 5px;
     padding: 12px;
     background: rgba(0, 0, 0, 0.02);
     border-radius: 8px;
@@ -197,7 +198,7 @@
 
 /* Section */
 .section {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     padding: 16px;
     background: rgba(0, 0, 0, 0.02);
     border-radius: 8px;
@@ -211,7 +212,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
+    margin-bottom: 5px;
+    background: white;
+    border-radius: 4px;
+    padding: 0 10px;
 }
 
 .label {
@@ -234,6 +238,10 @@
 /* Slider */
 .sliderContainer {
     margin-bottom: 12px;
+
+    background: white;
+    border-radius: 4px;
+    padding: 0 10px;
 }
 
 .slider {
@@ -289,7 +297,7 @@
     justify-content: space-between;
     margin-top: 6px;
     font-size: 10px;
-    color: #999;
+    color: #000000;
     font-weight: 500;
 }
 
@@ -349,13 +357,10 @@
     border-radius: 8px;
 }
 
-.inputGroup {
-    margin-bottom: 12px;
-}
+
 
 .inputLabel {
     display: block;
-    margin-bottom: 6px;
     font-size: 12px;
     font-weight: 600;
     color: #555;
@@ -424,6 +429,7 @@
     background: rgba(74, 144, 226, 0.05);
     border: 1px solid rgba(74, 144, 226, 0.15);
     border-radius: 6px;
+    background: white;
 }
 
 .infoRow {
@@ -437,7 +443,6 @@
 .infoRow:not(:last-child) {
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     padding-bottom: 8px;
-    margin-bottom: 8px;
 }
 
 .infoLabel {
@@ -454,4 +459,11 @@
 .deviation {
     font-size: 11px;
     color: #4A90E2;
+}
+
+/* Адаптив для узких экранов */
+@media (max-width: 480px) {
+    .panel {
+        width: calc(100vw - 32px);
+    }
 }

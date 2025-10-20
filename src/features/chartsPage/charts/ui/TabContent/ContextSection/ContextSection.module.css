@@ -2,9 +2,6 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 16px;
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     width: 100%;
@@ -14,55 +11,12 @@
     overflow: hidden;
 }
 
-.contextContent {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-    overflow: hidden;
-}
 
-/* КРИТИЧНО: Все дочерние элементы соблюдают границы */
-.contextContent > * {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-}
-
-.contextHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: 12px;
-    border-bottom: 2px solid #f0f0f0;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.contextTitle {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-    word-break: break-word;
-}
 
 @media (max-width: 768px) {
     .contextSection {
         padding: 12px;
         gap: 8px;
-    }
-
-    .contextHeader {
-        padding-bottom: 8px;
-    }
-
-    .contextTitle {
-        font-size: 16px;
     }
 }
 
@@ -71,7 +25,4 @@
         padding: 8px;
     }
 
-    .contextTitle {
-        font-size: 14px;
-    }
 }

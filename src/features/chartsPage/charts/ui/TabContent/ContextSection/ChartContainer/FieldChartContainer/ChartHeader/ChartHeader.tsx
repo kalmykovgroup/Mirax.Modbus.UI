@@ -24,7 +24,6 @@ export type HeaderProps = {
     readonly contextId: Guid;
     readonly width: number;
     readonly fieldName: FieldName;
-    readonly title?: string | undefined;
     readonly showDetails?: boolean | undefined;
     readonly enableTestControls?: boolean | undefined;
     readonly enableDebugLogs?: boolean | undefined;
@@ -95,7 +94,6 @@ export const ChartHeader: React.FC<HeaderProps> = ({
                                                        contextId,
                                                        width,
                                                        fieldName,
-                                                       title,
                                                        showDetails = true
                                                    }) => {
     // ============================================
@@ -274,12 +272,12 @@ export const ChartHeader: React.FC<HeaderProps> = ({
     // РЕНДЕРИНГ
     // ============================================
 
+
     return (
         <div className={styles.container}>
             {/* Заголовок с общей статистикой */}
             <div className={styles.header}>
                 <div className={styles.title}>
-                    {title ?? fieldName}
                     {headerData.isFieldLoading && (
                         <span className={styles.loadingIndicator}>
                             (загрузка...)

@@ -39,6 +39,9 @@ const MAX_PRESETS: readonly Preset[] = [
     { factor: 3, label: '×3', className: styles.increase }
 ] as const;
 
+const EDGE_PADDING = 16;
+const VERTICAL_GAP = 8; // Отступ между кнопкой и панелью
+
 export const YAxisControls: React.FC<YAxisControlsProps> = ({
                                                                 control,
                                                                 className
@@ -47,6 +50,9 @@ export const YAxisControls: React.FC<YAxisControlsProps> = ({
     const [showManualInput, setShowManualInput] = useState(false);
     const [manualMin, setManualMin] = useState('');
     const [manualMax, setManualMax] = useState('');
+    const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
+
+    const containerRef = useRef<HTMLDivElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
 
     const toggleExpanded = useCallback(() => {
@@ -56,7 +62,6 @@ export const YAxisControls: React.FC<YAxisControlsProps> = ({
     const toggleManualInput = useCallback(() => {
         setShowManualInput(prev => {
             if (!prev) {
-                // Открываем - заполняем текущими значениями
                 setManualMin(control.currentRange.min.toString());
                 setManualMax(control.currentRange.max.toString());
             }
@@ -64,12 +69,173 @@ export const YAxisControls: React.FC<YAxisControlsProps> = ({
         });
     }, [control.currentRange]);
 
+    // ТОЧНОЕ позиционирование под кнопкой с защитой от выхода за границы
+    useEffect(() => {
+        if (!isExpanded || !containerRef.current || !panelRef.current) {
+            return;
+        }
+
+        const calculatePosition = (): void => {
+            if (!containerRef.current || !panelRef.current) return;
+
+            const button = containerRef.current.getBoundingClientRect();
+            const panel = panelRef.current;
+
+            const panelWidth = panel.offsetWidth;
+            const panelHeight = panel.offsetHeight;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            // Позиция кнопки
+            const buttonLeft = button.left;
+            const buttonRight = button.right;
+            const buttonTop = button.top;
+            const buttonBottom = button.bottom;
+            const buttonWidth = button.width;
+
+            console.log('[YAxisControls] 🔍 Расчёт позиции:', {
+                button: {
+                    left: Math.round(buttonLeft),
+                    right: Math.round(buttonRight),
+                    top: Math.round(buttonTop),
+                    bottom: Math.round(buttonBottom),
+                    width: Math.round(buttonWidth)
+                },
+                panel: {
+                    width: panelWidth,
+                    height: panelHeight
+                },
+                viewport: {
+                    width: viewportWidth,
+                    height: viewportHeight
+                }
+            });
+
+            // ========================================
+            // ВЕРТИКАЛЬНАЯ ПОЗИЦИЯ (top)
+            // ========================================
+            let top = buttonBottom + VERTICAL_GAP;
+            let showAbove = false;
+
+            // Проверяем, влезет ли снизу
+            if (top + panelHeight > viewportHeight - EDGE_PADDING) {
+                // Не влезает снизу - показываем сверху
+                top = buttonTop - panelHeight - VERTICAL_GAP;
+                showAbove = true;
+
+                // Проверяем, влезет ли сверху
+                if (top < EDGE_PADDING) {
+                    // Не влезает и сверху - показываем снизу и обрезаем по высоте
+                    top = buttonBottom + VERTICAL_GAP;
+                    showAbove = false;
+                    console.log('[YAxisControls] ⚠️ Панель не влезает по высоте');
+                }
+            }
+
+            console.log(`[YAxisControls] Вертикаль: ${showAbove ? '⬆️ СВЕРХУ' : '⬇️ СНИЗУ'} кнопки`);
+
+            // ========================================
+            // ГОРИЗОНТАЛЬНАЯ ПОЗИЦИЯ (left)
+            // ========================================
+            let left: number;
+
+            // СТРАТЕГИЯ 1: Выравниваем по ПРАВОМУ краю кнопки
+            // Панель прижата правым краем к правому краю кнопки
+            const leftIfAlignedRight = buttonRight - panelWidth;
+
+            if (leftIfAlignedRight >= EDGE_PADDING && buttonRight <= viewportWidth - EDGE_PADDING) {
+                // Влезает при выравнивании по правому краю
+                left = leftIfAlignedRight;
+                console.log('[YAxisControls] ✅ Выравнивание по ПРАВОМУ краю кнопки');
+            }
+                // СТРАТЕГИЯ 2: Выравниваем по ЛЕВОМУ краю кнопки
+            // Панель прижата левым краем к левому краю кнопки
+            else if (buttonLeft >= EDGE_PADDING && (buttonLeft + panelWidth) <= viewportWidth - EDGE_PADDING) {
+                // Влезает при выравнивании по левому краю
+                left = buttonLeft;
+                console.log('[YAxisControls] ✅ Выравнивание по ЛЕВОМУ краю кнопки');
+            }
+            // СТРАТЕГИЯ 3: Не влезает ни так, ни так - позиционируем с учётом границ экрана
+            else {
+                // Определяем, к какому краю ближе кнопка
+                const distanceFromLeft = buttonLeft;
+                const distanceFromRight = viewportWidth - buttonRight;
+
+                if (distanceFromRight > distanceFromLeft) {
+                    // Кнопка ближе к левому краю - выравниваем панель по правому краю экрана
+                    left = viewportWidth - panelWidth - EDGE_PADDING;
+                    console.log('[YAxisControls] 🔧 Прижато к ПРАВОМУ краю экрана');
+                } else {
+                    // Кнопка ближе к правому краю - выравниваем панель по левому краю экрана
+                    left = EDGE_PADDING;
+                    console.log('[YAxisControls] 🔧 Прижато к ЛЕВОМУ краю экрана');
+                }
+            }
+
+            // ========================================
+            // ФИНАЛЬНАЯ ПРОВЕРКА И КОРРЕКЦИЯ
+            // ========================================
+            // Гарантируем, что панель не выйдет за левую границу
+            if (left < EDGE_PADDING) {
+                left = EDGE_PADDING;
+                console.log('[YAxisControls] 🔧 Коррекция: прижато к левой границе');
+            }
+
+            // Гарантируем, что панель не выйдет за правую границу
+            if (left + panelWidth > viewportWidth - EDGE_PADDING) {
+                left = viewportWidth - panelWidth - EDGE_PADDING;
+                console.log('[YAxisControls] 🔧 Коррекция: прижато к правой границе');
+            }
+
+            // Гарантируем, что панель не выйдет за верхнюю границу
+            if (top < EDGE_PADDING) {
+                top = EDGE_PADDING;
+                console.log('[YAxisControls] 🔧 Коррекция: прижато к верхней границе');
+            }
+
+            const positioning: React.CSSProperties = {
+                top: `${top}px`,
+                left: `${left}px`
+            };
+
+            console.log('[YAxisControls] 📍 Итоговая позиция:', {
+                top: Math.round(top),
+                left: Math.round(left),
+                fitsHorizontally: (left >= EDGE_PADDING) && (left + panelWidth <= viewportWidth - EDGE_PADDING),
+                fitsVertically: (top >= EDGE_PADDING) && (top + panelHeight <= viewportHeight - EDGE_PADDING)
+            });
+
+            setPanelStyle(positioning);
+        };
+
+        // Вычисляем позицию с задержкой для корректного рендера
+        const timerId = setTimeout(calculatePosition, 20);
+
+        // Перевычисляем при изменениях
+        const handleResize = (): void => {
+            calculatePosition();
+        };
+
+        const handleScroll = (): void => {
+            calculatePosition();
+        };
+
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('scroll', handleScroll, true);
+
+        return () => {
+            clearTimeout(timerId);
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('scroll', handleScroll, true);
+        };
+    }, [isExpanded]);
+
     // Закрытие при клике вне панели
     useEffect(() => {
         if (!isExpanded) return;
 
-        const handleClickOutside = (e: MouseEvent) => {
-            if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        const handleClickOutside = (e: MouseEvent): void => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
                 setIsExpanded(false);
                 setShowManualInput(false);
             }
@@ -96,21 +262,18 @@ export const YAxisControls: React.FC<YAxisControlsProps> = ({
         return value.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
     }, []);
 
-    // Процент отклонения от оптимального
     const deviation = useMemo(() => {
         const optRange = control.optimalRange.max - control.optimalRange.min;
         const currRange = control.currentRange.max - control.currentRange.min;
         return ((currRange - optRange) / optRange * 100);
     }, [control.optimalRange, control.currentRange]);
 
-    // Ползунок для Min
     const minSliderValue = useMemo(() => {
         const range = control.optimalRange.max - control.optimalRange.min;
         const offset = control.currentRange.min - control.optimalRange.min;
         return (offset / range) * 100;
     }, [control.optimalRange, control.currentRange.min]);
 
-    // Ползунок для Max
     const maxSliderValue = useMemo(() => {
         const range = control.optimalRange.max - control.optimalRange.min;
         const offset = control.currentRange.max - control.optimalRange.max;
@@ -151,7 +314,7 @@ export const YAxisControls: React.FC<YAxisControlsProps> = ({
     }, [control]);
 
     return (
-        <div className={`${styles.container} ${className ?? ''}`} ref={panelRef}>
+        <div className={`${styles.container} ${className ?? ''}`} ref={containerRef}>
             <button
                 type="button"
                 className={`${styles.toggleButton} ${control.isCustom ? styles.active : ''}`}
@@ -175,7 +338,11 @@ export const YAxisControls: React.FC<YAxisControlsProps> = ({
             </button>
 
             {isExpanded && (
-                <div className={styles.panel}>
+                <div
+                    ref={panelRef}
+                    className={styles.panel}
+                    style={panelStyle}
+                >
                     <div className={styles.header}>
                         <h4 className={styles.title}>Диапазон оси Y</h4>
                         <div className={styles.headerButtons}>
@@ -243,7 +410,6 @@ export const YAxisControls: React.FC<YAxisControlsProps> = ({
                         </div>
                     ) : (
                         <>
-                            {/* Быстрые действия */}
                             <div className={styles.quickActions}>
                                 <button
                                     type="button"
@@ -271,7 +437,6 @@ export const YAxisControls: React.FC<YAxisControlsProps> = ({
                                 </button>
                             </div>
 
-                            {/* Максимум */}
                             <div className={styles.section}>
                                 <div className={styles.sectionHeader}>
                                     <span className={styles.label}>Максимум</span>
@@ -312,7 +477,6 @@ export const YAxisControls: React.FC<YAxisControlsProps> = ({
                                 </div>
                             </div>
 
-                            {/* Минимум */}
                             <div className={styles.section}>
                                 <div className={styles.sectionHeader}>
                                     <span className={styles.label}>Минимум</span>
@@ -353,7 +517,6 @@ export const YAxisControls: React.FC<YAxisControlsProps> = ({
                                 </div>
                             </div>
 
-                            {/* Информация */}
                             {control.isCustom && (
                                 <div className={styles.info}>
                                     <div className={styles.infoRow}>

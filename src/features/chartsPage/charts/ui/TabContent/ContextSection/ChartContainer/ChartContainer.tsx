@@ -12,6 +12,7 @@ import { ENV } from '@/env';
 
 const CHART_MIN_CONTAINER_WIDTH = ENV.CHART_MIN_CONTAINER_WIDTH;
 
+
 export function ChartContainer() {
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
@@ -79,7 +80,7 @@ export function ChartContainer() {
 
     if (!template) {
         return (
-            <div ref={containerRef} className={styles.container}>
+            <div ref={containerRef} className={styles.chartContainer}>
                 <div className={styles.empty}>
                     <p>Шаблон не загружен</p>
                 </div>
@@ -89,7 +90,7 @@ export function ChartContainer() {
 
     if (containerWidth === undefined) {
         return (
-            <div ref={containerRef} className={styles.container}>
+            <div ref={containerRef} className={styles.chartContainer}>
                 <div className={styles.loading}>
                     <div className={styles.spinner} />
                     <p>Подготовка графиков...</p>
@@ -100,7 +101,7 @@ export function ChartContainer() {
 
     if (isInitializing) {
         return (
-            <div className={styles.container}>
+            <div className={styles.chartContainer}>
                 <div className={styles.loading}>
                     <div className={styles.spinner} />
                     <p>Инициализация графиков...</p>
@@ -111,7 +112,7 @@ export function ChartContainer() {
 
     if (error) {
         return (
-            <div className={styles.container}>
+            <div className={styles.chartContainer}>
                 <div className={styles.error}>
                     <p>Ошибка инициализации: {error}</p>
                     <button
@@ -128,7 +129,7 @@ export function ChartContainer() {
 
     if (!isInitialized) {
         return (
-            <div className={styles.container}>
+            <div className={styles.chartContainer}>
                 <div className={styles.empty}>
                     <p>Графики не инициализированы</p>
                     <button
@@ -144,13 +145,14 @@ export function ChartContainer() {
     }
 
     return (
-        <div ref={containerRef} className={styles.container}>
+        <div ref={containerRef} className={styles.chartContainer}>
             <div className={styles.chartsGrid}>
                 {template.selectedFields.map((field) => (
                     <FieldChartContainer
                         contextId={contextId}
                         key={field.name}
                         fieldName={field.name}
+                        templateName={template.name}
                         width={containerWidth}
                     />
                 ))}

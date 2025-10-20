@@ -5,7 +5,6 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import styles from './ChartNavigator.module.css';
 
 interface ChartNavigatorProps {
-    readonly currentFieldName: string;
     readonly totalFields: number;
     readonly currentIndex: number;
     readonly onPrevious: () => void;
@@ -13,7 +12,6 @@ interface ChartNavigatorProps {
 }
 
 export const ChartNavigator = memo(function ChartNavigator({
-                                                               currentFieldName,
                                                                totalFields,
                                                                currentIndex,
                                                                onPrevious,
@@ -36,7 +34,6 @@ export const ChartNavigator = memo(function ChartNavigator({
             </button>
 
             <div className={styles.info}>
-                <span className={styles.fieldName}>{currentFieldName}</span>
                 <span className={styles.counter}>
           {currentIndex + 1} / {totalFields}
         </span>

@@ -1,4 +1,4 @@
-// src/features/chartsPage/charts/ui/TabContent/contexts/GlobalNavigationContext.tsx
+// src/features/chartsPage/charts/ui/TabContent/GlobalNavigationContext/GlobalNavigationContext.tsx
 
 import { createContext, useContext, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { useSelector } from 'react-redux';
@@ -13,8 +13,8 @@ import { selectVisibleContextIds } from '@chartsPage/charts/core/store/tabsSlice
 interface GlobalChartIndex {
     readonly contextId: Guid;
     readonly fieldName: string;
-    readonly fieldIndex: number; // индекс внутри контекста
-    readonly globalIndex: number; // глобальный индекс на странице
+    readonly fieldIndex: number;
+    readonly globalIndex: number;
 }
 
 /**
@@ -44,7 +44,6 @@ export function GlobalNavigationProvider({ children, tabId }: GlobalNavigationPr
         selectVisibleContextIds(state, tabId)
     );
 
-    // Получаем все шаблоны для видимых контекстов
     const templates = useSelector((state: RootState) => {
         const result: Record<Guid, ReturnType<typeof selectTemplate>> = {};
         for (const contextId of visibleContextIds) {
@@ -53,10 +52,8 @@ export function GlobalNavigationProvider({ children, tabId }: GlobalNavigationPr
         return result;
     });
 
-    // Используем ref вместо state для отслеживания текущего индекса
     const currentGlobalIndexRef = useRef<number>(0);
 
-    // Собираем все графики со всех видимых контекстов
     const allCharts = useMemo((): readonly GlobalChartIndex[] => {
         const charts: GlobalChartIndex[] = [];
         let globalIndex = 0;
@@ -84,7 +81,6 @@ export function GlobalNavigationProvider({ children, tabId }: GlobalNavigationPr
 
     const totalCharts = allCharts.length;
 
-    // Получить глобальный индекс по contextId и fieldName
     const getCurrentIndex = useCallback(
         (contextId: Guid, fieldName: string): number => {
             const index = allCharts.findIndex(
@@ -95,42 +91,79 @@ export function GlobalNavigationProvider({ children, tabId }: GlobalNavigationPr
         [allCharts]
     );
 
-    // Навигация к конкретному индексу
     const navigateToIndex = useCallback(
-        (globalIndex: number): void => {
+        async (globalIndex: number): Promise<void> => {
             if (globalIndex < 0 || globalIndex >= totalCharts) {
                 console.warn('[GlobalNavigation] Invalid index:', globalIndex);
                 return;
             }
 
-            const chart = allCharts[globalIndex];
-            if (!chart) {
+            const targetChart = allCharts[globalIndex];
+            if (!targetChart) {
                 console.warn('[GlobalNavigation] Chart not found for index:', globalIndex);
                 return;
             }
 
             console.log('[GlobalNavigation] Navigating to:', {
                 globalIndex,
-                contextId: chart.contextId,
-                fieldName: chart.fieldName
+                contextId: targetChart.contextId,
+                fieldName: targetChart.fieldName
             });
 
             currentGlobalIndexRef.current = globalIndex;
 
-            // Скроллим к графику
-            const selector = `[data-chart-id="${chart.contextId}-${chart.fieldName}"]`;
+            // Запоминаем, был ли активен fullscreen
+            const wasInFullscreen = document.fullscreenElement !== null;
+
+            console.log('[GlobalNavigation] wasInFullscreen:', wasInFullscreen);
+
+            // Выходим из fullscreen если нужно
+            if (wasInFullscreen) {
+                console.log('[GlobalNavigation] Exiting fullscreen...');
+                try {
+                    await document.exitFullscreen();
+                    // Даём время на анимацию выхода
+                    await new Promise(resolve => setTimeout(resolve, 150));
+                } catch (error) {
+                    console.error('[GlobalNavigation] Error exiting fullscreen:', error);
+                }
+            }
+
+            // Ищем целевой элемент
+            const selector = `[data-chart-id="${targetChart.contextId}-${targetChart.fieldName}"]`;
             console.log('[GlobalNavigation] Looking for element:', selector);
 
             const chartElement = document.querySelector(selector);
 
-            if (chartElement) {
-                console.log('[GlobalNavigation] Element found, scrolling...');
-                chartElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                });
-            } else {
+            if (!chartElement) {
                 console.warn('[GlobalNavigation] Element not found:', selector);
+                return;
+            }
+
+            console.log('[GlobalNavigation] Element found, scrolling...');
+
+            // Скроллим к элементу
+            chartElement.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+            });
+
+            // Если был fullscreen - автоматически входим в fullscreen для нового графика
+            if (wasInFullscreen) {
+                console.log('[GlobalNavigation] Re-entering fullscreen for new chart...');
+
+                // Даём время на скролл, затем входим в fullscreen
+                setTimeout(() => {
+                    if (chartElement instanceof HTMLElement) {
+                        chartElement.requestFullscreen()
+                            .then(() => {
+                                console.log('[GlobalNavigation] Successfully entered fullscreen');
+                            })
+                            .catch((err) => {
+                                console.error('[GlobalNavigation] Error entering fullscreen:', err);
+                            });
+                    }
+                }, 400);
             }
         },
         [allCharts, totalCharts]
@@ -146,7 +179,7 @@ export function GlobalNavigationProvider({ children, tabId }: GlobalNavigationPr
             total: totalCharts
         });
 
-        navigateToIndex(nextIndex);
+        void navigateToIndex(nextIndex);
     }, [totalCharts, navigateToIndex]);
 
     const navigatePrevious = useCallback((): void => {
@@ -159,7 +192,7 @@ export function GlobalNavigationProvider({ children, tabId }: GlobalNavigationPr
             total: totalCharts
         });
 
-        navigateToIndex(prevIndex);
+        void navigateToIndex(prevIndex);
     }, [navigateToIndex]);
 
     const value = useMemo(
@@ -167,7 +200,7 @@ export function GlobalNavigationProvider({ children, tabId }: GlobalNavigationPr
             allCharts,
             totalCharts,
             getCurrentIndex,
-            navigateToIndex,
+            navigateToIndex: (idx: number) => void navigateToIndex(idx),
             navigateNext,
             navigatePrevious,
         }),

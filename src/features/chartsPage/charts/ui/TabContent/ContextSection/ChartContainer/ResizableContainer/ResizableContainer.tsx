@@ -11,6 +11,7 @@ interface ResizableContainerProps {
     defaultHeight?: number | undefined;
     onHeightChange?: ((height: number) => void) | undefined;
     className?: string | undefined;
+    disabled?: boolean | undefined; // НОВОЕ
 }
 
 // Улучшенный менеджер синхронизации
@@ -18,7 +19,7 @@ class SyncManager {
     private groups = new Map<string, {
         height: number;
         listeners: Set<(height: number) => void>;
-        stateListeners: Set<(enabled: boolean) => void>; // Добавляем слушателей состояния
+        stateListeners: Set<(enabled: boolean) => void>;
         enabled: boolean;
     }>();
 
@@ -40,11 +41,9 @@ class SyncManager {
         return () => group.listeners.delete(listener);
     }
 
-    // Новый метод для подписки на изменение состояния синхронизации
     subscribeToState(groupId: string, listener: (enabled: boolean) => void) {
         const group = this.getGroup(groupId);
         group.stateListeners.add(listener);
-        // Сразу уведомляем о текущем состоянии
         listener(group.enabled);
         return () => group.stateListeners.delete(listener);
     }
@@ -62,11 +61,9 @@ class SyncManager {
         const newState = enabled !== undefined ? enabled : !group.enabled;
         group.enabled = newState;
 
-        // Уведомляем все контейнеры об изменении состояния
         group.stateListeners.forEach(listener => listener(newState));
 
         if (newState) {
-            // При включении синхронизируем высоту
             group.listeners.forEach(listener => listener(group.height));
         }
 
@@ -75,7 +72,6 @@ class SyncManager {
 
     setIndividualSync(groupId: string, enabled: boolean) {
         const group = this.getGroup(groupId);
-        // Если хотя бы один контейнер включает синхронизацию, включаем для группы
         if (enabled && !group.enabled) {
             group.enabled = true;
             group.stateListeners.forEach(listener => listener(true));
@@ -100,7 +96,8 @@ export const ResizableContainer: React.FC<ResizableContainerProps> = ({
                                                                           maxHeight = 1200,
                                                                           defaultHeight = 500,
                                                                           onHeightChange,
-                                                                          className
+                                                                          className,
+                                                                          disabled = false // НОВОЕ
                                                                       }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [height, setHeight] = useState(defaultHeight);
@@ -108,23 +105,26 @@ export const ResizableContainer: React.FC<ResizableContainerProps> = ({
     const [isSynced, setIsSynced] = useState(false);
     const updateFromSyncRef = useRef(false);
 
-    // Обработчик изменения высоты
+    // Синхронизация с внешним defaultHeight
+    useEffect(() => {
+        setHeight(defaultHeight);
+    }, [defaultHeight]);
+
     const handleHeightUpdate = useCallback((newHeight: number) => {
+        if (disabled) return; // НОВОЕ: Блокируем обновление если disabled
+
         const clampedHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
         setHeight(clampedHeight);
         onHeightChange?.(clampedHeight);
 
-        // Обновляем другие контейнеры если синхронизация включена
         if (isSynced && !updateFromSyncRef.current) {
-            syncManager.updateHeight(groupId, clampedHeight );
+            syncManager.updateHeight(groupId, clampedHeight);
         }
-    }, [minHeight, maxHeight, onHeightChange, isSynced, groupId]);
+    }, [minHeight, maxHeight, onHeightChange, isSynced, groupId, disabled]); // НОВОЕ: добавили disabled
 
-    // Подписка на изменения высоты и состояния группы
     useEffect(() => {
-        // Подписка на изменения высоты
         const unsubscribeHeight = syncManager.subscribe(groupId, (newHeight: number) => {
-            if (isSynced) {
+            if (isSynced && !disabled) { // НОВОЕ: проверка disabled
                 updateFromSyncRef.current = true;
                 const clampedHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
                 setHeight(clampedHeight);
@@ -133,17 +133,17 @@ export const ResizableContainer: React.FC<ResizableContainerProps> = ({
             }
         });
 
-        // Подписка на изменения состояния синхронизации
         const unsubscribeState = syncManager.subscribeToState(groupId, (enabled: boolean) => {
-            setIsSynced(enabled);
-            if (enabled) {
-                // При включении применяем высоту группы
-                const groupHeight = syncManager.getGroupHeight(groupId);
-                const clampedHeight = Math.max(minHeight, Math.min(maxHeight, groupHeight));
-                updateFromSyncRef.current = true;
-                setHeight(clampedHeight);
-                onHeightChange?.(clampedHeight);
-                updateFromSyncRef.current = false;
+            if (!disabled) { // НОВОЕ: проверка disabled
+                setIsSynced(enabled);
+                if (enabled) {
+                    const groupHeight = syncManager.getGroupHeight(groupId);
+                    const clampedHeight = Math.max(minHeight, Math.min(maxHeight, groupHeight));
+                    updateFromSyncRef.current = true;
+                    setHeight(clampedHeight);
+                    onHeightChange?.(clampedHeight);
+                    updateFromSyncRef.current = false;
+                }
             }
         });
 
@@ -151,10 +151,11 @@ export const ResizableContainer: React.FC<ResizableContainerProps> = ({
             unsubscribeHeight();
             unsubscribeState();
         };
-    }, [groupId, minHeight, maxHeight, onHeightChange, isSynced]);
+    }, [groupId, minHeight, maxHeight, onHeightChange, isSynced, disabled]); // НОВОЕ: добавили disabled
 
-    // Обработка ресайза мышью
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        if (disabled) return; // НОВОЕ: Блокируем ресайз если disabled
+
         e.preventDefault();
         setIsResizing(true);
         const startY = e.clientY;
@@ -173,9 +174,7 @@ export const ResizableContainer: React.FC<ResizableContainerProps> = ({
 
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-    }, [height, handleHeightUpdate]);
-
-
+    }, [height, handleHeightUpdate, disabled]); // НОВОЕ: добавили disabled
 
     return (
         <div
@@ -187,18 +186,20 @@ export const ResizableContainer: React.FC<ResizableContainerProps> = ({
                 {children}
             </div>
 
-            <div
-                className={styles.resizeHandle}
-                onMouseDown={handleMouseDown}
-            >
-                <div className={styles.resizeGrip}>
-                    <SyncGroupControl groupId={groupId} />
-                    <span></span>
-                    <span></span>
-                    <span></span>
+            {/* НОВОЕ: Скрываем handle если disabled */}
+            {!disabled && (
+                <div
+                    className={styles.resizeHandle}
+                    onMouseDown={handleMouseDown}
+                >
+                    <div className={styles.resizeGrip}>
+                        <SyncGroupControl groupId={groupId} />
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
                 </div>
-            </div>
-
+            )}
         </div>
     );
 };
@@ -209,17 +210,14 @@ export const SyncGroupControl: React.FC<{ groupId: string }> = ({ groupId }) => 
     const [_groupHeight, setGroupHeight] = useState(500);
 
     useEffect(() => {
-        // Подписка на изменения высоты
         const unsubscribeHeight = syncManager.subscribe(groupId, (newHeight) => {
             setGroupHeight(newHeight);
         });
 
-        // Подписка на изменения состояния
         const unsubscribeState = syncManager.subscribeToState(groupId, (enabled) => {
             setIsEnabled(enabled);
         });
 
-        // Получаем начальные значения
         setIsEnabled(syncManager.isGroupEnabled(groupId));
         setGroupHeight(syncManager.getGroupHeight(groupId));
 

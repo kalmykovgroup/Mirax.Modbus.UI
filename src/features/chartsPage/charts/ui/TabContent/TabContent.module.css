@@ -160,26 +160,7 @@
     }
 }
 
-/* ========== SYNC BUTTON CONTAINER ========== */
-.syncButtonContainer {
-    /* Базовые стили - кнопка в потоке */
-    transition: all 0.3s ease;
 
-}
-
-.syncButtonSticky {
-    /* Липкое позиционирование когда активна */
-    position: sticky;
-    /* Читаем высоту топбара из CSS переменной + отступ 16px */
-    top: calc(var(--topbar-height, 49px));
-    z-index: 100;
-
-    /* Визуальные эффекты для липкого состояния */
-
-
-    /* Анимация появления тени при "прилипании" */
-    animation: stickyAppear 0.3s ease;
-}
 
 @keyframes stickyAppear {
     from {
@@ -188,17 +169,5 @@
     to {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
     }
-}
-
-/* Опциональный эффект "подсветки" границы */
-.syncButtonSticky::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    border-radius: 8px 8px 0 0;
-    opacity: 0.6;
 }
 
