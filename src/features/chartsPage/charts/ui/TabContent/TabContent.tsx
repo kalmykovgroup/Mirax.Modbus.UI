@@ -23,6 +23,9 @@ import { ContextSection } from '@chartsPage/charts/ui/TabContent/ContextSection/
 import { SyncButton } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/SyncFields/SyncButton/SyncButton';
 import { useDocumentTitle } from '@app/lib/hooks/DocumentTitleContext';
 import {selectChartContexts} from "@chartsPage/charts/core/store/selectors/base.selectors.ts";
+import {
+    GlobalNavigationProvider
+} from "@chartsPage/charts/ui/TabContent/GlobalNavigationContext/GlobalNavigationContext.tsx";
 
 interface TabContentProps {
     readonly tabId: Guid;
@@ -77,7 +80,7 @@ export function TabContent({ tabId }: TabContentProps) {
             return orderA - orderB;
         });
     }, [allContextIds, chartContexts]);
-    
+
     const pageTitle = useMemo(() => {
         if (!isActiveTab) return 'Графики';
         return `Графики | ${tabName}`;
@@ -119,6 +122,7 @@ export function TabContent({ tabId }: TabContentProps) {
     }
 
     return (
+        <GlobalNavigationProvider tabId={tabId}>
         <div className={styles.tabContent}>
             {/* Фильтр контекстов */}
             <div className={styles.contextFilter}>
@@ -209,5 +213,6 @@ export function TabContent({ tabId }: TabContentProps) {
                 </div>
             )}
         </div>
+        </GlobalNavigationProvider>
     );
 }

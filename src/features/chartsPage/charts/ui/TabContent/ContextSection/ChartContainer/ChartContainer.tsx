@@ -1,13 +1,13 @@
 // components/ChartContainer/ChartContainer.tsx
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store/store';
 import { selectTemplate } from '@chartsPage/charts/core/store/selectors/base.selectors';
 import styles from './ChartContainer.module.css';
-import { useChartInitialization } from "@chartsPage/charts/orchestration/hooks/useChartInitialization.ts";
-import { FieldChartContainer } from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/FieldChartContainer.tsx";
-import { useRequestManager } from "@chartsPage/charts/orchestration/hooks/useRequestManager.ts";
+import { useChartInitialization } from '@chartsPage/charts/orchestration/hooks/useChartInitialization.ts';
+import { FieldChartContainer } from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/FieldChartContainer.tsx';
+import { useRequestManager } from '@chartsPage/charts/orchestration/hooks/useRequestManager.ts';
 import { ENV } from '@/env';
 
 const CHART_MIN_CONTAINER_WIDTH = ENV.CHART_MIN_CONTAINER_WIDTH;
@@ -15,27 +15,11 @@ const CHART_MIN_CONTAINER_WIDTH = ENV.CHART_MIN_CONTAINER_WIDTH;
 export function ChartContainer() {
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
-    const [_activeFieldIndex, setActiveFieldIndex] = useState<number>(0);
 
     const manager = useRequestManager();
     const contextId = manager.getContextId();
 
     const template = useSelector((state: RootState) => selectTemplate(state, contextId));
-
-    // Мемоизированный массив имён полей
-    const fieldNames = useMemo(() => {
-        if (!template) return [];
-        return template.selectedFields.map(f => f.name);
-    }, [template]);
-
-    // Навигация между графиками
-    const handleNavigatePrevious = useCallback(() => {
-        setActiveFieldIndex(prev => Math.max(0, prev - 1));
-    }, []);
-
-    const handleNavigateNext = useCallback(() => {
-        setActiveFieldIndex(prev => Math.min(fieldNames.length - 1, prev + 1));
-    }, [fieldNames.length]);
 
     /**
      * Измерение ширины контейнера
@@ -162,18 +146,12 @@ export function ChartContainer() {
     return (
         <div ref={containerRef} className={styles.container}>
             <div className={styles.chartsGrid}>
-                {template.selectedFields.map((field, index) => (
+                {template.selectedFields.map((field) => (
                     <FieldChartContainer
                         contextId={contextId}
                         key={field.name}
                         fieldName={field.name}
                         width={containerWidth}
-                        navigationInfo={{
-                            currentIndex: index,
-                            totalFields: fieldNames.length,
-                            onPrevious: handleNavigatePrevious,
-                            onNext: handleNavigateNext
-                        }}
                     />
                 ))}
             </div>

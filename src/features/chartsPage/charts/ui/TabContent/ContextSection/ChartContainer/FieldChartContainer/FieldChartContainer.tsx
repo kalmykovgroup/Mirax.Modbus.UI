@@ -1,4 +1,4 @@
-// src/features/chartsPage/charts/ui/ChartContainer/FieldChartContainer/FieldChartContainer.tsx
+// src/features/chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/FieldChartContainer.tsx
 // ИСПРАВЛЕНИЕ: Устранение рассинхронизации при включении/выключении sync
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -25,25 +25,16 @@ import { RequestManagerRegistry } from '@chartsPage/charts/orchestration/request
 import type { TimeRange } from '@chartsPage/charts/core/store/types/chart.types';
 import { calculateBucket } from '@chartsPage/charts/core/store/chartsSettingsSlice.ts';
 
-interface NavigationInfo {
-    readonly currentIndex: number;
-    readonly totalFields: number;
-    readonly onPrevious: () => void;
-    readonly onNext: () => void;
-}
-
 interface FieldChartContainerProps {
     readonly contextId: Guid;
     readonly fieldName: string;
     readonly width: number;
-    readonly navigationInfo?: NavigationInfo | undefined;
 }
 
 export function FieldChartContainer({
                                         contextId,
                                         fieldName,
                                         width,
-                                        navigationInfo
                                     }: FieldChartContainerProps) {
     const dispatch = useAppDispatch();
     const requestManager = useRequestManager();
@@ -357,7 +348,6 @@ export function FieldChartContainer({
             onRetry={handleRetry}
             width={width}
             currentRange={currentRange}
-            navigationInfo={navigationInfo}
         />
     );
 }

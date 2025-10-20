@@ -29,30 +29,27 @@ import { SyncCheckbox } from '@chartsPage/charts/ui/TabContent/ContextSection/Ch
 import type { Guid } from '@app/lib/types/Guid.ts';
 import {
     ChartExportButton
-} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/СhartDataExport/ChartExportButton.tsx";
-import { ChevronDown, ChevronUp } from "lucide-react";
+} from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/СhartDataExport/ChartExportButton.tsx';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { ENV } from '@/env';
 import {
     ResetZoomButton
-} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ResetZoomButton/ResetZoomButton.tsx";
+} from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ViewFieldChart/ResetZoomButton/ResetZoomButton.tsx';
 import classNames from 'classnames';
 import { useFullscreen } from './hooks/useFullscreen';
 import {
     FullscreenButton
-} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/FullscreenButton/FullscreenButton.tsx";
+} from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/FullscreenButton/FullscreenButton.tsx';
 import {
     ChartNavigator
-} from "@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ChartNavigator/ChartNavigator.tsx";
+} from '@chartsPage/charts/ui/TabContent/ContextSection/ChartContainer/FieldChartContainer/ChartNavigator/ChartNavigator.tsx';
+import {
+    useGlobalNavigation
+} from "@chartsPage/charts/ui/TabContent/GlobalNavigationContext/GlobalNavigationContext.tsx";
+
 
 const GROUP_ID = 'ChartContainer';
 const CHART_DEFAULT_CHART_HEIGHT_PX = ENV.CHART_DEFAULT_CHART_HEIGHT_PX;
-
-interface NavigationInfo {
-    readonly currentIndex: number;
-    readonly totalFields: number;
-    readonly onPrevious: () => void;
-    readonly onNext: () => void;
-}
 
 interface ViewFieldChartProps {
     readonly contextId: Guid;
@@ -61,7 +58,6 @@ interface ViewFieldChartProps {
     readonly onRetry?: (() => void) | undefined;
     readonly width: number;
     readonly currentRange?: TimeRange | undefined;
-    readonly navigationInfo?: NavigationInfo | undefined;
 }
 
 export const ViewFieldChart = memo(function ViewFieldChart({
@@ -70,10 +66,13 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                                                                onZoomEnd,
                                                                width,
                                                                currentRange,
-                                                               navigationInfo
                                                            }: ViewFieldChartProps) {
     const chartRef = useRef<ChartCanvasRef>(null);
     const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+
+    // Используем глобальную навигацию
+    const globalNav = useGlobalNavigation();
+    const currentGlobalIndex = globalNav.getCurrentIndex(contextId, fieldName);
 
     const chartData = useSelector((state: RootState) =>
         selectChartRenderData(state, contextId, fieldName)
@@ -103,38 +102,11 @@ export const ViewFieldChart = memo(function ViewFieldChart({
         isSupported: isFullscreenSupported
     } = useFullscreen(fullscreenContainerRef);
 
-    // КРИТИЧНО: Управление overflow на body для предотвращения скролла
-    useEffect(() => {
-        if (isFullscreen) {
-            // Сохраняем текущие стили
-            const originalOverflow = document.body.style.overflow;
-            const originalPosition = document.body.style.position;
 
-            // Блокируем скролл
-            document.body.style.overflow = 'hidden';
-            document.body.style.position = 'fixed';
-            document.body.style.width = '100%';
-            document.body.style.top = '0';
-            document.body.style.left = '0';
-
-
-            // Восстанавливаем стили
-            document.body.style.overflow = originalOverflow;
-            document.body.style.position = originalPosition;
-            document.body.style.width = '';
-            document.body.style.top = '';
-            document.body.style.left = '';
-
-            // КРИТИЧНО: Форсируем пересчёт layout после выхода
-            requestAnimationFrame(() => {
-                window.dispatchEvent(new Event('resize'));
-            });
-        }
-    }, [isFullscreen]);
 
     // Keyboard navigation - работает ТОЛЬКО в fullscreen
     useEffect(() => {
-        if (!isFullscreen || !navigationInfo) {
+        if (!isFullscreen) {
             return;
         }
 
@@ -146,10 +118,10 @@ export const ViewFieldChart = memo(function ViewFieldChart({
 
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
-                navigationInfo.onPrevious();
+                globalNav.navigatePrevious();
             } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
-                navigationInfo.onNext();
+                globalNav.navigateNext();
             } else if (e.key === 'f' || e.key === 'F') {
                 e.preventDefault();
                 void toggleFullscreen();
@@ -161,7 +133,7 @@ export const ViewFieldChart = memo(function ViewFieldChart({
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isFullscreen, navigationInfo, toggleFullscreen]);
+    }, [isFullscreen, globalNav, toggleFullscreen]);
 
     const handleZoomEnd = useCallback(
         (range: TimeRange) => {
@@ -241,6 +213,7 @@ export const ViewFieldChart = memo(function ViewFieldChart({
         <div
             ref={fullscreenContainerRef}
             className={classNames(styles.fullscreenWrapper, (isFullscreen ? styles.fullscreenActive : ''))}
+            data-chart-id={`${contextId}-${fieldName}`}
         >
             {/* Обёртка для ChartHeader с анимацией */}
             <div className={`${styles.chartHeaderWrapper} ${isHeaderVisible ? styles.headerVisible : styles.headerHidden}`}>
@@ -344,14 +317,14 @@ export const ViewFieldChart = memo(function ViewFieldChart({
                 </div>
             </ResizableContainer>
 
-            {/* Навигатор - ТОЛЬКО в fullscreen */}
-            {isFullscreen && navigationInfo && (
+            {/* Навигатор - ТОЛЬКО в fullscreen, теперь глобальный */}
+            {isFullscreen && (
                 <ChartNavigator
                     currentFieldName={fieldName}
-                    totalFields={navigationInfo.totalFields}
-                    currentIndex={navigationInfo.currentIndex}
-                    onPrevious={navigationInfo.onPrevious}
-                    onNext={navigationInfo.onNext}
+                    totalFields={globalNav.totalCharts}
+                    currentIndex={currentGlobalIndex}
+                    onPrevious={globalNav.navigatePrevious}
+                    onNext={globalNav.navigateNext}
                 />
             )}
         </div>
