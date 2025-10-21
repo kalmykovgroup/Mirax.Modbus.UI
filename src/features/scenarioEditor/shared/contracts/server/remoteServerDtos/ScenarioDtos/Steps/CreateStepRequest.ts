@@ -33,18 +33,18 @@ interface CreateActivityStepBase extends CreateStepBase {
     defaultOutput?: string | null;
 }
 
-/** Modbus Activity (C# CreateModbusActivityStepRequest) */
-export interface CreateModbusActivityStepRequest extends CreateActivityStepBase {
+/** Modbus Activity (C# CreateActivityModbusStepRequest) */
+export interface CreateActivityModbusStepRequest extends CreateActivityStepBase {
     // ВАЖНО: подгони значение под твой enum (в C#: ActivityModbus)
-    type: StepType.ModbusActivity;
+    type: StepType.ActivityModbus;
     modbusDeviceActionId?: Guid | null;   // Guid?
     modbusDeviceAddressId?: Guid | null;  // Guid?
 }
 
-/** System Activity (C# CreateSystemActivityStepRequest) */
-export interface CreateSystemActivityStepRequest extends CreateActivityStepBase {
+/** System Activity (C# CreateActivitySystemStepRequest) */
+export interface CreateActivitySystemStepRequest extends CreateActivityStepBase {
     // В C#: ActivitySystem
-    type: StepType.SystemActivity;
+    type: StepType.ActivitySystem;
     systemActionId?: Guid | null; // Guid?
 }
 
@@ -82,8 +82,8 @@ export interface CreateConditionStepRequest extends CreateStepBase {
 
 /** Объединяющий тип */
 export type CreateStepRequest =
-    | CreateModbusActivityStepRequest
-    | CreateSystemActivityStepRequest
+    | CreateActivityModbusStepRequest
+    | CreateActivitySystemStepRequest
     | CreateDelayStepRequest
     | CreateSignalStepRequest
     | CreateJumpStepRequest

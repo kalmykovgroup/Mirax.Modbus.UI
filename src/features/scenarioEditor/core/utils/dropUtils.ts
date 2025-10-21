@@ -1,7 +1,7 @@
 // src/app/scenario-designer/graph/dnd/dropUtils.ts
 import type {ReactFlowInstance} from '@xyflow/react';
 import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
-import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
+import {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
 
 // ——— базовые helpers ———
 export const getAll = (rf: ReactFlowInstance<FlowNode>) => rf.getNodes() as FlowNode[];
@@ -28,7 +28,7 @@ export const rectOf = (n: FlowNode, all: FlowNode[]) => {
     let h = num(n.height) ?? num((n.style as any)?.height);
 
     if ((w ?? 0) <= 0 || (h ?? 0) <= 0) {
-        if (n.type === FlowType.branchNode) {
+        if (n.type === FlowType.BranchNode) {
             throw new Error(`Branch '${n.id}' has no numeric width/height at hit-test time`);
         }
         // для не-веток возвращаем 0×0 — они не цели хит-теста
@@ -57,7 +57,7 @@ export const pickDeepestBranchByTopLeft = (
     ignoreId?: string
 ) => {
     const hits = all
-        .filter(n => n.type === FlowType.branchNode && n.id !== ignoreId)
+        .filter(n => n.type === FlowType.BranchNode && n.id !== ignoreId)
         .filter(b => {
             const r = rectOf(b, all);
             if (r.w === 0 || r.h === 0) return false; // ещё не измерено/не задан inline размер
@@ -71,7 +71,7 @@ export const pickDeepestBranchByTopLeft = (
 export const setHoverBranch = (setNodes: (updater: (nds: FlowNode[]) => FlowNode[]) => void, branchId: string | null) =>
     setNodes((nds): FlowNode[] =>
         nds.map(n =>
-            n.type === FlowType.branchNode
+            n.type === FlowType.BranchNode
                 ? { ...n, data: { ...n.data, isDropTarget: branchId != null && n.id === branchId } }
                 : n
         )

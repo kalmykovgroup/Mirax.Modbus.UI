@@ -1,4 +1,4 @@
-// src/features/scenarioEditor/ui/map/LeftPanel/LeftPanel.tsx
+// src/features/scenarioEditor/core/ui/map/LeftPanel/LeftPanel.tsx
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -15,61 +15,80 @@ import {
     useStopScenarioMutation,
 } from '@/features/scenarioEditor/shared/api/workflowApi';
 import type { RunScenarioResponse } from '@scenario/shared/contracts/server/localDtos/ScenarioEngine/RunScenarioResponse';
-import { addRunningScenario, removeRunningScenario } from '@/features/scenarioEditor/store/workflowSlice';
+import {
+    addRunningScenario,
+    removeRunningScenario,
+} from '@/features/scenarioEditor/store/workflowSlice';
 import { SimpleMenu } from '@scenario/core/ui/map/LeftPanel/HoverActionMenu/SimpleMenu';
 import type { ScenarioStopMode } from '@scenario/shared/contracts/server/types/ScenarioEngine/ScenarioStopMode';
 import {
     selectActiveScenarioId,
-    selectScenarioEntries,
-    selectScenariosListError
-} from "@scenario/store/scenarioSelectors.ts";
+    selectScenariosList,
+} from '@scenario/store/scenarioSelectors';
 import {
     refreshScenarioById,
     refreshScenariosList,
-    type ScenarioMeta,
-    setActiveScenarioId
-} from "@scenario/store/scenarioSlice.ts";
+    setActiveScenarioId,
+} from '@scenario/store/scenarioSlice';
 
-
-export function LeftPanel()  {
+export function LeftPanel() {
     const dispatch = useDispatch<AppDispatch>();
 
     const [query, setQuery] = useState('');
     const [isLoadingList, setIsLoadingList] = useState(false);
+    const [errorLoadList, setErrorLoadList] = useState<string | null>(null);
+    const [loadingScenarioId, setLoadingScenarioId] = useState<string | null>(null);
 
-    // Селекторы
-    const errorLoadList = useSelector(selectScenariosListError);
     const activeScenarioId = useSelector(selectActiveScenarioId);
-    const entries = useSelector(selectScenarioEntries);
+    const scenarios = useSelector(selectScenariosList);
 
-    // Фильтрация по поисковому запросу
-    const list: readonly ScenarioMeta[] = useMemo(() => {
-        if (!query.trim()) return entries;
+    const list = useMemo(() => {
+        if (!query.trim()) return scenarios;
 
         const q = query.trim().toLowerCase();
-        return entries.filter((entry) => {
-            const name = entry.name ?? '';
-            const description = entry.description ?? '';
+        return scenarios.filter((s) => {
+            const name = s.name ?? '';
+            const description = s.description ?? '';
             return name.toLowerCase().includes(q) || description.toLowerCase().includes(q);
         });
-    }, [entries, query]);
+    }, [scenarios, query]);
 
-    // Выбор сценария
     const onSelect = useCallback(
         async (id: string) => {
-            dispatch(setActiveScenarioId(id));
-            await dispatch(refreshScenarioById(id, false)); // Догрузит детали, если их нет
+            console.log('[LeftPanel] Selecting scenario:', id);
+            setLoadingScenarioId(id);
+
+            try {
+                // Сначала устанавливаем активный ID
+                dispatch(setActiveScenarioId(id));
+
+                // Затем загружаем полную структуру с сервера
+                console.log('[LeftPanel] Loading full scenario data...');
+                await dispatch(refreshScenarioById(id, true)); // forceRefetch = true
+
+                console.log('[LeftPanel] Scenario loaded successfully');
+            } catch (error) {
+                console.error('[LeftPanel] Failed to load scenario:', error);
+            } finally {
+                setLoadingScenarioId(null);
+            }
         },
         [dispatch]
     );
 
-    // Загрузка списка при монтировании
     useEffect(() => {
         let mounted = true;
         (async () => {
             try {
                 setIsLoadingList(true);
+                setErrorLoadList(null);
+                console.log('[LeftPanel] Loading scenarios list...');
                 await dispatch(refreshScenariosList());
+                console.log('[LeftPanel] Scenarios list loaded');
+            } catch (e) {
+                if (mounted) {
+                    setErrorLoadList(e instanceof Error ? e.message : 'Ошибка загрузки');
+                }
             } finally {
                 if (mounted) setIsLoadingList(false);
             }
@@ -79,18 +98,19 @@ export function LeftPanel()  {
         };
     }, [dispatch]);
 
-    // Обновление списка
     const doRefetch = useCallback(async () => {
         if (isLoadingList) return;
         try {
             setIsLoadingList(true);
+            setErrorLoadList(null);
             await dispatch(refreshScenariosList(true));
+        } catch (e) {
+            setErrorLoadList(e instanceof Error ? e.message : 'Ошибка загрузки');
         } finally {
             setIsLoadingList(false);
         }
     }, [dispatch, isLoadingList]);
 
-    // Workflow actions
     const [runScenario, runState] = useRunScenarioMutation();
     const [pauseScenario, pauseState] = usePauseScenarioMutation();
     const [resumeScenario, resumeState] = useResumeScenarioMutation();
@@ -100,7 +120,9 @@ export function LeftPanel()  {
         async (scenarioId: string) => {
             if (runState.isLoading) return;
             try {
-                const response: RunScenarioResponse = await runScenario({ id: scenarioId }).unwrap();
+                const response: RunScenarioResponse = await runScenario({
+                    id: scenarioId,
+                }).unwrap();
                 dispatch(
                     addRunningScenario({
                         workflowId: response.workflowId,
@@ -145,7 +167,10 @@ export function LeftPanel()  {
         async (scenarioId: string) => {
             if (stopState.isLoading) return;
             try {
-                await stopScenario({ scenarioId, mode: 'Cancel' as ScenarioStopMode }).unwrap();
+                await stopScenario({
+                    scenarioId,
+                    mode: 'Cancel' as ScenarioStopMode,
+                }).unwrap();
                 dispatch(removeRunningScenario({ scenarioId }));
             } catch (err) {
                 console.error('CancelScenario error:', err);
@@ -158,7 +183,10 @@ export function LeftPanel()  {
         async (scenarioId: string) => {
             if (stopState.isLoading) return;
             try {
-                await stopScenario({ scenarioId, mode: 'Terminate' as ScenarioStopMode }).unwrap();
+                await stopScenario({
+                    scenarioId,
+                    mode: 'Terminate' as ScenarioStopMode,
+                }).unwrap();
                 dispatch(removeRunningScenario({ scenarioId }));
             } catch (err) {
                 console.error('TerminateScenario error:', err);
@@ -168,7 +196,6 @@ export function LeftPanel()  {
     );
 
     const CreateScenario = useCallback(async () => {
-        // TODO: Открыть модалку создания сценария
         console.log('Create scenario');
     }, []);
 
@@ -214,18 +241,24 @@ export function LeftPanel()  {
 
                 {!isLoadingList &&
                     !errorLoadList &&
-                    list.map((entry) => {
-                        const title = entry.name || `Сценарий ${entry.id}`;
-                        const isActive = activeScenarioId === entry.id;
+                    list.map((scenario) => {
+                        const title = scenario.name || `Сценарий ${scenario.id}`;
+                        const isActive = activeScenarioId === scenario.id;
+                        const isLoading = loadingScenarioId === scenario.id;
 
                         return (
                             <div
-                                key={entry.id}
-                                className={`${styles.scenarioItem} ${isActive ? styles.itemActive : ''}`}
-                                onClick={() => onSelect(entry.id)}
+                                key={scenario.id}
+                                className={`${styles.scenarioItem} ${
+                                    isActive ? styles.itemActive : ''
+                                } ${isLoading ? styles.itemLoading : ''}`}
+                                onClick={() => !isLoading && onSelect(scenario.id)}
                                 title={title}
                             >
-                                <div className={styles.itemTitle}>{title}</div>
+                                <div className={styles.itemTitle}>
+                                    {isLoading ? '⏳ ' : ''}
+                                    {title}
+                                </div>
 
                                 <SimpleMenu
                                     label="Действия"
@@ -233,19 +266,19 @@ export function LeftPanel()  {
                                     onAction={(action) => {
                                         switch (action) {
                                             case 'play':
-                                                ScenarioPlay(entry.id);
+                                                ScenarioPlay(scenario.id);
                                                 break;
                                             case 'pause':
-                                                ScenarioPause(entry.id);
+                                                ScenarioPause(scenario.id);
                                                 break;
                                             case 'resume':
-                                                ScenarioResume(entry.id);
+                                                ScenarioResume(scenario.id);
                                                 break;
                                             case 'cancel':
-                                                ScenarioCancel(entry.id);
+                                                ScenarioCancel(scenario.id);
                                                 break;
                                             case 'terminated':
-                                                ScenarioTerminated(entry.id);
+                                                ScenarioTerminated(scenario.id);
                                                 break;
                                         }
                                     }}

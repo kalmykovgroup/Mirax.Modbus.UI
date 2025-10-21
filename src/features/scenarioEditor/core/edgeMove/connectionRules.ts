@@ -1,89 +1,89 @@
 // src/app/scenario-designer/graph/connectionRules.ts
 
-import { FlowType } from "@/features/scenarioEditor/shared/contracts/types/FlowType";
+import { FlowType } from "@scenario/core/ui/nodes/types/flowType.ts";
 
 type Rules = Partial<Record<FlowType, ReadonlySet<FlowType>>>;
 
 /** Источник → допустимые цели */
 export const ALLOW_MAP: Rules = {
     // jump ->
-    [FlowType.jumpStepNode]: new Set<FlowType>([
-        FlowType.activitySystemNode,
-        FlowType.activityModbusNode,
-        FlowType.parallelStepNode,
-        FlowType.delayStepNode,
-        FlowType.jumpStepNode,
-        FlowType.signalStepNode,
-        FlowType.conditionStepNode,
+    [FlowType.Jump]: new Set<FlowType>([
+        FlowType.ActivitySystem,
+        FlowType.ActivityModbus,
+        FlowType.Parallel,
+        FlowType.Delay,
+        FlowType.Jump,
+        FlowType.Signal,
+        FlowType.Condition,
     ]),
 
     // condition ->
-    [FlowType.conditionStepNode]: new Set<FlowType>([
-        FlowType.branchNode,
-        FlowType.activitySystemNode,
-        FlowType.activityModbusNode,
-        FlowType.parallelStepNode,
-        FlowType.delayStepNode,
-        FlowType.jumpStepNode,
-        FlowType.signalStepNode,
-        FlowType.conditionStepNode,
+    [FlowType.Condition]: new Set<FlowType>([
+        FlowType.BranchNode,
+        FlowType.ActivitySystem,
+        FlowType.ActivityModbus,
+        FlowType.Parallel,
+        FlowType.Delay,
+        FlowType.Jump,
+        FlowType.Signal,
+        FlowType.Condition,
     ]),
 
     // parallel ->
-    [FlowType.parallelStepNode]: new Set<FlowType>([
-        FlowType.branchNode,
-        FlowType.activitySystemNode,
-        FlowType.activityModbusNode,
-        FlowType.parallelStepNode,
-        FlowType.delayStepNode,
-        FlowType.jumpStepNode,
-        FlowType.signalStepNode,
-        FlowType.conditionStepNode,
+    [FlowType.Parallel]: new Set<FlowType>([
+        FlowType.BranchNode,
+        FlowType.ActivitySystem,
+        FlowType.ActivityModbus,
+        FlowType.Parallel,
+        FlowType.Delay,
+        FlowType.Jump,
+        FlowType.Signal,
+        FlowType.Condition,
     ]),
 
     // system ->
-    [FlowType.activitySystemNode]: new Set<FlowType>([
-        FlowType.activitySystemNode,
-        FlowType.activityModbusNode,
-        FlowType.parallelStepNode,
-        FlowType.delayStepNode,
-        FlowType.jumpStepNode,
-        FlowType.signalStepNode,
-        FlowType.conditionStepNode,
+    [FlowType.ActivitySystem]: new Set<FlowType>([
+        FlowType.ActivitySystem,
+        FlowType.ActivityModbus,
+        FlowType.Parallel,
+        FlowType.Delay,
+        FlowType.Jump,
+        FlowType.Signal,
+        FlowType.Condition,
     ]),
 
     // modbus ->
-    [FlowType.activityModbusNode]: new Set<FlowType>([
-        FlowType.activitySystemNode,
-        FlowType.activityModbusNode,
-        FlowType.parallelStepNode,
-        FlowType.delayStepNode,
-        FlowType.jumpStepNode,
-        FlowType.signalStepNode,
-        FlowType.conditionStepNode,
+    [FlowType.ActivityModbus]: new Set<FlowType>([
+        FlowType.ActivitySystem,
+        FlowType.ActivityModbus,
+        FlowType.Parallel,
+        FlowType.Delay,
+        FlowType.Jump,
+        FlowType.Signal,
+        FlowType.Condition,
     ]),
 
     // delay ->
-    [FlowType.delayStepNode]: new Set<FlowType>([
-        FlowType.activitySystemNode,
-        FlowType.activityModbusNode,
-        FlowType.parallelStepNode,
-        FlowType.delayStepNode,
-        FlowType.jumpStepNode,
-        FlowType.signalStepNode,
-        FlowType.conditionStepNode,
+    [FlowType.Delay]: new Set<FlowType>([
+        FlowType.ActivitySystem,
+        FlowType.ActivityModbus,
+        FlowType.Parallel,
+        FlowType.Delay,
+        FlowType.Jump,
+        FlowType.Signal,
+        FlowType.Condition,
     ]),
 
 
     // signal ->
-    [FlowType.signalStepNode]: new Set<FlowType>([
-        FlowType.activitySystemNode,
-        FlowType.activityModbusNode,
-        FlowType.parallelStepNode,
-        FlowType.delayStepNode,
-        FlowType.jumpStepNode,
-        FlowType.signalStepNode,
-        FlowType.conditionStepNode,
+    [FlowType.Signal]: new Set<FlowType>([
+        FlowType.ActivitySystem,
+        FlowType.ActivityModbus,
+        FlowType.Parallel,
+        FlowType.Delay,
+        FlowType.Jump,
+        FlowType.Signal,
+        FlowType.Condition,
     ]),
 
     // при необходимости добавляй остальные источники

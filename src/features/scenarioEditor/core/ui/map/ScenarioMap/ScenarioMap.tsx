@@ -4,13 +4,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     Background,
     BackgroundVariant,
-    type Connection,
     ConnectionLineType,
     Controls,
     type EdgeChange,
-    type IsValidConnection,
     MarkerType,
-    type OnNodesChange,
     type NodeChange,
     Panel,
     ReactFlow,
@@ -20,85 +17,44 @@ import {
     applyEdgeChanges,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 
 import styles from './ScenarioMap.module.css';
 
-// Типы
 import type { FlowEdge, FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
-import { edgeTypes } from '@/features/scenarioEditor/shared/contracts/types/edgeTypes';
-import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType';
+import { edgeTypes } from '@scenario/core/ui/nodes/types/edgeTypes';
 
-// Панели
 import { RightPanel } from '@scenario/core/ui/map/RightPanel/RightPanel';
 import LeftPanel from '@scenario/core/ui/map/LeftPanel/LeftPanel';
 
-// State & Selectors
-import type { AppDispatch, RootState } from '@/baseStore/store';
-import { store } from '@/baseStore/store';
+import type { RootState } from '@/baseStore/store';
 
-
-// Утилиты
-import { isAnyBranchResizing } from '@scenario/core/branchResize/branchResizeGuard';
-import { createIsValidConnection } from '@scenario/core/edgeMove/isValidConnection';
-import { ALLOW_MAP, TARGET_ALLOW_MAP } from '@scenario/core/edgeMove/connectionRules';
-
-// Сервисы и хуки
-import { HoverBranchService } from '@scenario/core/handlers/HoverBranchService';
-import { NodeDragStopHandler } from '@scenario/core/handlers/NodeDragStopHandler';
-import { ConnectionHandler } from '@scenario/core/handlers/ConnectionHandler';
-import { useEdgesRef, useIsValidConnection } from '@scenario/core/hooks/useConnectionValidation';
-import { useFitViewOnVersion } from '@scenario/core/hooks/useFitViewOnVersion';
-import { useBranchSizeValidation } from '@scenario/core/hooks/useBranchSizeValidation';
-import { useSelection } from '@scenario/core/hooks/useSelection';
-import { useConnectContext } from '@scenario/core/hooks/useConnectContext';
-import { useRightMousePan } from '@scenario/core/hooks/useRightMousePan';
-import { omitNodeProps } from '@scenario/core/utils/omitNodeProps';
-import {
-    absOf,
-    ensureParentBeforeChild,
-    pickDeepestBranchByTopLeft,
-    rectOf,
-} from '@scenario/core/utils/dropUtils';
-
-// Тема
 import { useTheme } from '@app/providers/theme/useTheme';
-
-// Маппинг
 import { mapScenarioToFlow } from '@scenario/core/mapScenarioToFlow';
 
-import type { Guid } from '@app/lib/types/Guid';
-import { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto';
-import {
-    selectActiveScenarioId,
-    selectDenormalizedScenario,
-    selectScenarioById
-} from '@scenario/store/scenarioSelectors';
-import {
-    refreshScenarioById,
-    ScenarioLoadState,
-    deleteStep,
-    deleteBranch,
-    deleteRelation,
-    addRelation,
-    addStep,
-} from '@scenario/store/scenarioSlice';
-import {generateNodeTypes} from "@scenario/core/utils/generateNodeTypes.ts";
-import {NodeUpdateService} from "@scenario/core/features/NodeUpdateService.ts";
+import { selectActiveScenarioId } from '@scenario/store/scenarioSelectors';
+import { generateNodeTypes } from '@scenario/core/utils/generateNodeTypes';
 
 export interface ScenarioEditorProps {}
 
+interface DragState {
+    readonly x: number;
+    readonly y: number;
+}
+
+interface ResizeState {
+    readonly width: number;
+    readonly height: number;
+}
+
 export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
-    const dispatch = useDispatch<AppDispatch>();
     const { theme } = useTheme();
 
-    const updateService = useMemo(() => new NodeUpdateService(dispatch), [dispatch]);
-
-    // ✅ Используем FlowNode и FlowEdge везде
     const [nodes, setNodes] = useState<FlowNode[]>([]);
     const [edges, setEdges] = useState<FlowEdge[]>([]);
 
-    const edgesRef = useEdgesRef(edges);
+    const dragStateRef = useRef<Map<string, DragState>>(new Map());
+    const resizeStateRef = useRef<Map<string, ResizeState>>(new Map());
     const nodesRef = useRef<FlowNode[]>([]);
 
     useEffect(() => {
@@ -108,404 +64,184 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const nodeTypes = useMemo(() => generateNodeTypes(), []);
 
     const activeId = useSelector(selectActiveScenarioId);
-    const scenarioMeta = useSelector((state: RootState) =>
-        activeId ? selectScenarioById(state, activeId) : null
-    );
-    const activeScenario = useSelector((state: RootState) =>
-        activeId ? selectDenormalizedScenario(state, activeId) : null
-    );
+    const state = useSelector((s: RootState) => s);
 
-    const dragStartStatesRef = useRef<Map<string, { position: { x: number; y: number } }>>(new Map());
-    const resizeStartStatesRef = useRef<Map<string, { size: { width: number; height: number } }>>(new Map());
-
-    // ============================================================================
-    // СИНХРОНИЗАЦИЯ Redux → ReactFlow
-    // ============================================================================
-
+    // Синхронизация Redux → ReactFlow
     useEffect(() => {
-        if (!activeScenario) {
+        if (activeId == null) {
+            console.log('[ScenarioMap] No active scenario');
             setNodes([]);
             setEdges([]);
-            dragStartStatesRef.current.clear();
-            resizeStartStatesRef.current.clear();
+            dragStateRef.current.clear();
+            resizeStateRef.current.clear();
             return;
         }
 
-        const { nodes: mappedNodes, edges: mappedEdges } = mapScenarioToFlow(activeScenario);
-
-        // ✅ Типы уже совпадают
-        setNodes(mappedNodes);
-        setEdges(mappedEdges);
-    }, [activeScenario]);
-
-    // ============================================================================
-    // ОБРАБОТЧИКИ
-    // ============================================================================
-
-    const handleDragStart = useCallback((nodeId: string, x: number, y: number) => {
-        dragStartStatesRef.current.set(nodeId, { position: { x, y } });
-    }, []);
-
-    const handleDragEnd = useCallback(
-        (nodeId: string, newX: number, newY: number) => {
-            const startState = dragStartStatesRef.current.get(nodeId);
-            if (!startState) return;
-
-            const { position: startPos } = startState;
-            if (startPos.x === newX && startPos.y === newY) {
-                dragStartStatesRef.current.delete(nodeId);
-                return;
-            }
-
-            const node = nodesRef.current.find((n) => n.id === nodeId);
-            if (!node) {
-                dragStartStatesRef.current.delete(nodeId);
-                return;
-            }
-
-            // ✅ node уже FlowNode
-            updateService.updateNodePosition(node, newX, newY);
-            dragStartStatesRef.current.delete(nodeId);
-        },
-        [updateService]
-    );
-
-    const handleResizeStart = useCallback((nodeId: string, width: number, height: number) => {
-        resizeStartStatesRef.current.set(nodeId, { size: { width, height } });
-    }, []);
-
-    const handleResizeEnd = useCallback(
-        (nodeId: string, newWidth: number, newHeight: number) => {
-            const startState = resizeStartStatesRef.current.get(nodeId);
-            if (!startState) return;
-
-            const { size: startSize } = startState;
-            if (startSize.width === newWidth && startSize.height === newHeight) {
-                resizeStartStatesRef.current.delete(nodeId);
-                return;
-            }
-
-            const node = nodesRef.current.find((n) => n.id === nodeId);
-            if (!node) {
-                resizeStartStatesRef.current.delete(nodeId);
-                return;
-            }
-
-            // ✅ node уже FlowNode
-            updateService.updateNodeSize(node, newWidth, newHeight);
-            resizeStartStatesRef.current.delete(nodeId);
-        },
-        [updateService]
-    );
-
-    const onNodesChangeHandler: OnNodesChange<FlowNode> = useCallback(
-        (changes: NodeChange<FlowNode>[]) => {
-            setNodes((nds) => applyNodeChanges(changes, nds));
-
-            for (const change of changes) {
-                if (change.type === 'position') {
-                    if (change.dragging === true && change.position) {
-                        handleDragStart(
-                            change.id,
-                            Math.round(change.position.x),
-                            Math.round(change.position.y)
-                        );
-                    } else if (change.dragging === false && change.position) {
-                        handleDragEnd(
-                            change.id,
-                            Math.round(change.position.x),
-                            Math.round(change.position.y)
-                        );
-                    }
-                }
-
-                if (change.type === 'dimensions' && change.dimensions) {
-                    if (change.resizing === true) {
-                        handleResizeStart(
-                            change.id,
-                            Math.round(change.dimensions.width),
-                            Math.round(change.dimensions.height)
-                        );
-                    } else if (change.resizing === false) {
-                        handleResizeEnd(
-                            change.id,
-                            Math.round(change.dimensions.width),
-                            Math.round(change.dimensions.height)
-                        );
-                    }
-                }
-
-                if (change.type === 'remove') {
-                    dragStartStatesRef.current.delete(change.id);
-                    resizeStartStatesRef.current.delete(change.id);
-                }
-            }
-        },
-        [handleDragStart, handleDragEnd, handleResizeStart, handleResizeEnd]
-    );
-
-    const onEdgesChangeHandler = useCallback(
-        (changes: EdgeChange<FlowEdge>[]) => {
-            setEdges((eds) => applyEdgeChanges(changes, eds));
-
-            if (!activeId) return;
-
-            for (const ch of changes) {
-                if (ch.type === 'remove' && ch.id) {
-                    const edge = edgesRef.current.find((e) => e.id === ch.id);
-                    if (!edge) continue;
-
-                    const state = store.getState();
-                    const relation = state.scenario.relations.entities[edge.id];
-
-                    if (relation) {
-                        dispatch(deleteRelation(edge.id as Guid));
-                    }
-                }
-            }
-        },
-        [dispatch, activeId, edgesRef]
-    );
-
-    // ============================================================================
-    // ОСТАЛЬНАЯ ЛОГИКА
-    // ============================================================================
-
-    const scenarioVersion = scenarioMeta
-        ? `${scenarioMeta.id}:${scenarioMeta.lastFetchedAt ?? 0}:${scenarioMeta.loadState}`
-        : 'none';
-
-    useEffect(() => {
-        if (!activeId) return;
-        if (scenarioMeta?.loadState !== ScenarioLoadState.Full) {
-            dispatch(refreshScenarioById(activeId, false)).catch(() => {});
+        const scenario = state.scenario.scenarios[activeId];
+        if (scenario == null) {
+            console.log('[ScenarioMap] Scenario not found in state:', activeId);
+            setNodes([]);
+            setEdges([]);
+            return;
         }
-    }, [dispatch, activeId, scenarioMeta?.loadState]);
 
-    const rf = useReactFlow<FlowNode, FlowEdge>();
+        console.log('[ScenarioMap] Mapping scenario to flow:', activeId);
+        console.log('[ScenarioMap] Scenario data:', scenario);
+        console.log('[ScenarioMap] Branches count:', Object.keys(state.scenario.branches).length);
+        console.log('[ScenarioMap] Steps count:', Object.keys(state.scenario.steps).length);
 
-    useFitViewOnVersion(rf as any, scenarioVersion);
-    useBranchSizeValidation(rf as any);
+        try {
+            const flow = mapScenarioToFlow(state, activeId);
+            console.log('[ScenarioMap] Flow result:', {
+                nodesCount: flow.nodes.length,
+                edgesCount: flow.edges.length,
+            });
+            setNodes(flow.nodes as FlowNode[]);
+            setEdges(flow.edges as FlowEdge[]);
+        } catch (error) {
+            console.error('[ScenarioMap] Error mapping scenario:', error);
+        }
+    }, [state, activeId]);
 
-    const getAll = useCallback(() => rf.getNodes() as FlowNode[], [rf]);
+    const onNodesChangeHandler = useCallback((changes: NodeChange[]): void => {
+        setNodes((nds) => applyNodeChanges(changes, nds));
 
-    const { selectedNodeIds, selectedEdgeIds, onSelectionChange, deleteSelected } = useSelection({
-        setNodes,
-        setEdges,
-        getNodes: () => nodesRef.current,
-        getEdges: () => edgesRef.current,
-        onDeleted: ({ nodes: deletedNodes, edges: deletedEdges }) => {
-            if (!activeId) return;
+        for (const change of changes) {
+            if (change.type === 'position' && 'position' in change && change.position != null) {
+                const { id, position, dragging } = change;
 
-            for (const n of deletedNodes) {
-                const state = store.getState();
+                if (dragging === true) {
+                    dragStateRef.current.set(id, {
+                        x: Math.round(position.x),
+                        y: Math.round(position.y),
+                    });
+                } else if (dragging === false) {
+                    const startState = dragStateRef.current.get(id);
+                    const newX = Math.round(position.x);
+                    const newY = Math.round(position.y);
 
-                if (n.type === FlowType.branchNode) {
-                    const branch = state.scenario.branches.entities[n.id];
-                    if (branch) {
-                        dispatch(deleteBranch({ branchId: n.id as Guid }));
-                    }
-                } else {
-                    const step = state.scenario.steps.entities[n.id];
-                    if (step) {
-                        dispatch(deleteStep({ branchId: step.branchId, stepId: n.id as Guid }));
-                    }
-                }
-
-                dragStartStatesRef.current.delete(n.id);
-                resizeStartStatesRef.current.delete(n.id);
-            }
-
-            for (const e of deletedEdges) {
-                const state = store.getState();
-                const relation = state.scenario.relations.entities[e.id];
-                if (relation) {
-                    dispatch(deleteRelation(e.id as Guid));
-                }
-            }
-        },
-    });
-
-    const { onConnectStart, onConnectEnd, getNodeType: getNodeTypeConnect } = useConnectContext({
-        rf,
-        setNodes,
-    });
-
-    const hover = useMemo(
-        () =>
-            new HoverBranchService(getAll, setNodes, {
-                absOf,
-                pickDeepestBranchByTopLeft,
-                isAnyBranchResizing,
-            }),
-        [getAll, setNodes]
-    );
-    const setHoverBranch = useCallback(hover.setHoverBranch, [hover]);
-    const onNodeDrag = useCallback(hover.onNodeDrag, [hover]);
-
-    const ctrlDragIdsRef = useRef<Set<string>>(new Set());
-
-    const onNodeDragStart = useCallback(
-        (e: React.MouseEvent | React.TouchEvent, node: FlowNode) => {
-            const ctrl = (e as any).ctrlKey === true;
-            if (ctrl && node.parentId) {
-                ctrlDragIdsRef.current.add(node.id);
-                setNodes((nds) =>
-                    nds.map((n): FlowNode => {
-                        if (n.id !== node.id) return n;
-                        const base = omitNodeProps(n, ['extent']);
-                        return { ...base, expandParent: false } as FlowNode;
-                    })
-                );
-            }
-        },
-        [setNodes]
-    );
-
-    const dropHandler = useMemo(
-        () =>
-            new NodeDragStopHandler({
-                getAll,
-                setNodes,
-                setHoverBranch,
-                ctrlDragIdsRef,
-                utils: {
-                    absOf,
-                    rectOf,
-                    ensureParentBeforeChild,
-                    pickDeepestBranchByTopLeft,
-                    isAnyBranchResizing,
-                },
-                callbacks: {
-                    onStepAttachedToBranch: (stepId, branchId, x, y) => {
-                        if (!activeId) return;
-
-                        const state = store.getState();
-                        const step = state.scenario.steps.entities[stepId];
-                        const isPersisted = !!(step && (step as any).__persisted);
-
-                        if (isPersisted && step) {
-                            const node = nodesRef.current.find((n) => n.id === stepId);
-                            if (node) {
-                                updateService.updateNodeData(node, { branchId, x, y });
-                            }
-                        } else if (step) {
-                            dispatch(
-                                addStep({
-                                    branchId: branchId as Guid,
-                                    step: { ...step, branchId, x, y } as any,
-                                })
-                            );
-
-                            rf.setNodes((nds) =>
-                                nds.map((nn) =>
-                                    nn.id === stepId ? { ...nn, data: { ...nn.data, __persisted: true } } : nn
-                                )
-                            );
+                    if (startState != null && (startState.x !== newX || startState.y !== newY)) {
+                        const node = nodesRef.current.find((n) => n.id === id);
+                        if (node != null) {
+                            console.log('[ScenarioMap] 📍 Position changed:', {
+                                nodeId: id,
+                                type: node.type,
+                                from: startState,
+                                to: { x: newX, y: newY },
+                            });
                         }
-                    },
+                    }
 
-                    onStepMoved: () => {},
+                    dragStateRef.current.delete(id);
+                }
+            }
 
-                    onStepDetachedFromBranch: (stepId) => {
-                        if (!activeId) return;
+            if (change.type === 'dimensions' && 'dimensions' in change && change.dimensions != null) {
+                const { id, dimensions, resizing } = change;
 
-                        const state = store.getState();
-                        const step = state.scenario.steps.entities[stepId];
-                        const isPersisted = !!(step && (step as any).__persisted);
-                        if (!isPersisted || !step) return;
+                if (resizing === true) {
+                    resizeStateRef.current.set(id, {
+                        width: Math.round(dimensions.width),
+                        height: Math.round(dimensions.height),
+                    });
+                } else if (resizing === false) {
+                    const startState = resizeStateRef.current.get(id);
+                    const newWidth = Math.round(dimensions.width);
+                    const newHeight = Math.round(dimensions.height);
 
-                        dispatch(deleteStep({ branchId: step.branchId, stepId: stepId as Guid }));
+                    if (
+                        startState != null &&
+                        (startState.width !== newWidth || startState.height !== newHeight)
+                    ) {
+                        const node = nodesRef.current.find((n) => n.id === id);
+                        if (node != null) {
+                            console.log('[ScenarioMap] 📏 Size changed:', {
+                                nodeId: id,
+                                type: node.type,
+                                from: startState,
+                                to: { width: newWidth, height: newHeight },
+                            });
+                        }
+                    }
 
-                        rf.setNodes((nds) =>
-                            nds.map((nn) =>
-                                nn.id === stepId ? { ...nn, data: { ...nn.data, __persisted: false } } : nn
-                            )
-                        );
+                    resizeStateRef.current.delete(id);
+                }
+            }
 
-                        dragStartStatesRef.current.delete(stepId);
-                    },
+            if (change.type === 'remove') {
+                dragStateRef.current.delete(change.id);
+                resizeStateRef.current.delete(change.id);
+                console.log('[ScenarioMap] 🗑️ Node removed:', change.id);
+            }
 
-                    onBranchResized: () => {},
-                },
-            }),
-        [getAll, setNodes, setHoverBranch, dispatch, activeId, rf, updateService]
-    );
+            if (change.type === 'add' && 'item' in change) {
+                console.log('[ScenarioMap] ➕ Node added:', change.item.id);
+            }
 
-    const onNodeDragStop = useCallback(dropHandler.onNodeDragStop, [dropHandler]);
+            if (change.type === 'select') {
+                console.log('[ScenarioMap] 🎯 Node selection changed:', {
+                    nodeId: change.id,
+                    selected: change.selected,
+                });
+            }
+        }
+    }, []);
 
-    const connectionHandler = useMemo(
-        () => new ConnectionHandler(setEdges, onConnectEnd),
-        [setEdges, onConnectEnd]
-    );
+    const onEdgesChangeHandler = useCallback((changes: EdgeChange[]): void => {
+        setEdges((eds) => applyEdgeChanges(changes, eds));
 
-    const onConnect = useCallback(
-        (conn: Connection) => {
-            connectionHandler.onConnect(conn);
+        for (const ch of changes) {
+            if (ch.type === 'remove') {
+                console.log('[ScenarioMap] 🗑️ Edge removed:', ch.id);
+            }
 
-            if (!activeId || !conn.source || !conn.target) return;
+            if (ch.type === 'add' && 'item' in ch) {
+                console.log('[ScenarioMap] ➕ Edge added:', {
+                    edgeId: ch.item.id,
+                    source: ch.item.source,
+                    target: ch.item.target,
+                });
+            }
 
-            const newRelation: StepRelationDto = {
-                id: crypto.randomUUID() as Guid,
-                parentStepId: conn.source as Guid,
-                childStepId: conn.target as Guid,
-                conditionExpression: null,
-                conditionOrder: 0,
-            };
+            if (ch.type === 'select') {
+                console.log('[ScenarioMap] 🎯 Edge selection changed:', {
+                    edgeId: ch.id,
+                    selected: ch.selected,
+                });
+            }
+        }
+    }, []);
 
-            dispatch(addRelation(newRelation));
-        },
-        [connectionHandler, dispatch, activeId]
-    );
-
-    const isValidConnection: IsValidConnection<FlowEdge> = useIsValidConnection(
-        getNodeTypeConnect,
-        () => edgesRef.current,
-        createIsValidConnection,
-        ALLOW_MAP,
-        TARGET_ALLOW_MAP
-    );
-
-    const { containerRef, onMouseDown: onRmbDown } = useRightMousePan(rf as any);
+    const rf = useReactFlow();
 
     return (
-        <div
-            ref={containerRef}
-            onMouseDown={onRmbDown}
-            data-theme={theme}
-            className={styles.containerScenarioMap}
-            style={{ height: '70vh' }}
-        >
-            <ReactFlow<FlowNode, FlowEdge>
+        <div data-theme={theme} className={styles.containerScenarioMap} style={{ height: '70vh' }}>
+            <ReactFlow
                 nodes={nodes}
                 edges={edges}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
-                onEdgeMouseEnter={(_, edge) =>
+                onEdgeMouseEnter={(_, edge): void =>
                     setEdges((es) =>
-                        es.map((e) => (e.id === edge.id ? { ...e, data: { ...e.data, __hovered: true } } : e))
+                        es.map((e): FlowEdge =>
+                            e.id === edge.id ? { ...e, data: { ...e.data, __hovered: true } } : e
+                        )
                     )
                 }
-                onEdgeMouseLeave={(_, edge) =>
+                onEdgeMouseLeave={(_, edge): void =>
                     setEdges((es) =>
-                        es.map((e) => (e.id === edge.id ? { ...e, data: { ...e.data, __hovered: false } } : e))
+                        es.map((e): FlowEdge =>
+                            e.id === edge.id ? { ...e, data: { ...e.data, __hovered: false } } : e
+                        )
                     )
                 }
-                onSelectionChange={onSelectionChange}
                 onNodesChange={onNodesChangeHandler}
                 onEdgesChange={onEdgesChangeHandler}
-                onNodeDrag={onNodeDrag}
-                onNodeDragStart={onNodeDragStart}
-                onNodeDragStop={onNodeDragStop}
-                onConnectStart={onConnectStart}
-                onConnect={onConnect}
-                onConnectEnd={onConnectEnd}
-                isValidConnection={isValidConnection}
                 minZoom={0.01}
                 maxZoom={10}
                 defaultEdgeOptions={{
                     animated: true,
-                    type: 'step' as const,
+                    type: 'step',
                     markerEnd: { type: MarkerType.ArrowClosed },
                     style: {
                         stroke: 'var(--edge-default-color, #ffffff)',
@@ -533,8 +269,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 <Panel position="bottom-left">
                     <button
                         className={styles.deleteBtn}
-                        onClick={deleteSelected}
-                        disabled={selectedNodeIds.size === 0 && selectedEdgeIds.size === 0}
+                        onClick={() => console.log('[ScenarioMap] 🗑️ Delete button clicked')}
                         title="Удалить выбранное (Del/Backspace)"
                     >
                         Удалить

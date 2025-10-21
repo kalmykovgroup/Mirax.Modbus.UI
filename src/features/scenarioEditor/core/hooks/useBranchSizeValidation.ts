@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode'
-import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType'
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts'
 
 /**
  * useBranchSizeValidation
@@ -25,7 +25,7 @@ export function useBranchSizeValidation(rf: { getNodes: () => FlowNode[] }) {
         const collectBadBranches = (): string[] => {
             const all = rf.getNodes() as FlowNode[]
             return all
-                .filter(n => n.type === FlowType.branchNode)
+                .filter(n => n.type === FlowType.BranchNode)
                 .filter(n => {
                     const w =
                         typeof n.width === 'number'

@@ -32,17 +32,17 @@ interface UpdateActivityStepBase extends UpdateStepBase {
     defaultOutput?: string | null;
 }
 
-/** Modbus Activity (C# UpdateModbusActivityStepRequest) */
-export interface UpdateModbusActivityStepRequest extends UpdateActivityStepBase {
+/** Modbus Activity (C# UpdateActivityModbusStepRequest) */
+export interface UpdateActivityModbusStepRequest extends UpdateActivityStepBase {
     // дискриминатор для полиморфной сериализации на бэке
-    kind: StepType.ModbusActivity;
+    kind: StepType.ActivityModbus;
     modbusDeviceActionId?: string | null;   // Guid?
     modbusDeviceAddressId?: string | null;  // Guid?
 }
 
-/** System Activity (C# UpdateSystemActivityStepRequest) */
-export interface UpdateSystemActivityStepRequest extends UpdateActivityStepBase {
-    kind: StepType.SystemActivity;
+/** System Activity (C# UpdateActivitySystemStepRequest) */
+export interface UpdateActivitySystemStepRequest extends UpdateActivityStepBase {
+    kind: StepType.ActivitySystem;
     systemActionId?: string | null; // Guid?
 }
 
@@ -79,8 +79,8 @@ export interface UpdateConditionStepRequest extends UpdateStepBase {
 
 /** Объединяющий дискриминированный тип */
 export type UpdateStepRequest =
-    | UpdateModbusActivityStepRequest
-    | UpdateSystemActivityStepRequest
+    | UpdateActivityModbusStepRequest
+    | UpdateActivitySystemStepRequest
     | UpdateDelayStepRequest
     | UpdateSignalStepRequest
     | UpdateJumpStepRequest

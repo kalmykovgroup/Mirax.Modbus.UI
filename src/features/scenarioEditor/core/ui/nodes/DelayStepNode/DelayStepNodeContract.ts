@@ -1,22 +1,19 @@
 // src/features/scenarioEditor/nodes/delayStep/DelayStepNodeContract.ts
-import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType';
-import type {
-    NodeTypeContract,
-    NodeMappingResult,
-} from '@/features/scenarioEditor/shared/contracts/registry/NodeTypeContract';
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
 import type { DelayStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
 import { DelayStepNode } from '@scenario/core/ui/nodes/DelayStepNode/DelayStepNode';
+import type {NodeTypeContract} from "@scenario/shared/contracts/registry/NodeTypeContract.ts";
+import type {FlowNode} from "@scenario/shared/contracts/models/FlowNode.ts";
 
 export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
-    type: FlowType.delayStepNode,
-    dbTypeId: 2,
+    type: FlowType.Delay,
     displayName: 'Задержка',
-    description: 'Пауза выполнения сценария на заданное время',
     Component: DelayStepNode,
 
-    mapFromDto(dto, parentId): NodeMappingResult<DelayStepDto> {
+    mapFromDto(dto, parentId) {
         return {
             id: dto.id,
+            type: FlowType.Delay,
             position: { x: dto.x, y: dto.y },
             parentId,
             data: {
@@ -26,25 +23,17 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
                 __persisted: true,
             },
             style: { zIndex: 1 },
-            extent: 'parent',
-            expandParent: true,
-        };
+            extent: 'parent',      // ✅ Свойство конкретной ноды
+            expandParent: true,    // ✅ Свойство конкретной ноды
+        } as FlowNode<DelayStepDto>;
     },
 
-    mapToDto(data, nodeId): DelayStepDto {
+    mapToDto(node) {
         return {
-            ...data.object,
-            id: nodeId,
-            x: data.x,
-            y: data.y,
+            ...node.data.object,
+            id: node.id,
+            x: node.data.x,
+            y: node.data.y,
         };
     },
-
-    handles: {
-        sources: [{ id: 'bottom' }],
-        targets: [{ id: 'top' }],
-    },
-
-    extent: 'parent',
-    expandParent: true,
-} as const;
+};

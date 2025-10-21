@@ -1,22 +1,19 @@
 // src/features/scenarioEditor/nodes/jumpStep/JumpStepNodeContract.ts
-import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType';
-import type {
-    NodeTypeContract,
-    NodeMappingResult,
-} from '@/features/scenarioEditor/shared/contracts/registry/NodeTypeContract';
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
+import type { NodeTypeContract } from '@scenario/shared/contracts/registry/NodeTypeContract';
+import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
 import type { JumpStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
 import { JumpStepNode } from '@scenario/core/ui/nodes/JumpStepNode/JumpStepNode';
 
 export const JumpStepNodeContract: NodeTypeContract<JumpStepDto> = {
-    type: FlowType.jumpStepNode,
-    dbTypeId: 6,
+    type: FlowType.Jump,
     displayName: 'Переход',
-    description: 'Переход к указанному шагу',
     Component: JumpStepNode,
 
-    mapFromDto(dto, parentId): NodeMappingResult<JumpStepDto> {
+    mapFromDto(dto, parentId) {
         return {
             id: dto.id,
+            type: FlowType.Jump,
             position: { x: dto.x, y: dto.y },
             parentId,
             data: {
@@ -28,23 +25,15 @@ export const JumpStepNodeContract: NodeTypeContract<JumpStepDto> = {
             style: { zIndex: 1 },
             extent: 'parent',
             expandParent: true,
-        };
+        } as FlowNode<JumpStepDto>;
     },
 
-    mapToDto(data, nodeId): JumpStepDto {
+    mapToDto(node) {
         return {
-            ...data.object,
-            id: nodeId,
-            x: data.x,
-            y: data.y,
+            ...node.data.object,
+            id: node.id,
+            x: node.data.x,
+            y: node.data.y,
         };
     },
-
-    handles: {
-        sources: [{ id: 's1' }, { id: 's2' }],
-        targets: [{ id: 't1' }, { id: 't2' }],
-    },
-
-    extent: 'parent',
-    expandParent: true,
-} as const;
+};

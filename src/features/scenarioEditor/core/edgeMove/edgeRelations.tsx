@@ -8,7 +8,7 @@ import {ConditionParallel} from "@scenario/core/ui/edges/ConditionParallel.tsx";
 import {ConditionSystem} from "@scenario/core/ui/edges/ConditionSystem.tsx";
 import {ConditionModbus} from "@scenario/core/ui/edges/ConditionModbus.tsx";
 import {SignalSignal} from "@scenario/core/ui/edges/SignalSignal.tsx";
-import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
+import {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
 import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
 
 /** Сужение FlowNode до конкретного типа enum */
@@ -29,59 +29,59 @@ export function resolveEdgeRender(
 ): React.ReactElement | null {
 
     // Condition -> Branch (или Branch <- Condition)
-    if (isNodeType(src, FlowType.conditionStepNode) && isNodeType(tgt, FlowType.branchNode))
+    if (isNodeType(src, FlowType.Condition) && isNodeType(tgt, FlowType.BranchNode))
         return <ConditionBranch condition={src} branch={tgt} targetPosition={targetPosition} />;
 
-    if (isNodeType(src, FlowType.branchNode) && isNodeType(tgt, FlowType.conditionStepNode))
+    if (isNodeType(src, FlowType.BranchNode) && isNodeType(tgt, FlowType.Condition))
         return <ConditionBranch condition={tgt} branch={src} targetPosition={targetPosition} />;
 
     // Condition -> Condition
-    if (isNodeType(src, FlowType.conditionStepNode) && isNodeType(tgt, FlowType.conditionStepNode))
+    if (isNodeType(src, FlowType.Condition) && isNodeType(tgt, FlowType.Condition))
         return <ConditionCondition source={src} target={tgt} targetPosition={targetPosition} />;
 
 
     // Condition -> Jump (обе стороны)
-    if (isNodeType(src, FlowType.conditionStepNode) && isNodeType(tgt, FlowType.jumpStepNode))
+    if (isNodeType(src, FlowType.Condition) && isNodeType(tgt, FlowType.Jump))
         return <ConditionJump condition={src} jump={tgt} targetPosition={targetPosition} />;
 
-    if (isNodeType(src, FlowType.jumpStepNode) && isNodeType(tgt, FlowType.conditionStepNode))
+    if (isNodeType(src, FlowType.Jump) && isNodeType(tgt, FlowType.Condition))
         return <ConditionJump condition={tgt} jump={src} targetPosition={targetPosition} />;
 
 
     // Condition -> Delay
-    if (isNodeType(src, FlowType.conditionStepNode) && isNodeType(tgt, FlowType.delayStepNode))
+    if (isNodeType(src, FlowType.Condition) && isNodeType(tgt, FlowType.Delay))
         return <ConditionDelay condition={src} delay={tgt} targetPosition={targetPosition} />;
 
-    if (isNodeType(src, FlowType.delayStepNode) && isNodeType(tgt, FlowType.conditionStepNode))
+    if (isNodeType(src, FlowType.Delay) && isNodeType(tgt, FlowType.Condition))
         return <ConditionDelay condition={tgt} delay={src} targetPosition={targetPosition} />;
 
 
     // Condition -> Parallel
-    if (isNodeType(src, FlowType.conditionStepNode) && isNodeType(tgt, FlowType.parallelStepNode))
+    if (isNodeType(src, FlowType.Condition) && isNodeType(tgt, FlowType.Parallel))
         return <ConditionParallel condition={src} parallel={tgt} targetPosition={targetPosition} />;
 
-    if (isNodeType(src, FlowType.parallelStepNode) && isNodeType(tgt, FlowType.conditionStepNode))
+    if (isNodeType(src, FlowType.Parallel) && isNodeType(tgt, FlowType.Condition))
         return <ConditionParallel condition={tgt} parallel={src} targetPosition={targetPosition} />;
 
 
     // Condition -> System
-    if (isNodeType(src, FlowType.conditionStepNode) && isNodeType(tgt, FlowType.activitySystemNode))
+    if (isNodeType(src, FlowType.Condition) && isNodeType(tgt, FlowType.ActivitySystem))
         return <ConditionSystem condition={src} system={tgt} targetPosition={targetPosition} />;
 
-    if (isNodeType(src, FlowType.activitySystemNode) && isNodeType(tgt, FlowType.conditionStepNode))
+    if (isNodeType(src, FlowType.ActivitySystem) && isNodeType(tgt, FlowType.Condition))
         return <ConditionSystem condition={tgt} system={src} targetPosition={targetPosition} />;
 
 
     // Condition -> Modbus
-    if (isNodeType(src, FlowType.conditionStepNode) && isNodeType(tgt, FlowType.activityModbusNode))
+    if (isNodeType(src, FlowType.Condition) && isNodeType(tgt, FlowType.ActivityModbus))
         return <ConditionModbus condition={src} modbus={tgt} targetPosition={targetPosition} />;
 
-    if (isNodeType(src, FlowType.activityModbusNode) && isNodeType(tgt, FlowType.conditionStepNode))
+    if (isNodeType(src, FlowType.ActivityModbus) && isNodeType(tgt, FlowType.Condition))
         return <ConditionModbus condition={tgt} modbus={src} targetPosition={targetPosition} />;
 
 
     // Signal -> Signal
-    if (isNodeType(src, FlowType.signalStepNode) && isNodeType(tgt, FlowType.signalStepNode))
+    if (isNodeType(src, FlowType.Signal) && isNodeType(tgt, FlowType.Signal))
         return <SignalSignal source={src} target={tgt} targetPosition={targetPosition} />;
 
     // Неизвестная пара — ничего не выводим

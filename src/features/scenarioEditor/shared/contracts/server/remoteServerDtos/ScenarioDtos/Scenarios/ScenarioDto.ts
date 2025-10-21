@@ -15,6 +15,7 @@ export interface ScenarioDto {
     /** Версия сценария */
     version: number;
     /** Главная ветка сценария */
+    branchId: Guid;
     branch: BranchDto;
 }
 
@@ -43,6 +44,7 @@ export const ScenarioDto = {
             description: p.description ?? null,
             status: p.status,
             version: p.version ?? 1,
+            branchId: p.branch.id,
             branch: p.branch,
         };
     },

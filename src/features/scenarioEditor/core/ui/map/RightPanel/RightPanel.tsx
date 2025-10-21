@@ -13,13 +13,13 @@ import {
     ConditionStepDto,
     DelayStepDto,
     JumpStepDto,
-    ModbusActivityStepDto,
+    ActivityModbusStepDto,
     ParallelStepDto,
     SignalStepDto,
-    SystemActivityStepDto
+    ActivitySystemStepDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto";
 import { BranchDto } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto";
-import { FlowType } from "@/features/scenarioEditor/shared/contracts/types/FlowType";
+import { FlowType } from "@scenario/core/ui/nodes/types/flowType.ts";
 import type { FlowNode } from "@/features/scenarioEditor/shared/contracts/models/FlowNode";
 import type { FlowNodeData } from "@scenario/shared/contracts/models/FlowNodeData.ts";
 
@@ -32,14 +32,14 @@ import {BranchCommands, StepCommands} from "@scenario/core/features/scenarioChan
 
 function createByFlowType(type: FlowType, p: any) {
     switch (type) {
-        case FlowType.activityModbusNode:  return ModbusActivityStepDto.create(p);
-        case FlowType.activitySystemNode:  return SystemActivityStepDto.create(p);
-        case FlowType.delayStepNode:       return DelayStepDto.create(p);
-        case FlowType.signalStepNode:      return SignalStepDto.create(p);
-        case FlowType.jumpStepNode:        return JumpStepDto.create(p);
-        case FlowType.parallelStepNode:    return ParallelStepDto.create(p);
-        case FlowType.conditionStepNode:   return ConditionStepDto.create(p);
-        case FlowType.branchNode:          return BranchDto.create(p);
+        case FlowType.ActivityModbus:  return ActivityModbusStepDto.create(p);
+        case FlowType.ActivitySystem:  return ActivitySystemStepDto.create(p);
+        case FlowType.Delay:       return DelayStepDto.create(p);
+        case FlowType.Signal:      return SignalStepDto.create(p);
+        case FlowType.Jump:        return JumpStepDto.create(p);
+        case FlowType.Parallel:    return ParallelStepDto.create(p);
+        case FlowType.Condition:   return ConditionStepDto.create(p);
+        case FlowType.BranchNode:          return BranchDto.create(p);
         default:
             throw new Error(`FlowType ${type} не является шагом (или не поддержан)`);
     }
@@ -47,13 +47,13 @@ function createByFlowType(type: FlowType, p: any) {
 
 // Какие flow-типами считаем «шагами» для Create Step
 const STEP_FLOW_TYPES: Set<FlowType> = new Set<FlowType>([
-    FlowType.activityModbusNode,
-    FlowType.activitySystemNode,
-    FlowType.delayStepNode,
-    FlowType.signalStepNode,
-    FlowType.jumpStepNode,
-    FlowType.parallelStepNode,
-    FlowType.conditionStepNode,
+    FlowType.ActivityModbus,
+    FlowType.ActivitySystem,
+    FlowType.Delay,
+    FlowType.Signal,
+    FlowType.Jump,
+    FlowType.Parallel,
+    FlowType.Condition,
 ]);
 
 export const RightPanel: React.FC = () => {
@@ -114,7 +114,7 @@ export const RightPanel: React.FC = () => {
                     } as FlowNodeData<object>,
                     draggable: true,
                     selectable: true,
-                    ...(type === FlowType.branchNode
+                    ...(type === FlowType.BranchNode
                         ? { style: { width: 300, height: 100 } }
                         : {}),
                 };
@@ -151,7 +151,7 @@ export const RightPanel: React.FC = () => {
             if (!commandDispatcher || !activeId) return;
 
             // Если это ветка → создаём Branch
-            if (type === FlowType.branchNode) {
+            if (type === FlowType.BranchNode) {
                 const width = 300;
                 const height = 100;
 
@@ -212,49 +212,49 @@ export const RightPanel: React.FC = () => {
     return (
         <div className={styles.rightPanelContainer}>
             <div
-                onMouseDown={startCreateNode(FlowType.activityModbusNode)}
+                onMouseDown={startCreateNode(FlowType.ActivityModbus)}
                 className={`${styles.activityModbusBtnAdd} ${styles.btn}`}
             >
                 Действие с modbus устр.
             </div>
             <div
-                onMouseDown={startCreateNode(FlowType.activitySystemNode)}
+                onMouseDown={startCreateNode(FlowType.ActivitySystem)}
                 className={`${styles.activitySystemBtnAdd} ${styles.btn}`}
             >
                 Системное действие
             </div>
             <div
-                onMouseDown={startCreateNode(FlowType.branchNode)}
+                onMouseDown={startCreateNode(FlowType.BranchNode)}
                 className={`${styles.branchBtnAdd} ${styles.btn}`}
             >
                 <span>Новая</span> ветка
             </div>
             <div
-                onMouseDown={startCreateNode(FlowType.parallelStepNode)}
+                onMouseDown={startCreateNode(FlowType.Parallel)}
                 className={`${styles.parallelBtnAdd} ${styles.btn}`}
             >
                 Параллел. шаг
             </div>
             <div
-                onMouseDown={startCreateNode(FlowType.conditionStepNode)}
+                onMouseDown={startCreateNode(FlowType.Condition)}
                 className={`${styles.conditionBtnAdd} ${styles.btn}`}
             >
                 Условие
             </div>
             <div
-                onMouseDown={startCreateNode(FlowType.delayStepNode)}
+                onMouseDown={startCreateNode(FlowType.Delay)}
                 className={`${styles.delayBtnAdd} ${styles.btn}`}
             >
                 Время ожидания
             </div>
             <div
-                onMouseDown={startCreateNode(FlowType.jumpStepNode)}
+                onMouseDown={startCreateNode(FlowType.Jump)}
                 className={`${styles.jumpBtnAdd} ${styles.btn}`}
             >
                 Переход
             </div>
             <div
-                onMouseDown={startCreateNode(FlowType.signalStepNode)}
+                onMouseDown={startCreateNode(FlowType.Signal)}
                 className={`${styles.signalBtnAdd} ${styles.btn}`}
             >
                 Сигнал

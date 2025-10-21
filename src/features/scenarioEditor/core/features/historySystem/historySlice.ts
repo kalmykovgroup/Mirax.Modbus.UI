@@ -1,12 +1,11 @@
 // src/features/history/historySlice.ts
 
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
-import type { AppDispatch, RootState } from '@/baseStore/store';
+import type { RootState } from '@/baseStore/store';
 import type {
     HistoryState,
     HistoryContext,
     HistoryConfig,
-    HistoryRecord,
     CreateRecord,
     UpdateRecord,
     DeleteRecord,
@@ -290,7 +289,7 @@ export const historySlice = createSlice({
 
         commitBatch: (
             state,
-            action: PayloadAction<{ contextId: string; description?: string }>
+            action: PayloadAction<{ contextId: string; description?: string | undefined }>
         ) => {
             const { contextId, description } = action.payload;
             const context = state.contexts[contextId];

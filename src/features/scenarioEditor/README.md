@@ -89,13 +89,13 @@ src/app/scenario-designer/
 ## Как добавить правило соединений
 - Источник → цель:
   ```ts
-  ALLOW_MAP[FlowType.parallelStepNode] = new Set([FlowType.branchNode]);
+  ALLOW_MAP[FlowType.Parallel] = new Set([FlowType.BranchNode]);
   ```
 - Цель ← источники:
   ```ts
-  TARGET_ALLOW_MAP[FlowType.branchNode] = new Set([
-    FlowType.conditionStepNode,
-    FlowType.parallelStepNode,
+  TARGET_ALLOW_MAP[FlowType.BranchNode] = new Set([
+    FlowType.Condition,
+    FlowType.Parallel,
   ]);
   ```
 

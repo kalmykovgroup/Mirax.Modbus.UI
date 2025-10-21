@@ -1,15 +1,10 @@
-// src/features/scenario/scenarioNormalization.ts
+// src/features/scenarioEditor/store/scenarioNormalization.ts
 
-import type { ScenarioDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Scenarios/ScenarioDto.ts';
-import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto.ts';
-import type { AnyStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts';
-import type { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto.ts';
-import type { Guid } from '@app/lib/types/Guid.ts';
+import type { ScenarioDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Scenarios/ScenarioDto';
+import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
+import type { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto';
+import type { Guid } from '@app/lib/types/Guid';
 import type { NormalizedBranch, NormalizedStep } from './scenarioSlice';
-
-// ============================================================================
-// NORMALIZATION
-// ============================================================================
 
 export interface NormalizedScenarioData {
     readonly branches: readonly NormalizedBranch[];
@@ -18,31 +13,37 @@ export interface NormalizedScenarioData {
 }
 
 /**
- * Нормализация: разбирает вложенную структуру ScenarioDto на плоские массивы
+ * Нормализует ScenarioDto в плоские массивы для быстрого доступа.
+ * Сохраняет связи через ID-ссылки для понимания вложенности.
  */
 export function normalizeScenario(scenario: ScenarioDto): NormalizedScenarioData {
     const branches: NormalizedBranch[] = [];
     const steps: NormalizedStep[] = [];
     const relations: StepRelationDto[] = [];
+    const processedRelationIds = new Set<Guid>();
 
-    // Обрабатываем главную ветку и все вложенные рекурсивно
-    normalizeBranch(scenario.branch, scenario.id, null, branches, steps, relations);
+    normalizeBranchRecursive(
+        scenario.branch,
+        scenario.id,
+        null,
+        branches,
+        steps,
+        relations,
+        processedRelationIds
+    );
 
     return { branches, steps, relations };
 }
 
-/**
- * Рекурсивная нормализация ветки
- */
-function normalizeBranch(
+function normalizeBranchRecursive(
     branch: BranchDto,
     scenarioId: Guid,
     parentStepId: Guid | null,
     branches: NormalizedBranch[],
     steps: NormalizedStep[],
-    relations: StepRelationDto[]
+    relations: StepRelationDto[],
+    processedRelationIds: Set<Guid>
 ): void {
-    // Добавляем нормализованную ветку
     const normalizedBranch: NormalizedBranch = {
         id: branch.id,
         scenarioId,
@@ -63,7 +64,6 @@ function normalizeBranch(
 
     branches.push(normalizedBranch);
 
-    // Обрабатываем шаги ветки
     for (const step of branch.steps) {
         const normalizedStep: NormalizedStep = {
             ...step,
@@ -74,119 +74,40 @@ function normalizeBranch(
 
         steps.push(normalizedStep);
 
-        // Собираем relations
         for (const relation of step.childRelations) {
-            if (!relations.find((r) => r.id === relation.id)) {
+            if (!processedRelationIds.has(relation.id)) {
                 relations.push(relation);
+                processedRelationIds.add(relation.id);
             }
         }
 
         for (const relation of step.parentRelations) {
-            if (!relations.find((r) => r.id === relation.id)) {
+            if (!processedRelationIds.has(relation.id)) {
                 relations.push(relation);
+                processedRelationIds.add(relation.id);
             }
         }
 
-        // Обрабатываем вложенные ветки для Parallel/Condition шагов
         if ('stepBranchRelations' in step) {
-            const branchRelations = (step as any).stepBranchRelations;
-            if (Array.isArray(branchRelations)) {
-                for (const branchRel of branchRelations) {
-                    // Здесь нужно получить полную ветку из scenarioDto
-                    // Обычно они уже есть в branch.steps, но для параллельных/условных
-                    // нужно искать по branchId в исходном ScenarioDto
-                    // Пока пропускаем, т.к. структура не полная
-                    console.warn(
-                        '[normalizeScenario] Nested branches in Parallel/Condition steps need manual handling'
-                    );
+            const branchRelations = (step as any).stepBranchRelations as
+                | readonly { branchId: Guid; branch?: BranchDto | undefined }[]
+                | undefined;
+
+            if (branchRelations != null) {
+                for (const rel of branchRelations) {
+                    if (rel.branch != null) {
+                        normalizeBranchRecursive(
+                            rel.branch,
+                            scenarioId,
+                            step.id,
+                            branches,
+                            steps,
+                            relations,
+                            processedRelationIds
+                        );
+                    }
                 }
             }
         }
     }
-}
-
-// ============================================================================
-// DENORMALIZATION
-// ============================================================================
-
-/**
- * Денормализация: собирает вложенную структуру ScenarioDto из плоских массивов
- */
-export function denormalizeScenario(
-    scenarioId: Guid,
-    scenarios: Record<Guid, any>,
-    branches: Record<Guid, NormalizedBranch>,
-    steps: Record<Guid, NormalizedStep>,
-    relations: Record<Guid, StepRelationDto>
-): ScenarioDto | null {
-    const scenarioMeta = scenarios[scenarioId];
-    if (!scenarioMeta) return null;
-
-    const mainBranch = branches[scenarioMeta.mainBranchId];
-    if (!mainBranch) return null;
-
-    const denormalizedBranch = denormalizeBranch(mainBranch, branches, steps, relations);
-
-    return {
-        id: scenarioMeta.id,
-        name: scenarioMeta.name,
-        description: scenarioMeta.description ?? null,
-        status: scenarioMeta.status,
-        version: scenarioMeta.version,
-        branch: denormalizedBranch,
-    };
-}
-
-/**
- * Рекурсивная денормализация ветки
- */
-function denormalizeBranch(
-    normalizedBranch: NormalizedBranch,
-    branches: Record<Guid, NormalizedBranch>,
-    steps: Record<Guid, NormalizedStep>,
-    relations: Record<Guid, StepRelationDto>
-): BranchDto {
-    const denormalizedSteps: AnyStepDto[] = normalizedBranch.stepIds
-        .map((stepId) => steps[stepId])
-        .filter(Boolean)
-        .map((normalizedStep) => denormalizeStep(normalizedStep, relations));
-
-    return {
-        id: normalizedBranch.id,
-        scenarioId: normalizedBranch.scenarioId,
-        name: normalizedBranch.name,
-        description: normalizedBranch.description,
-        waitForCompletion: normalizedBranch.waitForCompletion,
-        parallelStepId: normalizedBranch.parallelStepId ?? null,
-        conditionStepId: normalizedBranch.conditionStepId ?? null,
-        conditionExpression: normalizedBranch.conditionExpression ?? null,
-        conditionOrder: normalizedBranch.conditionOrder,
-        steps: denormalizedSteps,
-        x: normalizedBranch.x,
-        y: normalizedBranch.y,
-        width: normalizedBranch.width,
-        height: normalizedBranch.height,
-    };
-}
-
-/**
- * Денормализация шага
- */
-function denormalizeStep(
-    normalizedStep: NormalizedStep,
-    relations: Record<Guid, StepRelationDto>
-): AnyStepDto {
-    const childRelations = normalizedStep.childRelationIds
-        .map((id) => relations[id])
-        .filter(Boolean);
-
-    const parentRelations = normalizedStep.parentRelationIds
-        .map((id) => relations[id])
-        .filter(Boolean);
-
-    return {
-        ...normalizedStep,
-        childRelations,
-        parentRelations,
-    } as AnyStepDto;
 }

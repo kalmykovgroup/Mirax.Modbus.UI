@@ -2,7 +2,7 @@
 import { Handle, type NodeProps, type Node, NodeResizer, Position } from '@xyflow/react';
 import styles from './BranchNode.module.css';
 import { formatWithMode } from '@app/lib/utils/format';
-import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType';
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
 import { endBranchResize, startBranchResize } from '@scenario/core/branchResize/branchResizeGuard';
 import type { FlowNodeData } from '@/features/scenarioEditor/shared/contracts/models/FlowNodeData';
 import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
@@ -14,8 +14,8 @@ export function BranchNode({ id, data, selected }: Props) {
     const handleType = data.connectContext?.from.handleType;
     const type = data.connectContext?.from.type;
     const isConnectValid =
-        type !== FlowType.branchNode &&
-        (type === FlowType.conditionStepNode || type === FlowType.parallelStepNode);
+        type !== FlowType.BranchNode &&
+        (type === FlowType.Condition || type === FlowType.Parallel);
 
     return (
         <div className={styles.container} aria-selected={selected}>

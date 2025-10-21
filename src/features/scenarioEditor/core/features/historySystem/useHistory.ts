@@ -16,8 +16,8 @@ import {
 } from "@scenario/core/features/historySystem/historySlice.ts";
 
 export interface UseHistoryOptions {
-    readonly autoInit?: boolean;
-    readonly config?: Partial<HistoryConfig>;
+    readonly autoInit?: boolean | undefined;
+    readonly config?: Partial<HistoryConfig> | undefined;
 }
 
 export interface UseHistoryResult {

@@ -2,8 +2,8 @@
 
 import type { EntityHandler, EntitySnapshot } from '../types.ts';
 import type {
-    ModbusActivityStepEntity,
-    SystemActivityStepEntity,
+    ActivityModbusStepEntity,
+    ActivitySystemStepEntity,
     DelayStepEntity,
     SignalStepEntity,
     JumpStepEntity,
@@ -26,10 +26,10 @@ function getStepFromState(entityId: string) {
 // MODBUS ACTIVITY STEP HANDLER
 // ============================================================================
 
-const modbusActivityStepHandler: EntityHandler<ModbusActivityStepEntity> = {
-    createSnapshot: (entity): EntitySnapshot<ModbusActivityStepEntity> => ({
+const ActivityModbusStepHandler: EntityHandler<ActivityModbusStepEntity> = {
+    createSnapshot: (entity): EntitySnapshot<ActivityModbusStepEntity> => ({
         entityId: entity.id,
-        entityType: 'ModbusActivityStep',
+        entityType: 'ActivityModbusStep',
         data: entity,
         timestamp: Date.now(),
     }),
@@ -71,7 +71,7 @@ const modbusActivityStepHandler: EntityHandler<ModbusActivityStepEntity> = {
                 })
             );
         } else {
-            console.warn(`[ModbusActivityStepHandler] Step ${entityId} not found for deletion`);
+            console.warn(`[ActivityModbusStepHandler] Step ${entityId} not found for deletion`);
         }
     },
 };
@@ -80,10 +80,10 @@ const modbusActivityStepHandler: EntityHandler<ModbusActivityStepEntity> = {
 // SYSTEM ACTIVITY STEP HANDLER
 // ============================================================================
 
-const systemActivityStepHandler: EntityHandler<SystemActivityStepEntity> = {
-    createSnapshot: (entity): EntitySnapshot<SystemActivityStepEntity> => ({
+const ActivitySystemStepHandler: EntityHandler<ActivitySystemStepEntity> = {
+    createSnapshot: (entity): EntitySnapshot<ActivitySystemStepEntity> => ({
         entityId: entity.id,
-        entityType: 'SystemActivityStep',
+        entityType: 'ActivitySystemStep',
         data: entity,
         timestamp: Date.now(),
     }),
@@ -395,8 +395,8 @@ const conditionStepHandler: EntityHandler<ConditionStepEntity> = {
 export function registerStepHandlers(): void {
     // Динамический импорт для избежания circular dependency
     import('../historyRegistry').then(({ historyRegistry }) => {
-        historyRegistry.register<ModbusActivityStepEntity>('ModbusActivityStep', modbusActivityStepHandler);
-        historyRegistry.register<SystemActivityStepEntity>('SystemActivityStep', systemActivityStepHandler);
+        historyRegistry.register<ActivityModbusStepEntity>('ActivityModbusStep', ActivityModbusStepHandler);
+        historyRegistry.register<ActivitySystemStepEntity>('ActivitySystemStep', ActivitySystemStepHandler);
         historyRegistry.register<DelayStepEntity>('DelayStep', delayStepHandler);
         historyRegistry.register<SignalStepEntity>('SignalStep', signalStepHandler);
         historyRegistry.register<JumpStepEntity>('JumpStep', jumpStepHandler);

@@ -1,7 +1,7 @@
 // @scenario/core/handlers/NodeDragStopHandler.ts
 import type React from 'react'
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode.ts'
-import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType.ts'
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts'
 
 type Utils = {
     absOf: (n: FlowNode, all: FlowNode[]) => { x: number; y: number }
@@ -79,7 +79,7 @@ export class NodeDragStopHandler {
             }
 
             // Ctrl: перенос в ДРУГУЮ ветку — просто меняем branchId и координаты (без детача!)
-            if (current.type !== FlowType.branchNode) {
+            if (current.type !== FlowType.BranchNode) {
                 const br = this.u.rectOf(target, all)
                 const relX = absTL.x - br.x
                 const relY = absTL.y - br.y
@@ -109,7 +109,7 @@ export class NodeDragStopHandler {
         // ─────────────────────────────────────────
         // Обычный drag
         // ─────────────────────────────────────────
-        if (target && current.type !== FlowType.branchNode) {
+        if (target && current.type !== FlowType.BranchNode) {
             const br = this.u.rectOf(target, all)
 
             // 1) внутри той же ветки — возможен авто-рост, координаты фиксируем

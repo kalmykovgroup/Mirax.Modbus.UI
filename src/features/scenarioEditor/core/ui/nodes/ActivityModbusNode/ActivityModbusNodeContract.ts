@@ -1,22 +1,19 @@
 // src/features/scenarioEditor/nodes/activityModbus/ActivityModbusNodeContract.ts
-import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType';
-import type {
-    NodeTypeContract,
-    NodeMappingResult,
-} from '@/features/scenarioEditor/shared/contracts/registry/NodeTypeContract';
-import type { ModbusActivityStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
+import type { NodeTypeContract } from '@scenario/shared/contracts/registry/NodeTypeContract';
+import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
+import type { ActivityModbusStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
 import { ActivityModbusNode } from '@scenario/core/ui/nodes/ActivityModbusNode/ActivityModbusNode';
 
-export const ActivityModbusNodeContract: NodeTypeContract<ModbusActivityStepDto> = {
-    type: FlowType.activityModbusNode,
-    dbTypeId: 1,
+export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto> = {
+    type: FlowType.ActivityModbus,
     displayName: 'Действие Modbus',
-    description: 'Взаимодействие с Modbus устройством',
     Component: ActivityModbusNode,
 
-    mapFromDto(dto, parentId): NodeMappingResult<ModbusActivityStepDto> {
+    mapFromDto(dto, parentId) {
         return {
             id: dto.id,
+            type: FlowType.ActivityModbus,
             position: { x: dto.x, y: dto.y },
             parentId,
             data: {
@@ -28,23 +25,15 @@ export const ActivityModbusNodeContract: NodeTypeContract<ModbusActivityStepDto>
             style: { zIndex: 1 },
             extent: 'parent',
             expandParent: true,
-        };
+        } as FlowNode<ActivityModbusStepDto>;
     },
 
-    mapToDto(data, nodeId): ModbusActivityStepDto {
+    mapToDto(node) {
         return {
-            ...data.object,
-            id: nodeId,
-            x: data.x,
-            y: data.y,
+            ...node.data.object,
+            id: node.id,
+            x: node.data.x,
+            y: node.data.y,
         };
     },
-
-    handles: {
-        sources: [{ id: 's1' }],
-        targets: [{ id: 't1' }],
-    },
-
-    extent: 'parent',
-    expandParent: true,
-} as const;
+};

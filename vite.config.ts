@@ -1,12 +1,10 @@
 import {defineConfig, type TerserOptions, type UserConfig} from 'vite';
 import react from '@vitejs/plugin-react';
-import MakeCert from 'vite-plugin-mkcert';
 import path from 'path';
 
 export default defineConfig(({ mode }): UserConfig => {
     const isDev = mode === 'development';
 
-    // Общие алиасы
     const aliases = {
         '@': path.resolve(__dirname, 'src'),
         '@shared': path.resolve(__dirname, './src/shared'),
@@ -21,7 +19,6 @@ export default defineConfig(({ mode }): UserConfig => {
         '@scenario': path.resolve(__dirname, './src/features/scenarioEditor'),
     };
 
-    // Общие rollup опции
     const rollupOptions = {
         output: {
             manualChunks: {
@@ -47,23 +44,24 @@ export default defineConfig(({ mode }): UserConfig => {
     // DEV конфигурация
     if (isDev) {
         return {
-            plugins: [react(), MakeCert()],
+            plugins: [react()],
             base: '/',
             resolve: { alias: aliases },
             server: {
                 port: 5173,
                 strictPort: true,
+                sourcemapIgnoreList: false, // ⬅️ ВАЖНО для debugger
             },
             build: {
                 outDir: 'dist',
                 assetsDir: 'assets',
-                minify: 'esbuild',
+                minify: false, // ⬅️ Отключаем минификацию в dev
                 sourcemap: true,
                 rollupOptions,
                 chunkSizeWarningLimit: 1000,
                 target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
                 cssCodeSplit: true,
-                cssMinify: true,
+                cssMinify: false, // ⬅️ Отключаем минификацию CSS в dev
             },
             optimizeDeps: {
                 include: [
@@ -78,6 +76,9 @@ export default defineConfig(({ mode }): UserConfig => {
                 port: 4173,
                 strictPort: true,
             },
+            esbuild: {
+                drop: [], // ⬅️ НЕ удаляем console/debugger в dev
+            },
         };
     }
 
@@ -91,7 +92,7 @@ export default defineConfig(({ mode }): UserConfig => {
         format: {
             comments: false,
         },
-    }
+    };
 
     // PROD конфигурация
     return {
@@ -106,7 +107,7 @@ export default defineConfig(({ mode }): UserConfig => {
             outDir: 'dist',
             assetsDir: 'assets',
             minify: 'terser',
-            terserOptions : terserOptions as TerserOptions,
+            terserOptions: terserOptions as TerserOptions,
             sourcemap: 'hidden',
             rollupOptions,
             chunkSizeWarningLimit: 1000,

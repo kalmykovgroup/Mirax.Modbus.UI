@@ -1,8 +1,8 @@
 // src/features/history/entities/stepEntities.ts
 
 import type {
-    ModbusActivityStepDto,
-    SystemActivityStepDto,
+    ActivityModbusStepDto,
+    ActivitySystemStepDto,
     DelayStepDto,
     SignalStepDto,
     JumpStepDto,
@@ -15,12 +15,12 @@ import type { Entity } from '../types.ts';
 // ENTITY WRAPPERS
 // ============================================================================
 
-export interface ModbusActivityStepEntity extends ModbusActivityStepDto, Entity {
-    readonly entityType: 'ModbusActivityStep';
+export interface ActivityModbusStepEntity extends ActivityModbusStepDto, Entity {
+    readonly entityType: 'ActivityModbusStep';
 }
 
-export interface SystemActivityStepEntity extends SystemActivityStepDto, Entity {
-    readonly entityType: 'SystemActivityStep';
+export interface ActivitySystemStepEntity extends ActivitySystemStepDto, Entity {
+    readonly entityType: 'ActivitySystemStep';
 }
 
 export interface DelayStepEntity extends DelayStepDto, Entity {
@@ -48,8 +48,8 @@ export interface ConditionStepEntity extends ConditionStepDto, Entity {
 // ============================================================================
 
 export type AnyStepEntity =
-    | ModbusActivityStepEntity
-    | SystemActivityStepEntity
+    | ActivityModbusStepEntity
+    | ActivitySystemStepEntity
     | DelayStepEntity
     | SignalStepEntity
     | JumpStepEntity
@@ -60,12 +60,12 @@ export type AnyStepEntity =
 // TYPE GUARDS
 // ============================================================================
 
-export function isModbusActivityStepEntity(entity: Entity): entity is ModbusActivityStepEntity {
-    return entity.entityType === 'ModbusActivityStep';
+export function isActivityModbusStepEntity(entity: Entity): entity is ActivityModbusStepEntity {
+    return entity.entityType === 'ActivityModbusStep';
 }
 
-export function isSystemActivityStepEntity(entity: Entity): entity is SystemActivityStepEntity {
-    return entity.entityType === 'SystemActivityStep';
+export function isActivitySystemStepEntity(entity: Entity): entity is ActivitySystemStepEntity {
+    return entity.entityType === 'ActivitySystemStep';
 }
 
 export function isDelayStepEntity(entity: Entity): entity is DelayStepEntity {

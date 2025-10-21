@@ -1,22 +1,19 @@
 // src/features/scenarioEditor/nodes/parallelStep/ParallelStepNodeContract.ts
-import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType';
-import type {
-    NodeTypeContract,
-    NodeMappingResult,
-} from '@/features/scenarioEditor/shared/contracts/registry/NodeTypeContract';
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
+import type { NodeTypeContract } from '@scenario/shared/contracts/registry/NodeTypeContract';
+import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
 import type { ParallelStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
 import { ParallelStepNode } from '@scenario/core/ui/nodes/ParallelStepNode/ParallelStepNode';
 
 export const ParallelStepNodeContract: NodeTypeContract<ParallelStepDto> = {
-    type: FlowType.parallelStepNode,
-    dbTypeId: 4,
+    type: FlowType.Parallel,
     displayName: 'Параллельный шаг',
-    description: 'Запуск параллельных веток выполнения',
     Component: ParallelStepNode,
 
-    mapFromDto(dto, parentId): NodeMappingResult<ParallelStepDto> {
+    mapFromDto(dto, parentId) {
         return {
             id: dto.id,
+            type: FlowType.Parallel,
             position: { x: dto.x, y: dto.y },
             parentId,
             data: {
@@ -28,24 +25,18 @@ export const ParallelStepNodeContract: NodeTypeContract<ParallelStepDto> = {
             style: { zIndex: 1 },
             extent: 'parent',
             expandParent: true,
-        };
+        } as FlowNode<ParallelStepDto>;
     },
 
-    mapToDto(data, nodeId): ParallelStepDto {
+    mapToDto(node) {
         return {
-            ...data.object,
-            id: nodeId,
-            x: data.x,
-            y: data.y,
+            ...node.data.object,
+            id: node.id,
+            x: node.data.x,
+            y: node.data.y,
         };
     },
 
-    handles: {
-        sources: [{ id: 's1' }, { id: 's2' }, { id: 's3' }],
-        targets: [{ id: 't1' }],
-    },
-
-    canHaveChildren: true,
-    extent: 'parent',
-    expandParent: true,
-} as const;
+    canHaveChildBranches: true,
+    getBranchLinkMode: () => 'parallel',
+};

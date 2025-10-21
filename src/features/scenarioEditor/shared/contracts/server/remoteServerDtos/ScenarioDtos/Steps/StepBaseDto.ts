@@ -19,7 +19,7 @@ import type {
     ModbusDeviceAddressDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ModbusDtos/ModbusDeviceAddresses/ModbusDeviceAddressDto.ts";
 import type {Guid} from "@app/lib/types/Guid.ts";
-import {FlowType} from "@scenario/shared/contracts/types/FlowType.ts";
+import {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
 
 // ---------------- Базовый тип ----------------
 
@@ -46,7 +46,7 @@ export interface StepBaseDto {
 
 // ---------------- Наследники ----------------
 
-export interface ModbusActivityStepDto extends StepBaseDto {
+export interface ActivityModbusStepDto extends StepBaseDto {
     sessionId: Guid;
     connectionConfigId: Guid;
 
@@ -57,7 +57,7 @@ export interface ModbusActivityStepDto extends StepBaseDto {
     modbusDeviceAddress?: ModbusDeviceAddressDto | null;
 }
 
-export interface SystemActivityStepDto extends StepBaseDto {
+export interface ActivitySystemStepDto extends StepBaseDto {
     systemActionId: Guid;
     systemAction?: SystemActionDto | null;
 }
@@ -86,8 +86,8 @@ export interface ConditionStepDto extends StepBaseDto {
 }
 
 export type AnyStepDto =
-    | ModbusActivityStepDto
-    | SystemActivityStepDto
+    | ActivityModbusStepDto
+    | ActivitySystemStepDto
     | DelayStepDto
     | SignalStepDto
     | JumpStepDto
@@ -131,18 +131,8 @@ const base = (
     parentRelations: p.parentRelations ?? [],
 });
 
-// Соответствие FlowType → StepType (как в C#)
-const STEP_OF: Record<Exclude<FlowType, FlowType.branchNode>, StepType> = {
-    [FlowType.jumpStepNode]: StepType.Jump,
-    [FlowType.delayStepNode]: StepType.Delay,
-    [FlowType.parallelStepNode]: StepType.Parallel,
-    [FlowType.conditionStepNode]: StepType.Condition,
-    [FlowType.activitySystemNode]: StepType.SystemActivity,
-    [FlowType.activityModbusNode]: StepType.ModbusActivity,
-    [FlowType.signalStepNode]: StepType.Signal,
-};
 
-export const ModbusActivityStepDto = {
+export const ActivityModbusStepDto = {
     create(
         p: {
             branchId: string;
@@ -153,10 +143,10 @@ export const ModbusActivityStepDto = {
             x?: number; y?: number; width?: number; height?: number;
             childRelations?: StepRelationDto[];
             parentRelations?: StepRelationDto[];
-        } & Partial<ModbusActivityStepDto>
-    ): ModbusActivityStepDto {
+        } & Partial<ActivityModbusStepDto>
+    ): ActivityModbusStepDto {
         return {
-            ...base(STEP_OF[FlowType.activityModbusNode], p),
+            ...base(FlowType.ActivityModbus, p),
             sessionId: p.sessionId ?? "",
             connectionConfigId: p.connectionConfigId ?? "",
             modbusDeviceActionId: p.modbusDeviceActionId ?? "",
@@ -167,7 +157,7 @@ export const ModbusActivityStepDto = {
     },
 } as const;
 
-export const SystemActivityStepDto = {
+export const ActivitySystemStepDto = {
     create(
         p: {
             branchId: string;
@@ -178,10 +168,10 @@ export const SystemActivityStepDto = {
             x?: number; y?: number; width?: number; height?: number;
             childRelations?: StepRelationDto[];
             parentRelations?: StepRelationDto[];
-        } & Partial<SystemActivityStepDto>
-    ): SystemActivityStepDto {
+        } & Partial<ActivitySystemStepDto>
+    ): ActivitySystemStepDto {
         return {
-            ...base(STEP_OF[FlowType.activitySystemNode], p),
+            ...base(FlowType.ActivitySystem, p),
             systemActionId: p.systemActionId ?? "",
             systemAction: p.systemAction ?? null,
         };
@@ -203,7 +193,7 @@ export const DelayStepDto = {
         } & Partial<DelayStepDto>
     ): DelayStepDto {
         return {
-            ...base(STEP_OF[FlowType.delayStepNode], p),
+            ...base(FlowType.Delay, p),
             timeSpan: p.timeSpan ?? "PT0S",
         };
     },
@@ -227,7 +217,7 @@ export const SignalStepDto = {
         } & Partial<SignalStepDto>
     ): SignalStepDto {
         return {
-            ...base(STEP_OF[FlowType.signalStepNode], p),
+            ...base(FlowType.Signal, p),
             awaitSignalStepType: p.awaitSignalStepType,
             sendSignalStepType: p.sendSignalStepType,
             signalKey: p.signalKey ?? "",
@@ -251,7 +241,7 @@ export const JumpStepDto = {
         } & Partial<JumpStepDto>
     ): JumpStepDto {
         return {
-            ...base(STEP_OF[FlowType.jumpStepNode], p),
+            ...base(FlowType.Jump, p),
             jumpToStepId: p.jumpToStepId ?? "",
         };
     },
@@ -272,7 +262,7 @@ export const ParallelStepDto = {
         } & Partial<ParallelStepDto>
     ): ParallelStepDto {
         return {
-            ...base(STEP_OF[FlowType.parallelStepNode], p),
+            ...base(FlowType.Parallel, p),
             stepBranchRelations: p.stepBranchRelations ?? [],
         };
     },
@@ -293,7 +283,7 @@ export const ConditionStepDto = {
         } & Partial<ConditionStepDto>
     ): ConditionStepDto {
         return {
-            ...base(STEP_OF[FlowType.conditionStepNode], p),
+            ...base(FlowType.Condition, p),
             stepBranchRelations: p.stepBranchRelations ?? [],
         };
     },

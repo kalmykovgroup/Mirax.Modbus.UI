@@ -2,7 +2,7 @@
 import type { AppDispatch } from '@/baseStore/store';
 import type { Guid } from '@app/lib/types/Guid';
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
-import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType';
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
 import { updateStep, updateBranch } from '@scenario/store/scenarioSlice';
 
 /**
@@ -25,7 +25,7 @@ export class NodeUpdateService {
         const nodeId = node.id as Guid;
 
         // Определяем тип ноды по FlowType
-        if (node.type === FlowType.branchNode) {
+        if (node.type === FlowType.BranchNode) {
             this.dispatch(
                 updateBranch({
                     branchId: nodeId,

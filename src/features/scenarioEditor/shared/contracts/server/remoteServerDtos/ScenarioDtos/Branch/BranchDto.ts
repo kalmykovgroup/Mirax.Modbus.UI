@@ -1,7 +1,7 @@
 import type {StepBaseDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 import {type Guid, newGuid} from "@app/lib/types/Guid.ts";
 import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
-import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
+import {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
 
 export interface BranchDto {
     id: Guid;
@@ -78,7 +78,7 @@ export const BranchDto = {
    toFlowNode(b: BranchDto): FlowNode {
     return {
         id: b.id,
-        type: FlowType.branchNode,
+        type: FlowType.BranchNode,
         position: { x: b.x ?? 0, y: b.y ?? 0 },
         data: { object: b, x: b.x ?? 0, y: b.y ?? 0 },
         style: { width: b.width, height: b.height },

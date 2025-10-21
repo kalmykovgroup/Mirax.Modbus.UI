@@ -1,22 +1,19 @@
 // src/features/scenarioEditor/nodes/signalStep/SignalStepNodeContract.ts
-import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType';
-import type {
-    NodeTypeContract,
-    NodeMappingResult,
-} from '@/features/scenarioEditor/shared/contracts/registry/NodeTypeContract';
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
+import type { NodeTypeContract } from '@scenario/shared/contracts/registry/NodeTypeContract';
+import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
 import type { SignalStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
 import { SignalStepNode } from '@scenario/core/ui/nodes/SignalStepNode/SignalStepNode';
 
 export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
-    type: FlowType.signalStepNode,
-    dbTypeId: 5,
+    type: FlowType.Signal,
     displayName: 'Сигнал',
-    description: 'Отправка или ожидание сигнала',
     Component: SignalStepNode,
 
-    mapFromDto(dto, parentId): NodeMappingResult<SignalStepDto> {
+    mapFromDto(dto, parentId) {
         return {
             id: dto.id,
+            type: FlowType.Signal,
             position: { x: dto.x, y: dto.y },
             parentId,
             data: {
@@ -28,23 +25,15 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
             style: { zIndex: 1 },
             extent: 'parent',
             expandParent: true,
-        };
+        } as FlowNode<SignalStepDto>;
     },
 
-    mapToDto(data, nodeId): SignalStepDto {
+    mapToDto(node) {
         return {
-            ...data.object,
-            id: nodeId,
-            x: data.x,
-            y: data.y,
+            ...node.data.object,
+            id: node.id,
+            x: node.data.x,
+            y: node.data.y,
         };
     },
-
-    handles: {
-        sources: [{ id: 's1' }],
-        targets: [{ id: 't1' }],
-    },
-
-    extent: 'parent',
-    expandParent: true,
-} as const;
+};

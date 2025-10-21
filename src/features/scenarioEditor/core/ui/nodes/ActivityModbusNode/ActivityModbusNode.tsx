@@ -2,18 +2,18 @@ import {Handle, type Node, type NodeProps, Position} from "@xyflow/react";
 
 import styles from "./ActivityModbusNode.module.css";
 import {formatWithMode} from "@app/lib/utils/format.ts";
-import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
+import {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
 import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
 import type {
-    ModbusActivityStepDto
+    ActivityModbusStepDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 
-type Props = NodeProps<Node<FlowNodeData<ModbusActivityStepDto>>>;
+type Props = NodeProps<Node<FlowNodeData<ActivityModbusStepDto>>>;
 export function ActivityModbusNode({ data, selected }: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
     const type : FlowType | undefined = data?.connectContext?.from.type;
-    const validateTarget = type != FlowType.branchNode
+    const validateTarget = type != FlowType.BranchNode
 
     return (
         <div className={styles.container} aria-selected={selected}>

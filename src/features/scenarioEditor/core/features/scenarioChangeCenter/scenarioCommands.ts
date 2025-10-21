@@ -1,9 +1,9 @@
-// src/features/scenario/commands/types/scenarioCommands.ts
+// src/features/scenarioEditor/core/features/scenarioChangeCenter/scenarioCommands.ts
 
-import type { Guid } from '@app/lib/types/Guid.ts';
-import type { AnyStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts';
-import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto.ts';
-import type { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto.ts';
+import type { Guid } from '@app/lib/types/Guid';
+import type { AnyStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
+import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
+import type { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto';
 
 /**
  * Базовый интерфейс команды
@@ -36,23 +36,20 @@ export interface CreateStepPayload {
 
 export interface UpdateStepPayload {
     readonly stepId: Guid;
-    readonly changes: Partial<AnyStepDto>;
-    readonly previousState?: AnyStepDto | undefined; // Для истории
+    readonly previousState: AnyStepDto; // Полный объект до изменения
+    readonly newState: AnyStepDto; // Полный объект после изменения
 }
 
 export interface DeleteStepPayload {
     readonly stepId: Guid;
-    readonly previousState?: AnyStepDto | undefined; // Для восстановления
+    readonly branchId: Guid;
+    readonly deletedState: AnyStepDto; // Полный объект для восстановления
 }
 
 export interface MoveStepPayload {
     readonly stepId: Guid;
-    readonly branchId: Guid;
-    readonly x: number;
-    readonly y: number;
-    readonly previousBranchId?: Guid | undefined;
-    readonly previousX?: number | undefined;
-    readonly previousY?: number | undefined;
+    readonly previousState: AnyStepDto;
+    readonly newState: AnyStepDto;
 }
 
 export type CreateStepCommand = ScenarioCommand<CreateStepPayload> & { type: 'CREATE_STEP' };
@@ -71,21 +68,19 @@ export interface CreateBranchPayload {
 
 export interface UpdateBranchPayload {
     readonly branchId: Guid;
-    readonly changes: Partial<BranchDto>;
-    readonly previousState?: Partial<BranchDto> | undefined;
+    readonly previousState: BranchDto; // Полный объект до изменения
+    readonly newState: BranchDto; // Полный объект после изменения
 }
 
 export interface DeleteBranchPayload {
     readonly branchId: Guid;
-    readonly previousState?: BranchDto | undefined;
+    readonly deletedState: BranchDto; // Полный объект для восстановления
 }
 
 export interface ResizeBranchPayload {
     readonly branchId: Guid;
-    readonly width: number;
-    readonly height: number;
-    readonly previousWidth?: number | undefined;
-    readonly previousHeight?: number | undefined;
+    readonly previousState: BranchDto;
+    readonly newState: BranchDto;
 }
 
 export type CreateBranchCommand = ScenarioCommand<CreateBranchPayload> & { type: 'CREATE_BRANCH' };
@@ -103,18 +98,24 @@ export interface CreateRelationPayload {
 
 export interface UpdateRelationPayload {
     readonly relationId: Guid;
-    readonly changes: Partial<StepRelationDto>;
-    readonly previousState?: Partial<StepRelationDto> | undefined;
+    readonly previousState: StepRelationDto;
+    readonly newState: StepRelationDto;
 }
 
 export interface DeleteRelationPayload {
     readonly relationId: Guid;
-    readonly previousState?: StepRelationDto | undefined;
+    readonly deletedState: StepRelationDto;
 }
 
-export type CreateRelationCommand = ScenarioCommand<CreateRelationPayload> & { type: 'CREATE_RELATION' };
-export type UpdateRelationCommand = ScenarioCommand<UpdateRelationPayload> & { type: 'UPDATE_RELATION' };
-export type DeleteRelationCommand = ScenarioCommand<DeleteRelationPayload> & { type: 'DELETE_RELATION' };
+export type CreateRelationCommand = ScenarioCommand<CreateRelationPayload> & {
+    type: 'CREATE_RELATION';
+};
+export type UpdateRelationCommand = ScenarioCommand<UpdateRelationPayload> & {
+    type: 'UPDATE_RELATION';
+};
+export type DeleteRelationCommand = ScenarioCommand<DeleteRelationPayload> & {
+    type: 'DELETE_RELATION';
+};
 
 // ============================================================================
 // BATCH COMMAND

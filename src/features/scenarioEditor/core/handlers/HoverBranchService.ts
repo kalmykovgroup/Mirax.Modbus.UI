@@ -1,6 +1,6 @@
 // src/app/scenario-designer/core/handlers/HoverBranchService.ts
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode'
-import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType'
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts'
 
 type SetNodes = (updater: (prev: FlowNode[]) => FlowNode[]) => void
 
@@ -34,7 +34,7 @@ export class HoverBranchService {
 
         this.setNodes((nds) =>
             nds.map((n) => {
-                if (n.type !== FlowType.branchNode) return n
+                if (n.type !== FlowType.BranchNode) return n
                 const nextData: any = n.data ? { ...(n.data as any) } : {}
                 nextData.isDropTarget = branchId !== undefined && n.id === branchId
                 return { ...n, data: nextData }
