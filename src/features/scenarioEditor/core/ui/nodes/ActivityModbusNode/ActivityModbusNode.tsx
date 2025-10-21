@@ -1,12 +1,15 @@
-import {Handle, type NodeProps, Position} from "@xyflow/react";
+import {Handle, type Node, type NodeProps, Position} from "@xyflow/react";
 
 import styles from "./ActivityModbusNode.module.css";
 import {formatWithMode} from "@app/lib/utils/format.ts";
-import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
 import {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
+import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
+import type {
+    ModbusActivityStepDto
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 
-
-export function ActivityModbusNode({ data, selected }: NodeProps<FlowNode>) {
+type Props = NodeProps<Node<FlowNodeData<ModbusActivityStepDto>>>;
+export function ActivityModbusNode({ data, selected }: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
     const type : FlowType | undefined = data?.connectContext?.from.type;

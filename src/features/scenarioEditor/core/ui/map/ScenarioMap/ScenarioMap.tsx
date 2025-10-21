@@ -26,7 +26,6 @@ import styles from './ScenarioMap.module.css';
 
 // Типы
 import type { FlowEdge, FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
-import { nodeTypes as nodeTypesRegistry } from '@/features/scenarioEditor/shared/contracts/types/nodeTypes';
 import { edgeTypes } from '@/features/scenarioEditor/shared/contracts/types/edgeTypes';
 import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType';
 
@@ -37,6 +36,7 @@ import LeftPanel from '@scenario/core/ui/map/LeftPanel/LeftPanel';
 // State & Selectors
 import type { AppDispatch, RootState } from '@/baseStore/store';
 import { store } from '@/baseStore/store';
+
 
 // Утилиты
 import { isAnyBranchResizing } from '@scenario/core/branchResize/branchResizeGuard';
@@ -73,18 +73,18 @@ import {
     selectActiveScenarioId,
     selectDenormalizedScenario,
     selectScenarioById
-} from '@scenario/store/scenarioSelectors.ts';
+} from '@scenario/store/scenarioSelectors';
 import {
     refreshScenarioById,
     ScenarioLoadState,
-    updateStep,
-    updateBranch,
     deleteStep,
     deleteBranch,
     deleteRelation,
     addRelation,
     addStep,
-} from '@scenario/store/scenarioSlice.ts';
+} from '@scenario/store/scenarioSlice';
+import {generateNodeTypes} from "@scenario/core/utils/generateNodeTypes.ts";
+import {NodeUpdateService} from "@scenario/core/features/NodeUpdateService.ts";
 
 export interface ScenarioEditorProps {}
 
@@ -92,7 +92,9 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const dispatch = useDispatch<AppDispatch>();
     const { theme } = useTheme();
 
-    // --- Состояние графа ---
+    const updateService = useMemo(() => new NodeUpdateService(dispatch), [dispatch]);
+
+    // ✅ Используем FlowNode и FlowEdge везде
     const [nodes, setNodes] = useState<FlowNode[]>([]);
     const [edges, setEdges] = useState<FlowEdge[]>([]);
 
@@ -103,45 +105,149 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         nodesRef.current = nodes;
     }, [nodes]);
 
-    // --- Активный сценарий ---
-    const activeId = useSelector(selectActiveScenarioId);
+    const nodeTypes = useMemo(() => generateNodeTypes(), []);
 
-    // Получаем мета-информацию
+    const activeId = useSelector(selectActiveScenarioId);
     const scenarioMeta = useSelector((state: RootState) =>
         activeId ? selectScenarioById(state, activeId) : null
     );
-
-    // Получаем полную денормализованную структуру для рендера
     const activeScenario = useSelector((state: RootState) =>
         activeId ? selectDenormalizedScenario(state, activeId) : null
     );
 
-    // --- Отслеживание позиций для фиксации изменений ---
-    const dragStartPositionsRef = useRef<Map<string, { x: number; y: number; branchId: Guid }>>(new Map());
+    const dragStartStatesRef = useRef<Map<string, { position: { x: number; y: number } }>>(new Map());
+    const resizeStartStatesRef = useRef<Map<string, { size: { width: number; height: number } }>>(new Map());
 
-    // ⚡ СИНХРОНИЗАЦИЯ: Redux → ReactFlow
+    // ============================================================================
+    // СИНХРОНИЗАЦИЯ Redux → ReactFlow
+    // ============================================================================
+
     useEffect(() => {
         if (!activeScenario) {
             setNodes([]);
             setEdges([]);
-            dragStartPositionsRef.current.clear();
+            dragStartStatesRef.current.clear();
+            resizeStartStatesRef.current.clear();
             return;
         }
 
-        console.log('[ScenarioMap] 🔄 Syncing Redux → ReactFlow');
+        const { nodes: mappedNodes, edges: mappedEdges } = mapScenarioToFlow(activeScenario);
 
-        const { nodes: newNodes, edges: newEdges } = mapScenarioToFlow(activeScenario);
-        setNodes(newNodes);
-        setEdges(newEdges);
+        // ✅ Типы уже совпадают
+        setNodes(mappedNodes);
+        setEdges(mappedEdges);
     }, [activeScenario]);
 
-    // Обработка изменений edges
+    // ============================================================================
+    // ОБРАБОТЧИКИ
+    // ============================================================================
+
+    const handleDragStart = useCallback((nodeId: string, x: number, y: number) => {
+        dragStartStatesRef.current.set(nodeId, { position: { x, y } });
+    }, []);
+
+    const handleDragEnd = useCallback(
+        (nodeId: string, newX: number, newY: number) => {
+            const startState = dragStartStatesRef.current.get(nodeId);
+            if (!startState) return;
+
+            const { position: startPos } = startState;
+            if (startPos.x === newX && startPos.y === newY) {
+                dragStartStatesRef.current.delete(nodeId);
+                return;
+            }
+
+            const node = nodesRef.current.find((n) => n.id === nodeId);
+            if (!node) {
+                dragStartStatesRef.current.delete(nodeId);
+                return;
+            }
+
+            // ✅ node уже FlowNode
+            updateService.updateNodePosition(node, newX, newY);
+            dragStartStatesRef.current.delete(nodeId);
+        },
+        [updateService]
+    );
+
+    const handleResizeStart = useCallback((nodeId: string, width: number, height: number) => {
+        resizeStartStatesRef.current.set(nodeId, { size: { width, height } });
+    }, []);
+
+    const handleResizeEnd = useCallback(
+        (nodeId: string, newWidth: number, newHeight: number) => {
+            const startState = resizeStartStatesRef.current.get(nodeId);
+            if (!startState) return;
+
+            const { size: startSize } = startState;
+            if (startSize.width === newWidth && startSize.height === newHeight) {
+                resizeStartStatesRef.current.delete(nodeId);
+                return;
+            }
+
+            const node = nodesRef.current.find((n) => n.id === nodeId);
+            if (!node) {
+                resizeStartStatesRef.current.delete(nodeId);
+                return;
+            }
+
+            // ✅ node уже FlowNode
+            updateService.updateNodeSize(node, newWidth, newHeight);
+            resizeStartStatesRef.current.delete(nodeId);
+        },
+        [updateService]
+    );
+
+    const onNodesChangeHandler: OnNodesChange<FlowNode> = useCallback(
+        (changes: NodeChange<FlowNode>[]) => {
+            setNodes((nds) => applyNodeChanges(changes, nds));
+
+            for (const change of changes) {
+                if (change.type === 'position') {
+                    if (change.dragging === true && change.position) {
+                        handleDragStart(
+                            change.id,
+                            Math.round(change.position.x),
+                            Math.round(change.position.y)
+                        );
+                    } else if (change.dragging === false && change.position) {
+                        handleDragEnd(
+                            change.id,
+                            Math.round(change.position.x),
+                            Math.round(change.position.y)
+                        );
+                    }
+                }
+
+                if (change.type === 'dimensions' && change.dimensions) {
+                    if (change.resizing === true) {
+                        handleResizeStart(
+                            change.id,
+                            Math.round(change.dimensions.width),
+                            Math.round(change.dimensions.height)
+                        );
+                    } else if (change.resizing === false) {
+                        handleResizeEnd(
+                            change.id,
+                            Math.round(change.dimensions.width),
+                            Math.round(change.dimensions.height)
+                        );
+                    }
+                }
+
+                if (change.type === 'remove') {
+                    dragStartStatesRef.current.delete(change.id);
+                    resizeStartStatesRef.current.delete(change.id);
+                }
+            }
+        },
+        [handleDragStart, handleDragEnd, handleResizeStart, handleResizeEnd]
+    );
+
     const onEdgesChangeHandler = useCallback(
-        (changes: EdgeChange[]) => {
-            // 1. Применяем изменения к UI
+        (changes: EdgeChange<FlowEdge>[]) => {
             setEdges((eds) => applyEdgeChanges(changes, eds));
 
-            // 2. Фиксируем удаление в Redux
             if (!activeId) return;
 
             for (const ch of changes) {
@@ -153,7 +259,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     const relation = state.scenario.relations.entities[edge.id];
 
                     if (relation) {
-                        console.log('[ScenarioMap] Deleting relation:', edge.id);
                         dispatch(deleteRelation(edge.id as Guid));
                     }
                 }
@@ -162,118 +267,14 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         [dispatch, activeId, edgesRef]
     );
 
-    // Обработка изменений nodes
-    const onNodesChangeHandler: OnNodesChange<FlowNode> = useCallback(
-        (changes: NodeChange<FlowNode>[]) => {
-            // 1. Применяем изменения к UI
-            setNodes((nds) => applyNodeChanges(changes, nds));
+    // ============================================================================
+    // ОСТАЛЬНАЯ ЛОГИКА
+    // ============================================================================
 
-            // 2. Обрабатываем специфичную логику
-            for (const change of changes) {
-                // Начало перетаскивания - запоминаем начальную позицию
-                if (change.type === 'position' && change.dragging === true) {
-                    const node = nodesRef.current.find((n) => n.id === change.id);
-                    if (!node) continue;
-
-                    const isBranch = node.type === 'branchNode' || node.type === FlowType.branchNode;
-                    if (isBranch) continue;
-
-                    const state = store.getState();
-                    const step = state.scenario.steps.entities[change.id];
-
-                    if (step && (step as any).__persisted) {
-                        if (!dragStartPositionsRef.current.has(change.id)) {
-                            dragStartPositionsRef.current.set(change.id, {
-                                x: step.x ?? node.position.x,
-                                y: step.y ?? node.position.y,
-                                branchId: step.branchId,
-                            });
-                            console.log('[ScenarioMap] Drag start:', change.id);
-                        }
-                    }
-                }
-
-                // Конец перетаскивания - обновляем Redux
-                if (change.type === 'position' && change.dragging === false && change.position) {
-                    const startPos = dragStartPositionsRef.current.get(change.id);
-                    if (!startPos) continue;
-
-                    const newX = Math.round(change.position.x);
-                    const newY = Math.round(change.position.y);
-
-                    if (startPos.x !== newX || startPos.y !== newY) {
-                        if (activeId) {
-                            const state = store.getState();
-                            const step = state.scenario.steps.entities[change.id];
-
-                            if (step && (step as any).__persisted) {
-                                console.log('[ScenarioMap] 🎯 Updating step position in Redux:', {
-                                    stepId: change.id,
-                                    oldX: step.x,
-                                    oldY: step.y,
-                                    newX,
-                                    newY,
-                                });
-
-                                dispatch(
-                                    updateStep({
-                                        stepId: change.id as Guid,
-                                        changes: { x: newX, y: newY },
-                                    })
-                                );
-                            }
-                        }
-                    }
-
-                    dragStartPositionsRef.current.delete(change.id);
-                }
-
-                // Удаление node
-                if (change.type === 'remove') {
-                    dragStartPositionsRef.current.delete(change.id);
-                }
-
-                // Изменение размеров веток
-                if (change.type === 'dimensions' && change.dimensions && change.resizing === false) {
-                    const node = nodesRef.current.find((n) => n.id === change.id);
-                    if (!node) continue;
-
-                    const isBranch = node.type === 'branchNode' || node.type === FlowType.branchNode;
-
-                    if (isBranch && activeId) {
-                        const state = store.getState();
-                        const branch = state.scenario.branches.entities[change.id];
-
-                        if (branch && change.dimensions.width && change.dimensions.height) {
-                            const newWidth = Math.round(change.dimensions.width);
-                            const newHeight = Math.round(change.dimensions.height);
-
-                            if (branch.width !== newWidth || branch.height !== newHeight) {
-                                console.log('[ScenarioMap] Resizing branch:', change.id);
-                                dispatch(
-                                    updateBranch({
-                                        branchId: change.id as Guid,
-                                        changes: {
-                                            width: newWidth,
-                                            height: newHeight,
-                                        },
-                                    })
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        [dispatch, activeId]
-    );
-
-    // Версия для пересборки
     const scenarioVersion = scenarioMeta
         ? `${scenarioMeta.id}:${scenarioMeta.lastFetchedAt ?? 0}:${scenarioMeta.loadState}`
         : 'none';
 
-    // Догрузка деталей при необходимости
     useEffect(() => {
         if (!activeId) return;
         if (scenarioMeta?.loadState !== ScenarioLoadState.Full) {
@@ -281,30 +282,25 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         }
     }, [dispatch, activeId, scenarioMeta?.loadState]);
 
-    // Доступ к RF
     const rf = useReactFlow<FlowNode, FlowEdge>();
 
-    // Подгон вида и валидация размеров веток
     useFitViewOnVersion(rf as any, scenarioVersion);
     useBranchSizeValidation(rf as any);
 
-    // Helpers
     const getAll = useCallback(() => rf.getNodes() as FlowNode[], [rf]);
 
-    // Выбор/удаление
     const { selectedNodeIds, selectedEdgeIds, onSelectionChange, deleteSelected } = useSelection({
         setNodes,
         setEdges,
         getNodes: () => nodesRef.current,
         getEdges: () => edgesRef.current,
-        onDeleted: ({ nodes, edges }) => {
+        onDeleted: ({ nodes: deletedNodes, edges: deletedEdges }) => {
             if (!activeId) return;
 
-            for (const n of nodes) {
-                const isBranch = n.type === 'branchNode' || n.type === FlowType.branchNode;
+            for (const n of deletedNodes) {
                 const state = store.getState();
 
-                if (isBranch) {
+                if (n.type === FlowType.branchNode) {
                     const branch = state.scenario.branches.entities[n.id];
                     if (branch) {
                         dispatch(deleteBranch({ branchId: n.id as Guid }));
@@ -316,10 +312,11 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     }
                 }
 
-                dragStartPositionsRef.current.delete(n.id);
+                dragStartStatesRef.current.delete(n.id);
+                resizeStartStatesRef.current.delete(n.id);
             }
 
-            for (const e of edges) {
+            for (const e of deletedEdges) {
                 const state = store.getState();
                 const relation = state.scenario.relations.entities[e.id];
                 if (relation) {
@@ -329,10 +326,11 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         },
     });
 
-    // Drag-соединение
-    const { onConnectStart, onConnectEnd, getNodeType } = useConnectContext({ rf, setNodes });
+    const { onConnectStart, onConnectEnd, getNodeType: getNodeTypeConnect } = useConnectContext({
+        rf,
+        setNodes,
+    });
 
-    // Hover ветки-цели
     const hover = useMemo(
         () =>
             new HoverBranchService(getAll, setNodes, {
@@ -345,10 +343,8 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const setHoverBranch = useCallback(hover.setHoverBranch, [hover]);
     const onNodeDrag = useCallback(hover.onNodeDrag, [hover]);
 
-    // Ctrl-drag ids
     const ctrlDragIdsRef = useRef<Set<string>>(new Set());
 
-    // Старт перетаскивания
     const onNodeDragStart = useCallback(
         (e: React.MouseEvent | React.TouchEvent, node: FlowNode) => {
             const ctrl = (e as any).ctrlKey === true;
@@ -366,7 +362,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         [setNodes]
     );
 
-    // Финализация перетаскивания
     const dropHandler = useMemo(
         () =>
             new NodeDragStopHandler({
@@ -390,12 +385,10 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                         const isPersisted = !!(step && (step as any).__persisted);
 
                         if (isPersisted && step) {
-                            dispatch(
-                                updateStep({
-                                    stepId: stepId as Guid,
-                                    changes: { branchId, x, y },
-                                })
-                            );
+                            const node = nodesRef.current.find((n) => n.id === stepId);
+                            if (node) {
+                                updateService.updateNodeData(node, { branchId, x, y });
+                            }
                         } else if (step) {
                             dispatch(
                                 addStep({
@@ -412,9 +405,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                         }
                     },
 
-                    onStepMoved: (stepId, x, y) => {
-                        // Обработка в onNodesChangeHandler
-                    },
+                    onStepMoved: () => {},
 
                     onStepDetachedFromBranch: (stepId) => {
                         if (!activeId) return;
@@ -432,20 +423,17 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                             )
                         );
 
-                        dragStartPositionsRef.current.delete(stepId);
+                        dragStartStatesRef.current.delete(stepId);
                     },
 
-                    onBranchResized: (branchId, width, height) => {
-                        // Обработка в onNodesChangeHandler
-                    },
+                    onBranchResized: () => {},
                 },
             }),
-        [getAll, setNodes, setHoverBranch, dispatch, activeId, rf]
+        [getAll, setNodes, setHoverBranch, dispatch, activeId, rf, updateService]
     );
 
     const onNodeDragStop = useCallback(dropHandler.onNodeDragStop, [dropHandler]);
 
-    // Соединения
     const connectionHandler = useMemo(
         () => new ConnectionHandler(setEdges, onConnectEnd),
         [setEdges, onConnectEnd]
@@ -470,17 +458,13 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         [connectionHandler, dispatch, activeId]
     );
 
-    // Валидатор соединений
     const isValidConnection: IsValidConnection<FlowEdge> = useIsValidConnection(
-        getNodeType,
+        getNodeTypeConnect,
         () => edgesRef.current,
         createIsValidConnection,
         ALLOW_MAP,
         TARGET_ALLOW_MAP
     );
-
-    // Реестр типов
-    const nodeTypes = useMemo(() => nodeTypesRegistry, []);
 
     const { containerRef, onMouseDown: onRmbDown } = useRightMousePan(rf as any);
 

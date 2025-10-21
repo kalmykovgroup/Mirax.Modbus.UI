@@ -21,7 +21,7 @@ import {
 import { BranchDto } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto";
 import { FlowType } from "@/features/scenarioEditor/shared/contracts/types/FlowType";
 import type { FlowNode } from "@/features/scenarioEditor/shared/contracts/models/FlowNode";
-import type { StepNodeData } from "@/features/scenarioEditor/shared/contracts/models/StepNodeData";
+import type { FlowNodeData } from "@scenario/shared/contracts/models/FlowNodeData.ts";
 
 // ⚡ NEW: Командная система (заменяет ScenarioChangeCenter)
 import { useSelector } from "react-redux";
@@ -93,7 +93,7 @@ export const RightPanel: React.FC = () => {
                                 position: pos,
                                 data: {
                                     ...n.data
-                                } as StepNodeData<object>,
+                                } as FlowNodeData<object>,
                             }
                             : n
                     );
@@ -111,7 +111,7 @@ export const RightPanel: React.FC = () => {
                         x: 0,
                         y: 0,
                         __persisted: false,
-                    } as StepNodeData<object>,
+                    } as FlowNodeData<object>,
                     draggable: true,
                     selectable: true,
                     ...(type === FlowType.branchNode

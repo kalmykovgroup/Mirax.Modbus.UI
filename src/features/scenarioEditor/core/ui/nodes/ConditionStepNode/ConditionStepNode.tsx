@@ -1,11 +1,14 @@
-import {Handle, type NodeProps, Position} from "@xyflow/react";
+import {Handle, type Node, type NodeProps, Position} from "@xyflow/react";
 
 import styles from "./ConditionStepNode.module.css";
-import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
 import {formatWithMode} from "@app/lib/utils/format.ts";
+import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
+import type {
+    ConditionStepDto
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 
-
-export function ConditionStepNode({ data, selected}: NodeProps<FlowNode>) {
+type Props = NodeProps<Node<FlowNodeData<ConditionStepDto>>>;
+export function ConditionStepNode({ data, selected}: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
 

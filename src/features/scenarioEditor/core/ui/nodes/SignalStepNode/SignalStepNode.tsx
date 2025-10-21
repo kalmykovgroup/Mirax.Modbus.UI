@@ -1,10 +1,16 @@
 import styles from "./SignalStepNode.module.css";
-import {type NodeProps,  Handle, Position} from "@xyflow/react";
+import {type NodeProps, Handle, Position, type Node} from "@xyflow/react";
 
-import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
 import {formatWithMode} from "@app/lib/utils/format.ts";
+import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
+import type {SignalStepDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 
-export function SignalStepNode({ data, selected}: NodeProps<FlowNode>) {
+
+
+type Props = NodeProps<Node<FlowNodeData<SignalStepDto>>>;
+
+
+export function SignalStepNode({ data, selected}: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
 

@@ -1,10 +1,15 @@
 import styles from "./JumpStepNode.module.css";
-import {type NodeProps, Handle, Position} from "@xyflow/react";
+import {type NodeProps, Handle, Position, type Node} from "@xyflow/react";
 import {formatWithMode} from "@app/lib/utils/format.ts";
 import  {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
-import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
+import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
+import type {
+    JumpStepDto
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 
-export function JumpStepNode({ data, selected}: NodeProps<FlowNode>) {
+type Props = NodeProps<Node<FlowNodeData<JumpStepDto>>>;
+
+export function JumpStepNode({ data, selected}: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
     const type : FlowType | undefined = data?.connectContext?.from.type;

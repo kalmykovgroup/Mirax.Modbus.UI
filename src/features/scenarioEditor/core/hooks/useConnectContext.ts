@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { OnConnectStartParams } from '@xyflow/react';
-import type {StepNodeData} from "@/features/scenarioEditor/shared/contracts/models/StepNodeData.ts";
+import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
 import type {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
 import type {ConnectContext} from "@/features/scenarioEditor/shared/contracts/models/ConnectContext.ts";
 import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
@@ -63,7 +63,7 @@ export function useConnectContext({ rf, setNodes }: Params) {
         setNodes((nds) =>
             nds.map((n) => {
                 // скопировали shared
-                const data = { ...n.data } as StepNodeData<object>;
+                const data = { ...n.data } as FlowNodeData<object>;
 
                 if (connectCtx === undefined) {
                     // при сбросе контекста — удаляем свойство

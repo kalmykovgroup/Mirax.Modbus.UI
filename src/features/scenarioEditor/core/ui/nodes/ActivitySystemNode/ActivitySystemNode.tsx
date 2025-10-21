@@ -1,11 +1,16 @@
-import {Handle,  type NodeProps, Position} from "@xyflow/react";
+import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
+
+import {Handle, type Node, type NodeProps, Position} from "@xyflow/react";
 import styles from "./ActivitySystemNode.module.css";
 import {formatWithMode} from "@app/lib/utils/format.ts";
 import  {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
-import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
+import type {
+    SystemActivityStepDto
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 
+type Props = NodeProps<Node<FlowNodeData<SystemActivityStepDto>>>;
 
-export function ActivitySystemNode({ data, selected }: NodeProps<FlowNode>) {
+export function ActivitySystemNode({ data, selected }: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
     const type : FlowType | undefined = data?.connectContext?.from.type;

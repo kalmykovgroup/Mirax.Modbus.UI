@@ -1,36 +1,35 @@
-import {Handle, type NodeProps, NodeResizer, Position} from "@xyflow/react";
-import styles from "./BranchNode.module.css";
-import {formatWithMode} from "@app/lib/utils/format.ts";
-import  {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
-import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
-import {endBranchResize, startBranchResize} from "@scenario/core/branchResize/branchResizeGuard.ts";
+// src/features/scenarioEditor/core/ui/nodes/BranchNode/BranchNode.tsx
+import { Handle, type NodeProps, type Node, NodeResizer, Position } from '@xyflow/react';
+import styles from './BranchNode.module.css';
+import { formatWithMode } from '@app/lib/utils/format';
+import { FlowType } from '@/features/scenarioEditor/shared/contracts/types/FlowType';
+import { endBranchResize, startBranchResize } from '@scenario/core/branchResize/branchResizeGuard';
+import type { FlowNodeData } from '@/features/scenarioEditor/shared/contracts/models/FlowNodeData';
+import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
 
-export function BranchNode({ id, data, selected }: NodeProps<FlowNode>) {
-    const handleType = data?.connectContext?.from.handleType;
-    const type : FlowType | undefined = data?.connectContext?.from.type;
+// Правильная типизация: NodeProps<Node<FlowNodeData<BranchDto>>>
+type Props = NodeProps<Node<FlowNodeData<BranchDto>>>;
+
+export function BranchNode({ id, data, selected }: Props) {
+    const handleType = data.connectContext?.from.handleType;
+    const type = data.connectContext?.from.type;
     const isConnectValid =
-        (type != FlowType.branchNode && type == FlowType.conditionStepNode) ||
-        (type != FlowType.branchNode && type == FlowType.parallelStepNode);
+        type !== FlowType.branchNode &&
+        (type === FlowType.conditionStepNode || type === FlowType.parallelStepNode);
 
     return (
         <div className={styles.container} aria-selected={selected}>
-            {/* фон ветки — никак не ловит клики */}
             <div className={styles.bg} />
-
             <NodeResizer
                 isVisible={selected}
                 onResizeStart={() => startBranchResize(id)}
                 onResizeEnd={() => endBranchResize(id)}
             />
-
-            {/* чисто визуальный оверлей — тоже не ловит клики */}
             <span className={styles.coordinates}>
         <span>x:{formatWithMode(data.x, 2, true)}</span>
         <span>y:{formatWithMode(data.y, 2, true)}</span>
       </span>
             <span className={styles.name}>Ветка</span>
-
-            {/* хэндл остаётся кликабельным */}
             <Handle
                 className={styles.target}
                 aria-selected={handleType === 'source' && isConnectValid}

@@ -1,16 +1,18 @@
-import {Handle, type NodeProps, Position} from "@xyflow/react";
+import {Handle, type Node, type NodeProps, Position} from "@xyflow/react";
 import styles from "./DelayStepNode.module.css";
 import {formatWithMode} from "@app/lib/utils/format.ts";
 import  {FlowType} from "@/features/scenarioEditor/shared/contracts/types/FlowType.ts";
-import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
 import type {DelayStepDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 import DelayTimeInput from "@scenario/core/ui/nodes/DelayStepNode/DelayTimeInput/DelayTimeInput.tsx";
+import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
 
 const onChangeDto = (dto: DelayStepDto) =>{
     console.log(dto);
 }
 
-export function DelayStepNode({ data, selected}: NodeProps<FlowNode>) {
+type Props = NodeProps<Node<FlowNodeData<DelayStepDto>>>;
+
+export function DelayStepNode({ data, selected}: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
     const type : FlowType | undefined = data?.connectContext?.from.type;
