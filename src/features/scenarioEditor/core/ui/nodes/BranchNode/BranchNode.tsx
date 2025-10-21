@@ -6,19 +6,48 @@ import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
 import { endBranchResize, startBranchResize } from '@scenario/core/branchResize/branchResizeGuard';
 import type { FlowNodeData } from '@/features/scenarioEditor/shared/contracts/models/FlowNodeData';
 import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
+import { useEffect, useState } from 'react';
 
-// Правильная типизация: NodeProps<Node<FlowNodeData<BranchDto>>>
 type Props = NodeProps<Node<FlowNodeData<BranchDto>>>;
 
 export function BranchNode({ id, data, selected }: Props) {
+    const [isCtrlPressed, setIsCtrlPressed] = useState(false);
+
     const handleType = data.connectContext?.from.handleType;
     const type = data.connectContext?.from.type;
     const isConnectValid =
         type !== FlowType.BranchNode &&
         (type === FlowType.Condition || type === FlowType.Parallel);
 
+    // Отслеживаем нажатие Ctrl
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Control' || e.key === 'Meta') {
+                setIsCtrlPressed(true);
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Control' || e.key === 'Meta') {
+                setIsCtrlPressed(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
+
     return (
-        <div className={styles.container} aria-selected={selected}>
+        <div
+            className={styles.container}
+            aria-selected={selected}
+            data-ctrl-mode={isCtrlPressed}
+        >
             <div className={styles.bg} />
             <NodeResizer
                 isVisible={selected}
@@ -26,10 +55,10 @@ export function BranchNode({ id, data, selected }: Props) {
                 onResizeEnd={() => endBranchResize(id)}
             />
             <span className={styles.coordinates}>
-        <span>x:{formatWithMode(data.x, 2, true)}</span>
-        <span>y:{formatWithMode(data.y, 2, true)}</span>
-      </span>
-            <span className={styles.name}>Ветка</span>
+                <span>x:{formatWithMode(data.x, 2, true)}</span>
+                <span>y:{formatWithMode(data.y, 2, true)}</span>
+            </span>
+            <span className={styles.name}>Ветка {isCtrlPressed && '(Ctrl)'}</span>
             <Handle
                 className={styles.target}
                 aria-selected={handleType === 'source' && isConnectValid}

@@ -6,18 +6,20 @@ import {
     BackgroundVariant,
     ConnectionLineType,
     Controls,
-    type EdgeChange,
+    type OnEdgesChange,
+    type OnNodesChange,
+    type OnSelectionChangeParams,
     MarkerType,
-    type NodeChange,
     Panel,
     ReactFlow,
     SelectionMode,
-    useReactFlow,
     applyNodeChanges,
     applyEdgeChanges,
+    useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useSelector } from 'react-redux';
+import { createSelector } from '@reduxjs/toolkit';
 
 import styles from './ScenarioMap.module.css';
 
@@ -34,6 +36,16 @@ import { mapScenarioToFlow } from '@scenario/core/mapScenarioToFlow';
 
 import { selectActiveScenarioId } from '@scenario/store/scenarioSelectors';
 import { generateNodeTypes } from '@scenario/core/utils/generateNodeTypes';
+import { useSelection } from '@scenario/core/hooks/useSelection';
+import { NodeDragStopHandler } from '@scenario/core/handlers/NodeDragStopHandler';
+import {
+    absOf,
+    rectOf,
+    ensureParentBeforeChild,
+    pickDeepestBranchByTopLeft,
+} from '@scenario/core/utils/dropUtils';
+import { isAnyBranchResizing } from '@scenario/core/branchResize/branchResizeGuard';
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
 
 export interface ScenarioEditorProps {}
 
@@ -47,15 +59,45 @@ interface ResizeState {
     readonly height: number;
 }
 
+// Мемоизированный селектор для данных сценария
+const makeSelectScenarioData = () =>
+    createSelector(
+        [
+            (state: RootState) => state.scenario.scenarios,
+            (state: RootState) => state.scenario.branches,
+            (state: RootState) => state.scenario.steps,
+            (state: RootState) => state.scenario.relations,
+            (_: RootState, scenarioId: string | null) => scenarioId,
+        ],
+        (scenarios, branches, steps, relations, scenarioId) => {
+            if (scenarioId == null) return null;
+            const scenario = scenarios[scenarioId];
+            if (scenario == null) return null;
+            return { scenario, branches, steps, relations };
+        }
+    );
+
 export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const { theme } = useTheme();
 
     const [nodes, setNodes] = useState<FlowNode[]>([]);
     const [edges, setEdges] = useState<FlowEdge[]>([]);
+    const [_hoverBranch, setHoverBranch] = useState<string | undefined>();
+    const [isCtrlPressed, setIsCtrlPressed] = useState(false);
 
     const dragStateRef = useRef<Map<string, DragState>>(new Map());
     const resizeStateRef = useRef<Map<string, ResizeState>>(new Map());
+    const branchSizesRef = useRef<Map<string, ResizeState>>(new Map());
     const nodesRef = useRef<FlowNode[]>([]);
+    const ctrlDragIdsRef = useRef<Set<string>>(new Set());
+    const resizeObserversRef = useRef<Map<string, ResizeObserver>>(new Map());
+
+    // Отслеживание активного dragging
+    const isDraggingRef = useRef<boolean>(false);
+    const isDraggingBranchRef = useRef<boolean>(false);
+    const pendingBranchResizeRef = useRef<Map<string, { from: ResizeState; to: ResizeState }>>(
+        new Map()
+    );
 
     useEffect(() => {
         nodesRef.current = nodes;
@@ -64,86 +106,337 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const nodeTypes = useMemo(() => generateNodeTypes(), []);
 
     const activeId = useSelector(selectActiveScenarioId);
-    const state = useSelector((s: RootState) => s);
+
+    const selectScenarioData = useMemo(() => makeSelectScenarioData(), []);
+    const scenarioData = useSelector((state: RootState) =>
+        selectScenarioData(state, activeId)
+    );
+
+    const rf = useReactFlow<FlowNode, FlowEdge>();
+
+    // Хук выбора и удаления
+    const { onSelectionChange, deleteSelected } = useSelection({
+        setNodes,
+        setEdges,
+        getNodes: rf.getNodes,
+        getEdges: rf.getEdges,
+        onDeleted: (payload) => {
+            console.log('[ScenarioMap] 🗑️ Deleted:', payload);
+        },
+    });
+
+    // NodeDragStopHandler с колбэками
+    const dragStopHandler = useMemo(
+        () =>
+            new NodeDragStopHandler({
+                getAll: rf.getNodes,
+                setNodes,
+                setHoverBranch,
+                ctrlDragIdsRef,
+                utils: {
+                    absOf,
+                    rectOf,
+                    ensureParentBeforeChild,
+                    pickDeepestBranchByTopLeft,
+                    isAnyBranchResizing,
+                },
+                callbacks: {
+                    onStepAttachedToBranch: (stepId, branchId, x, y) => {
+                        console.log(
+                            `[ScenarioMap] 🔗 STEP ATTACHED TO BRANCH | Step: ${stepId} | Branch: ${branchId}`,
+                            { x, y }
+                        );
+                    },
+                    onStepDetachedFromBranch: (stepId) => {
+                        console.log(`[ScenarioMap] 🔓 STEP DETACHED FROM BRANCH | ID: ${stepId}`);
+                    },
+                    onBranchResized: (branchId, width, height) => {
+                        console.log(
+                            `[ScenarioMap] 📐 BRANCH RESIZED (handler) | ID: ${branchId}`,
+                            { width, height }
+                        );
+                    },
+                },
+            }),
+        [rf, setNodes]
+    );
+
+    // Отслеживание DOM-изменений размеров веток через ResizeObserver
+    useEffect(() => {
+        const branchNodes = nodes.filter((n) => n.type === FlowType.BranchNode);
+
+        for (const branch of branchNodes) {
+            if (resizeObserversRef.current.has(branch.id)) continue;
+
+            const nodeElement = document.querySelector(
+                `[data-id="${branch.id}"]`
+            ) as HTMLElement | null;
+
+            if (nodeElement == null) continue;
+
+            const observer = new ResizeObserver((entries) => {
+                for (const entry of entries) {
+                    const newWidth = Math.round(entry.contentRect.width);
+                    const newHeight = Math.round(entry.contentRect.height);
+
+                    const prev = branchSizesRef.current.get(branch.id);
+
+                    if (
+                        prev != null &&
+                        (prev.width !== newWidth || prev.height !== newHeight)
+                    ) {
+                        // Если сейчас идёт dragging - НЕ логируем, а сохраняем для отложенного лога
+                        if (isDraggingRef.current) {
+                            pendingBranchResizeRef.current.set(branch.id, {
+                                from: prev,
+                                to: { width: newWidth, height: newHeight },
+                            });
+                        } else {
+                            // Нет активного dragging - логируем сразу
+                            console.log(
+                                `[ScenarioMap] 📐 BRANCH AUTO-EXPANDED | ID: ${branch.id}`,
+                                {
+                                    from: prev,
+                                    to: { width: newWidth, height: newHeight },
+                                    delta: {
+                                        width: newWidth - prev.width,
+                                        height: newHeight - prev.height,
+                                    },
+                                }
+                            );
+                        }
+
+                        setNodes((nds) =>
+                            nds.map((n) =>
+                                n.id === branch.id
+                                    ? {
+                                        ...n,
+                                        style: {
+                                            ...(n.style ?? {}),
+                                            width: newWidth,
+                                            height: newHeight,
+                                        },
+                                    }
+                                    : n
+                            )
+                        );
+                    }
+
+                    branchSizesRef.current.set(branch.id, {
+                        width: newWidth,
+                        height: newHeight,
+                    });
+                }
+            });
+
+            observer.observe(nodeElement);
+            resizeObserversRef.current.set(branch.id, observer);
+        }
+
+        const branchIds = new Set(branchNodes.map((n) => n.id));
+        for (const [id, observer] of resizeObserversRef.current.entries()) {
+            if (!branchIds.has(id)) {
+                observer.disconnect();
+                resizeObserversRef.current.delete(id);
+                branchSizesRef.current.delete(id);
+            }
+        }
+
+        return () => {
+            for (const observer of resizeObserversRef.current.values()) {
+                observer.disconnect();
+            }
+            resizeObserversRef.current.clear();
+        };
+    }, [nodes, setNodes]);
 
     // Синхронизация Redux → ReactFlow
     useEffect(() => {
-        if (activeId == null) {
-            console.log('[ScenarioMap] No active scenario');
+        if (activeId == null || scenarioData == null) {
             setNodes([]);
             setEdges([]);
             dragStateRef.current.clear();
             resizeStateRef.current.clear();
+            branchSizesRef.current.clear();
+            for (const observer of resizeObserversRef.current.values()) {
+                observer.disconnect();
+            }
+            resizeObserversRef.current.clear();
             return;
         }
-
-        const scenario = state.scenario.scenarios[activeId];
-        if (scenario == null) {
-            console.log('[ScenarioMap] Scenario not found in state:', activeId);
-            setNodes([]);
-            setEdges([]);
-            return;
-        }
-
-        console.log('[ScenarioMap] Mapping scenario to flow:', activeId);
-        console.log('[ScenarioMap] Scenario data:', scenario);
-        console.log('[ScenarioMap] Branches count:', Object.keys(state.scenario.branches).length);
-        console.log('[ScenarioMap] Steps count:', Object.keys(state.scenario.steps).length);
 
         try {
-            const flow = mapScenarioToFlow(state, activeId);
-            console.log('[ScenarioMap] Flow result:', {
-                nodesCount: flow.nodes.length,
-                edgesCount: flow.edges.length,
-            });
+            const minimalState: RootState = {
+                scenario: {
+                    scenarios: { [activeId]: scenarioData.scenario },
+                    branches: scenarioData.branches,
+                    steps: scenarioData.steps,
+                    relations: scenarioData.relations,
+                },
+            } as RootState;
+
+            const flow = mapScenarioToFlow(minimalState, activeId);
             setNodes(flow.nodes as FlowNode[]);
             setEdges(flow.edges as FlowEdge[]);
-        } catch (error) {
-            console.error('[ScenarioMap] Error mapping scenario:', error);
-        }
-    }, [state, activeId]);
 
-    const onNodesChangeHandler = useCallback((changes: NodeChange[]): void => {
-        setNodes((nds) => applyNodeChanges(changes, nds));
+            const branches = flow.nodes.filter((n) => n.type === FlowType.BranchNode);
+            for (const branch of branches) {
+                const width = branch.style?.width;
+                const height = branch.style?.height;
+                if (typeof width === 'number' && typeof height === 'number') {
+                    branchSizesRef.current.set(branch.id, {
+                        width: Math.round(width),
+                        height: Math.round(height),
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('[ScenarioMap] ❌ Error mapping scenario:', error);
+        }
+    }, [scenarioData, activeId]);
+
+    // Глобальное отслеживание Ctrl
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Control' || e.key === 'Meta') {
+                setIsCtrlPressed(true);
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Control' || e.key === 'Meta') {
+                setIsCtrlPressed(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
+
+    // Динамически обновляем selectable и draggable для веток при изменении Ctrl
+    useEffect(() => {
+        setNodes((nds) =>
+            nds.map((n) => {
+                if (n.type === FlowType.BranchNode) {
+                    if (isCtrlPressed) {
+                        // Ctrl нажат — делаем ветки интерактивными
+                        return {
+                            ...n,
+                            selectable: true,
+                            draggable: true,
+                        };
+                    } else {
+                        // Ctrl отпущен
+                        // Если сейчас идёт драг ветки — НЕ трогаем её
+                        if (isDraggingBranchRef.current && n.selected === true) {
+                            return n;
+                        }
+
+                        // Иначе — блокируем и снимаем выделение
+                        return {
+                            ...n,
+                            selectable: false,
+                            draggable: false,
+                            selected: false,
+                        };
+                    }
+                }
+                return n;
+            })
+        );
+    }, [isCtrlPressed]);
+
+    const onNodesChangeHandler: OnNodesChange<FlowNode> = useCallback((changes) => {
+        setNodes((nds) => applyNodeChanges(changes, nds) as FlowNode[]);
 
         for (const change of changes) {
             if (change.type === 'position' && 'position' in change && change.position != null) {
                 const { id, position, dragging } = change;
 
                 if (dragging === true) {
-                    dragStateRef.current.set(id, {
-                        x: Math.round(position.x),
-                        y: Math.round(position.y),
-                    });
+                    // Начало drag
+                    isDraggingRef.current = true;
+
+                    // Проверяем, ветка ли это
+                    const node = nodesRef.current.find((n) => n.id === id);
+                    if (node?.type === FlowType.BranchNode) {
+                        isDraggingBranchRef.current = true;
+                    }
+
+                    if (!dragStateRef.current.has(id)) {
+                        if (node != null) {
+                            dragStateRef.current.set(id, {
+                                x: Math.round(node.position.x),
+                                y: Math.round(node.position.y),
+                            });
+                        }
+                    }
                 } else if (dragging === false) {
+                    // Конец drag
+                    isDraggingRef.current = false;
+                    isDraggingBranchRef.current = false;
+
                     const startState = dragStateRef.current.get(id);
                     const newX = Math.round(position.x);
                     const newY = Math.round(position.y);
 
                     if (startState != null && (startState.x !== newX || startState.y !== newY)) {
                         const node = nodesRef.current.find((n) => n.id === id);
-                        if (node != null) {
-                            console.log('[ScenarioMap] 📍 Position changed:', {
-                                nodeId: id,
-                                type: node.type,
+                        console.log(
+                            `[ScenarioMap] 📍 NODE MOVED | Type: ${node?.type ?? 'unknown'} | ID: ${id}`,
+                            {
                                 from: startState,
                                 to: { x: newX, y: newY },
-                            });
-                        }
+                                delta: {
+                                    x: newX - startState.x,
+                                    y: newY - startState.y,
+                                },
+                            }
+                        );
                     }
 
                     dragStateRef.current.delete(id);
+
+                    // Логируем отложенные изменения размеров веток
+                    for (const [branchId, resize] of pendingBranchResizeRef.current.entries()) {
+                        console.log(
+                            `[ScenarioMap] 📐 BRANCH AUTO-EXPANDED | ID: ${branchId}`,
+                            {
+                                from: resize.from,
+                                to: resize.to,
+                                delta: {
+                                    width: resize.to.width - resize.from.width,
+                                    height: resize.to.height - resize.from.height,
+                                },
+                            }
+                        );
+                    }
+                    pendingBranchResizeRef.current.clear();
                 }
             }
 
-            if (change.type === 'dimensions' && 'dimensions' in change && change.dimensions != null) {
+            if (
+                change.type === 'dimensions' &&
+                'dimensions' in change &&
+                change.dimensions != null
+            ) {
                 const { id, dimensions, resizing } = change;
 
                 if (resizing === true) {
-                    resizeStateRef.current.set(id, {
-                        width: Math.round(dimensions.width),
-                        height: Math.round(dimensions.height),
-                    });
+                    if (!resizeStateRef.current.has(id)) {
+                        const node = nodesRef.current.find((n) => n.id === id);
+                        if (node?.style?.width != null && node.style.height != null) {
+                            resizeStateRef.current.set(id, {
+                                width: Math.round(node.style.width as number),
+                                height: Math.round(node.style.height as number),
+                            });
+                        }
+                    }
                 } else if (resizing === false) {
                     const startState = resizeStateRef.current.get(id);
                     const newWidth = Math.round(dimensions.width);
@@ -154,65 +447,67 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                         (startState.width !== newWidth || startState.height !== newHeight)
                     ) {
                         const node = nodesRef.current.find((n) => n.id === id);
-                        if (node != null) {
-                            console.log('[ScenarioMap] 📏 Size changed:', {
-                                nodeId: id,
-                                type: node.type,
+                        console.log(
+                            `[ScenarioMap] 📐 NODE RESIZED (manual) | Type: ${node?.type ?? 'unknown'} | ID: ${node?.id}`,
+                            {
                                 from: startState,
                                 to: { width: newWidth, height: newHeight },
-                            });
-                        }
+                                delta: {
+                                    width: newWidth - startState.width,
+                                    height: newHeight - startState.height,
+                                },
+                            }
+                        );
                     }
 
                     resizeStateRef.current.delete(id);
                 }
             }
 
+            if (change.type === 'select') {
+                const node = nodesRef.current.find((n) => n.id === change.id);
+                console.log(
+                    `[ScenarioMap] 🎯 NODE ${change.selected ? 'SELECTED' : 'DESELECTED'} | Type: ${node?.type ?? 'unknown'} | ID: ${change.id}`
+                );
+            }
+
             if (change.type === 'remove') {
+                const node = nodesRef.current.find((n) => n.id === change.id);
+                console.log(
+                    `[ScenarioMap] 🗑️ NODE REMOVED | Type: ${node?.type ?? 'unknown'} | ID: ${change.id}`
+                );
                 dragStateRef.current.delete(change.id);
                 resizeStateRef.current.delete(change.id);
-                console.log('[ScenarioMap] 🗑️ Node removed:', change.id);
+                branchSizesRef.current.delete(change.id);
             }
+        }
+    }, []);
 
-            if (change.type === 'add' && 'item' in change) {
-                console.log('[ScenarioMap] ➕ Node added:', change.item.id);
-            }
+    const onEdgesChangeHandler: OnEdgesChange<FlowEdge> = useCallback((changes) => {
+        setEdges((eds) => applyEdgeChanges(changes, eds) as FlowEdge[]);
 
+        for (const change of changes) {
             if (change.type === 'select') {
-                console.log('[ScenarioMap] 🎯 Node selection changed:', {
-                    nodeId: change.id,
-                    selected: change.selected,
-                });
+                console.log(
+                    `[ScenarioMap] 🎯 EDGE ${change.selected ? 'SELECTED' : 'DESELECTED'} | ID: ${change.id}`
+                );
+            }
+
+            if (change.type === 'remove') {
+                console.log(`[ScenarioMap] 🗑️ EDGE REMOVED | ID: ${change.id}`);
             }
         }
     }, []);
 
-    const onEdgesChangeHandler = useCallback((changes: EdgeChange[]): void => {
-        setEdges((eds) => applyEdgeChanges(changes, eds));
-
-        for (const ch of changes) {
-            if (ch.type === 'remove') {
-                console.log('[ScenarioMap] 🗑️ Edge removed:', ch.id);
-            }
-
-            if (ch.type === 'add' && 'item' in ch) {
-                console.log('[ScenarioMap] ➕ Edge added:', {
-                    edgeId: ch.item.id,
-                    source: ch.item.source,
-                    target: ch.item.target,
-                });
-            }
-
-            if (ch.type === 'select') {
-                console.log('[ScenarioMap] 🎯 Edge selection changed:', {
-                    edgeId: ch.id,
-                    selected: ch.selected,
-                });
-            }
-        }
-    }, []);
-
-    const rf = useReactFlow();
+    const handleSelectionChange = useCallback(
+        (params: OnSelectionChangeParams): void => {
+            onSelectionChange({
+                nodes: params.nodes as FlowNode[],
+                edges: params.edges as FlowEdge[],
+            });
+        },
+        [onSelectionChange]
+    );
 
     return (
         <div data-theme={theme} className={styles.containerScenarioMap} style={{ height: '70vh' }}>
@@ -237,6 +532,8 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 }
                 onNodesChange={onNodesChangeHandler}
                 onEdgesChange={onEdgesChangeHandler}
+                onSelectionChange={handleSelectionChange}
+                onNodeDragStop={dragStopHandler.onNodeDragStop}
                 minZoom={0.01}
                 maxZoom={10}
                 defaultEdgeOptions={{
@@ -253,7 +550,9 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 selectionOnDrag
                 selectionMode={SelectionMode.Partial}
                 panOnDrag={[1, 2]}
-                panOnScroll
+                panOnScroll={false} // ← Отключаем скролл для панорамирования
+                zoomOnScroll // ← Включаем зум на скролл БЕЗ модификаторов
+                zoomActivationKeyCode={['Control', 'Meta']} // ← Зум теперь ТОЛЬКО с Ctrl/Cmd
                 autoPanSpeed={3}
                 fitView
                 className={styles.customFlow}
@@ -269,7 +568,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 <Panel position="bottom-left">
                     <button
                         className={styles.deleteBtn}
-                        onClick={() => console.log('[ScenarioMap] 🗑️ Delete button clicked')}
+                        onClick={deleteSelected}
                         title="Удалить выбранное (Del/Backspace)"
                     >
                         Удалить

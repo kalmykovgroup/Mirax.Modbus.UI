@@ -6,7 +6,7 @@ import {
     ActivityModbusUpdateCommandHandler,
     ActivityModbusDeleteCommandHandler,
     ActivityModbusMoveCommandHandler,
-} from './ActivityModbusCommandHandler';
+} from './ModbusActivityCommandHandler';
 
 commandRegistry.register(ActivityModbusCreateCommandHandler);
 commandRegistry.register(ActivityModbusUpdateCommandHandler);

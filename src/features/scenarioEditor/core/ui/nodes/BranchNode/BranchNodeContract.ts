@@ -4,6 +4,7 @@ import type { NodeTypeContract } from '@scenario/shared/contracts/registry/NodeT
 import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
 import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
 import { BranchNode } from '@scenario/core/ui/nodes/BranchNode/BranchNode';
+import {BranchCommands} from "@scenario/core/features/scenarioChangeCenter/commandBuilders.ts";
 
 const DEFAULT_BRANCH_W = 320;
 const DEFAULT_BRANCH_H = 100;
@@ -29,6 +30,8 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
                 __persisted: true,
             },
             style: { width, height, zIndex: 0 },
+            selectable: false, // ← Ветка НЕ выделяется кликом
+            draggable: false,
         } as FlowNode<BranchDto>;
     },
 
@@ -39,5 +42,29 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
             x: node.data.x,
             y: node.data.y,
         };
+    },
+
+    createMoveCommand: (scenarioId, nodeId, previousState, newX, newY) => {
+        return BranchCommands.update(
+            scenarioId,
+            {
+                branchId: nodeId,
+                previousState,
+                newState: { ...previousState, x: newX, y: newY },
+            },
+            `Переместить ветку (${newX}, ${newY})`
+        );
+    },
+
+    createResizeCommand: (scenarioId, nodeId, previousState, newWidth, newHeight) => {
+        return BranchCommands.resize(
+            scenarioId,
+            {
+                branchId: nodeId,
+                previousState,
+                newState: { ...previousState, width: newWidth, height: newHeight },
+            },
+            `Изменить размер ветки (${newWidth}x${newHeight})`
+        );
     },
 };

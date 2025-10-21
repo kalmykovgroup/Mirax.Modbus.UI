@@ -10,10 +10,27 @@ import {ActivitySystemNodeContract} from "@scenario/core/ui/nodes/ActivitySystem
 import {ActivityModbusNodeContract} from "@scenario/core/ui/nodes/ActivityModbusNode/ActivityModbusNodeContract.ts";
 import {SignalStepNodeContract} from "@scenario/core/ui/nodes/SignalStepNode/SignalStepNodeContract.ts";
 
+
+// Импортируем все обработчики для регистрации
+import '@scenario/core/ui/nodes/DelayStepNode/commands';
+import '@scenario/core/ui/nodes/BranchNode/commands';
+import '@scenario/core/ui/nodes/JumpStepNode/commands';
+import '@scenario/core/ui/nodes/SignalStepNode/commands';
+import '@scenario/core/ui/nodes/ParallelStepNode/commands';
+import '@scenario/core/ui/nodes/ConditionStepNode/commands';
+import '@scenario/core/ui/nodes/ActivitySystemNode/commands';
+import '@scenario/core/ui/nodes/ActivityModbusNode/commands';
+
+import '@scenario/core/features/scenarioChangeCenter/scenarioCommands';
+
+// Этот файл просто импортирует все обработчики для их регистрации
+console.log('[CommandRegistry] All command handlers registered');
+
 /**
  * Регистрирует все типы нод в глобальном реестре.
  * Должна быть вызвана один раз при старте приложения (в main.tsx).
  */
+
 
 export function registerAllNodeTypes(): void {
     nodeTypeRegistry.register(BranchNodeContract);
@@ -25,3 +42,4 @@ export function registerAllNodeTypes(): void {
     nodeTypeRegistry.register(ActivityModbusNodeContract);
     nodeTypeRegistry.register(SignalStepNodeContract);
 }
+

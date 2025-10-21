@@ -6,7 +6,7 @@ import {
     ActivitySystemUpdateCommandHandler,
     ActivitySystemDeleteCommandHandler,
     ActivitySystemMoveCommandHandler,
-} from './ActivitySystemCommandHandler';
+} from './SystemActivityCommandHandler';
 
 commandRegistry.register(ActivitySystemCreateCommandHandler);
 commandRegistry.register(ActivitySystemUpdateCommandHandler);
