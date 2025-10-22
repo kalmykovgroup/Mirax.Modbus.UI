@@ -1,10 +1,13 @@
 // src/features/scenarioEditor/shared/contracts/models/FlowNodeData.ts
+
 import type { ConnectContext } from './ConnectContext';
+import type { BaseNodeDto } from '@scenario/shared/contracts/registry/NodeTypeContract';
 
 /**
  * Базовые поля данных ноды
+ * T extends BaseNodeDto — гарантирует, что object всегда объект с id
  */
-interface FlowNodeDataBase<T = unknown> {
+interface FlowNodeDataBase<T extends BaseNodeDto = BaseNodeDto> {
     readonly object: T;
     readonly connectContext?: ConnectContext | undefined;
     readonly x: number;
@@ -14,9 +17,7 @@ interface FlowNodeDataBase<T = unknown> {
 }
 
 /**
- * FlowNodeData с расширением Record<string, unknown> для ReactFlow.
- *
- * Используем intersection (&) вместо extends, чтобы обойти проблемы
- * с exactOptionalPropertyTypes: true.
+ * FlowNodeData с расширением Record<string, unknown> для ReactFlow
  */
-export type FlowNodeData<T = unknown> = FlowNodeDataBase<T> & Record<string, unknown>;
+export type FlowNodeData<T extends BaseNodeDto = BaseNodeDto> = FlowNodeDataBase<T> &
+    Record<string, unknown>;

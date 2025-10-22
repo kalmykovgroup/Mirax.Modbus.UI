@@ -1,22 +1,26 @@
 // src/features/history/types.ts
 
+import type {Guid} from "@app/lib/types/Guid.ts";
+
+
 /**
  * Базовый тип для любой сущности
  */
 export interface Entity {
-    readonly id: string;
-    readonly entityType: string;
+    readonly id: Guid;
+    readonly entityType: string; // FlowType в виде строки
 }
 
 /**
  * Снимок состояния сущности
  */
 export interface EntitySnapshot<T extends Entity = Entity> {
-    readonly entityId: string;
+    readonly entityId: Guid;
     readonly entityType: string;
     readonly data: T;
     readonly timestamp: number;
 }
+
 
 /**
  * Базовые поля для всех записей истории

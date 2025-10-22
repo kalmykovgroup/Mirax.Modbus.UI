@@ -1,4 +1,4 @@
-// src/features/history/historySlice.ts
+// src/features/scenarioEditor/core/features/historySystem/historySlice.ts
 
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/baseStore/store';
@@ -17,7 +17,10 @@ const initialState: HistoryState = {
     contexts: {},
 };
 
-// ⚡ КЛЮЧЕВОЕ: Thunk для undo (вызываем handlers ВНЕ reducer)
+// ============================================================================
+// THUNKS (вызывают методы из контрактов ВНЕ reducer)
+// ============================================================================
+
 export const undoThunk = createAsyncThunk<void, { contextId: string }, { state: RootState }>(
     'history/undoThunk',
     async ({ contextId }, { getState, dispatch }) => {
@@ -34,19 +37,13 @@ export const undoThunk = createAsyncThunk<void, { contextId: string }, { state: 
 
         console.log('[historySlice] Undoing record:', record);
 
-        const handler = historyRegistry.getHandler(record.entityType);
-        if (!handler) {
-            console.error('[historySlice] No handler for entity type:', record.entityType);
-            return;
-        }
-
-        // ⚡ Применяем откат (handlers вызывают dispatch, но мы ВНЕ reducer)
+        // ✅ Применяем откат через historyRegistry → contract
         if (record.type === 'create') {
-            handler.delete(record.entityId);
+            historyRegistry.deleteEntity(record.entityType, record.entityId as any);
         } else if (record.type === 'update') {
-            handler.revert(record.before);
+            historyRegistry.revertSnapshot(record.before);
         } else if (record.type === 'delete') {
-            handler.create(record.before);
+            historyRegistry.createFromSnapshot(record.before);
         }
 
         // Обновляем историю
@@ -54,7 +51,6 @@ export const undoThunk = createAsyncThunk<void, { contextId: string }, { state: 
     }
 );
 
-// ⚡ КЛЮЧЕВОЕ: Thunk для redo (вызываем handlers ВНЕ reducer)
 export const redoThunk = createAsyncThunk<void, { contextId: string }, { state: RootState }>(
     'history/redoThunk',
     async ({ contextId }, { getState, dispatch }) => {
@@ -71,25 +67,23 @@ export const redoThunk = createAsyncThunk<void, { contextId: string }, { state: 
 
         console.log('[historySlice] Redoing record:', record);
 
-        const handler = historyRegistry.getHandler(record.entityType);
-        if (!handler) {
-            console.error('[historySlice] No handler for entity type:', record.entityType);
-            return;
-        }
-
-        // ⚡ Применяем повтор (handlers вызывают dispatch, но мы ВНЕ reducer)
+        // ✅ Применяем повтор через historyRegistry → contract
         if (record.type === 'create') {
-            handler.create(record.after);
+            historyRegistry.createFromSnapshot(record.after);
         } else if (record.type === 'update') {
-            handler.apply(record.after);
+            historyRegistry.applySnapshot(record.after);
         } else if (record.type === 'delete') {
-            handler.delete(record.entityId);
+            historyRegistry.deleteEntity(record.entityType, record.entityId as any);
         }
 
         // Обновляем историю
         dispatch(redoCommit({ contextId }));
     }
 );
+
+// ============================================================================
+// SLICE
+// ============================================================================
 
 export const historySlice = createSlice({
     name: 'history',
@@ -130,13 +124,9 @@ export const historySlice = createSlice({
 
             if (!context.isRecording) return;
 
-            const handler = historyRegistry.getHandler(entity.entityType);
-            if (!handler) {
-                console.error('[historySlice] No handler for entity type:', entity.entityType);
-                return;
-            }
+            // ✅ Создаём снимок через historyRegistry → contract
+            const snapshot = historyRegistry.createSnapshot(entity);
 
-            const snapshot = handler.createSnapshot(entity);
             const record: CreateRecord = {
                 id: crypto.randomUUID(),
                 type: 'create',
@@ -150,10 +140,16 @@ export const historySlice = createSlice({
             console.log('[historySlice] Recording create:', record);
 
             if (context.isBatching) {
-                context.batchBuffer.push(record);
+                state.contexts[contextId] = {
+                    ...context,
+                    batchBuffer: [...context.batchBuffer, record],
+                };
             } else {
-                context.past.push(record);
-                context.future = [];
+                state.contexts[contextId] = {
+                    ...context,
+                    past: [...context.past, record],
+                    future: [],
+                };
             }
         },
 
@@ -175,14 +171,9 @@ export const historySlice = createSlice({
 
             if (!context.isRecording) return;
 
-            const handler = historyRegistry.getHandler(newEntity.entityType);
-            if (!handler) {
-                console.error('[historySlice] No handler for entity type:', newEntity.entityType);
-                return;
-            }
-
-            const beforeSnapshot = handler.createSnapshot(previousEntity);
-            const afterSnapshot = handler.createSnapshot(newEntity);
+            // ✅ Создаём снимки через historyRegistry → contract
+            const beforeSnapshot = historyRegistry.createSnapshot(previousEntity);
+            const afterSnapshot = historyRegistry.createSnapshot(newEntity);
 
             const record: UpdateRecord = {
                 id: crypto.randomUUID(),
@@ -197,10 +188,16 @@ export const historySlice = createSlice({
             console.log('[historySlice] Recording update:', record);
 
             if (context.isBatching) {
-                context.batchBuffer.push(record);
+                state.contexts[contextId] = {
+                    ...context,
+                    batchBuffer: [...context.batchBuffer, record],
+                };
             } else {
-                context.past.push(record);
-                context.future = [];
+                state.contexts[contextId] = {
+                    ...context,
+                    past: [...context.past, record],
+                    future: [],
+                };
             }
         },
 
@@ -218,13 +215,9 @@ export const historySlice = createSlice({
 
             if (!context.isRecording) return;
 
-            const handler = historyRegistry.getHandler(entity.entityType);
-            if (!handler) {
-                console.error('[historySlice] No handler for entity type:', entity.entityType);
-                return;
-            }
+            // ✅ Создаём снимок через historyRegistry → contract
+            const snapshot = historyRegistry.createSnapshot(entity);
 
-            const snapshot = handler.createSnapshot(entity);
             const record: DeleteRecord = {
                 id: crypto.randomUUID(),
                 type: 'delete',
@@ -238,14 +231,20 @@ export const historySlice = createSlice({
             console.log('[historySlice] Recording delete:', record);
 
             if (context.isBatching) {
-                context.batchBuffer.push(record);
+                state.contexts[contextId] = {
+                    ...context,
+                    batchBuffer: [...context.batchBuffer, record],
+                };
             } else {
-                context.past.push(record);
-                context.future = [];
+                state.contexts[contextId] = {
+                    ...context,
+                    past: [...context.past, record],
+                    future: [],
+                };
             }
         },
 
-        // ⚡ ТОЛЬКО перемещение записи в past/future (БЕЗ вызова handlers)
+        // ТОЛЬКО перемещение записи в past/future (БЕЗ вызова контрактов)
         undoCommit: (state, action: PayloadAction<{ contextId: string }>) => {
             const { contextId } = action.payload;
             const context = state.contexts[contextId];
@@ -255,13 +254,21 @@ export const historySlice = createSlice({
             const record = context.past[context.past.length - 1];
             if (!record) return;
 
-            context.past = context.past.slice(0, -1);
-            context.future = [record, ...context.future];
+            state.contexts[contextId] = {
+                ...context,
+                past: context.past.slice(0, -1),
+                future: [record, ...context.future],
+            };
 
-            console.log('[historySlice] Undo committed. Past:', context.past.length, 'Future:', context.future.length);
+            console.log(
+                '[historySlice] Undo committed. Past:',
+                context.past.length - 1,
+                'Future:',
+                context.future.length + 1
+            );
         },
 
-        // ⚡ ТОЛЬКО перемещение записи в past/future (БЕЗ вызова handlers)
+        // ТОЛЬКО перемещение записи в past/future (БЕЗ вызова контрактов)
         redoCommit: (state, action: PayloadAction<{ contextId: string }>) => {
             const { contextId } = action.payload;
             const context = state.contexts[contextId];
@@ -271,10 +278,18 @@ export const historySlice = createSlice({
             const record = context.future[0];
             if (!record) return;
 
-            context.past = [...context.past, record];
-            context.future = context.future.slice(1);
+            state.contexts[contextId] = {
+                ...context,
+                past: [...context.past, record],
+                future: context.future.slice(1),
+            };
 
-            console.log('[historySlice] Redo committed. Past:', context.past.length, 'Future:', context.future.length);
+            console.log(
+                '[historySlice] Redo committed. Past:',
+                context.past.length + 1,
+                'Future:',
+                context.future.length - 1
+            );
         },
 
         startBatch: (state, action: PayloadAction<{ contextId: string }>) => {
@@ -282,8 +297,11 @@ export const historySlice = createSlice({
             const context = state.contexts[contextId];
 
             if (context) {
-                context.isBatching = true;
-                context.batchBuffer = [];
+                state.contexts[contextId] = {
+                    ...context,
+                    isBatching: true,
+                    batchBuffer: [],
+                };
             }
         },
 
@@ -309,12 +327,20 @@ export const historySlice = createSlice({
                     records: context.batchBuffer,
                 };
 
-                context.past.push(batchRecord);
-                context.future = [];
+                state.contexts[contextId] = {
+                    ...context,
+                    past: [...context.past, batchRecord],
+                    future: [],
+                    isBatching: false,
+                    batchBuffer: [],
+                };
+            } else {
+                state.contexts[contextId] = {
+                    ...context,
+                    isBatching: false,
+                    batchBuffer: [],
+                };
             }
-
-            context.isBatching = false;
-            context.batchBuffer = [];
         },
 
         cancelBatch: (state, action: PayloadAction<{ contextId: string }>) => {
@@ -322,8 +348,11 @@ export const historySlice = createSlice({
             const context = state.contexts[contextId];
 
             if (context) {
-                context.isBatching = false;
-                context.batchBuffer = [];
+                state.contexts[contextId] = {
+                    ...context,
+                    isBatching: false,
+                    batchBuffer: [],
+                };
             }
         },
 
@@ -332,9 +361,12 @@ export const historySlice = createSlice({
             const context = state.contexts[contextId];
 
             if (context) {
-                context.past = [];
-                context.future = [];
-                context.batchBuffer = [];
+                state.contexts[contextId] = {
+                    ...context,
+                    past: [],
+                    future: [],
+                    batchBuffer: [],
+                };
             }
         },
     },
@@ -355,7 +387,10 @@ export const {
 
 export default historySlice.reducer;
 
-// Селекторы
+// ============================================================================
+// SELECTORS
+// ============================================================================
+
 export const selectHistoryContext = (state: RootState, contextId: string) =>
     state.history.contexts[contextId];
 

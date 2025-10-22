@@ -1,37 +1,36 @@
 // src/features/scenarioEditor/shared/contracts/registry/NodeTypeRegistry.ts
 
-import type { NodeTypeContract } from '@scenario/shared/contracts/registry/NodeTypeContract';
+import type { NodeTypeContract, BaseNodeDto } from '@scenario/shared/contracts/registry/NodeTypeContract';
 import type { FlowType } from '@scenario/core/ui/nodes/types/flowType';
-import { StepType } from '@scenario/shared/contracts/server/types/Api.Shared/StepType';
 
 class NodeTypeRegistry {
-    private readonly registry = new Map<FlowType, NodeTypeContract<unknown>>();
-    private readonly stepTypeToFlowType = new Map<StepType, FlowType>();
+    private readonly registry = new Map<FlowType, NodeTypeContract<any>>();
 
-    register<TDto>(contract: NodeTypeContract<TDto>): void {
-        if (this.registry.has(contract.type)) {
-            throw new Error(`NodeType ${contract.type} уже зарегистрирован`);
+    // ✅ ИСПРАВЛЕНО: Принимаем контракт как unknown, затем кастуем
+    register(contract: unknown): void {
+        const typedContract = contract as NodeTypeContract<any>;
+
+        if (this.registry.has(typedContract.type)) {
+            throw new Error(`NodeType ${typedContract.type} уже зарегистрирован`);
         }
 
-        this.registry.set(contract.type, contract as NodeTypeContract<unknown>);
+        this.registry.set(typedContract.type, typedContract);
+        console.log(`[NodeTypeRegistry] ✅ Registered: ${typedContract.type}`);
+    }
 
-        // Если у контракта есть stepType, создаём маппинг StepType -> FlowType
-        if ('stepType' in contract && contract.stepType != null) {
-            this.stepTypeToFlowType.set(contract.stepType as StepType, contract.type);
+    registerMany(...contracts: unknown[]): void {
+        for (const contract of contracts) {
+            this.register(contract);
         }
     }
 
-    /**
-     * Получает контракт по FlowType
-     */
-    get<TDto = unknown>(type: FlowType): NodeTypeContract<TDto> | undefined {
-        const contract = this.registry.get(type);
-        return contract as NodeTypeContract<TDto> | undefined;
+    get<TDto extends BaseNodeDto = BaseNodeDto>(
+        type: FlowType
+    ): NodeTypeContract<TDto> | undefined {
+        return this.registry.get(type) as NodeTypeContract<TDto> | undefined;
     }
 
-
-
-    getAll(): ReadonlyArray<NodeTypeContract<unknown>> {
+    getAll(): ReadonlyArray<NodeTypeContract<any>> {
         return Array.from(this.registry.values());
     }
 

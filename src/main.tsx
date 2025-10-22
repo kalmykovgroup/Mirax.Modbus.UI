@@ -17,8 +17,6 @@ import {registerAllNodeTypes} from "@scenario/ui/ScenarioEditorPage";
 setStoreForInterceptors(store);
 setupInterceptors(apiClient);
 
-// ВАЖНО: инициализировать до рендера приложения
-//initHistorySystem();
 
 //Регистрируем все типы нод до рендера приложения
 registerAllNodeTypes();

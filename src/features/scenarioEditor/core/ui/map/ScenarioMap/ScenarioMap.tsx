@@ -46,6 +46,7 @@ import {
 } from '@scenario/core/utils/dropUtils';
 import { isAnyBranchResizing } from '@scenario/core/branchResize/branchResizeGuard';
 import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import {useScenarioOperations} from "@scenario/core/hooks/useScenarioOperations.ts";
 
 export interface ScenarioEditorProps {}
 
@@ -106,6 +107,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const nodeTypes = useMemo(() => generateNodeTypes(), []);
 
     const activeId = useSelector(selectActiveScenarioId);
+    const operations = useScenarioOperations(activeId);
 
     const selectScenarioData = useMemo(() => makeSelectScenarioData(), []);
     const scenarioData = useSelector((state: RootState) =>
@@ -125,7 +127,8 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         },
     });
 
-    // NodeDragStopHandler с колбэками
+    // src/features/scenarioEditor/core/ui/map/ScenarioMap/ScenarioMap.tsx
+
     const dragStopHandler = useMemo(
         () =>
             new NodeDragStopHandler({
@@ -146,19 +149,39 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                             `[ScenarioMap] 🔗 STEP ATTACHED TO BRANCH | Step: ${stepId} | Branch: ${branchId}`,
                             { x, y }
                         );
+
+                        // ✅ ДОБАВЬ ЭТО: Вызов операции присоединения
+                        const stepNode = rf.getNodes().find((n) => n.id === stepId);
+                        if (stepNode) {
+                            operations.attachStepToBranch(stepNode, branchId, x, y);
+                        }
                     },
                     onStepDetachedFromBranch: (stepId) => {
                         console.log(`[ScenarioMap] 🔓 STEP DETACHED FROM BRANCH | ID: ${stepId}`);
+
+                        // ✅ ДОБАВЬ ЭТО: Вызов операции отсоединения
+                        const stepNode = rf.getNodes().find((n) => n.id === stepId);
+                        if (stepNode) {
+                            const x = stepNode.position.x;
+                            const y = stepNode.position.y;
+                            operations.detachStepFromBranch(stepNode, x, y);
+                        }
                     },
                     onBranchResized: (branchId, width, height) => {
                         console.log(
                             `[ScenarioMap] 📐 BRANCH RESIZED (handler) | ID: ${branchId}`,
                             { width, height }
                         );
+
+                        // ✅ ДОБАВЬ ЭТО: Вызов операции ресайза ветки
+                        const branchNode = rf.getNodes().find((n) => n.id === branchId);
+                        if (branchNode) {
+                            operations.resizeNode(branchNode, width, height);
+                        }
                     },
                 },
             }),
-        [rf, setNodes]
+        [rf, setNodes, operations] // ✅ ВАЖНО: Добавь operations в dependencies
     );
 
     // Отслеживание DOM-изменений размеров веток через ResizeObserver
@@ -398,6 +421,10 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                                 },
                             }
                         );
+
+                        if (node) {
+                            operations.moveNode(node, newX, newY);
+                        }
                     }
 
                     dragStateRef.current.delete(id);
@@ -415,6 +442,15 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                                 },
                             }
                         );
+                        // ✅ ДОБАВЬ ЭТО: Вызов операции автоматического расширения ветки
+                        const branchNode = nodesRef.current.find((n) => n.id === branchId);
+                        if (branchNode) {
+                            operations.autoExpandBranch(
+                                branchNode,
+                                resize.to.width,
+                                resize.to.height
+                            );
+                        }
                     }
                     pendingBranchResizeRef.current.clear();
                 }
@@ -458,6 +494,11 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                                 },
                             }
                         );
+
+                        // ✅ ДОБАВЬ ЭТО: Вызов операции ручного ресайза
+                        if (node) {
+                            operations.resizeNode(node, newWidth, newHeight);
+                        }
                     }
 
                     resizeStateRef.current.delete(id);
@@ -469,6 +510,13 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 console.log(
                     `[ScenarioMap] 🎯 NODE ${change.selected ? 'SELECTED' : 'DESELECTED'} | Type: ${node?.type ?? 'unknown'} | ID: ${change.id}`
                 );
+
+                // ✅ ДОБАВЬ ЭТО (опционально): Если нужно записывать в историю выбор/снятие выбора
+                // if (node && change.selected) {
+                //     operations.selectNode(node);
+                // } else if (node && !change.selected) {
+                //     operations.deselectNode(node);
+                // }
             }
 
             if (change.type === 'remove') {
@@ -476,12 +524,17 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 console.log(
                     `[ScenarioMap] 🗑️ NODE REMOVED | Type: ${node?.type ?? 'unknown'} | ID: ${change.id}`
                 );
+                // ✅ ДОБАВЬ ЭТО: Вызов операции удаления
+                if (node) {
+                    operations.deleteNode(node);
+                }
+
                 dragStateRef.current.delete(change.id);
                 resizeStateRef.current.delete(change.id);
                 branchSizesRef.current.delete(change.id);
             }
         }
-    }, []);
+    }, [operations]);
 
     const onEdgesChangeHandler: OnEdgesChange<FlowEdge> = useCallback((changes) => {
         setEdges((eds) => applyEdgeChanges(changes, eds) as FlowEdge[]);
@@ -495,6 +548,12 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
 
             if (change.type === 'remove') {
                 console.log(`[ScenarioMap] 🗑️ EDGE REMOVED | ID: ${change.id}`);
+
+                // ✅ ДОБАВЬ ЭТО (если нужно): Удаление связи между нодами
+                // const edge = edgesRef.current.find((e) => e.id === change.id);
+                // if (edge) {
+                //     operations.deleteRelation(edge);
+                // }
             }
         }
     }, []);

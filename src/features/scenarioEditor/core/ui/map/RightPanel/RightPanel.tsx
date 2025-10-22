@@ -19,16 +19,13 @@ import {
     ActivitySystemStepDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto";
 import { BranchDto } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto";
-import { FlowType } from "@scenario/core/ui/nodes/types/flowType.ts";
-import type { FlowNode } from "@/features/scenarioEditor/shared/contracts/models/FlowNode";
-import type { FlowNodeData } from "@scenario/shared/contracts/models/FlowNodeData.ts";
-
-// ⚡ NEW: Командная система (заменяет ScenarioChangeCenter)
+import { FlowType } from "@scenario/core/ui/nodes/types/flowType";
+import type { FlowNode } from "@scenario/shared/contracts/models/FlowNode";
+import type { FlowNodeData } from "@scenario/shared/contracts/models/FlowNodeData";
 import { useSelector } from "react-redux";
 import { selectActiveScenarioId } from "@scenario/store/scenarioSelectors";
 import type { Guid } from "@app/lib/types/Guid";
-import {useCommandDispatcher} from "@scenario/core/features/scenarioChangeCenter/useCommandDispatcher.ts";
-import {BranchCommands, StepCommands} from "@scenario/core/features/scenarioChangeCenter/commandBuilders.ts";
+import { useScenarioOperations } from "@scenario/core/hooks/useScenarioOperations";
 
 function createByFlowType(type: FlowType, p: any) {
     switch (type) {
@@ -39,13 +36,12 @@ function createByFlowType(type: FlowType, p: any) {
         case FlowType.Jump:        return JumpStepDto.create(p);
         case FlowType.Parallel:    return ParallelStepDto.create(p);
         case FlowType.Condition:   return ConditionStepDto.create(p);
-        case FlowType.BranchNode:          return BranchDto.create(p);
+        case FlowType.BranchNode:  return BranchDto.create(p);
         default:
             throw new Error(`FlowType ${type} не является шагом (или не поддержан)`);
     }
 }
 
-// Какие flow-типами считаем «шагами» для Create Step
 const STEP_FLOW_TYPES: Set<FlowType> = new Set<FlowType>([
     FlowType.ActivityModbus,
     FlowType.ActivitySystem,
@@ -60,8 +56,8 @@ export const RightPanel: React.FC = () => {
     const rf = useReactFlow<FlowNode>();
     const activeId = useSelector(selectActiveScenarioId);
 
-    // ⚡ NEW: Command dispatcher вместо change center
-    const commandDispatcher = useCommandDispatcher(activeId);
+    // ✅ Хук для операций со сценарием
+    const operations = useScenarioOperations(activeId);
 
     const hoverBranchIdRef = useRef<string | null>(null);
 
@@ -78,7 +74,6 @@ export const RightPanel: React.FC = () => {
         const move = (ev: MouseEvent) => {
             const pos = rf.screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
 
-            // Подсветка цели
             const all = getAll(rf);
             const target = pickDeepestBranchByTopLeft(all, pos, id);
             setHover(target?.id ?? null);
@@ -92,14 +87,15 @@ export const RightPanel: React.FC = () => {
                                 ...n,
                                 position: pos,
                                 data: {
-                                    ...n.data
-                                } as FlowNodeData<object>,
+                                    ...n.data,
+                                    x: pos.x,
+                                    y: pos.y,
+                                } as FlowNodeData,
                             }
                             : n
                     );
                 }
 
-                // Создаём DTO для shared.object
                 const object = createByFlowType(type, { id });
 
                 const newNode: FlowNode = {
@@ -108,10 +104,10 @@ export const RightPanel: React.FC = () => {
                     position: pos,
                     data: {
                         object,
-                        x: 0,
-                        y: 0,
+                        x: pos.x,
+                        y: pos.y,
                         __persisted: false,
-                    } as FlowNodeData<object>,
+                    } as FlowNodeData,
                     draggable: true,
                     selectable: true,
                     ...(type === FlowType.BranchNode
@@ -131,78 +127,73 @@ export const RightPanel: React.FC = () => {
             const all = getAll(rf);
             const target = pickDeepestBranchByTopLeft(all, drop, id);
 
-            // Снять подсветку
             setHover(null);
 
             if (!target) {
-                // Без ветки: визуально — как было; операции не шлём
+                rf.setNodes((nds) => nds.filter((n) => n.id !== id));
                 return;
             }
 
-            // Единый коммит в граф
-            commitDropToBranch(rf.setNodes as any, all, target, id, drop, /*growBranch*/ true);
+            commitDropToBranch(rf.setNodes as any, all, target, id, drop, true);
 
-            // Помечаем как персистентный локально
             rf.setNodes((nds) =>
                 nds.map(n => n.id === id ? { ...n, data: { ...n.data, __persisted: true } } : n)
             );
 
-            // ⚡ NEW: Шлём операцию через командный диспетчер
-            if (!commandDispatcher || !activeId) return;
+            // ✅ Получаем созданную ноду
+            const nodes = rf.getNodes();
+            const createdNode = nodes.find(n => n.id === id);
+            if (!createdNode || !activeId) {
+                console.error('[RightPanel] Created node not found or no activeId');
+                return;
+            }
 
-            // Если это ветка → создаём Branch
+            // ✅ Создаём финальный DTO
+            let finalDto = createdNode.data.object;
+
             if (type === FlowType.BranchNode) {
-                const width = 300;
-                const height = 100;
-
-                const branch = BranchDto.create({
+                finalDto = {
+                    ...finalDto,
                     id: id as Guid,
                     scenarioId: activeId,
                     x: drop.x,
                     y: drop.y,
-                    width,
-                    height,
-                    name: 'Новая ветка',
-                    stepIds: [],
-                });
-
-                commandDispatcher.execute(
-                    BranchCommands.create(
-                        activeId,
-                        { branch, parentStepId: null },
-                        'Создать ветку'
-                    )
-                );
-                return;
-            }
-
-            // Если это шаг → создаём Step с branchId ветки
-            if (STEP_FLOW_TYPES.has(type)) {
-                // Получаем созданный DTO
-                const nodes = rf.getNodes();
-                const node = nodes.find(n => n.id === id);
-                if (!node) return;
-
-                const stepDto = (node.data as any).object;
-                if (!stepDto) return;
-
-                // Обновляем позицию и branchId в DTO
-                const step = {
-                    ...stepDto,
+                    width: 300,
+                    height: 100,
+                };
+            } else if (STEP_FLOW_TYPES.has(type)) {
+                finalDto = {
+                    ...finalDto,
                     id: id as Guid,
                     branchId: target.id as Guid,
                     x: drop.x,
                     y: drop.y,
                 };
-
-                commandDispatcher.execute(
-                    StepCommands.create(
-                        activeId,
-                        { step, branchId: target.id as Guid },
-                        `Создать шаг "${step.name ?? type}"`
-                    )
-                );
             }
+
+            // ✅ Обновляем ноду с финальным DTO
+            rf.setNodes((nds) =>
+                nds.map(n =>
+                    n.id === id
+                        ? {
+                            ...n,
+                            data: {
+                                ...n.data,
+                                object: finalDto,
+                            },
+                        }
+                        : n
+                )
+            );
+
+            // ✅ Получаем обновлённую ноду для записи в историю
+            const finalNode = rf.getNodes().find(n => n.id === id);
+            if (!finalNode) return;
+
+            // ✅ Вызываем createNode из operations (аналог moveNode в ScenarioMap)
+            operations.createNode(finalNode);
+
+            console.log(`[RightPanel] ✅ Created ${type}: ${id}`, { target: target.id, drop });
         };
 
         window.addEventListener('mousemove', move);

@@ -1,68 +1,82 @@
-// src/features/history/historyRegistry.ts
+// src/features/scenarioEditor/core/features/historySystem/historyRegistry.ts
 
-import type { Entity, EntityHandler } from './types.ts';
+import type { EntitySnapshot } from './types';
+import { nodeTypeRegistry } from '@scenario/shared/contracts/registry/NodeTypeRegistry';
+import type { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import type { Guid } from '@app/lib/types/Guid';
 
 /**
- * Глобальный реестр обработчиков для разных типов сущностей
+ * Реестр истории — работает через NodeTypeRegistry
  */
 class HistoryRegistry {
-    private readonly handlers = new Map<string, EntityHandler<Entity>>();
-
     /**
-     * Зарегистрировать обработчик для типа сущности
+     * Создать снимок для любой сущности
      */
-    register<T extends Entity>(entityType: string, handler: EntityHandler<T>): void {
-        if (this.handlers.has(entityType)) {
-            console.warn(`[HistoryRegistry] Handler for "${entityType}" already registered, overwriting`);
+    createSnapshot<T extends { id: Guid; entityType: string }>(entity: T): EntitySnapshot<T> {
+        const contract = nodeTypeRegistry.get(entity.entityType as FlowType);
+        if (!contract?.createSnapshot) {
+            console.error(`[HistoryRegistry] No createSnapshot for type: ${entity.entityType}`);
+            throw new Error(`No contract for entity type: ${entity.entityType}`);
         }
 
-        // Безопасное приведение: T extends Entity, поэтому EntityHandler<T> совместим с EntityHandler<Entity>
-        this.handlers.set(entityType, handler as unknown as EntityHandler<Entity>);
-        console.log(`[HistoryRegistry] ✅ Registered handler for "${entityType}"`);
+        return contract.createSnapshot(entity as any) as EntitySnapshot<T>;
     }
 
     /**
-     * Получить обработчик для типа сущности
+     * Применить снимок (redo)
      */
-    getHandler<T extends Entity>(entityType: string): EntityHandler<T> | null {
-        const handler = this.handlers.get(entityType);
-        if (!handler) {
-            return null;
+    applySnapshot<T extends { id: Guid; entityType: string }>(snapshot: EntitySnapshot<T>): void {
+        const contract = nodeTypeRegistry.get(snapshot.entityType as FlowType);
+        if (!contract?.applySnapshot) {
+            console.error(`[HistoryRegistry] No applySnapshot for type: ${snapshot.entityType}`);
+            return;
         }
 
-        // Возвращаем как EntityHandler<T>, т.к. caller знает конкретный тип
-        return handler as unknown as EntityHandler<T>;
+        contract.applySnapshot(snapshot as any);
     }
 
     /**
-     * Проверить, зарегистрирован ли тип
+     * Отменить снимок (undo)
      */
-    hasHandler(entityType: string): boolean {
-        return this.handlers.has(entityType);
+    revertSnapshot<T extends { id: Guid; entityType: string }>(snapshot: EntitySnapshot<T>): void {
+        const contract = nodeTypeRegistry.get(snapshot.entityType as FlowType);
+        if (!contract?.revertSnapshot) {
+            console.error(`[HistoryRegistry] No revertSnapshot for type: ${snapshot.entityType}`);
+            return;
+        }
+
+        contract.revertSnapshot(snapshot as any);
     }
 
     /**
-     * Получить все зарегистрированные типы
+     * Создать сущность из снимка
      */
-    getRegisteredTypes(): readonly string[] {
-        return Array.from(this.handlers.keys());
+    createFromSnapshot<T extends { id: Guid; entityType: string }>(
+        snapshot: EntitySnapshot<T>
+    ): void {
+        const contract = nodeTypeRegistry.get(snapshot.entityType as FlowType);
+        if (!contract?.createFromSnapshot) {
+            console.error(
+                `[HistoryRegistry] No createFromSnapshot for type: ${snapshot.entityType}`
+            );
+            return;
+        }
+
+        contract.createFromSnapshot(snapshot as any);
     }
 
     /**
-     * Удалить обработчик
+     * Удалить сущность
      */
-    unregister(entityType: string): boolean {
-        return this.handlers.delete(entityType);
-    }
+    deleteEntity(entityType: string, entityId: Guid): void {
+        const contract = nodeTypeRegistry.get(entityType as FlowType);
+        if (!contract?.deleteEntity) {
+            console.error(`[HistoryRegistry] No deleteEntity for type: ${entityType}`);
+            return;
+        }
 
-    /**
-     * Очистить все обработчики (использовать только в тестах)
-     */
-    clear(): void {
-        this.handlers.clear();
-        console.log('[HistoryRegistry] All handlers cleared');
+        contract.deleteEntity(entityId);
     }
 }
 
-// Синглтон экземпляр
 export const historyRegistry = new HistoryRegistry();

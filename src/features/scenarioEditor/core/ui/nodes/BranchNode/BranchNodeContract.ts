@@ -1,70 +1,164 @@
-// src/features/scenarioEditor/nodes/branchNode/BranchNodeContract.ts
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
-import type { NodeTypeContract } from '@scenario/shared/contracts/registry/NodeTypeContract';
-import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
-import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
-import { BranchNode } from '@scenario/core/ui/nodes/BranchNode/BranchNode';
-import {BranchCommands} from "@scenario/core/features/scenarioChangeCenter/commandBuilders.ts";
+// src/features/scenarioEditor/core/ui/nodes/BranchNode/BranchNodeContract.ts
 
-const DEFAULT_BRANCH_W = 320;
-const DEFAULT_BRANCH_H = 100;
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import type { NodeTypeContract } from '@scenario/shared/contracts/registry/NodeTypeContract';
+import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
+import type { EntitySnapshot, Entity } from '@scenario/core/features/historySystem/types';
+
+import { store } from '@/baseStore/store';
+import { updateBranch, addBranch, deleteBranch } from '@scenario/store/scenarioSlice';
+import { BranchNode } from './BranchNode';
 
 export const BranchNodeContract: NodeTypeContract<BranchDto> = {
     type: FlowType.BranchNode,
     displayName: 'Ветка',
-    Component: BranchNode,
+    Component: BranchNode as any,
 
-    mapFromDto(dto, parentId) {
-        const width = dto.width > 0 ? dto.width : DEFAULT_BRANCH_W;
-        const height = dto.height > 0 ? dto.height : DEFAULT_BRANCH_H;
+    canHaveChildBranches: true,
 
-        return {
-            id: dto.id,
-            type: FlowType.BranchNode,
-            position: { x: dto.x, y: dto.y },
-            parentId,
-            data: {
-                object: dto,
-                x: dto.x,
-                y: dto.y,
-                __persisted: true,
-            },
-            style: { width, height, zIndex: 0 },
-            selectable: false, // ← Ветка НЕ выделяется кликом
-            draggable: false,
-        } as FlowNode<BranchDto>;
+    mapFromDto: (dto, parentId) => ({
+        id: dto.id,
+        type: FlowType.BranchNode,
+        position: { x: dto.x, y: dto.y },
+        data: {
+            object: dto,
+            x: dto.x,
+            y: dto.y,
+        },
+        style: {
+            width: dto.width,
+            height: dto.height,
+        },
+        parentId,
+        draggable: true,
+        selectable: true,
+    }),
+
+    mapToDto: (node) => node.data.object,
+
+    // ============================================================================
+    // ОПЕРАЦИИ
+    // ============================================================================
+
+    createMoveEntity: (dto, newX, newY) => ({
+        ...dto,
+        x: newX,
+        y: newY,
+    }),
+
+    createResizeEntity: (dto, newWidth, newHeight) => ({
+        ...dto,
+        width: newWidth,
+        height: newHeight,
+    }),
+
+    createAutoExpandEntity: (dto, newWidth, newHeight) => ({
+        ...dto,
+        width: newWidth,
+        height: newHeight,
+    }),
+
+    createAttachToBranchEntity: (dto, branchId, newX, newY) => {
+        // Ветки не присоединяются к другим веткам
+        console.warn('[BranchNodeContract] Branches cannot be attached to other branches');
+        return dto;
     },
 
-    mapToDto(node) {
-        return {
-            ...node.data.object,
-            id: node.id,
-            x: node.data.x,
-            y: node.data.y,
-        };
+    createDetachFromBranchEntity: (dto, newX, newY) => {
+        console.warn('[BranchNodeContract] Branches cannot be detached');
+        return dto;
     },
 
-    createMoveCommand: (scenarioId, nodeId, previousState, newX, newY) => {
-        return BranchCommands.update(
-            scenarioId,
-            {
-                branchId: nodeId,
-                previousState,
-                newState: { ...previousState, x: newX, y: newY },
-            },
-            `Переместить ветку (${newX}, ${newY})`
+    // ============================================================================
+    // ВАЛИДАЦИЯ
+    // ============================================================================
+
+    validateOperation: (operation, dto, params) => {
+        switch (operation) {
+            case 'delete':
+                if (dto.steps && dto.steps.length > 0) {
+                    return {
+                        valid: false,
+                        error: 'Нельзя удалить ветку с шагами',
+                    };
+                }
+                return { valid: true };
+
+            case 'resize':
+            case 'auto-expand':
+                const { newWidth, newHeight } = params as { newWidth: number; newHeight: number };
+                if (newWidth < 200 || newHeight < 100) {
+                    return { valid: false, error: 'Минимальный размер ветки: 200x100' };
+                }
+                return { valid: true };
+
+            default:
+                return { valid: true };
+        }
+    },
+
+    // ============================================================================
+    // ХУКИ
+    // ============================================================================
+
+    onCreated: (dto) => {
+        console.log(`[BranchNodeContract] ✅ Created branch: ${dto.id}`);
+    },
+
+    onBeforeDelete: (dto) => {
+        console.log(`[BranchNodeContract] 🗑️ Deleting branch: ${dto.id}`);
+    },
+
+    onUpdated: (previousDto, newDto) => {
+        console.log(`[BranchNodeContract] 📝 Updated branch: ${newDto.id}`);
+    },
+
+    // ============================================================================
+    // ИСТОРИЯ
+    // ============================================================================
+
+    createSnapshot: (dto): EntitySnapshot<Entity> => ({
+        entityId: dto.id,
+        entityType: FlowType.BranchNode,
+        data: {
+            ...dto,
+            entityType: FlowType.BranchNode,
+        } as Entity,
+        timestamp: Date.now(),
+    }),
+
+    applySnapshot: (snapshot) => {
+        const { entityType, ...dto } = snapshot.data;
+        store.dispatch(
+            updateBranch({
+                branchId: dto.id,
+                changes: dto as any,
+            })
         );
     },
 
-    createResizeCommand: (scenarioId, nodeId, previousState, newWidth, newHeight) => {
-        return BranchCommands.resize(
-            scenarioId,
-            {
-                branchId: nodeId,
-                previousState,
-                newState: { ...previousState, width: newWidth, height: newHeight },
-            },
-            `Изменить размер ветки (${newWidth}x${newHeight})`
+    revertSnapshot: (snapshot) => {
+        const { entityType, ...dto } = snapshot.data;
+        store.dispatch(
+            updateBranch({
+                branchId: dto.id,
+                changes: dto as any,
+            })
         );
     },
-};
+
+    createFromSnapshot: (snapshot) => {
+        const { entityType, ...dto } = snapshot.data;
+        store.dispatch(
+            addBranch({
+                scenarioId: (dto as any).scenarioId,
+                branch: dto as any,
+                parentStepId: (dto as any).parallelStepId ?? (dto as any).conditionStepId ?? null,
+            })
+        );
+    },
+
+    deleteEntity: (entityId) => {
+        store.dispatch(deleteBranch({ branchId: entityId }));
+    },
+} as const;
