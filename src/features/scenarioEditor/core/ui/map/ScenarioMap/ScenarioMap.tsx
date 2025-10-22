@@ -139,6 +139,20 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         getEdges: rf.getEdges,
         onDeleted: (payload) => {
             console.log('[ScenarioMap] 🗑️ Deleted:', payload);
+
+            // ✅ КРИТИЧНО: Вызываем operations.deleteNode для каждой удалённой ноды
+            // deleteNode внутри проверит __persisted и вызовет dispatch только для персистентных
+            for (const node of payload.nodes) {
+                // Проверяем, что нода персистентная (уже в БД)
+                if (node.data.__persisted === true) {
+                    operations.deleteNode(node);
+                }
+            }
+
+            // TODO: Если нужно удалять связи (edges), добавить operations.deleteRelation
+            // for (const edge of payload.edges) {
+            //     operations.deleteRelation(edge);
+            // }
         },
     });
 

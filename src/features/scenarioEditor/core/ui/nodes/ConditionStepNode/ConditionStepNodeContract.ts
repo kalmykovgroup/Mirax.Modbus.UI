@@ -333,7 +333,7 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
         console.log('[ConditionStepNodeContract] Deleting entity:', entityId);
 
         const state = store.getState();
-        const step = state.scenario.steps.entities[entityId];
+        const step = state.scenario.steps[entityId];
 
         if (step) {
             // Проверяем дочерние ветки перед удалением

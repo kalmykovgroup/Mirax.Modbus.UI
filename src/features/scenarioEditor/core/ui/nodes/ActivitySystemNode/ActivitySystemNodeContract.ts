@@ -289,7 +289,7 @@ export const ActivitySystemNodeContract: NodeTypeContract<ActivitySystemStepDto>
         console.log('[ActivitySystemNodeContract] Deleting entity:', entityId);
 
         const state = store.getState();
-        const step = state.scenario.steps.entities[entityId];
+        const step = state.scenario.steps[entityId];
 
         if (step) {
             store.dispatch(

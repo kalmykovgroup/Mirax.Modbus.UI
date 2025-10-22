@@ -267,7 +267,7 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
         console.log('[SignalStepNodeContract] Deleting entity:', entityId);
 
         const state = store.getState();
-        const step = state.scenario.steps.entities[entityId];
+        const step = state.scenario.steps[entityId];
 
         if (step) {
             store.dispatch(

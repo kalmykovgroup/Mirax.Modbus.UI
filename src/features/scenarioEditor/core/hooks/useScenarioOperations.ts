@@ -2,14 +2,14 @@
 
 import { useCallback } from 'react';
 import { useHistory } from '@scenario/core/features/historySystem/useHistory';
-import {type Guid} from '@app/lib/types/Guid';
+import { type Guid } from '@app/lib/types/Guid';
 import { nodeTypeRegistry } from '@scenario/shared/contracts/registry/NodeTypeRegistry';
 import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
 import type { Entity } from '@scenario/core/features/historySystem/types';
 import type {
     StepRelationDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto.ts";
-import {stepRelationContract} from "@scenario/core/ui/edges/StepRelationContract.ts";
+import { stepRelationContract } from "@scenario/core/ui/edges/StepRelationContract.ts";
 
 export function useScenarioOperations(scenarioId: Guid | null) {
     const history = useHistory(scenarioId ?? 'no-scenario', {
@@ -60,11 +60,10 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 conditionOrder,
             } as StepRelationDto);
 
-            // ✅ ВАЖНО: Применяем изменения СРАЗУ через контракт
-            // (создаём snapshot и применяем его через createFromSnapshot)
+            // ✅ КРИТИЧНО: Применяем изменения через dispatch
             const snapshot = stepRelationContract.createSnapshot(relationDto);
             stepRelationContract.createFromSnapshot(snapshot);
-            // ↑ Это вызовет store.dispatch(addRelation(relationDto))
+            // ↑ Вызовет store.dispatch(addRelation(relationDto))
 
             // Записываем в историю (для undo/redo)
             history.recordCreate(toEntity(relationDto, 'StepRelation'));
@@ -108,13 +107,18 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createMoveEntity(previousDto, newX, newY);
 
-            //  Преобразуем DTO в Entity (добавляем entityType из contract.type)
+            // ✅ КРИТИЧНО: Применяем изменения через dispatch
+            const newSnapshot = contract.createSnapshot(newDto);
+            contract.applySnapshot(newSnapshot);
+            // ↑ Вызовет store.dispatch(updateStep/updateBranch(...))
+
+            // Записываем в историю (для undo/redo)
             history.recordUpdate(
                 toEntity(newDto, node.type),
                 toEntity(previousDto, node.type)
             );
 
-            console.log(`[useScenarioOperations]  Node moved: ${node.id}`, { newX, newY });
+            console.log(`[useScenarioOperations] ✅ Node moved: ${node.id}`, { newX, newY });
         },
         [scenarioId, history, toEntity]
     );
@@ -147,12 +151,18 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createResizeEntity(previousDto, newWidth, newHeight);
 
+            // ✅ КРИТИЧНО: Применяем изменения через dispatch
+            const newSnapshot = contract.createSnapshot(newDto);
+            contract.applySnapshot(newSnapshot);
+            // ↑ Вызовет store.dispatch(updateStep/updateBranch(...))
+
+            // Записываем в историю (для undo/redo)
             history.recordUpdate(
                 toEntity(newDto, node.type),
                 toEntity(previousDto, node.type)
             );
 
-            console.log(`[useScenarioOperations]  Node resized: ${node.id}`, {
+            console.log(`[useScenarioOperations] ✅ Node resized: ${node.id}`, {
                 newWidth,
                 newHeight,
             });
@@ -164,13 +174,23 @@ export function useScenarioOperations(scenarioId: Guid | null) {
     // УДАЛЕНИЕ НОДЫ
     // ============================================================================
 
+    // В useScenarioOperations.ts
     const deleteNode = useCallback(
         (node: FlowNode) => {
-            if (!scenarioId) return;
+            if (!scenarioId) return false;
+
+            // ✅ Проверяем, что нода персистентная
+            if (node.data.__persisted !== true) {
+                console.log(`[useScenarioOperations] ⚠️ Skipping delete for non-persisted node: ${node.id}`);
+                return false;
+            }
 
             const contract = nodeTypeRegistry.get(node.type);
+
+            if(contract == undefined) throw Error('[useScenarioOperations] No DTO in node.data.object');
+
             const dto = node.data.object;
-            if (!dto) return;
+            if (!dto) return false;
 
             const validation = contract?.validateOperation?.('delete', dto, {});
             if (validation && !validation.valid) {
@@ -179,11 +199,16 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 return false;
             }
 
-            contract?.onBeforeDelete?.(dto);
+            contract.onBeforeDelete?.(dto);
 
+            // ✅ КРИТИЧНО: Применяем удаление через dispatch
+            contract.deleteEntity(dto.id);
+            // ↑ Вызовет store.dispatch(deleteStep/deleteBranch(...))
+
+            // Записываем в историю (для undo/redo)
             history.recordDelete(toEntity(dto, node.type));
 
-            console.log(`[useScenarioOperations]  Node deleted: ${node.id}`);
+            console.log(`[useScenarioOperations] ✅ Node deleted: ${node.id}`);
             return true;
         },
         [scenarioId, history, toEntity]
@@ -223,12 +248,18 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createAttachToBranchEntity(previousDto, branchId, newX, newY);
 
+            // ✅ КРИТИЧНО: Применяем изменения через dispatch
+            const newSnapshot = contract.createSnapshot(newDto);
+            contract.applySnapshot(newSnapshot);
+            // ↑ Вызовет store.dispatch(updateStep(...))
+
+            // Записываем в историю (для undo/redo)
             history.recordUpdate(
                 toEntity(newDto, stepNode.type),
                 toEntity(previousDto, stepNode.type)
             );
 
-            console.log(`[useScenarioOperations]  Step attached to branch: ${stepNode.id}`, {
+            console.log(`[useScenarioOperations] ✅ Step attached to branch: ${stepNode.id}`, {
                 branchId,
             });
         },
@@ -268,12 +299,18 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createDetachFromBranchEntity(previousDto, newX, newY);
 
+            // ✅ КРИТИЧНО: Применяем изменения через dispatch
+            const newSnapshot = contract.createSnapshot(newDto);
+            contract.applySnapshot(newSnapshot);
+            // ↑ Вызовет store.dispatch(updateStep(...))
+
+            // Записываем в историю (для undo/redo)
             history.recordUpdate(
                 toEntity(newDto, stepNode.type),
                 toEntity(previousDto, stepNode.type)
             );
 
-            console.log(`[useScenarioOperations]  Step detached from branch: ${stepNode.id}`);
+            console.log(`[useScenarioOperations] ✅ Step detached from branch: ${stepNode.id}`);
         },
         [scenarioId, history, toEntity]
     );
@@ -299,12 +336,18 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createAutoExpandEntity(previousDto, newWidth, newHeight);
 
+            // ✅ КРИТИЧНО: Применяем изменения через dispatch
+            const newSnapshot = contract.createSnapshot(newDto);
+            contract.applySnapshot(newSnapshot);
+            // ↑ Вызовет store.dispatch(updateBranch(...))
+
+            // Записываем в историю (для undo/redo)
             history.recordUpdate(
                 toEntity(newDto, branchNode.type),
                 toEntity(previousDto, branchNode.type)
             );
 
-            console.log(`[useScenarioOperations]  Branch auto-expanded: ${branchNode.id}`, {
+            console.log(`[useScenarioOperations] ✅ Branch auto-expanded: ${branchNode.id}`, {
                 newWidth,
                 newHeight,
             });
@@ -327,11 +370,23 @@ export function useScenarioOperations(scenarioId: Guid | null) {
             }
 
             const contract = nodeTypeRegistry.get(node.type);
-            contract?.onCreated?.(dto);
+            if (!contract) {
+                console.error(`[useScenarioOperations] No contract found for type: ${node.type}`);
+                return;
+            }
 
+            // ✅ КРИТИЧНО: Применяем изменения через dispatch
+            const snapshot = contract.createSnapshot(dto);
+            contract.createFromSnapshot(snapshot);
+            // ↑ Вызовет store.dispatch(addStep/addBranch(...))
+
+            // Записываем в историю (для undo/redo)
             history.recordCreate(toEntity(dto, node.type));
 
-            console.log(`[useScenarioOperations]  Node created: ${node.id}`);
+            // Хук жизненного цикла
+            contract?.onCreated?.(dto);
+
+            console.log(`[useScenarioOperations] ✅ Node created: ${node.id}`);
         },
         [scenarioId, history, toEntity]
     );

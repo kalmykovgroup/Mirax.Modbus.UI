@@ -7,6 +7,7 @@ import type { ScenarioDto } from '@scenario/shared/contracts/server/remoteServer
 import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
 import type { StepBaseDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
 import type { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto';
+import {ScenarioLoadStatus} from "@scenario/store/scenarioSlice.ts";
 
 // ============================================================================
 // BASE SELECTORS
@@ -138,3 +139,9 @@ export const selectChildBranchesOfStep = createSelector(
             (b) => b.parallelStepId === stepId || b.conditionStepId === stepId
         )
 );
+
+export const selectScenarioStatus = (state: RootState, id: Guid): ScenarioLoadStatus =>
+    state.scenario.scenarioStatuses[id] ?? ScenarioLoadStatus.NotLoaded;
+
+export const selectScenarioError = (state: RootState, id: Guid): string | undefined =>
+    state.scenario.scenarioErrors[id];

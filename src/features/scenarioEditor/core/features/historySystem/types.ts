@@ -71,7 +71,7 @@ export interface BatchRecord extends BaseHistoryRecord {
     readonly entityId: 'batch'; // Константа для батча
     readonly before: null;
     readonly after: null;
-    readonly records: readonly HistoryRecord[];
+    readonly records: HistoryRecord[];
 }
 
 /**
@@ -136,23 +136,23 @@ export interface EntityHandler<T extends Entity = Entity> {
  * Конфигурация истории
  */
 export interface HistoryConfig {
-    readonly maxHistorySize: number;
-    readonly enableBatching: boolean;
-    readonly batchTimeout: number;
-    readonly contextId: string;
+      maxHistorySize: number;
+      enableBatching: boolean;
+      batchTimeout: number;
+      contextId: string;
 }
 
 /**
  * Контекст истории для одного сценария/графа
  */
 export interface HistoryContext {
-    readonly past: readonly HistoryRecord[];
-    readonly present: HistoryRecord | null;
-    readonly future: readonly HistoryRecord[];
-    readonly isRecording: boolean;
-    readonly isBatching: boolean;
-    readonly batchBuffer: readonly HistoryRecord[];
-    readonly config: HistoryConfig;
+    readonly  past: HistoryRecord[];
+    readonly  present: HistoryRecord | null;
+    readonly  future:  HistoryRecord[];
+    readonly  isRecording: boolean;
+    readonly   isBatching: boolean;
+    readonly  batchBuffer: HistoryRecord[];
+    readonly   config: HistoryConfig;
 }
 
 /**

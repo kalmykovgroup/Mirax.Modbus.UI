@@ -216,7 +216,7 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
         console.log('[DelayStepNodeContract] Deleting entity:', entityId);
 
         const state = store.getState();
-        const step = state.scenario.steps.entities[entityId];
+        const step = state.scenario.steps[entityId];
 
         if (step) {
             store.dispatch(

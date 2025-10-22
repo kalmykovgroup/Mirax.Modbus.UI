@@ -4,7 +4,6 @@ import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/tool
 import type { RootState } from '@/baseStore/store';
 import type {
     HistoryState,
-    HistoryContext,
     HistoryConfig,
     CreateRecord,
     UpdateRecord,
@@ -97,7 +96,7 @@ export const historySlice = createSlice({
 
             if (!state.contexts[contextId]) {
                 console.log('[historySlice] Initializing context:', contextId);
-                const newContext: HistoryContext = {
+                state.contexts[contextId] = {
                     past: [],
                     present: null,
                     future: [],
@@ -106,7 +105,6 @@ export const historySlice = createSlice({
                     batchBuffer: [],
                     config,
                 };
-                state.contexts[contextId] = newContext;
             }
         },
 

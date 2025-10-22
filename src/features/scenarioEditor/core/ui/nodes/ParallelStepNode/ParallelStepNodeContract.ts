@@ -203,7 +203,7 @@ export const ParallelStepNodeContract: NodeTypeContract<ParallelStepDto> = {
 
     deleteEntity: (entityId) => {
         const state = store.getState();
-        const step = state.scenario.steps.entities[entityId];
+        const step = state.scenario.steps[entityId];
         if (step) {
             store.dispatch(deleteStep({ branchId: step.branchId, stepId: entityId }));
         }

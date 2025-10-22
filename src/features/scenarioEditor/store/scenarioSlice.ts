@@ -2,7 +2,6 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { persistReducer } from 'redux-persist';
-import sessionStorage from 'redux-persist/lib/storage/session';
 
 import { scenarioApi } from '@/features/scenarioEditor/shared/api/scenarioApi';
 import { extractErr } from '@app/lib/types/extractErr';
@@ -14,7 +13,8 @@ import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDt
 import type { StepBaseDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
 import type { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto';
 import { StepType } from '@scenario/shared/contracts/server/types/Api.Shared/StepType';
-
+import { notify } from '@app/lib/notify.ts';
+import storage from "redux-persist/lib/storage";
 
 const DEFAULT_BRANCH_WIDTH = 800;
 const DEFAULT_BRANCH_HEIGHT = 600;
@@ -22,12 +22,22 @@ const DEFAULT_BRANCH_HEIGHT = 600;
 const DEFAULT_STEP_WIDTH = 70;
 const DEFAULT_STEP_HEIGHT = 21;
 
+// @ts-ignore
+export enum ScenarioLoadStatus {
+    NotLoaded = 'NotLoaded',
+    Loading = 'Loading',
+    Loaded = 'Loaded',
+    Error = 'Error',
+}
+
 export interface ScenarioState {
     readonly scenarios: Record<Guid, ScenarioDto>;
     readonly branches: Record<Guid, BranchDto>;
     readonly steps: Record<Guid, StepBaseDto>;
     readonly relations: Record<Guid, StepRelationDto>;
     readonly activeScenarioId: Guid | null;
+    readonly scenarioStatuses: Record<Guid, ScenarioLoadStatus>;
+    readonly scenarioErrors: Record<Guid, string>;
 }
 
 const initialState: ScenarioState = {
@@ -36,6 +46,8 @@ const initialState: ScenarioState = {
     steps: {},
     relations: {},
     activeScenarioId: null,
+    scenarioStatuses: {},
+    scenarioErrors: {},
 };
 
 function normalizeScenario(scenario: ScenarioDto): {
@@ -48,7 +60,6 @@ function normalizeScenario(scenario: ScenarioDto): {
     const relationsMap = new Map<Guid, StepRelationDto>();
 
     function processBranch(branch: BranchDto, scenarioId: Guid): void {
-        //  НОРМАЛИЗАЦИЯ: проставляем scenarioId и дефолтные размеры
         const normalizedBranch: BranchDto = {
             ...branch,
             scenarioId,
@@ -59,7 +70,6 @@ function normalizeScenario(scenario: ScenarioDto): {
         branches.push(normalizedBranch);
 
         for (const step of branch.steps) {
-            //  НОРМАЛИЗАЦИЯ: дефолтные размеры для шагов
             const normalizedStep: StepBaseDto = {
                 ...step,
                 width: step.width > 0 ? step.width : DEFAULT_STEP_WIDTH,
@@ -72,7 +82,6 @@ function normalizeScenario(scenario: ScenarioDto): {
                 relationsMap.set(rel.id, rel);
             }
 
-            // Обработка вложенных веток (Parallel/Condition)
             if (step.type === StepType.Parallel || step.type === StepType.Condition) {
                 const branchRels = (step as any).stepBranchRelations as
                     | readonly { branch?: BranchDto | undefined }[]
@@ -81,7 +90,6 @@ function normalizeScenario(scenario: ScenarioDto): {
                 if (branchRels != null) {
                     for (const sbr of branchRels) {
                         if (sbr.branch != null) {
-                            //  РЕКУРСИЯ: передаём scenarioId
                             processBranch(sbr.branch, scenarioId);
                         }
                     }
@@ -90,7 +98,6 @@ function normalizeScenario(scenario: ScenarioDto): {
         }
     }
 
-    // Стартуем с главной ветки
     processBranch(scenario.branch, scenario.id);
 
     return {
@@ -104,12 +111,27 @@ export const refreshScenariosList =
     (forceRefetch = true) =>
         async (dispatch: AppDispatch): Promise<ScenarioDto[]> => {
             try {
-                const list = await dispatch(
+                const subscription = dispatch(
                     scenarioApi.endpoints.getAllScenarios.initiate(undefined, {
                         forceRefetch,
                         subscribe: false,
                     })
-                ).unwrap();
+                );
+
+                const list = (await notify.run(
+                    subscription.unwrap(),
+                    {
+                        loading: { text: 'Загрузка сценариев' },
+                        success: {
+                            text: 'Сценарии успешно загружены',
+                            toastOptions: { duration: 700 },
+                        },
+                        error: {
+                            toastOptions: { duration: 3000 },
+                        },
+                    },
+                    { id: 'fetch-scenario-list' }
+                )) as ScenarioDto[];
 
                 dispatch(scenariosSlice.actions.setScenariosList(list ?? []));
                 return list ?? [];
@@ -123,14 +145,21 @@ export const refreshScenarioById =
     (id: Guid, forceRefetch = false) =>
         async (dispatch: AppDispatch, getState: () => RootState): Promise<ScenarioDto | undefined> => {
             try {
-                if (!forceRefetch) {
-                    const scenario = getState().scenario.scenarios[id];
+                const state = getState();
+                const currentStatus = state.scenario.scenarioStatuses[id];
+
+                // Если не форсируем и статус Loaded, возвращаем из стейта
+                if (!forceRefetch && currentStatus === ScenarioLoadStatus.Loaded) {
+                    const scenario = state.scenario.scenarios[id];
                     if (scenario != null) {
                         return scenario;
                     }
                 }
 
-                const dto = await dispatch(
+                // Устанавливаем статус загрузки
+                dispatch(scenariosSlice.actions.setScenarioStatus({ id, status: ScenarioLoadStatus.Loading }));
+
+                const subscription = dispatch(
                     scenarioApi.endpoints.getScenarioById.initiate(
                         {
                             id,
@@ -138,14 +167,37 @@ export const refreshScenarioById =
                         },
                         { forceRefetch: true, subscribe: false }
                     )
-                ).unwrap();
+                );
+
+                const dto = (await notify.run(
+                    subscription.unwrap(),
+                    {
+                        loading: { text: 'Загрузка деталей сценария' },
+                        success: {
+                            text: 'Загрузка деталей сценария успешна',
+                            toastOptions: { duration: 700 },
+                        },
+                        error: {
+                            toastOptions: { duration: 3000 },
+                        },
+                    },
+                    { id: 'fetch-scenario-one' }
+                )) as ScenarioDto;
 
                 if (dto != null) {
                     dispatch(scenariosSlice.actions.upsertScenarioFull(dto));
+                    dispatch(scenariosSlice.actions.setScenarioStatus({ id, status: ScenarioLoadStatus.Loaded }));
                 }
                 return dto;
             } catch (e) {
                 const msg = extractErr(e);
+                dispatch(
+                    scenariosSlice.actions.setScenarioError({
+                        id,
+                        status: ScenarioLoadStatus.Error,
+                        error: msg,
+                    })
+                );
                 throw new Error(msg);
             }
         };
@@ -162,7 +214,28 @@ const scenariosSlice = createSlice({
             state.scenarios = {};
             for (const s of action.payload) {
                 state.scenarios[s.id] = s;
+                // При загрузке списка все сценарии имеют статус NotLoaded
+                if (state.scenarioStatuses[s.id] == null) {
+                    state.scenarioStatuses[s.id] = ScenarioLoadStatus.NotLoaded;
+                }
             }
+        },
+
+        setScenarioStatus(state, action: PayloadAction<{ id: Guid; status: ScenarioLoadStatus }>) {
+            const { id, status } = action.payload;
+            state.scenarioStatuses[id] = status;
+            if (status !== ScenarioLoadStatus.Error) {
+                delete state.scenarioErrors[id];
+            }
+        },
+
+        setScenarioError(
+            state,
+            action: PayloadAction<{ id: Guid; status: ScenarioLoadStatus.Error; error: string }>
+        ) {
+            const { id, status, error } = action.payload;
+            state.scenarioStatuses[id] = status;
+            state.scenarioErrors[id] = error;
         },
 
         upsertScenarioFull(state, action: PayloadAction<ScenarioDto>) {
@@ -190,6 +263,8 @@ const scenariosSlice = createSlice({
             state.steps = {};
             state.relations = {};
             state.activeScenarioId = null;
+            state.scenarioStatuses = {};
+            state.scenarioErrors = {};
         },
 
         // ============================================================================
@@ -219,9 +294,10 @@ const scenariosSlice = createSlice({
 
                 const branch = state.branches[step.branchId];
                 if (branch != null) {
+                    const steps = branch.steps.map((s) => (s.id === stepId ? state.steps[stepId] : s));
                     state.branches[step.branchId] = {
                         ...branch,
-                        steps: branch.steps.map((s) => (s.id === stepId ? state.steps[stepId] : s)),
+                        steps: [...steps] as StepBaseDto[],
                     };
                 }
             }
@@ -233,7 +309,7 @@ const scenariosSlice = createSlice({
             delete state.steps[stepId];
 
             const branch = state.branches[branchId];
-            if (branch != null) {
+            if (branch) {
                 state.branches[branchId] = {
                     ...branch,
                     steps: branch.steps.filter((s) => s.id !== stepId),
@@ -349,6 +425,8 @@ const scenariosSlice = createSlice({
 export const {
     setActiveScenarioId,
     setScenariosList,
+    setScenarioStatus,
+    setScenarioError,
     upsertScenarioFull,
     clearScenarios,
     addStep,
@@ -362,10 +440,11 @@ export const {
     deleteRelation,
 } = scenariosSlice.actions;
 
+
+
 const scenarioPersistConfig = {
     key: 'scenario',
-    storage: sessionStorage,
-    whitelist: [],
+    storage,
 };
 
 export const scenarioReducer = persistReducer(scenarioPersistConfig, scenariosSlice.reducer);

@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { RefreshCw, Plus } from 'lucide-react';
+import { RefreshCw, Plus, RotateCw } from 'lucide-react';
 
 import styles from './LeftPanel.module.css';
 
-import type { AppDispatch } from '@/baseStore/store';
+import type { AppDispatch, RootState } from '@/baseStore/store';
 
 import {
     usePauseScenarioMutation,
@@ -24,20 +24,23 @@ import type { ScenarioStopMode } from '@scenario/shared/contracts/server/types/S
 import {
     selectActiveScenarioId,
     selectScenariosList,
+    selectScenarioStatus,
 } from '@scenario/store/scenarioSelectors';
 import {
     refreshScenarioById,
     refreshScenariosList,
     setActiveScenarioId,
+    ScenarioLoadStatus,
 } from '@scenario/store/scenarioSlice';
 
-export function LeftPanel() {
+export function LeftPanel(): JSX.Element {
     const dispatch = useDispatch<AppDispatch>();
 
     const [query, setQuery] = useState('');
     const [isLoadingList, setIsLoadingList] = useState(false);
     const [errorLoadList, setErrorLoadList] = useState<string | null>(null);
     const [loadingScenarioId, setLoadingScenarioId] = useState<string | null>(null);
+    const [refreshingScenarioId, setRefreshingScenarioId] = useState<string | null>(null);
 
     const activeScenarioId = useSelector(selectActiveScenarioId);
     const scenarios = useSelector(selectScenariosList);
@@ -54,18 +57,24 @@ export function LeftPanel() {
     }, [scenarios, query]);
 
     const onSelect = useCallback(
-        async (id: string) => {
-            console.log('[LeftPanel] Selecting scenario:', id);
+        async (id: string, currentStatus: ScenarioLoadStatus) => {
+            console.log('[LeftPanel] Selecting scenario:', id, 'status:', currentStatus);
+
+            // Сначала всегда устанавливаем активный ID
+            dispatch(setActiveScenarioId(id));
+
+            // Если сценарий уже загружен или загружается, ничего не делаем
+            if (currentStatus === ScenarioLoadStatus.Loaded || currentStatus === ScenarioLoadStatus.Loading) {
+                console.log('[LeftPanel] Scenario already loaded or loading, skipping');
+                return;
+            }
+
+            // Загружаем сценарий только если он ещё не был загружен
             setLoadingScenarioId(id);
 
             try {
-                // Сначала устанавливаем активный ID
-                dispatch(setActiveScenarioId(id));
-
-                // Затем загружаем полную структуру с сервера
-                console.log('[LeftPanel] Loading full scenario data...');
-                await dispatch(refreshScenarioById(id, true)); // forceRefetch = true
-
+                console.log('[LeftPanel] Loading scenario for the first time...');
+                await dispatch(refreshScenarioById(id, false)); // forceRefetch = false
                 console.log('[LeftPanel] Scenario loaded successfully');
             } catch (error) {
                 console.error('[LeftPanel] Failed to load scenario:', error);
@@ -76,13 +85,40 @@ export function LeftPanel() {
         [dispatch]
     );
 
+    const onRefreshScenario = useCallback(
+        async (id: string, event: React.MouseEvent) => {
+            event.stopPropagation();
+
+            if (refreshingScenarioId === id) return;
+
+            console.log('[LeftPanel] Force refreshing scenario:', id);
+            setRefreshingScenarioId(id);
+
+            try {
+                await dispatch(refreshScenarioById(id, true)); // forceRefetch = true
+                console.log('[LeftPanel] Scenario force refreshed successfully');
+            } catch (error) {
+                console.error('[LeftPanel] Failed to force refresh scenario:', error);
+            } finally {
+                setRefreshingScenarioId(null);
+            }
+        },
+        [dispatch, refreshingScenarioId]
+    );
+
     useEffect(() => {
+        // Проверяем, есть ли уже сценарии в сторе (загружены из storage)
+        if (scenarios.length > 0) {
+            console.log('[LeftPanel] Scenarios already loaded from storage, skipping fetch');
+            return;
+        }
+
         let mounted = true;
         (async () => {
             try {
                 setIsLoadingList(true);
                 setErrorLoadList(null);
-                console.log('[LeftPanel] Loading scenarios list...');
+                console.log('[LeftPanel] Loading scenarios list from server...');
                 await dispatch(refreshScenariosList());
                 console.log('[LeftPanel] Scenarios list loaded');
             } catch (e) {
@@ -96,14 +132,16 @@ export function LeftPanel() {
         return () => {
             mounted = false;
         };
-    }, [dispatch]);
+    }, [dispatch, scenarios.length]);
 
     const doRefetch = useCallback(async () => {
         if (isLoadingList) return;
         try {
             setIsLoadingList(true);
             setErrorLoadList(null);
+            console.log('[LeftPanel] Force refreshing scenarios list...');
             await dispatch(refreshScenariosList(true));
+            console.log('[LeftPanel] Scenarios list refreshed');
         } catch (e) {
             setErrorLoadList(e instanceof Error ? e.message : 'Ошибка загрузки');
         } finally {
@@ -205,7 +243,7 @@ export function LeftPanel() {
                 <div className={styles.actions}>
                     <button
                         className={styles.iconBtn}
-                        title="Обновить"
+                        title="Обновить список"
                         onClick={doRefetch}
                         disabled={isLoadingList}
                     >
@@ -229,65 +267,142 @@ export function LeftPanel() {
             <div className={styles.list}>
                 {isLoadingList && <div className={styles.placeholder}>Загрузка…</div>}
 
-                {errorLoadList && (
-                    <div className={styles.error}>
-                        Не удалось загрузить сценарии: {errorLoadList}
-                    </div>
+                {errorLoadList !== null && (
+                    <div className={styles.error}>Не удалось загрузить сценарии: {errorLoadList}</div>
                 )}
 
-                {!isLoadingList && !errorLoadList && list.length === 0 && (
+                {!isLoadingList && errorLoadList === null && list.length === 0 && (
                     <div className={styles.placeholder}>Нет сценариев</div>
                 )}
 
                 {!isLoadingList &&
-                    !errorLoadList &&
+                    errorLoadList === null &&
                     list.map((scenario) => {
-                        const title = scenario.name || `Сценарий ${scenario.id}`;
+                        const title = scenario.name ?? `Сценарий ${scenario.id}`;
                         const isActive = activeScenarioId === scenario.id;
                         const isLoading = loadingScenarioId === scenario.id;
+                        const isRefreshing = refreshingScenarioId === scenario.id;
 
                         return (
-                            <div
+                            <ScenarioItem
                                 key={scenario.id}
-                                className={`${styles.scenarioItem} ${
-                                    isActive ? styles.itemActive : ''
-                                } ${isLoading ? styles.itemLoading : ''}`}
-                                onClick={() => !isLoading && onSelect(scenario.id)}
+                                scenarioId={scenario.id}
                                 title={title}
-                            >
-                                <div className={styles.itemTitle}>
-                                    {isLoading ? '⏳ ' : ''}
-                                    {title}
-                                </div>
-
-                                <SimpleMenu
-                                    label="Действия"
-                                    placement="bottom"
-                                    onAction={(action) => {
-                                        switch (action) {
-                                            case 'play':
-                                                ScenarioPlay(scenario.id);
-                                                break;
-                                            case 'pause':
-                                                ScenarioPause(scenario.id);
-                                                break;
-                                            case 'resume':
-                                                ScenarioResume(scenario.id);
-                                                break;
-                                            case 'cancel':
-                                                ScenarioCancel(scenario.id);
-                                                break;
-                                            case 'terminated':
-                                                ScenarioTerminated(scenario.id);
-                                                break;
-                                        }
-                                    }}
-                                />
-                            </div>
+                                isActive={isActive}
+                                isLoading={isLoading}
+                                isRefreshing={isRefreshing}
+                                onSelect={onSelect}
+                                onRefresh={onRefreshScenario}
+                                onPlay={ScenarioPlay}
+                                onPause={ScenarioPause}
+                                onResume={ScenarioResume}
+                                onCancel={ScenarioCancel}
+                                onTerminate={ScenarioTerminated}
+                            />
                         );
                     })}
             </div>
         </aside>
+    );
+}
+
+interface ScenarioItemProps {
+    scenarioId: string;
+    title: string;
+    isActive: boolean;
+    isLoading: boolean;
+    isRefreshing: boolean;
+    onSelect: (id: string, status: ScenarioLoadStatus) => void;
+    onRefresh: (id: string, event: React.MouseEvent) => void;
+    onPlay: (id: string) => void;
+    onPause: (id: string) => void;
+    onResume: (id: string) => void;
+    onCancel: (id: string) => void;
+    onTerminate: (id: string) => void;
+}
+
+function ScenarioItem({
+                          scenarioId,
+                          title,
+                          isActive,
+                          isLoading,
+                          isRefreshing,
+                          onSelect,
+                          onRefresh,
+                          onPlay,
+                          onPause,
+                          onResume,
+                          onCancel,
+                          onTerminate,
+                      }: ScenarioItemProps): JSX.Element {
+    const status = useSelector((state: RootState) => selectScenarioStatus(state, scenarioId));
+
+    const statusIcon = useMemo(() => {
+        if (isLoading || isRefreshing) return '⏳ ';
+        switch (status) {
+            case ScenarioLoadStatus.Loading:
+                return '⏳ ';
+            case ScenarioLoadStatus.Error:
+                return '❌ ';
+            case ScenarioLoadStatus.Loaded:
+                return '✅ ';
+            default:
+                return '';
+        }
+    }, [status, isLoading, isRefreshing]);
+
+    const handleClick = useCallback(() => {
+        if (!isLoading && !isRefreshing) {
+            onSelect(scenarioId, status);
+        }
+    }, [isLoading, isRefreshing, onSelect, scenarioId, status]);
+
+    return (
+        <div
+            className={`${styles.scenarioItem} ${isActive ? styles.itemActive : ''} ${
+                isLoading ? styles.itemLoading : ''
+            }`}
+            onClick={handleClick}
+            title={title}
+        >
+            <div className={styles.itemTitle}>
+                {statusIcon}
+                {title}
+            </div>
+
+            <button
+                className={`${styles.refreshBtn} ${isRefreshing ? styles.refreshBtnLoading : ''}`}
+                title="Принудительно обновить"
+                onClick={(e) => onRefresh(scenarioId, e)}
+                disabled={isRefreshing}
+            >
+                <RotateCw size={14} />
+            </button>
+
+            <SimpleMenu
+                label="Действия"
+                placement="bottom"
+                onAction={(action) => {
+                    switch (action) {
+                        case 'play':
+                            onPlay(scenarioId);
+                            break;
+                        case 'pause':
+                            onPause(scenarioId);
+                            break;
+                        case 'resume':
+                            onResume(scenarioId);
+                            break;
+                        case 'cancel':
+                            onCancel(scenarioId);
+                            break;
+                        case 'terminated':
+                            onTerminate(scenarioId);
+                            break;
+                    }
+                }}
+            />
+        </div>
     );
 }
 
