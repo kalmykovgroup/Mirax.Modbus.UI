@@ -16,7 +16,7 @@ export const RelationCreateCommandHandler: CommandHandler = {
         const { relation } = command.payload;
         dispatch(addRelation(relation));
         history.recordCreate({ ...relation, entityType: 'StepRelation' });
-        console.log('[History] ✅ Relation created:', relation.id);
+        console.log('[History]  Relation created:', relation.id);
     },
 };
 
@@ -40,7 +40,7 @@ export const RelationUpdateCommandHandler: CommandHandler = {
             { ...newState, entityType: 'StepRelation' },
             { ...previousState, entityType: 'StepRelation' }
         );
-        console.log('[History] ✅ Relation updated:', relationId);
+        console.log('[History]  Relation updated:', relationId);
     },
 };
 
@@ -52,6 +52,6 @@ export const RelationDeleteCommandHandler: CommandHandler = {
         const { relationId, deletedState } = command.payload;
         dispatch(deleteRelation(relationId));
         history.recordDelete({ ...deletedState, entityType: 'StepRelation' });
-        console.log('[History] ✅ Relation deleted:', relationId);
+        console.log('[History]  Relation deleted:', relationId);
     },
 };

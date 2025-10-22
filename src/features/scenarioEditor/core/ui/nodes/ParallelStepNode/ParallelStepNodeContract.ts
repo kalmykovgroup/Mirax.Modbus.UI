@@ -22,9 +22,9 @@ export const ParallelStepNodeContract: NodeTypeContract<ParallelStepDto> = {
     // МЕТА-ИНФОРМАЦИЯ
     // ============================================================================
 
-    canHaveChildBranches: true, // ✅ Может содержать дочерние ветки через stepBranchRelations
+    canHaveChildBranches: true, //  Может содержать дочерние ветки через stepBranchRelations
 
-    getBranchLinkMode: () => 'parallel', // ✅ Режим связи — параллельный
+    getBranchLinkMode: () => 'parallel', //  Режим связи — параллельный
 
     // ============================================================================
     // МАППИНГ DTO ↔ Node
@@ -122,7 +122,7 @@ export const ParallelStepNodeContract: NodeTypeContract<ParallelStepDto> = {
                 return { valid: true };
 
             case 'detach':
-                // ✅ Проверяем stepBranchRelations (не childBranchIds!)
+                //  Проверяем stepBranchRelations (не childBranchIds!)
                 if (dto.stepBranchRelations && dto.stepBranchRelations.length > 0) {
                     return {
                         valid: false,
@@ -138,7 +138,7 @@ export const ParallelStepNodeContract: NodeTypeContract<ParallelStepDto> = {
                         error: 'Нельзя удалить степ с дочерними связями',
                     };
                 }
-                // ✅ Проверяем stepBranchRelations
+                //  Проверяем stepBranchRelations
                 if (dto.stepBranchRelations && dto.stepBranchRelations.length > 0) {
                     return {
                         valid: false,
@@ -157,7 +157,7 @@ export const ParallelStepNodeContract: NodeTypeContract<ParallelStepDto> = {
     // ============================================================================
 
     onCreated: (dto) => {
-        console.log(`[ParallelStepNodeContract] ✅ Created: ${dto.id}`, {
+        console.log(`[ParallelStepNodeContract]  Created: ${dto.id}`, {
             branches: dto.stepBranchRelations?.length ?? 0,
         });
     },

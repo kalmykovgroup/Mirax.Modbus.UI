@@ -37,7 +37,7 @@ export const undoThunk = createAsyncThunk<void, { contextId: string }, { state: 
 
         console.log('[historySlice] Undoing record:', record);
 
-        // ✅ Применяем откат через historyRegistry → contract
+        //  Применяем откат через historyRegistry → contract
         if (record.type === 'create') {
             historyRegistry.deleteEntity(record.entityType, record.entityId as any);
         } else if (record.type === 'update') {
@@ -67,7 +67,7 @@ export const redoThunk = createAsyncThunk<void, { contextId: string }, { state: 
 
         console.log('[historySlice] Redoing record:', record);
 
-        // ✅ Применяем повтор через historyRegistry → contract
+        //  Применяем повтор через historyRegistry → contract
         if (record.type === 'create') {
             historyRegistry.createFromSnapshot(record.after);
         } else if (record.type === 'update') {
@@ -124,7 +124,7 @@ export const historySlice = createSlice({
 
             if (!context.isRecording) return;
 
-            // ✅ Создаём снимок через historyRegistry → contract
+            //  Создаём снимок через historyRegistry → contract
             const snapshot = historyRegistry.createSnapshot(entity);
 
             const record: CreateRecord = {
@@ -171,7 +171,7 @@ export const historySlice = createSlice({
 
             if (!context.isRecording) return;
 
-            // ✅ Создаём снимки через historyRegistry → contract
+            //  Создаём снимки через historyRegistry → contract
             const beforeSnapshot = historyRegistry.createSnapshot(previousEntity);
             const afterSnapshot = historyRegistry.createSnapshot(newEntity);
 
@@ -215,7 +215,7 @@ export const historySlice = createSlice({
 
             if (!context.isRecording) return;
 
-            // ✅ Создаём снимок через historyRegistry → contract
+            //  Создаём снимок через historyRegistry → contract
             const snapshot = historyRegistry.createSnapshot(entity);
 
             const record: DeleteRecord = {

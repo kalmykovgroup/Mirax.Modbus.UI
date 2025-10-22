@@ -6,7 +6,7 @@ import type { FlowType } from '@scenario/core/ui/nodes/types/flowType';
 class NodeTypeRegistry {
     private readonly registry = new Map<FlowType, NodeTypeContract<any>>();
 
-    // ✅ ИСПРАВЛЕНО: Принимаем контракт как unknown, затем кастуем
+    //  ИСПРАВЛЕНО: Принимаем контракт как unknown, затем кастуем
     register(contract: unknown): void {
         const typedContract = contract as NodeTypeContract<any>;
 
@@ -15,7 +15,7 @@ class NodeTypeRegistry {
         }
 
         this.registry.set(typedContract.type, typedContract);
-        console.log(`[NodeTypeRegistry] ✅ Registered: ${typedContract.type}`);
+        console.log(`[NodeTypeRegistry]  Registered: ${typedContract.type}`);
     }
 
     registerMany(...contracts: unknown[]): void {

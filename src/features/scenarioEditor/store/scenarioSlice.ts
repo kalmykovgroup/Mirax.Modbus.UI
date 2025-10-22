@@ -15,6 +15,13 @@ import type { StepBaseDto } from '@scenario/shared/contracts/server/remoteServer
 import type { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto';
 import { StepType } from '@scenario/shared/contracts/server/types/Api.Shared/StepType';
 
+
+const DEFAULT_BRANCH_WIDTH = 800;
+const DEFAULT_BRANCH_HEIGHT = 600;
+
+const DEFAULT_STEP_WIDTH = 70;
+const DEFAULT_STEP_HEIGHT = 21;
+
 export interface ScenarioState {
     readonly scenarios: Record<Guid, ScenarioDto>;
     readonly branches: Record<Guid, BranchDto>;
@@ -40,25 +47,42 @@ function normalizeScenario(scenario: ScenarioDto): {
     const steps: StepBaseDto[] = [];
     const relationsMap = new Map<Guid, StepRelationDto>();
 
-    function processBranch(branch: BranchDto): void {
-        branches.push(branch);
+    function processBranch(branch: BranchDto, scenarioId: Guid): void {
+        //  НОРМАЛИЗАЦИЯ: проставляем scenarioId и дефолтные размеры
+        const normalizedBranch: BranchDto = {
+            ...branch,
+            scenarioId,
+            width: branch.width > 0 ? branch.width : DEFAULT_BRANCH_WIDTH,
+            height: branch.height > 0 ? branch.height : DEFAULT_BRANCH_HEIGHT,
+        };
+
+        branches.push(normalizedBranch);
 
         for (const step of branch.steps) {
-            steps.push(step);
+            //  НОРМАЛИЗАЦИЯ: дефолтные размеры для шагов
+            const normalizedStep: StepBaseDto = {
+                ...step,
+                width: step.width > 0 ? step.width : DEFAULT_STEP_WIDTH,
+                height: step.height > 0 ? step.height : DEFAULT_STEP_HEIGHT,
+            };
+
+            steps.push(normalizedStep);
 
             for (const rel of step.childRelations) {
                 relationsMap.set(rel.id, rel);
             }
 
+            // Обработка вложенных веток (Parallel/Condition)
             if (step.type === StepType.Parallel || step.type === StepType.Condition) {
                 const branchRels = (step as any).stepBranchRelations as
-                    | readonly { branch?: BranchDto }[]
+                    | readonly { branch?: BranchDto | undefined }[]
                     | undefined;
 
                 if (branchRels != null) {
-                    for (const rel of branchRels) {
-                        if (rel.branch != null) {
-                            processBranch(rel.branch);
+                    for (const sbr of branchRels) {
+                        if (sbr.branch != null) {
+                            //  РЕКУРСИЯ: передаём scenarioId
+                            processBranch(sbr.branch, scenarioId);
                         }
                     }
                 }
@@ -66,7 +90,8 @@ function normalizeScenario(scenario: ScenarioDto): {
         }
     }
 
-    processBranch(scenario.branch);
+    // Стартуем с главной ветки
+    processBranch(scenario.branch, scenario.id);
 
     return {
         branches,

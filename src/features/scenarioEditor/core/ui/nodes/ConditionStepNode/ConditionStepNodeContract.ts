@@ -22,9 +22,9 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
     // МЕТА-ИНФОРМАЦИЯ
     // ============================================================================
 
-    canHaveChildBranches: true, // ✅ Может содержать дочерние ветки через stepBranchRelations
+    canHaveChildBranches: true, //  Может содержать дочерние ветки через stepBranchRelations
 
-    getBranchLinkMode: () => 'condition', // ✅ Режим связи — условный
+    getBranchLinkMode: () => 'condition', //  Режим связи — условный
 
     // ============================================================================
     // МАППИНГ DTO ↔ Node
@@ -125,7 +125,7 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
                 return { valid: true };
 
             case 'detach':
-                // ✅ Проверяем stepBranchRelations
+                //  Проверяем stepBranchRelations
                 if (dto.stepBranchRelations && dto.stepBranchRelations.length > 0) {
                     return {
                         valid: false,
@@ -141,7 +141,7 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
                         error: 'Нельзя удалить степ с дочерними связями. Сначала удалите связи.',
                     };
                 }
-                // ✅ Проверяем stepBranchRelations
+                //  Проверяем stepBranchRelations
                 if (dto.stepBranchRelations && dto.stepBranchRelations.length > 0) {
                     return {
                         valid: false,
@@ -166,7 +166,7 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
     // ============================================================================
 
     onCreated: (dto) => {
-        console.log(`[ConditionStepNodeContract] ✅ Created condition step: ${dto.id}`, {
+        console.log(`[ConditionStepNodeContract]  Created condition step: ${dto.id}`, {
             name: dto.name,
             branchId: dto.branchId,
             position: { x: dto.x, y: dto.y },
@@ -291,7 +291,7 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
             })
         );
 
-        console.log('[ConditionStepNodeContract] ✅ Snapshot applied');
+        console.log('[ConditionStepNodeContract]  Snapshot applied');
     },
 
     revertSnapshot: (snapshot) => {
@@ -307,7 +307,7 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
             })
         );
 
-        console.log('[ConditionStepNodeContract] ✅ Snapshot reverted');
+        console.log('[ConditionStepNodeContract]  Snapshot reverted');
     },
 
     createFromSnapshot: (snapshot) => {
@@ -326,7 +326,7 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
             })
         );
 
-        console.log('[ConditionStepNodeContract] ✅ Step created from snapshot');
+        console.log('[ConditionStepNodeContract]  Step created from snapshot');
     },
 
     deleteEntity: (entityId) => {
@@ -355,7 +355,7 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
                     stepId: entityId,
                 })
             );
-            console.log('[ConditionStepNodeContract] ✅ Entity deleted');
+            console.log('[ConditionStepNodeContract]  Entity deleted');
         } else {
             console.warn(`[ConditionStepNodeContract] ⚠️ Step ${entityId} not found for deletion`);
         }

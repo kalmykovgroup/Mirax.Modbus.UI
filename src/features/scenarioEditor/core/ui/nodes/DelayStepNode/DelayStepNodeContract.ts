@@ -136,7 +136,7 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
     // ============================================================================
 
     onCreated: (dto) => {
-        console.log(`[DelayStepNodeContract] ✅ Created step: ${dto.id}`, dto);
+        console.log(`[DelayStepNodeContract]  Created step: ${dto.id}`, dto);
     },
 
     onBeforeDelete: (dto) => {

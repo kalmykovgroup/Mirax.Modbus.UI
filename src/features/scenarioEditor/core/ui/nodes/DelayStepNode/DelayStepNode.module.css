@@ -5,13 +5,15 @@
     box-sizing: border-box;
     background-clip: content-box; /* фон остаётся у исходного размера */
     border: 1px solid var(--color-delay);
-    background: transparent;
+    background: #2e2e2e;
     border-radius: 5px ;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     padding: 2px;
+    min-width: 120px;
+    min-height: 80px;
 
 }
 

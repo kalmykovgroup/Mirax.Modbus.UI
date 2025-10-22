@@ -30,8 +30,8 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
             height: dto.height,
         },
         parentId,
-        draggable: true,
-        selectable: true,
+        draggable: false,
+        selectable: false,
     }),
 
     mapToDto: (node) => node.data.object,
@@ -102,7 +102,7 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
     // ============================================================================
 
     onCreated: (dto) => {
-        console.log(`[BranchNodeContract] ✅ Created branch: ${dto.id}`);
+        console.log(`[BranchNodeContract]  Created branch: ${dto.id}`);
     },
 
     onBeforeDelete: (dto) => {

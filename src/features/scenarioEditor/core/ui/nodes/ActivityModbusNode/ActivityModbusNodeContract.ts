@@ -148,7 +148,7 @@ export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto>
     // ============================================================================
 
     onCreated: (dto) => {
-        console.log(`[ActivityModbusNodeContract] ✅ Created Modbus activity: ${dto.id}`, {
+        console.log(`[ActivityModbusNodeContract]  Created Modbus activity: ${dto.id}`, {
             name: dto.name,
             branchId: dto.branchId,
             sessionId: dto.sessionId,
@@ -273,7 +273,7 @@ export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto>
             })
         );
 
-        console.log('[ActivityModbusNodeContract] ✅ Snapshot applied');
+        console.log('[ActivityModbusNodeContract]  Snapshot applied');
     },
 
     revertSnapshot: (snapshot) => {
@@ -288,7 +288,7 @@ export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto>
             })
         );
 
-        console.log('[ActivityModbusNodeContract] ✅ Snapshot reverted');
+        console.log('[ActivityModbusNodeContract]  Snapshot reverted');
     },
 
     createFromSnapshot: (snapshot) => {
@@ -306,7 +306,7 @@ export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto>
             })
         );
 
-        console.log('[ActivityModbusNodeContract] ✅ Step created from snapshot');
+        console.log('[ActivityModbusNodeContract]  Step created from snapshot');
     },
 
     deleteEntity: (entityId) => {
@@ -322,7 +322,7 @@ export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto>
                     stepId: entityId,
                 })
             );
-            console.log('[ActivityModbusNodeContract] ✅ Entity deleted');
+            console.log('[ActivityModbusNodeContract]  Entity deleted');
         } else {
             console.warn(
                 `[ActivityModbusNodeContract] ⚠️ Step ${entityId} not found for deletion`

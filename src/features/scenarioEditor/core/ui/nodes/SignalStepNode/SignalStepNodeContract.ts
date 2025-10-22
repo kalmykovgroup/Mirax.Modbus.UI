@@ -146,7 +146,7 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
     // ============================================================================
 
     onCreated: (dto) => {
-        console.log(`[SignalStepNodeContract] ✅ Created signal step: ${dto.id}`, {
+        console.log(`[SignalStepNodeContract]  Created signal step: ${dto.id}`, {
             name: dto.name,
             branchId: dto.branchId,
             position: { x: dto.x, y: dto.y },
@@ -228,7 +228,7 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
             })
         );
 
-        console.log('[SignalStepNodeContract] ✅ Snapshot applied');
+        console.log('[SignalStepNodeContract]  Snapshot applied');
     },
 
     revertSnapshot: (snapshot) => {
@@ -244,7 +244,7 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
             })
         );
 
-        console.log('[SignalStepNodeContract] ✅ Snapshot reverted');
+        console.log('[SignalStepNodeContract]  Snapshot reverted');
     },
 
     createFromSnapshot: (snapshot) => {
@@ -260,7 +260,7 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
             })
         );
 
-        console.log('[SignalStepNodeContract] ✅ Step created from snapshot');
+        console.log('[SignalStepNodeContract]  Step created from snapshot');
     },
 
     deleteEntity: (entityId) => {
@@ -276,7 +276,7 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
                     stepId: entityId,
                 })
             );
-            console.log('[SignalStepNodeContract] ✅ Entity deleted');
+            console.log('[SignalStepNodeContract]  Entity deleted');
         } else {
             console.warn(`[SignalStepNodeContract] ⚠️ Step ${entityId} not found for deletion`);
         }

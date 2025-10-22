@@ -56,7 +56,7 @@ export const RightPanel: React.FC = () => {
     const rf = useReactFlow<FlowNode>();
     const activeId = useSelector(selectActiveScenarioId);
 
-    // ✅ Хук для операций со сценарием
+    //  Хук для операций со сценарием
     const operations = useScenarioOperations(activeId);
 
     const hoverBranchIdRef = useRef<string | null>(null);
@@ -140,7 +140,7 @@ export const RightPanel: React.FC = () => {
                 nds.map(n => n.id === id ? { ...n, data: { ...n.data, __persisted: true } } : n)
             );
 
-            // ✅ Получаем созданную ноду
+            //  Получаем созданную ноду
             const nodes = rf.getNodes();
             const createdNode = nodes.find(n => n.id === id);
             if (!createdNode || !activeId) {
@@ -148,7 +148,7 @@ export const RightPanel: React.FC = () => {
                 return;
             }
 
-            // ✅ Создаём финальный DTO
+            //  Создаём финальный DTO
             let finalDto = createdNode.data.object;
 
             if (type === FlowType.BranchNode) {
@@ -171,7 +171,7 @@ export const RightPanel: React.FC = () => {
                 };
             }
 
-            // ✅ Обновляем ноду с финальным DTO
+            //  Обновляем ноду с финальным DTO
             rf.setNodes((nds) =>
                 nds.map(n =>
                     n.id === id
@@ -186,14 +186,14 @@ export const RightPanel: React.FC = () => {
                 )
             );
 
-            // ✅ Получаем обновлённую ноду для записи в историю
+            //  Получаем обновлённую ноду для записи в историю
             const finalNode = rf.getNodes().find(n => n.id === id);
             if (!finalNode) return;
 
-            // ✅ Вызываем createNode из operations (аналог moveNode в ScenarioMap)
+            //  Вызываем createNode из operations (аналог moveNode в ScenarioMap)
             operations.createNode(finalNode);
 
-            console.log(`[RightPanel] ✅ Created ${type}: ${id}`, { target: target.id, drop });
+            console.log(`[RightPanel]  Created ${type}: ${id}`, { target: target.id, drop });
         };
 
         window.addEventListener('mousemove', move);

@@ -53,13 +53,13 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createMoveEntity(previousDto, newX, newY);
 
-            // ✅ Преобразуем DTO в Entity (добавляем entityType из contract.type)
+            //  Преобразуем DTO в Entity (добавляем entityType из contract.type)
             history.recordUpdate(
                 toEntity(newDto, node.type),
                 toEntity(previousDto, node.type)
             );
 
-            console.log(`[useScenarioOperations] ✅ Node moved: ${node.id}`, { newX, newY });
+            console.log(`[useScenarioOperations]  Node moved: ${node.id}`, { newX, newY });
         },
         [scenarioId, history, toEntity]
     );
@@ -97,7 +97,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 toEntity(previousDto, node.type)
             );
 
-            console.log(`[useScenarioOperations] ✅ Node resized: ${node.id}`, {
+            console.log(`[useScenarioOperations]  Node resized: ${node.id}`, {
                 newWidth,
                 newHeight,
             });
@@ -128,7 +128,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             history.recordDelete(toEntity(dto, node.type));
 
-            console.log(`[useScenarioOperations] ✅ Node deleted: ${node.id}`);
+            console.log(`[useScenarioOperations]  Node deleted: ${node.id}`);
             return true;
         },
         [scenarioId, history, toEntity]
@@ -173,7 +173,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 toEntity(previousDto, stepNode.type)
             );
 
-            console.log(`[useScenarioOperations] ✅ Step attached to branch: ${stepNode.id}`, {
+            console.log(`[useScenarioOperations]  Step attached to branch: ${stepNode.id}`, {
                 branchId,
             });
         },
@@ -218,7 +218,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 toEntity(previousDto, stepNode.type)
             );
 
-            console.log(`[useScenarioOperations] ✅ Step detached from branch: ${stepNode.id}`);
+            console.log(`[useScenarioOperations]  Step detached from branch: ${stepNode.id}`);
         },
         [scenarioId, history, toEntity]
     );
@@ -249,7 +249,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 toEntity(previousDto, branchNode.type)
             );
 
-            console.log(`[useScenarioOperations] ✅ Branch auto-expanded: ${branchNode.id}`, {
+            console.log(`[useScenarioOperations]  Branch auto-expanded: ${branchNode.id}`, {
                 newWidth,
                 newHeight,
             });
@@ -276,7 +276,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             history.recordCreate(toEntity(dto, node.type));
 
-            console.log(`[useScenarioOperations] ✅ Node created: ${node.id}`);
+            console.log(`[useScenarioOperations]  Node created: ${node.id}`);
         },
         [scenarioId, history, toEntity]
     );

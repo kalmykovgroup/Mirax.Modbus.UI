@@ -148,7 +148,7 @@ export const ActivitySystemNodeContract: NodeTypeContract<ActivitySystemStepDto>
     // ============================================================================
 
     onCreated: (dto) => {
-        console.log(`[ActivitySystemNodeContract] ✅ Created system activity: ${dto.id}`, {
+        console.log(`[ActivitySystemNodeContract]  Created system activity: ${dto.id}`, {
             name: dto.name,
             branchId: dto.branchId,
             systemActionId: dto.systemActionId,
@@ -249,7 +249,7 @@ export const ActivitySystemNodeContract: NodeTypeContract<ActivitySystemStepDto>
             })
         );
 
-        console.log('[ActivitySystemNodeContract] ✅ Snapshot applied');
+        console.log('[ActivitySystemNodeContract]  Snapshot applied');
     },
 
     revertSnapshot: (snapshot) => {
@@ -264,7 +264,7 @@ export const ActivitySystemNodeContract: NodeTypeContract<ActivitySystemStepDto>
             })
         );
 
-        console.log('[ActivitySystemNodeContract] ✅ Snapshot reverted');
+        console.log('[ActivitySystemNodeContract]  Snapshot reverted');
     },
 
     createFromSnapshot: (snapshot) => {
@@ -282,7 +282,7 @@ export const ActivitySystemNodeContract: NodeTypeContract<ActivitySystemStepDto>
             })
         );
 
-        console.log('[ActivitySystemNodeContract] ✅ Step created from snapshot');
+        console.log('[ActivitySystemNodeContract]  Step created from snapshot');
     },
 
     deleteEntity: (entityId) => {
@@ -298,7 +298,7 @@ export const ActivitySystemNodeContract: NodeTypeContract<ActivitySystemStepDto>
                     stepId: entityId,
                 })
             );
-            console.log('[ActivitySystemNodeContract] ✅ Entity deleted');
+            console.log('[ActivitySystemNodeContract]  Entity deleted');
         } else {
             console.warn(
                 `[ActivitySystemNodeContract] ⚠️ Step ${entityId} not found for deletion`

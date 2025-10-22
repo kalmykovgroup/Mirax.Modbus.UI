@@ -114,7 +114,7 @@ export const JumpStepNodeContract: NodeTypeContract<JumpStepDto> = {
                 return { valid: true };
 
             case 'detach':
-                // ✅ Jump можно отсоединить всегда (jumpToStepId независим от branchId)
+                //  Jump можно отсоединить всегда (jumpToStepId независим от branchId)
                 return { valid: true };
 
             case 'delete':
@@ -124,7 +124,7 @@ export const JumpStepNodeContract: NodeTypeContract<JumpStepDto> = {
                         error: 'Нельзя удалить степ с дочерними связями',
                     };
                 }
-                // ✅ Предупреждаем, если есть jumpToStepId
+                //  Предупреждаем, если есть jumpToStepId
                 if (dto.jumpToStepId) {
                     console.warn(`[JumpStepNodeContract] Deleting Jump pointing to: ${dto.jumpToStepId}`);
                 }
@@ -140,7 +140,7 @@ export const JumpStepNodeContract: NodeTypeContract<JumpStepDto> = {
     // ============================================================================
 
     onCreated: (dto) => {
-        console.log(`[JumpStepNodeContract] ✅ Created: ${dto.id}`, {
+        console.log(`[JumpStepNodeContract]  Created: ${dto.id}`, {
             jumpTo: dto.jumpToStepId,
         });
         if (!dto.jumpToStepId) {
