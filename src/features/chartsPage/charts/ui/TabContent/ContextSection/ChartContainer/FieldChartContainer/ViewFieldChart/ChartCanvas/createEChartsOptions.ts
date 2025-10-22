@@ -42,6 +42,8 @@ export interface CreateOptionsParams {
 }
 
 
+
+
 export function createOptions(params: CreateOptionsParams): EChartsOption {
     const {
         avgPoints,
@@ -66,10 +68,12 @@ export function createOptions(params: CreateOptionsParams): EChartsOption {
         };
     }
 
-    const xAxisMin = originalRange?.fromMs;
-    const xAxisMax = originalRange?.toMs;
+    const xAxisMin = originalRange?.fromMs ?? 0;
+    const xAxisMax = originalRange?.toMs ?? 0;
     const symbolSize = avgPoints.length < 50 ? 6 : 4;
     const shouldAnimate = animationConfig.enabled && avgPoints.length < 2000;
+
+
 
     // ============================================
     // РАСЧЁТ ГРАНИЦ Y-ОСИ (ИСПРАВЛЕНО)
@@ -402,21 +406,53 @@ export function createOptions(params: CreateOptionsParams): EChartsOption {
 
         xAxis: {
             type: 'time',
-            min: xAxisMin!,
-            max: xAxisMax!,
+            min: xAxisMin,
+            max: xAxisMax,
             axisLabel: {
-                formatter: (value: number) => {
-                    return formatDateWithTimezone(
-                        value,
-                        timeSettings,
-                        { hour: '2-digit', minute: '2-digit' }
-                    );
+                show: false // Полностью скрываем все метки оси X
+            },
+            // Настройка указателя оси (всплывающая подсказка внизу при наведении)
+            axisPointer: {
+                show: true,
+                type: 'line',
+                snap: true,
+                lineStyle: {
+                    color: '#4A90E2',
+                    width: 1,
+                    type: 'dashed'
                 },
-                rotate: 0,
-                fontSize: 11
+                label: {
+                    show: true,
+                    formatter: (params: any) => {
+                        const value = params.value;
+                        if (typeof value !== 'number') return '';
+
+                        return formatDateWithTimezone(
+                            value,
+                            timeSettings,
+                            {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit'
+                            }
+                        );
+                    },
+                    backgroundColor: 'rgba(74, 144, 226, 0.9)',
+                    color: '#fff',
+                    padding: [8, 12],
+                    fontSize: 12,
+                    fontWeight: 'bold' as const,
+                    borderRadius: 4
+                }
             },
             splitLine: { show: false },
-            axisLine: { lineStyle: { color: '#ddd' } }
+            axisLine: { lineStyle: { color: '#ddd' } },
+            axisTick: {
+                show: false // Скрываем засечки оси
+            }
         },
 
         yAxis: {
@@ -454,8 +490,8 @@ export function createOptions(params: CreateOptionsParams): EChartsOption {
         },
 
         grid: {
-            left: 70,
-            right: 30,
+            left: 50,
+            right: 20,
             top: 80,
             bottom: 60,
             containLabel: true
@@ -560,3 +596,4 @@ function createGapsMarkArea(
         data
     };
 }
+
