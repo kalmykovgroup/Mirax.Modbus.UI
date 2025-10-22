@@ -2,10 +2,14 @@
 
 import { useCallback } from 'react';
 import { useHistory } from '@scenario/core/features/historySystem/useHistory';
-import type { Guid } from '@app/lib/types/Guid';
+import {type Guid} from '@app/lib/types/Guid';
 import { nodeTypeRegistry } from '@scenario/shared/contracts/registry/NodeTypeRegistry';
 import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
 import type { Entity } from '@scenario/core/features/historySystem/types';
+import type {
+    StepRelationDto
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto.ts";
+import {stepRelationContract} from "@scenario/core/ui/edges/StepRelationContract.ts";
 
 export function useScenarioOperations(scenarioId: Guid | null) {
     const history = useHistory(scenarioId ?? 'no-scenario', {
@@ -24,6 +28,57 @@ export function useScenarioOperations(scenarioId: Guid | null) {
             entityType,
         } as Entity;
     }, []);
+
+
+    // ============================================================================
+    // СОЗДАНИЕ СВЯЗИ МЕЖДУ СТЕПАМИ
+    // ============================================================================
+
+    const createRelation = useCallback(
+        (parentStepId: Guid, childStepId: Guid, conditionExpression?: string | null, conditionOrder?: number) => {
+            if (!scenarioId) {
+                console.error('[useScenarioOperations] Cannot create relation: no scenarioId');
+                return null;
+            }
+
+            // Валидация через контракт
+            const validation = stepRelationContract.validateCreate({
+                parentStepId,
+                childStepId,
+            });
+
+            if (!validation.valid) {
+                console.error('[useScenarioOperations] Relation validation failed:', validation.error);
+                return null;
+            }
+
+            // Создание DTO через контракт
+            const relationDto: StepRelationDto = stepRelationContract.create({
+                parentStepId,
+                childStepId,
+                conditionExpression,
+                conditionOrder,
+            } as StepRelationDto);
+
+            // ✅ ВАЖНО: Применяем изменения СРАЗУ через контракт
+            // (создаём snapshot и применяем его через createFromSnapshot)
+            const snapshot = stepRelationContract.createSnapshot(relationDto);
+            stepRelationContract.createFromSnapshot(snapshot);
+            // ↑ Это вызовет store.dispatch(addRelation(relationDto))
+
+            // Записываем в историю (для undo/redo)
+            history.recordCreate(toEntity(relationDto, 'StepRelation'));
+
+            // Хук жизненного цикла
+            stepRelationContract.onCreated?.(relationDto);
+
+            console.log(`[useScenarioOperations] ✅ Relation created: ${relationDto.id}`);
+
+            return relationDto;
+        },
+        [scenarioId, history, toEntity]
+    );
+
 
     // ============================================================================
     // ПЕРЕМЕЩЕНИЕ НОДЫ
@@ -282,6 +337,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
     );
 
     return {
+        createRelation,
         moveNode,
         resizeNode,
         deleteNode,

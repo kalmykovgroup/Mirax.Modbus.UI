@@ -15,7 +15,7 @@ import {
     SelectionMode,
     applyNodeChanges,
     applyEdgeChanges,
-    useReactFlow,
+    useReactFlow, type Connection, addEdge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useSelector } from 'react-redux';
@@ -47,6 +47,11 @@ import {
 import { isAnyBranchResizing } from '@scenario/core/branchResize/branchResizeGuard';
 import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
 import {useScenarioOperations} from "@scenario/core/hooks/useScenarioOperations.ts";
+import type {Guid} from "@app/lib/types/Guid.ts";
+import {useConnectContext} from "@scenario/core/hooks/useConnectContext.ts";
+import {useEdgesRef, useIsValidConnection} from "@scenario/core/hooks/useConnectionValidation.ts";
+import {createIsValidConnection} from "@scenario/core/edgeMove/isValidConnection.ts";
+import {ALLOW_MAP, TARGET_ALLOW_MAP} from "@scenario/core/edgeMove/connectionRules.ts";
 
 export interface ScenarioEditorProps {}
 
@@ -115,6 +120,16 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     );
 
     const rf = useReactFlow<FlowNode, FlowEdge>();
+
+
+    // ============================================================================
+    // КОНТЕКСТ СОЕДИНЕНИЯ (для подсветки handles)
+    // ============================================================================
+
+    const { connectCtx, onConnectStart, onConnectEnd, getNodeType } = useConnectContext({
+        rf,
+        setNodes,
+    });
 
     // Хук выбора и удаления
     const { onSelectionChange, deleteSelected } = useSelection({
@@ -374,6 +389,90 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         );
     }, [isCtrlPressed]);
 
+    // ============================================================================
+    // ВАЛИДАЦИЯ СОЕДИНЕНИЙ
+    // ============================================================================
+
+    const edgesRef = useEdgesRef(edges);
+    const isValidConnection = useIsValidConnection(
+        getNodeType,
+        () => edgesRef.current,
+        createIsValidConnection,
+        ALLOW_MAP,
+        TARGET_ALLOW_MAP
+    );
+
+    // ============================================================================
+    // ОБРАБОТЧИК СОЗДАНИЯ СВЯЗИ
+    // ============================================================================
+
+
+    const onConnect = useCallback(
+        (connection: Connection) => {
+            if (!connection.source || !connection.target) {
+                console.warn('[ScenarioMap] Invalid connection: missing source or target');
+                onConnectEnd();
+                return;
+            }
+
+            console.log('[ScenarioMap] 🔗 Creating connection:', connection);
+
+            // Создаём связь через operations
+            const relationDto = operations.createRelation(
+                connection.source as Guid,
+                connection.target as Guid
+            );
+
+            if (!relationDto) {
+                console.error('[ScenarioMap] Failed to create relation');
+                onConnectEnd();
+                return;
+            }
+
+            // Добавляем ребро в ReactFlow (с id из relationDto)
+            setEdges((eds) =>
+                addEdge({ ...connection, id: relationDto.id, type: 'step' }, eds)
+            );
+
+            // Обновляем childRelations/parentRelations в нодах
+            setNodes((nds) =>
+                nds.map((n) => {
+                    if (n.id === connection.source && n.data.object) {
+                        const dto = n.data.object as any;
+                        return {
+                            ...n,
+                            data: {
+                                ...n.data,
+                                object: {
+                                    ...dto,
+                                    childRelations: [...(dto.childRelations ?? []), relationDto],
+                                },
+                            },
+                        };
+                    }
+                    if (n.id === connection.target && n.data.object) {
+                        const dto = n.data.object as any;
+                        return {
+                            ...n,
+                            data: {
+                                ...n.data,
+                                object: {
+                                    ...dto,
+                                    parentRelations: [...(dto.parentRelations ?? []), relationDto],
+                                },
+                            },
+                        };
+                    }
+                    return n;
+                })
+            );
+
+            console.log('[ScenarioMap] ✅ Connection created successfully');
+            onConnectEnd();
+        },
+        [operations, onConnectEnd, setEdges, setNodes]
+    );
+
     const onNodesChangeHandler: OnNodesChange<FlowNode> = useCallback((changes) => {
         setNodes((nds) => applyNodeChanges(changes, nds) as FlowNode[]);
 
@@ -592,6 +691,10 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 onNodesChange={onNodesChangeHandler}
                 onEdgesChange={onEdgesChangeHandler}
                 onSelectionChange={handleSelectionChange}
+                onConnect={onConnect} // Connect
+                onConnectStart={onConnectStart} // Connect
+                onConnectEnd={onConnectEnd} // Connect
+                isValidConnection={isValidConnection} // Connect
                 onNodeDragStop={dragStopHandler.onNodeDragStop}
                 minZoom={0.01}
                 maxZoom={10}

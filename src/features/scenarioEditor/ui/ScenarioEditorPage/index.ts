@@ -9,6 +9,8 @@ import { ConditionStepNodeContract } from "@scenario/core/ui/nodes/ConditionStep
 import { ActivitySystemNodeContract } from "@scenario/core/ui/nodes/ActivitySystemNode/ActivitySystemNodeContract";
 import { ActivityModbusNodeContract } from "@scenario/core/ui/nodes/ActivityModbusNode/ActivityModbusNodeContract";
 import { SignalStepNodeContract } from "@scenario/core/ui/nodes/SignalStepNode/SignalStepNodeContract";
+import {relationRegistry} from "@scenario/core/ui/edges/RelationRegistry.ts";
+import {stepRelationContract} from "@scenario/core/ui/edges/StepRelationContract.ts";
 
 export function registerAllNodeTypes(): void {
     nodeTypeRegistry.register(BranchNodeContract);
@@ -19,4 +21,7 @@ export function registerAllNodeTypes(): void {
     nodeTypeRegistry.register(ActivitySystemNodeContract);
     nodeTypeRegistry.register(ActivityModbusNodeContract);
     nodeTypeRegistry.register(SignalStepNodeContract);
+
+    // ✅ Регистрация связей
+    relationRegistry.register(stepRelationContract);
 }
