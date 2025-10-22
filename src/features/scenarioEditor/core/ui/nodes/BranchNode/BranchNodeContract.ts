@@ -32,6 +32,9 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
         parentId,
         draggable: false,
         selectable: false,
+        extent: 'parent',
+        expandParent: true,
+        resizable: true,
     }),
 
     mapToDto: (node) => node.data.object,

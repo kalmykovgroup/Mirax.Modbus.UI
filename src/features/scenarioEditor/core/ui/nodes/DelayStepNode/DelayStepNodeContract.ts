@@ -38,6 +38,8 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
         parentId,
         draggable: true,
         selectable: true,
+        extent: 'parent',
+        expandParent: true,
     }),
 
     mapToDto: (node) => node.data.object,
@@ -82,14 +84,14 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
     // ВАЛИДАЦИЯ ОПЕРАЦИЙ
     // ============================================================================
 
+    // Пример исправления validateOperation для DelayStepNodeContract.ts
+    // Применить аналогичные изменения ко всем контрактам из списка
+
     validateOperation: (operation, dto, params) => {
         switch (operation) {
             case 'move':
-                // Проверяем, что новые координаты валидны
-                const { newX, newY } = params as { newX: number; newY: number };
-                if (newX < 0 || newY < 0) {
-                    return { valid: false, error: 'Координаты не могут быть отрицательными' };
-                }
+                // ReactFlow допускает любые координаты (включая отрицательные)
+                // Валидация не требуется
                 return { valid: true };
 
             case 'resize':
@@ -117,14 +119,10 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
                 if (dto.childRelations && dto.childRelations.length > 0) {
                     return {
                         valid: false,
-                        error: 'Нельзя удалить степ с дочерними связями',
+                        error: 'Нельзя удалить степ с дочерними связями. Сначала удалите связи.',
                     };
                 }
                 return { valid: true };
-
-            case 'auto-expand':
-                // Для степов не поддерживается
-                return { valid: false, error: 'Auto-expand не поддерживается для степов' };
 
             default:
                 return { valid: true };

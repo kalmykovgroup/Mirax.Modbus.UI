@@ -1,190 +1,236 @@
 // @scenario/core/handlers/NodeDragStopHandler.ts
-import type React from 'react'
-import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode.ts'
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts'
+import type React from 'react';
+import type { FlowNode, FlowEdge } from '@/features/scenarioEditor/shared/contracts/models/FlowNode.ts';
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
 
 type Utils = {
-    absOf: (n: FlowNode, all: FlowNode[]) => { x: number; y: number }
-    rectOf: (n: FlowNode, all: FlowNode[]) => { x: number; y: number; w: number; h: number }
-    ensureParentBeforeChild: (nodes: FlowNode[], parentId: string, childId: string) => FlowNode[]
-    pickDeepestBranchByTopLeft: (all: FlowNode[], abs: { x: number; y: number }, skipId?: string) => FlowNode | undefined
-    isAnyBranchResizing: () => boolean
-}
+    absOf: (n: FlowNode, all: FlowNode[]) => { x: number; y: number };
+    rectOf: (n: FlowNode, all: FlowNode[]) => { x: number; y: number; w: number; h: number };
+    ensureParentBeforeChild: (nodes: FlowNode[], parentId: string, childId: string) => FlowNode[];
+    pickDeepestBranchByTopLeft: (
+        all: FlowNode[],
+        abs: { x: number; y: number },
+        skipId?: string
+    ) => FlowNode | undefined;
+    isAnyBranchResizing: () => boolean;
+};
 
 export type NodeDragStopDeps = {
-    getAll: () => FlowNode[]
-    setNodes: React.Dispatch<React.SetStateAction<FlowNode[]>>
-    setHoverBranch: (branchId: string | undefined) => void
-    ctrlDragIdsRef: React.MutableRefObject<Set<string>>
-    utils: Utils
+    getAll: () => FlowNode[];
+    getAllEdges: () => FlowEdge[];
+    setNodes: React.Dispatch<React.SetStateAction<FlowNode[]>>;
+    setEdges: React.Dispatch<React.SetStateAction<FlowEdge[]>>;
+    setHoverBranch: (branchId: string | undefined) => void;
+    shiftDragIdsRef: React.MutableRefObject<Set<string>>;
+    utils: Utils;
     callbacks?: {
-        // движение внутри той же ветки (координаты в абсолюте)
-        onStepMoved?: (stepId: string, x: number, y: number) => void
-        // прикрепили/перенесли шаг в ветку (меняем branchId, x, y)
-        onStepAttachedToBranch?: (stepId: string, branchId: string, x: number, y: number) => void
-        // вынесли шаг «на поле» (вне ветки) — удалить шаг и его связи (StepRelation)
-        onStepDetachedFromBranch?: (stepId: string) => void
-        // авто-рост ветки в UI
-        onBranchResized?: (branchId: string, width: number, height: number) => void
-    }
-}
+        // Движение внутри той же ветки (координаты в абсолюте)
+        onStepMoved?: (stepId: string, x: number, y: number) => void;
+        // Прикрепили/перенесли шаг в ветку (меняем branchId, x, y)
+        onStepAttachedToBranch?: (stepId: string, branchId: string, x: number, y: number) => void;
+        // Вынесли шаг «на поле» (вне ветки) — удалить шаг, его связи и саму ноду из сценария
+        onStepDetachedFromBranch?: (stepId: string) => void;
+        // Удалить связь между нодами
+        onConnectionRemoved?: (sourceId: string, targetId: string, edgeId: string) => void;
+        // Авто-рост ветки в UI
+        onBranchResized?: (branchId: string, width: number, height: number) => void;
+    };
+};
 
 export class NodeDragStopHandler {
-    private readonly getAll
-    private readonly setNodes
-    private readonly setHoverBranch
-    private readonly ctrlDragIdsRef
-    private readonly u: Utils
-    private readonly callbacks?: NodeDragStopDeps['callbacks']
+    private readonly getAll;
+    private readonly getAllEdges;
+    private readonly setNodes;
+    private readonly setEdges;
+    private readonly setHoverBranch;
+    private readonly shiftDragIdsRef;
+    private readonly u: Utils;
+    private readonly callbacks?: NodeDragStopDeps['callbacks'];
 
     constructor(deps: NodeDragStopDeps) {
-        this.getAll = deps.getAll
-        this.setNodes = deps.setNodes
-        this.setHoverBranch = deps.setHoverBranch
-        this.ctrlDragIdsRef = deps.ctrlDragIdsRef
-        this.u = deps.utils
-        this.callbacks = deps.callbacks
+        this.getAll = deps.getAll;
+        this.getAllEdges = deps.getAllEdges;
+        this.setNodes = deps.setNodes;
+        this.setEdges = deps.setEdges;
+        this.setHoverBranch = deps.setHoverBranch;
+        this.shiftDragIdsRef = deps.shiftDragIdsRef;
+        this.u = deps.utils;
+        this.callbacks = deps.callbacks;
     }
 
-    onNodeDragStop = (_e: React.MouseEvent | React.TouchEvent, node: FlowNode) => {
-        if (this.u.isAnyBranchResizing()) return
+    private removeNodeConnections = (nodeId: string): void => {
+        const edges = this.getAllEdges();
+        const connectedEdges = edges.filter(
+            (e) => e.source === nodeId || e.target === nodeId
+        );
 
-        const all = this.getAll()
-        const current = all.find(n => n.id === node.id) ?? node
-        //const prevBranchId = current.parentId // прошлый контейнер
-        const absTL = this.u.absOf(current, all)
-        const target = this.u.pickDeepestBranchByTopLeft(all, absTL, current.id)
+        if (connectedEdges.length > 0) {
+            console.log(
+                `[NodeDragStopHandler] 🗑️ Removing ${connectedEdges.length} connections for node ${nodeId}`
+            );
 
-        // снять подсветку цели
-        this.setHoverBranch(undefined)
+            // Удаляем рёбра из UI
+            this.setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
 
-        const wasCtrl = this.ctrlDragIdsRef.current.has(current.id)
-        if (wasCtrl) this.ctrlDragIdsRef.current.delete(current.id)
+            // Вызываем коллбэки для каждого удалённого ребра
+            for (const edge of connectedEdges) {
+                this.callbacks?.onConnectionRemoved?.(edge.source, edge.target, edge.id);
+            }
+        }
+    };
+
+    onNodeDragStop = (_e: React.MouseEvent | React.TouchEvent, node: FlowNode): void => {
+        if (this.u.isAnyBranchResizing()) return;
+
+        const all = this.getAll();
+        const current = all.find((n) => n.id === node.id) ?? node;
+        const absTL = this.u.absOf(current, all);
+        const target = this.u.pickDeepestBranchByTopLeft(all, absTL, current.id);
+
+        // Снять подсветку цели
+        this.setHoverBranch(undefined);
+
+        const wasShift = this.shiftDragIdsRef.current.has(current.id);
+        if (wasShift) this.shiftDragIdsRef.current.delete(current.id);
 
         // ─────────────────────────────────────────
-        // CTRL + drag
+        // SHIFT + drag (вынос из ветки)
         // ─────────────────────────────────────────
-        if (wasCtrl) {
+        if (wasShift) {
             if (!target) {
-                // Вынесли «на поле»: в UI делаем корневой; во внешней логике — удалить шаг + его StepRelation
-                this.setNodes(nds =>
-                    nds.map(n => {
-                        if (n.id !== current.id) return n
-                        const { parentId: _pid, extent: _ex, expandParent: _ep, ...rest } = n as FlowNode
-                        return { ...rest, position: { x: absTL.x, y: absTL.y } }
+                // Вынесли «на поле» с Shift: удаляем связи и саму ноду
+                console.log(
+                    `[NodeDragStopHandler] 🔀 SHIFT + DRAG TO FIELD | Node: ${current.id} | Removing connections and node`
+                );
+
+                // 1. Удаляем все связи ноды
+                this.removeNodeConnections(current.id);
+
+                // 2. Убираем parentId из ноды (делаем корневой визуально)
+                this.setNodes((nds) =>
+                    nds.map((n) => {
+                        if (n.id !== current.id) return n;
+                        const { parentId: _pid, extent: _ex, expandParent: _ep, ...rest } = n as FlowNode;
+                        return { ...rest, position: { x: absTL.x, y: absTL.y } };
                     })
-                )
-                this.callbacks?.onStepDetachedFromBranch?.(current.id)
-                return
+                );
+
+                // 3. Вызываем коллбэк для полного удаления шага из сценария
+                this.callbacks?.onStepDetachedFromBranch?.(current.id);
+                return;
             }
 
-            // Ctrl: перенос в ДРУГУЮ ветку — просто меняем branchId и координаты (без детача!)
+            // Shift: перенос в ДРУГУЮ ветку — просто меняем branchId и координаты (без удаления связей!)
             if (current.type !== FlowType.BranchNode) {
-                const br = this.u.rectOf(target, all)
-                const relX = absTL.x - br.x
-                const relY = absTL.y - br.y
+                const br = this.u.rectOf(target, all);
+                const relX = absTL.x - br.x;
+                const relY = absTL.y - br.y;
+
+                console.log(
+                    `[NodeDragStopHandler] 🔀 SHIFT + DRAG TO BRANCH | Node: ${current.id} | Target: ${target.id}`
+                );
 
                 this.setNodes((nds): FlowNode[] => {
-                    let next = nds.map(n =>
+                    let next = nds.map((n) =>
                         n.id === current.id
                             ? {
                                 ...n,
                                 parentId: target.id,
                                 position: { x: relX, y: relY },
                                 extent: 'parent' as const,
-                                expandParent: true
+                                expandParent: true,
                             }
                             : n
-                    )
-                    next = this.u.ensureParentBeforeChild(next, target.id, current.id)
-                    return next
-                })
+                    );
+                    next = this.u.ensureParentBeforeChild(next, target.id, current.id);
+                    return next;
+                });
 
                 // Только апдейт шага: branchId + x,y
-                this.callbacks?.onStepAttachedToBranch?.(current.id, target.id, absTL.x, absTL.y)
-                return
+                this.callbacks?.onStepAttachedToBranch?.(current.id, target.id, absTL.x, absTL.y);
+                return;
             }
         }
 
         // ─────────────────────────────────────────
-        // Обычный drag
+        // Обычный drag (без Shift)
         // ─────────────────────────────────────────
         if (target && current.type !== FlowType.BranchNode) {
-            const br = this.u.rectOf(target, all)
+            const br = this.u.rectOf(target, all);
 
-            // 1) внутри той же ветки — возможен авто-рост, координаты фиксируем
+            // 1) Внутри той же ветки — возможен авто-рост, координаты фиксируем
             if (current.parentId === target.id) {
-                const relX = current.position.x
-                const relY = current.position.y
-                const childW = current.width ?? 0
-                const childH = current.height ?? 0
+                const relX = current.position.x;
+                const relY = current.position.y;
+                const childW = current.width ?? 0;
+                const childH = current.height ?? 0;
 
                 if (childW > 0 && childH > 0) {
-                    const pad = 12
-                    const needW = Math.max(br.w, relX + childW + pad)
-                    const needH = Math.max(br.h, relY + childH + pad)
+                    const pad = 12;
+                    const needW = Math.max(br.w, relX + childW + pad);
+                    const needH = Math.max(br.h, relY + childH + pad);
                     if (needW !== br.w || needH !== br.h) {
                         this.setNodes((nds): FlowNode[] =>
-                            nds.map(n =>
+                            nds.map((n) =>
                                 n.id === target.id
                                     ? { ...n, style: { ...(n.style ?? {}), width: needW, height: needH } }
                                     : n
                             )
-                        )
-                        this.callbacks?.onBranchResized?.(target.id, needW, needH)
+                        );
+                        this.callbacks?.onBranchResized?.(target.id, needW, needH);
                     }
                 }
 
-                this.callbacks?.onStepMoved?.(current.id, absTL.x, absTL.y)
-                return
+                this.callbacks?.onStepMoved?.(current.id, absTL.x, absTL.y);
+                return;
             }
 
-            // 2) перенос в ДРУГУЮ ветку — только обновляем branchId и координаты (без удаления)
-            const relX = absTL.x - br.x
-            const relY = absTL.y - br.y
-            const childW = current.width ?? 0
-            const childH = current.height ?? 0
+            // 2) Перенос в ДРУГУЮ ветку (обычный drag без Shift) — только обновляем branchId и координаты
+            const relX = absTL.x - br.x;
+            const relY = absTL.y - br.y;
+            const childW = current.width ?? 0;
+            const childH = current.height ?? 0;
 
             this.setNodes((nds): FlowNode[] => {
-                let next = nds.map(n =>
+                let next = nds.map((n) =>
                     n.id === current.id
                         ? {
                             ...n,
                             parentId: target.id,
                             position: { x: relX, y: relY },
                             extent: 'parent' as const,
-                            expandParent: true
+                            expandParent: true,
                         }
                         : n
-                )
+                );
 
-                next = this.u.ensureParentBeforeChild(next, target.id, current.id)
+                next = this.u.ensureParentBeforeChild(next, target.id, current.id);
 
                 if (childW > 0 && childH > 0) {
-                    const pad = 12
-                    const needW = Math.max(br.w, relX + childW + pad)
-                    const needH = Math.max(br.h, relY + childH + pad)
-                    next = next.map(n =>
+                    const pad = 12;
+                    const needW = Math.max(br.w, relX + childW + pad);
+                    const needH = Math.max(br.h, relY + childH + pad);
+                    next = next.map((n) =>
                         n.id === target.id
                             ? { ...n, style: { ...(n.style ?? {}), width: needW, height: needH } }
                             : n
-                    )
+                    );
                 }
-                return next
-            })
+                return next;
+            });
 
-            this.callbacks?.onStepAttachedToBranch?.(current.id, target.id, absTL.x, absTL.y)
+            this.callbacks?.onStepAttachedToBranch?.(current.id, target.id, absTL.x, absTL.y);
 
-            // дублируем уведомление о возможном авто-росте ветки
+            // Дублируем уведомление о возможном авто-росте ветки
             if (childW > 0 && childH > 0) {
-                const pad = 12
-                const needW = Math.max(br.w, relX + childW + pad)
-                const needH = Math.max(br.h, relY + childH + pad)
-                this.callbacks?.onBranchResized?.(target.id, needW, needH)
+                const pad = 12;
+                const needW = Math.max(br.w, relX + childW + pad);
+                const needH = Math.max(br.h, relY + childH + pad);
+                this.callbacks?.onBranchResized?.(target.id, needW, needH);
             }
-            return
+            return;
         }
 
-        // Без ctrl — «на поле» не уходим
-    }
+        // Без Shift — «на поле» не уходим
+    };
 }

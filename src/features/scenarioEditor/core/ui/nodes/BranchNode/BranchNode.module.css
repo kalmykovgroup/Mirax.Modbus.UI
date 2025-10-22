@@ -15,7 +15,7 @@
     z-index: 0;
 
     /* По умолчанию: НЕ перехватываем клики (проходят к детям) */
-    pointer-events: none;
+
 }
 
 /* Когда нажат Ctrl — ветка становится интерактивной */
@@ -24,7 +24,7 @@
     cursor: move;
 }
 
-/* Выделенная ветка всегда интерактивна (для drag и resize) */
+/* Выделенная ветка ВСЕГДА интерактивна (для resize) */
 .container[aria-selected='true'] {
     pointer-events: auto;
     box-shadow: 0 0 7px var(--color-branch);
@@ -76,4 +76,21 @@
 .target[aria-selected='true'] {
     background: var(--target-active-styles-bkg);
     box-shadow: var(--target-active-styles-box-shadow);
+}
+
+:global(.react-flow__resize-control) {
+    pointer-events: auto !important;
+    z-index: 10;
+}
+
+:global(.react-flow__node-BranchNode) {
+    pointer-events: none;
+}
+
+:global(.react-flow__node-BranchNode[data-selected='true']) {
+    pointer-events: auto;
+}
+
+:global(.react-flow__node-BranchNode.ctrl-mode) {
+    pointer-events: auto;
 }

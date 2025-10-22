@@ -38,6 +38,8 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
         parentId,
         draggable: true,
         selectable: true,
+        extent: 'parent',
+        expandParent: true,
     }),
 
     mapToDto: (node) => node.data.object,
