@@ -33,7 +33,7 @@ import {
     ScenarioLoadStatus,
 } from '@scenario/store/scenarioSlice';
 
-export function LeftPanel(): JSX.Element {
+export function LeftPanel(){
     const dispatch = useDispatch<AppDispatch>();
 
     const [query, setQuery] = useState('');
@@ -334,7 +334,7 @@ function ScenarioItem({
                           onResume,
                           onCancel,
                           onTerminate,
-                      }: ScenarioItemProps): JSX.Element {
+                      }: ScenarioItemProps){
     const status = useSelector((state: RootState) => selectScenarioStatus(state, scenarioId));
 
     const statusIcon = useMemo(() => {
