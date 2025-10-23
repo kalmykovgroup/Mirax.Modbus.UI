@@ -95,7 +95,6 @@ export const historySlice = createSlice({
             const { contextId, config } = action.payload;
 
             if (!state.contexts[contextId]) {
-                console.log('[historySlice] Initializing context:', contextId);
                 state.contexts[contextId] = {
                     past: [],
                     present: null,
@@ -183,7 +182,7 @@ export const historySlice = createSlice({
                 after: afterSnapshot,
             };
 
-            console.log('[historySlice] Recording update:', record);
+            console.log('[historySlice] Обновление истории');
 
             if (context.isBatching) {
                 state.contexts[contextId] = {

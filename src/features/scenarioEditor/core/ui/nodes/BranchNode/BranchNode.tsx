@@ -10,7 +10,7 @@ import { useShiftKey } from "@app/lib/hooks/useShiftKey.ts";
 
 type Props = NodeProps<Node<FlowNodeData<BranchDto>>>;
 
-export function BranchNode({ id, data, selected }: Props) {
+export function BranchNode({ data, selected }: Props) {
     const isCtrlPressed = useCtrlKey();
     const isShiftPressed = useShiftKey();
 
@@ -26,6 +26,8 @@ export function BranchNode({ id, data, selected }: Props) {
             aria-selected={selected}
             data-ctrl-mode={isCtrlPressed}
             data-shift-mode={isShiftPressed}
+            data-draggable={isCtrlPressed}
+            data-selectable={isCtrlPressed}
         >
             <div className={styles.bg} />
 

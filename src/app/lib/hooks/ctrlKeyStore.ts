@@ -1,18 +1,35 @@
-let isCtrlPressedGlobal = false;
-const listeners = new Set<(value: boolean) => void>();
+// src/lib/hooks/ctrlKeyStore.ts
 
-export const ctrlKeyStore = {
-    get: (): boolean => isCtrlPressedGlobal,
+type Listener = (isPressed: boolean) => void;
 
-    set: (value: boolean): void => {
-        if (isCtrlPressedGlobal !== value) {
-            isCtrlPressedGlobal = value;
-            listeners.forEach(listener => listener(value));
-        }
-    },
+class CtrlKeyStore {
+    private isPressed = false;
+    private listeners: Set<Listener> = new Set();
 
-    subscribe: (listener: (value: boolean) => void): (() => void) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
+    get(): boolean {
+        return this.isPressed;
     }
-};
+
+    set(value: boolean): void {
+        if (this.isPressed !== value) {
+            this.isPressed = value;
+            this.notifyListeners();
+        }
+    }
+
+    subscribe(listener: Listener): () => void {
+        this.listeners.add(listener);
+        // Сразу вызываем listener с текущим значением
+        listener(this.isPressed);
+
+        return () => {
+            this.listeners.delete(listener);
+        };
+    }
+
+    private notifyListeners(): void {
+        this.listeners.forEach((listener) => listener(this.isPressed));
+    }
+}
+
+export const ctrlKeyStore = new CtrlKeyStore();

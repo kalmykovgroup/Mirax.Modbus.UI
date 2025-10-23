@@ -27,21 +27,30 @@
     border: 1px solid var(--branch-border, rgba(255, 255, 255, 0.2));
     border-radius: 8px;
     pointer-events: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-/* При Ctrl — меняем цвет (НЕ cursor) */
+/* При Ctrl — меняем цвет и показываем что можно взаимодействовать */
 .branchNodeContainer[data-ctrl-mode='true'] .bg {
-    background: var(--branch-bg-ctrl, rgba(255, 255, 255, 0.15));
-    border-color: var(--branch-border-ctrl, rgba(255, 255, 255, 0.4));
+    background: var(--branch-bg-ctrl, rgba(100, 200, 255, 0.15));
+    border-color: var(--branch-border-ctrl, rgba(100, 200, 255, 0.5));
 }
 
-/* При Shift — меняем цвет (НЕ cursor) */
+/* При Shift — меняем цвет */
 .branchNodeContainer[data-shift-mode='true'] .bg {
     background: var(--branch-bg-shift, rgba(255, 255, 255, 0.15));
     border-color: var(--branch-bg-shift, rgba(255, 255, 255, 0.4));
 }
 
+/* Визуальный индикатор что нода неактивна (без Ctrl) */
+.branchNodeContainer[data-ctrl-mode='false'] {
+    opacity: 0.7;
+}
 
+/* Возвращаем полную видимость при Ctrl */
+.branchNodeContainer[data-ctrl-mode='true'] {
+    opacity: 1;
+}
 
 /* Координаты и название */
 .coordinates,
@@ -62,6 +71,13 @@
     color: var(--color-branch);
     pointer-events: none;
     user-select: none;
+    transition: color 0.15s ease;
+}
+
+/* Меняем цвет названия при Ctrl для лучшей видимости */
+.branchNodeContainer[data-ctrl-mode='true'] .name {
+    color: rgba(100, 200, 255, 0.9);
+    font-weight: 500;
 }
 
 /* Handle всегда интерактивен */
@@ -74,4 +90,3 @@
     background: var(--target-active-styles-bkg);
     box-shadow: var(--target-active-styles-box-shadow);
 }
-

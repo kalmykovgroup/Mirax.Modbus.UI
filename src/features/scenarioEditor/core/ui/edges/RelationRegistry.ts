@@ -11,7 +11,6 @@ class RelationRegistry {
         }
 
         this.registry.set(contract.type, contract);
-        console.log(`[RelationRegistry] ✅ Registered: ${contract.type}`);
     }
 
     get(type: string): StepRelationContract | undefined {

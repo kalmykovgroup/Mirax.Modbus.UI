@@ -54,7 +54,7 @@ import {createIsValidConnection} from "@scenario/core/edgeMove/isValidConnection
 import {ALLOW_MAP, TARGET_ALLOW_MAP} from "@scenario/core/edgeMove/connectionRules.ts";
 import {NodeDragStartHandler} from "@scenario/core/handlers/NodeDragStartHandler.ts";
 import {useShiftKey} from "@app/lib/hooks/useShiftKey.ts";
-import {updateSourceTracker} from "@scenario/store/updateSourceTracker.ts";
+import {useBranchNodeInteractivity} from "@scenario/core/ui/nodes/BranchNode/useBranchNodeInteractivity.ts";
 
 export interface ScenarioEditorProps {}
 
@@ -156,14 +156,13 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         []
     );
 
+    //Отправки заявок на удаление
     const { onSelectionChange, deleteSelected } = useSelection({
         setNodes,
         setEdges,
         getNodes: rf.getNodes,
         getEdges: rf.getEdges,
         onDeleted: (payload) => {
-            console.log('[ScenarioMap] 🗑️ Deleted:', payload);
-
             for (const node of payload.nodes) {
                 if (node.data.__persisted === true) {
                     operations.deleteNode(node);
@@ -223,7 +222,8 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                         console.log(`[ScenarioMap] 📐 BRANCH RESIZED | ID: ${branchId}`, { width, height });
                         const branchNode = rf.getNodes().find((n) => n.id === branchId);
                         if (branchNode) {
-                            operations.resizeNode(branchNode, width, height);
+                            // Передаём текущие координаты!
+                            operations.resizeNode(branchNode, width, height, branchNode.position.x, branchNode.position.y);
                         }
                     },
                 },
@@ -384,12 +384,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
             return;
         }
 
-        // 🔥 КРИТИЧНО: Пропускаем синхронизацию если обновление из ReactFlow
-        if (updateSourceTracker.hasActiveReactFlowUpdates()) {
-            console.log('[ScenarioMap] ⏭️ Skipping sync: update from ReactFlow');
-            return;
-        }
-
         try {
             const minimalState: RootState = {
                 scenario: {
@@ -417,11 +411,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                                 return null;
                             }
 
-                            // 🔥 Пропускаем ноды которые обновляются из ReactFlow
-                            if (updateSourceTracker.isReactFlowUpdate(currentNode.id)) {
-                                console.log(`[ScenarioMap] ⏭️ Skipping node ${currentNode.id}: ReactFlow update`);
-                                return currentNode;
-                            }
 
                             // 🚀 ОПТИМИЗАЦИЯ: Shallow equal вместо JSON.stringify
                             const needsUpdate =
@@ -467,7 +456,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
             } else {
                 // Первая загрузка
                 setNodes(flow.nodes as FlowNode[]);
-                console.log('[ScenarioMap] ✅ Initial load: set all nodes');
             }
 
             setEdges(flow.edges as FlowEdge[]);
@@ -616,7 +604,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         // Обрабатываем только отфильтрованные changes
         for (const change of filteredChanges) {
             if (change.type === 'position' && 'position' in change && change.position != null) {
-                const { id, position, dragging } = change;
+                const { id, dragging } = change;
 
                 if (dragging === true) {
                     skipSyncRef.current = true;
@@ -640,17 +628,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 else if (dragging === false) {
                     isDraggingRef.current = false;
                     isDraggingBranchRef.current = false;
-
-                    const startState = dragStateRef.current.get(id);
-                    const newX = Math.round(position.x);
-                    const newY = Math.round(position.y);
-
-                    if (startState != null && (startState.x !== newX || startState.y !== newY)) {
-                        const node = nodesRef.current.find((n) => n.id === id);
-                        if (node) {
-                            operations.moveNode(node, newX, newY);
-                        }
-                    }
 
                     dragStateRef.current.delete(id);
 
@@ -729,6 +706,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     }
 
     const onEdgesChangeHandler: OnEdgesChange<FlowEdge> = useCallback((changes) => {
+        console.log("onEdgesChangeHandler", changes);
         setEdges((eds) => applyEdgeChanges(changes, eds) as FlowEdge[]);
 
         for (const change of changes) {
@@ -753,7 +731,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         },
         [onSelectionChange]
     );
-
+    useBranchNodeInteractivity();
 
     return (
         <div data-theme={theme} className={styles.containerScenarioMap} style={{ height: '70vh' }}>

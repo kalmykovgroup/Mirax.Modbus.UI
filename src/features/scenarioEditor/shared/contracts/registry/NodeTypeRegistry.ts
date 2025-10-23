@@ -15,7 +15,6 @@ class NodeTypeRegistry {
         }
 
         this.registry.set(typedContract.type, typedContract);
-        console.log(`[NodeTypeRegistry]  Registered: ${typedContract.type}`);
     }
 
     registerMany(...contracts: unknown[]): void {

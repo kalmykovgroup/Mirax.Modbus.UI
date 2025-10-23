@@ -53,15 +53,17 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
         y: newY,
     }),
 
-    createResizeEntity: (dto, newWidth, newHeight) => ({
+    createResizeEntity: (dto, newWidth, newHeight, newX, newY) => ({
         ...dto,
+        x: newX ?? dto.x,
+        y: newY ?? dto.y,
         width: newWidth,
         height: newHeight,
     }),
 
-    createAutoExpandEntity: (dto, newWidth, newHeight) => {
+    createAutoExpandEntity: (dto, newWidth, newHeight, newX, newY) => {
         // Для степов auto-expand не применяется (только для веток)
-        console.warn('[DelayStepNodeContract] Auto-expand not supported for steps', newWidth, newHeight);
+        console.warn('[DelayStepNodeContract] Auto-expand not supported for steps', newWidth, newHeight, newX, newY);
         return dto;
     },
 

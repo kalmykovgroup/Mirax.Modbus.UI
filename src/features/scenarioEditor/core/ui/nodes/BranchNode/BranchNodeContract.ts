@@ -8,6 +8,7 @@ import type { EntitySnapshot, Entity } from '@scenario/core/features/historySyst
 import { store } from '@/baseStore/store';
 import { updateBranch, addBranch, deleteBranch } from '@scenario/store/scenarioSlice';
 import { BranchNode } from './BranchNode';
+import { ctrlKeyStore } from '@app/lib/hooks/ctrlKeyStore';
 
 export const BranchNodeContract: NodeTypeContract<BranchDto> = {
     type: FlowType.BranchNode,
@@ -17,6 +18,9 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
     canHaveChildBranches: true,
 
     mapFromDto: (dto, parentId) => {
+        // Проверяем состояние Ctrl при создании ноды
+        const isCtrlPressed = ctrlKeyStore.get();
+
         const node: any = {
             id: dto.id,
             type: FlowType.BranchNode,
@@ -24,8 +28,9 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
             data: { object: dto, x: dto.x, y: dto.y },
             style: { width: dto.width, height: dto.height },
             parentId,
-            draggable: true,
-            selectable: true,  // Управляется через onNodeClick
+            // Изначально BranchNode неактивна для перетаскивания и выбора
+            draggable: isCtrlPressed,
+            selectable: isCtrlPressed,
             resizable: false,   // Только автоматическое расширение
             expandParent: true,
         };
@@ -45,14 +50,18 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
         y: newY,
     }),
 
-    createResizeEntity: (dto, newWidth, newHeight) => ({
+    createResizeEntity: (dto, newWidth, newHeight, newX, newY) => ({
         ...dto,
+        x: newX ?? dto.x,
+        y: newY ?? dto.y,
         width: newWidth,
         height: newHeight,
     }),
 
-    createAutoExpandEntity: (dto, newWidth, newHeight) => ({
+    createAutoExpandEntity: (dto, newWidth, newHeight, newX, newY) => ({
         ...dto,
+        x: newX ?? dto.x,
+        y: newY ?? dto.y,
         width: newWidth,
         height: newHeight,
     }),
@@ -83,6 +92,17 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
                 }
                 return { valid: true };
 
+            case 'move':
+                // Проверяем, что Ctrl нажат при попытке перемещения
+                const isCtrlPressed = ctrlKeyStore.get();
+                if (!isCtrlPressed) {
+                    return {
+                        valid: false,
+                        error: 'Для перемещения ветки нажмите Ctrl',
+                    };
+                }
+                return { valid: true };
+
             case 'resize':
             case 'auto-expand':
                 const { newWidth, newHeight } = params as { newWidth: number; newHeight: number };
@@ -101,7 +121,7 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
     // ============================================================================
 
     onCreated: (dto) => {
-        console.log(`[BranchNodeContract]  Created branch: ${dto.id}`);
+        console.log(`[BranchNodeContract] ✅ Created branch: ${dto.id}`);
     },
 
     onBeforeDelete: (dto) => {

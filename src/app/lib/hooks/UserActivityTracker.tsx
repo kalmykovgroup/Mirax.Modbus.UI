@@ -78,7 +78,7 @@ export const UserActivityTracker = (): null => {
 
         return () => clearInterval(interval);
     }, [lastActive, dispatch, isAuthenticated, isAutoLogoutEnabled, timeoutMs, timeoutMinutes]);
-
+/*
     // Логируем состояние только в dev
     useEffect(() => {
         if (ENV.DEV) {
@@ -88,7 +88,7 @@ export const UserActivityTracker = (): null => {
                 isAuthenticated,
             });
         }
-    }, [isAutoLogoutEnabled, timeoutMinutes, isAuthenticated]);
+    }, [isAutoLogoutEnabled, timeoutMinutes, isAuthenticated]);*/
 
     return null;
 };

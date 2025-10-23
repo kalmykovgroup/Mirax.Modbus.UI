@@ -66,12 +66,12 @@ export interface NodeTypeContract<TDto extends BaseNodeDto = BaseNodeDto> {
     /**
      * Создать новый DTO с обновлённым размером
      */
-    readonly createResizeEntity: (dto: TDto, newWidth: number, newHeight: number) => TDto;
+    readonly createResizeEntity: (dto: TDto, newWidth: number, newHeight: number, newX?: number | undefined, newY?: number | undefined) => TDto;
 
     /**
      * Создать новый DTO с автоматически расширенным размером (для веток)
      */
-    readonly createAutoExpandEntity: (dto: TDto, newWidth: number, newHeight: number) => TDto;
+    readonly createAutoExpandEntity: (dto: TDto, newWidth: number, newHeight: number, newX?: number | undefined, newY?: number | undefined) => TDto;
 
     /**
      * Создать новый DTO с присоединением к ветке (для степов)

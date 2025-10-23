@@ -11,7 +11,6 @@ import type {
     StepRelationDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto.ts";
 import { stepRelationContract } from "@scenario/core/ui/edges/StepRelationContract.ts";
-import {updateSourceTracker} from "@scenario/store/updateSourceTracker.ts";
 
 export function useScenarioOperations(scenarioId: Guid | null) {
     const history = useHistory(scenarioId ?? 'no-scenario', {
@@ -92,28 +91,19 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createMoveEntity(previousDto, newX, newY);
 
-            // 🔥 КРИТИЧНО: Отмечаем что обновление идёт из ReactFlow
-            updateSourceTracker.startReactFlowUpdate([node.id]);
 
-            try {
-                // Применяем изменения через dispatch
-                const newSnapshot = contract.createSnapshot(newDto);
-                contract.applySnapshot(newSnapshot);
+            // Применяем изменения через dispatch
+            const newSnapshot = contract.createSnapshot(newDto);
+            contract.applySnapshot(newSnapshot);
 
-                // Записываем в историю
-                history.recordUpdate(
-                    toEntity(newDto, node.type),
-                    toEntity(previousDto, node.type)
-                );
+            // Записываем в историю
+            history.recordUpdate(
+                toEntity(newDto, node.type),
+                toEntity(previousDto, node.type)
+            );
 
-                console.log(`[useScenarioOperations] ✅ Node moved: ${node.id}`, { newX, newY });
-            } finally {
-                // 🔥 Завершаем отслеживание через небольшую задержку
-                // чтобы useEffect успел отреагировать на изменение Redux
-                setTimeout(() => {
-                    updateSourceTracker.endReactFlowUpdate([node.id]);
-                }, 50);
-            }
+            console.log(`[useScenarioOperations] ✅ Node moved: ${node.id}`, { newX, newY });
+
         },
         [scenarioId, history, toEntity]
     );
@@ -123,7 +113,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
     // ============================================================================
 
     const resizeNode = useCallback(
-        (node: FlowNode, newWidth: number, newHeight: number) => {
+        (node: FlowNode, newWidth: number, newHeight: number, newX?: number, newY?: number) => {
             if (!scenarioId) return;
 
             const contract = nodeTypeRegistry.get(node.type);
@@ -144,29 +134,14 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 return;
             }
 
-            const newDto = contract.createResizeEntity(previousDto, newWidth, newHeight);
+            const newDto = contract.createResizeEntity(previousDto, newWidth, newHeight, newX, newY);
 
-            // 🔥 Отмечаем обновление из ReactFlow
-            updateSourceTracker.startReactFlowUpdate([node.id]);
-
-            try {
-                const newSnapshot = contract.createSnapshot(newDto);
-                contract.applySnapshot(newSnapshot);
-
-                history.recordUpdate(
-                    toEntity(newDto, node.type),
-                    toEntity(previousDto, node.type)
-                );
-
-                console.log(`[useScenarioOperations] ✅ Node resized: ${node.id}`, {
-                    newWidth,
-                    newHeight,
-                });
-            } finally {
-                setTimeout(() => {
-                    updateSourceTracker.endReactFlowUpdate([node.id]);
-                }, 50);
-            }
+            const newSnapshot = contract.createSnapshot(newDto);
+            contract.applySnapshot(newSnapshot);
+            history.recordUpdate(toEntity(newDto, node.type), toEntity(previousDto, node.type));
+            console.log(`[useScenarioOperations] ✅ Node resized: ${node.id}`, {
+                newWidth, newHeight, newX: newX, newY: newY,
+            });
         },
         [scenarioId, history, toEntity]
     );
@@ -177,7 +152,12 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
     const deleteNode = useCallback(
         (node: FlowNode) => {
-            if (!scenarioId) return false;
+            console.log('[ScenarioMap] 🗑️ Deleted:', node);
+
+            if (!scenarioId){
+                console.error('[ScenarioMap] scenarioId == false,  🗑️ Deleted:', node, scenarioId);
+                return false;
+            }
 
             if (node.data.__persisted !== true) {
                 console.log(`[useScenarioOperations] ⚠️ Skipping delete for non-persisted node: ${node.id}`);
@@ -243,26 +223,18 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createAttachToBranchEntity(previousDto, branchId, newX, newY);
 
-            // 🔥 Отмечаем обновление из ReactFlow
-            updateSourceTracker.startReactFlowUpdate([stepNode.id]);
+            const newSnapshot = contract.createSnapshot(newDto);
+            contract.applySnapshot(newSnapshot);
 
-            try {
-                const newSnapshot = contract.createSnapshot(newDto);
-                contract.applySnapshot(newSnapshot);
+            history.recordUpdate(
+                toEntity(newDto, stepNode.type),
+                toEntity(previousDto, stepNode.type)
+            );
 
-                history.recordUpdate(
-                    toEntity(newDto, stepNode.type),
-                    toEntity(previousDto, stepNode.type)
-                );
+            console.log(`[useScenarioOperations] ✅ Step attached to branch: ${stepNode.id}`, {
+                branchId,
+            });
 
-                console.log(`[useScenarioOperations] ✅ Step attached to branch: ${stepNode.id}`, {
-                    branchId,
-                });
-            } finally {
-                setTimeout(() => {
-                    updateSourceTracker.endReactFlowUpdate([stepNode.id]);
-                }, 50);
-            }
         },
         [scenarioId, history, toEntity]
     );
@@ -300,24 +272,16 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createDetachFromBranchEntity(previousDto, newX, newY);
 
-            // 🔥 Отмечаем обновление из ReactFlow
-            updateSourceTracker.startReactFlowUpdate([stepNode.id]);
+            const newSnapshot = contract.createSnapshot(newDto);
+            contract.applySnapshot(newSnapshot);
 
-            try {
-                const newSnapshot = contract.createSnapshot(newDto);
-                contract.applySnapshot(newSnapshot);
+            history.recordUpdate(
+                toEntity(newDto, stepNode.type),
+                toEntity(previousDto, stepNode.type)
+            );
 
-                history.recordUpdate(
-                    toEntity(newDto, stepNode.type),
-                    toEntity(previousDto, stepNode.type)
-                );
+            console.log(`[useScenarioOperations] ✅ Step detached from branch: ${stepNode.id}`);
 
-                console.log(`[useScenarioOperations] ✅ Step detached from branch: ${stepNode.id}`);
-            } finally {
-                setTimeout(() => {
-                    updateSourceTracker.endReactFlowUpdate([stepNode.id]);
-                }, 50);
-            }
         },
         [scenarioId, history, toEntity]
     );
@@ -327,7 +291,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
     // ============================================================================
 
     const autoExpandBranch = useCallback(
-        (branchNode: FlowNode, newWidth: number, newHeight: number) => {
+        (branchNode: FlowNode, newWidth: number, newHeight: number, newX?: number, newY?: number) => {
             if (!scenarioId) return;
 
             const contract = nodeTypeRegistry.get(branchNode.type);
@@ -341,29 +305,20 @@ export function useScenarioOperations(scenarioId: Guid | null) {
             const previousDto = branchNode.data.object;
             if (!previousDto) return;
 
-            const newDto = contract.createAutoExpandEntity(previousDto, newWidth, newHeight);
+            const newDto = contract.createAutoExpandEntity(previousDto, newWidth, newHeight, newX, newY);
 
-            // 🔥 Отмечаем обновление из ReactFlow
-            updateSourceTracker.startReactFlowUpdate([branchNode.id]);
+            const newSnapshot = contract.createSnapshot(newDto);
+            contract.applySnapshot(newSnapshot);
 
-            try {
-                const newSnapshot = contract.createSnapshot(newDto);
-                contract.applySnapshot(newSnapshot);
+            history.recordUpdate(
+                toEntity(newDto, branchNode.type),
+                toEntity(previousDto, branchNode.type)
+            );
 
-                history.recordUpdate(
-                    toEntity(newDto, branchNode.type),
-                    toEntity(previousDto, branchNode.type)
-                );
-
-                console.log(`[useScenarioOperations] ✅ Branch auto-expanded: ${branchNode.id}`, {
-                    newWidth,
-                    newHeight,
-                });
-            } finally {
-                setTimeout(() => {
-                    updateSourceTracker.endReactFlowUpdate([branchNode.id]);
-                }, 50);
-            }
+            console.log(`[useScenarioOperations] ✅ Branch auto-expanded: ${branchNode.id}`, {
+                newWidth,
+                newHeight,
+            });
         },
         [scenarioId, history, toEntity]
     );

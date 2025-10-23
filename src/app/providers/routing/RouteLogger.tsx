@@ -6,8 +6,8 @@
  * Может быть использован для аналитики, логирования или сброса состояния.
  */
 const RouteLogger = () => {
-    useRouteChange((path, type) => {
-         console.log(`[Route Change] ${type} -> ${path}`)
+    useRouteChange((_path, _type) => {
+        // console.log(`[Route Change] ${type} -> ${path}`)
         // можно отправить в GA, Sentry, или сохранить в store
     })
 

@@ -53,15 +53,17 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
         y: newY,
     }),
 
-    createResizeEntity: (dto, newWidth, newHeight) => ({
+    createResizeEntity: (dto, newWidth, newHeight, newX, newY) => ({
         ...dto,
+        x: newX ?? dto.x,
+        y: newY ?? dto.y,
         width: newWidth,
         height: newHeight,
     }),
 
-    createAutoExpandEntity: (dto, newWidth, newHeight) => {
+    createAutoExpandEntity: (dto, newWidth, newHeight, newX, newY) => {
         // Для степов auto-expand не применяется (только для веток)
-        console.warn('[SignalStepNodeContract] Auto-expand not supported for steps', newWidth, newHeight);
+        console.warn('[SignalStepNodeContract] Auto-expand not supported for steps', newWidth, newHeight, newX, newY);
         return dto;
     },
 
