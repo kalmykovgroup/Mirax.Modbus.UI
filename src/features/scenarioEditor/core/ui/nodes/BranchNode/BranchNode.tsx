@@ -1,17 +1,18 @@
 // src/features/scenarioEditor/core/ui/nodes/BranchNode/BranchNode.tsx
-import { Handle, type NodeProps, type Node, NodeResizer, Position } from '@xyflow/react';
+import {Handle, type NodeProps, type Node, Position} from '@xyflow/react';
 import styles from './BranchNode.module.css';
 import { formatWithMode } from '@app/lib/utils/format';
 import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
-import { endBranchResize, startBranchResize } from '@scenario/core/branchResize/branchResizeGuard';
 import type { FlowNodeData } from '@/features/scenarioEditor/shared/contracts/models/FlowNodeData';
 import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
-import {useCtrlKey} from "@app/lib/hooks/useCtrlKey.ts";
+import { useCtrlKey } from "@app/lib/hooks/useCtrlKey.ts";
+import { useShiftKey } from "@app/lib/hooks/useShiftKey.ts";
 
 type Props = NodeProps<Node<FlowNodeData<BranchDto>>>;
 
-export function BranchNode({ id, data, selected }: Props)  {
+export function BranchNode({ id, data, selected }: Props) {
     const isCtrlPressed = useCtrlKey();
+    const isShiftPressed = useShiftKey();
 
     const handleType = data.connectContext?.from.handleType;
     const type = data.connectContext?.from.type;
@@ -21,30 +22,12 @@ export function BranchNode({ id, data, selected }: Props)  {
 
     return (
         <div
-            className={`${styles.container} ${isCtrlPressed ? 'ctrl-mode' : ''}`}
+            className={styles.branchNodeContainer}
             aria-selected={selected}
             data-ctrl-mode={isCtrlPressed}
+            data-shift-mode={isShiftPressed}
         >
             <div className={styles.bg} />
-
-            {/* NodeResizer с минимальными размерами */}
-            <NodeResizer
-                isVisible={selected}
-                minWidth={200}
-                minHeight={100}
-                onResizeStart={() => startBranchResize(id)}
-                onResizeEnd={() => endBranchResize(id)}
-                lineStyle={{
-                    borderColor: 'var(--color-branch)',
-                    borderWidth: 2,
-                }}
-                handleStyle={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: 2,
-                    backgroundColor: 'var(--color-branch)',
-                }}
-            />
 
             <span className={styles.coordinates}>
                 <span>x:{formatWithMode(data.x, 2, true)}</span>
@@ -52,7 +35,7 @@ export function BranchNode({ id, data, selected }: Props)  {
             </span>
 
             <span className={styles.name}>
-                Ветка {isCtrlPressed && '(Ctrl)'}
+                Ветка {isCtrlPressed && '(Ctrl)'} {isShiftPressed && '(Shift)'}
             </span>
 
             <Handle

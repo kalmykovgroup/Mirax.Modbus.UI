@@ -16,26 +16,22 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
 
     canHaveChildBranches: true,
 
-    mapFromDto: (dto, parentId) => ({
-        id: dto.id,
-        type: FlowType.BranchNode,
-        position: { x: dto.x, y: dto.y },
-        data: {
-            object: dto,
-            x: dto.x,
-            y: dto.y,
-        },
-        style: {
-            width: dto.width,
-            height: dto.height,
-        },
-        parentId,
-        draggable: false,
-        selectable: false,
-        extent: 'parent',
-        expandParent: true,
-        resizable: true,
-    }),
+    mapFromDto: (dto, parentId) => {
+        const node: any = {
+            id: dto.id,
+            type: FlowType.BranchNode,
+            position: { x: dto.x, y: dto.y },
+            data: { object: dto, x: dto.x, y: dto.y },
+            style: { width: dto.width, height: dto.height },
+            parentId,
+            draggable: true,
+            selectable: true,  // Управляется через onNodeClick
+            resizable: false,   // Только автоматическое расширение
+            expandParent: true,
+        };
+
+        return node;
+    },
 
     mapToDto: (node) => node.data.object,
 
@@ -63,12 +59,12 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
 
     createAttachToBranchEntity: (dto, branchId, newX, newY) => {
         // Ветки не присоединяются к другим веткам
-        console.warn('[BranchNodeContract] Branches cannot be attached to other branches');
+        console.warn('[BranchNodeContract] Branches cannot be attached to other branches', branchId, newX, newY);
         return dto;
     },
 
     createDetachFromBranchEntity: (dto, newX, newY) => {
-        console.warn('[BranchNodeContract] Branches cannot be detached');
+        console.warn('[BranchNodeContract] Branches cannot be detached', newX, newY);
         return dto;
     },
 
@@ -113,7 +109,7 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
     },
 
     onUpdated: (previousDto, newDto) => {
-        console.log(`[BranchNodeContract] 📝 Updated branch: ${newDto.id}`);
+        console.log(`[BranchNodeContract] 📝 Updated branch: ${newDto.id}`, previousDto, newDto);
     },
 
     // ============================================================================

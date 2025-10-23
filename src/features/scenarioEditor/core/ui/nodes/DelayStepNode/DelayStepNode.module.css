@@ -12,8 +12,6 @@
     justify-content: center;
     align-items: center;
     padding: 2px;
-    width: 120px;
-    height: 80px;
 }
 
 .source[aria-selected="true"]{

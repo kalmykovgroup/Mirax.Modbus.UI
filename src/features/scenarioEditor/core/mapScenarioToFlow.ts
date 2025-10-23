@@ -1,4 +1,5 @@
 // src/features/scenarioEditor/core/mapScenarioToFlow.ts
+// 🚀 ОПТИМИЗИРОВАННАЯ ВЕРСИЯ (ИСПРАВЛЕНО): Batch selectors вместо циклов
 
 import type { RootState } from '@/baseStore/store';
 import type { Guid } from '@app/lib/types/Guid';
@@ -8,14 +9,31 @@ import { nodeTypeRegistry } from '@scenario/shared/contracts/registry/NodeTypeRe
 import {
     selectBranchesByScenarioId,
     selectStepsByBranchId,
-    selectChildRelationsByStepId,
-    selectChildBranchesOfStep,
 } from '@scenario/store/scenarioSelectors';
 import { StepType } from '@scenario/shared/contracts/server/types/Api.Shared/StepType';
 
 function handleFromOrder(order: unknown): string | undefined {
     const n = Number(order);
     return n >= 1 && n <= 3 ? `s${n}` : undefined;
+}
+
+// 🔥 Helper: Группировка массива по ключу
+function groupBy<T>(array: T[], keyFn: (item: T) => string | undefined): Map<string, T[]> {
+    const map = new Map<string, T[]>();
+
+    for (const item of array) {
+        const key = keyFn(item);
+        if (key === undefined) continue;
+
+        const existing = map.get(key);
+        if (existing) {
+            existing.push(item);
+        } else {
+            map.set(key, [item]);
+        }
+    }
+
+    return map;
 }
 
 export function mapScenarioToFlow(
@@ -29,7 +47,27 @@ export function mapScenarioToFlow(
     const edges: FlowEdge[] = [];
     const addedEdgeKeys = new Set<string>();
 
+    // 🚀 ОПТИМИЗАЦИЯ: Получаем ВСЕ данные один раз
     const branches = selectBranchesByScenarioId(state, scenarioId);
+    const allRelations = Object.values(state.scenario.relations);
+    const allBranches = Object.values(state.scenario.branches);
+
+    // 🚀 ОПТИМИЗАЦИЯ: Группируем relations по parentStepId для O(1) lookup
+    const relationsByParentStepId = groupBy(
+        allRelations,
+        (rel) => rel.parentStepId
+    );
+
+    // 🚀 ИСПРАВЛЕНО: Child branches связаны через parallelStepId ИЛИ conditionStepId
+    const childBranchesByParallelStepId = groupBy(
+        allBranches.filter((b) => b.parallelStepId != null),
+        (b) => b.parallelStepId!
+    );
+
+    const childBranchesByConditionStepId = groupBy(
+        allBranches.filter((b) => b.conditionStepId != null),
+        (b) => b.conditionStepId!
+    );
 
     for (const branch of branches) {
         const branchContract = nodeTypeRegistry.get(FlowType.BranchNode);
@@ -44,7 +82,6 @@ export function mapScenarioToFlow(
         const steps = selectStepsByBranchId(state, branch.id);
 
         for (const step of steps) {
-            // Используем getByStepType для получения контракта по StepType enum
             const stepContract = nodeTypeRegistry.get(step.type);
 
             if (stepContract == null) {
@@ -57,7 +94,8 @@ export function mapScenarioToFlow(
             const stepNode = stepContract.mapFromDto(step, branch.id);
             nodes.push(stepNode);
 
-            const childRelations = selectChildRelationsByStepId(state, step.id);
+            // 🚀 ОПТИМИЗАЦИЯ: O(1) lookup вместо селектора
+            const childRelations = relationsByParentStepId.get(step.id) ?? [];
 
             for (const rel of childRelations) {
                 if (addedEdgeKeys.has(rel.id)) {
@@ -80,10 +118,15 @@ export function mapScenarioToFlow(
             }
 
             if (stepContract.canHaveChildBranches === true) {
-                const childBranches = selectChildBranchesOfStep(state, step.id);
                 const mode = stepContract.getBranchLinkMode?.(step);
 
                 if (mode == null) continue;
+
+                // 🚀 ИСПРАВЛЕНО: Получаем child branches из правильной Map
+                const childBranches =
+                    mode === 'parallel'
+                        ? childBranchesByParallelStepId.get(step.id) ?? []
+                        : childBranchesByConditionStepId.get(step.id) ?? [];
 
                 for (const childBranch of childBranches) {
                     const edgeKey = `bl:${mode}:${step.id}->${childBranch.id}`;

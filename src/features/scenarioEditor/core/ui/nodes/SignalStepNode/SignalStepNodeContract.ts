@@ -38,7 +38,6 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
         parentId,
         draggable: true,
         selectable: true,
-        extent: 'parent',
         expandParent: true,
     }),
 
@@ -62,7 +61,7 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
 
     createAutoExpandEntity: (dto, newWidth, newHeight) => {
         // Для степов auto-expand не применяется (только для веток)
-        console.warn('[SignalStepNodeContract] Auto-expand not supported for steps');
+        console.warn('[SignalStepNodeContract] Auto-expand not supported for steps', newWidth, newHeight);
         return dto;
     },
 

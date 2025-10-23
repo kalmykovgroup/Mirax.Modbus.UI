@@ -48,7 +48,6 @@ export const ParallelStepNodeContract: NodeTypeContract<ParallelStepDto> = {
         parentId,
         draggable: true,
         selectable: true,
-        extent: 'parent',
         expandParent: true,
     }),
 
@@ -76,7 +75,7 @@ export const ParallelStepNodeContract: NodeTypeContract<ParallelStepDto> = {
     }),
 
     createAutoExpandEntity: (dto, newWidth, newHeight) => {
-        console.warn('[ParallelStepNodeContract] Auto-expand not supported for steps');
+        console.warn('[ParallelStepNodeContract] Auto-expand not supported for steps', newWidth, newHeight);
         return dto;
     },
 

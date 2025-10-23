@@ -11,9 +11,6 @@
     justify-content: center;
     align-items: center;
     padding: 5px;
-    min-width: 70px;
-    min-height: 21px;
-
 }
 
 .source[aria-selected="true"]{

@@ -40,7 +40,6 @@ export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto>
         parentId,
         draggable: true,
         selectable: true,
-        extent: 'parent',
         expandParent: true,
     }),
 
@@ -68,7 +67,7 @@ export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto>
     }),
 
     createAutoExpandEntity: (dto, newWidth, newHeight) => {
-        console.warn('[ActivityModbusNodeContract] Auto-expand not supported for steps');
+        console.warn('[ActivityModbusNodeContract] Auto-expand not supported for steps', newWidth, newHeight);
         return dto;
     },
 

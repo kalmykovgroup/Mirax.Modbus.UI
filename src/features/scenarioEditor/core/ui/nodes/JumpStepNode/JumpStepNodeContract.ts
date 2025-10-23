@@ -40,7 +40,6 @@ export const JumpStepNodeContract: NodeTypeContract<JumpStepDto> = {
         parentId,
         draggable: true,
         selectable: true,
-        extent: 'parent',
         expandParent: true,
     }),
 
@@ -68,7 +67,7 @@ export const JumpStepNodeContract: NodeTypeContract<JumpStepDto> = {
     }),
 
     createAutoExpandEntity: (dto, newWidth, newHeight) => {
-        console.warn('[JumpStepNodeContract] Auto-expand not supported for steps');
+        console.warn('[JumpStepNodeContract] Auto-expand not supported for steps', newWidth, newHeight);
         return dto;
     },
 

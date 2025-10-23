@@ -1,37 +1,33 @@
-// useCtrlKey.ts
-
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { ctrlKeyStore } from './ctrlKeyStore';
 
 export function useCtrlKey(): boolean {
-    const [isCtrlPressed, setIsCtrlPressed] = useState(false);
+    const [isPressed, setIsPressed] = useState(ctrlKeyStore.get());
 
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent): void => {
-            if ((e.key === 'Control' || e.key === 'Meta') && !e.repeat) {
-                setIsCtrlPressed(true);
-            }
-        };
-
-        const handleKeyUp = (e: KeyboardEvent): void => {
+        const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Control' || e.key === 'Meta') {
-                setIsCtrlPressed(false);
+                ctrlKeyStore.set(true);
             }
         };
 
-        const handleBlur = (): void => {
-            setIsCtrlPressed(false);
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Control' || e.key === 'Meta') {
+                ctrlKeyStore.set(false);
+            }
         };
+
+        const unsubscribe = ctrlKeyStore.subscribe(setIsPressed);
 
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
-        window.addEventListener('blur', handleBlur);
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
-            window.removeEventListener('blur', handleBlur);
+            unsubscribe();
         };
     }, []);
 
-    return isCtrlPressed;
+    return isPressed;
 }

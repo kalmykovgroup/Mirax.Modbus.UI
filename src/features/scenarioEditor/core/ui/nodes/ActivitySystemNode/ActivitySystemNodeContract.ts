@@ -40,7 +40,6 @@ export const ActivitySystemNodeContract: NodeTypeContract<ActivitySystemStepDto>
         parentId,
         draggable: true,
         selectable: true,
-        extent: 'parent',
         expandParent: true,
     }),
 
@@ -68,7 +67,7 @@ export const ActivitySystemNodeContract: NodeTypeContract<ActivitySystemStepDto>
     }),
 
     createAutoExpandEntity: (dto, newWidth, newHeight) => {
-        console.warn('[ActivitySystemNodeContract] Auto-expand not supported for steps');
+        console.warn('[ActivitySystemNodeContract] Auto-expand not supported for steps', newWidth, newHeight);
         return dto;
     },
 

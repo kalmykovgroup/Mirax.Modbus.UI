@@ -48,7 +48,6 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
         parentId,
         draggable: true,
         selectable: true,
-        extent: 'parent',
         expandParent: true,
     }),
 
@@ -76,7 +75,7 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
     }),
 
     createAutoExpandEntity: (dto, newWidth, newHeight) => {
-        console.warn('[ConditionStepNodeContract] Auto-expand not supported for steps');
+        console.warn('[ConditionStepNodeContract] Auto-expand not supported for steps', newWidth, newHeight);
         return dto;
     },
 

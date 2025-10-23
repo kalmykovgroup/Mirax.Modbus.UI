@@ -1,4 +1,5 @@
 // src/features/scenarioEditor/core/hooks/useScenarioOperations.ts
+// ОБНОВЛЕНИЕ: добавлен source tracking для избежания циклических обновлений
 
 import { useCallback } from 'react';
 import { useHistory } from '@scenario/core/features/historySystem/useHistory';
@@ -10,16 +11,13 @@ import type {
     StepRelationDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto.ts";
 import { stepRelationContract } from "@scenario/core/ui/edges/StepRelationContract.ts";
+import {updateSourceTracker} from "@scenario/store/updateSourceTracker.ts";
 
 export function useScenarioOperations(scenarioId: Guid | null) {
     const history = useHistory(scenarioId ?? 'no-scenario', {
         autoInit: !!scenarioId,
         config: { maxHistorySize: 100, enableBatching: true },
     });
-
-    // ============================================================================
-    // HELPER: Преобразовать DTO в Entity (добавить entityType)
-    // ============================================================================
 
     const toEntity = useCallback((dto: any, entityType: string): Entity => {
         return {
@@ -29,11 +27,6 @@ export function useScenarioOperations(scenarioId: Guid | null) {
         } as Entity;
     }, []);
 
-
-    // ============================================================================
-    // СОЗДАНИЕ СВЯЗИ МЕЖДУ СТЕПАМИ
-    // ============================================================================
-
     const createRelation = useCallback(
         (parentStepId: Guid, childStepId: Guid, conditionExpression?: string | null, conditionOrder?: number) => {
             if (!scenarioId) {
@@ -41,7 +34,6 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 return null;
             }
 
-            // Валидация через контракт
             const validation = stepRelationContract.validateCreate({
                 parentStepId,
                 childStepId,
@@ -52,7 +44,6 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 return null;
             }
 
-            // Создание DTO через контракт
             const relationDto: StepRelationDto = stepRelationContract.create({
                 parentStepId,
                 childStepId,
@@ -60,15 +51,10 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 conditionOrder,
             } as StepRelationDto);
 
-            // ✅ КРИТИЧНО: Применяем изменения через dispatch
             const snapshot = stepRelationContract.createSnapshot(relationDto);
             stepRelationContract.createFromSnapshot(snapshot);
-            // ↑ Вызовет store.dispatch(addRelation(relationDto))
 
-            // Записываем в историю (для undo/redo)
             history.recordCreate(toEntity(relationDto, 'StepRelation'));
-
-            // Хук жизненного цикла
             stepRelationContract.onCreated?.(relationDto);
 
             console.log(`[useScenarioOperations] ✅ Relation created: ${relationDto.id}`);
@@ -78,9 +64,8 @@ export function useScenarioOperations(scenarioId: Guid | null) {
         [scenarioId, history, toEntity]
     );
 
-
     // ============================================================================
-    // ПЕРЕМЕЩЕНИЕ НОДЫ
+    // ПЕРЕМЕЩЕНИЕ НОДЫ С SOURCE TRACKING
     // ============================================================================
 
     const moveNode = useCallback(
@@ -107,24 +92,34 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createMoveEntity(previousDto, newX, newY);
 
-            // ✅ КРИТИЧНО: Применяем изменения через dispatch
-            const newSnapshot = contract.createSnapshot(newDto);
-            contract.applySnapshot(newSnapshot);
-            // ↑ Вызовет store.dispatch(updateStep/updateBranch(...))
+            // 🔥 КРИТИЧНО: Отмечаем что обновление идёт из ReactFlow
+            updateSourceTracker.startReactFlowUpdate([node.id]);
 
-            // Записываем в историю (для undo/redo)
-            history.recordUpdate(
-                toEntity(newDto, node.type),
-                toEntity(previousDto, node.type)
-            );
+            try {
+                // Применяем изменения через dispatch
+                const newSnapshot = contract.createSnapshot(newDto);
+                contract.applySnapshot(newSnapshot);
 
-            console.log(`[useScenarioOperations] ✅ Node moved: ${node.id}`, { newX, newY });
+                // Записываем в историю
+                history.recordUpdate(
+                    toEntity(newDto, node.type),
+                    toEntity(previousDto, node.type)
+                );
+
+                console.log(`[useScenarioOperations] ✅ Node moved: ${node.id}`, { newX, newY });
+            } finally {
+                // 🔥 Завершаем отслеживание через небольшую задержку
+                // чтобы useEffect успел отреагировать на изменение Redux
+                setTimeout(() => {
+                    updateSourceTracker.endReactFlowUpdate([node.id]);
+                }, 50);
+            }
         },
         [scenarioId, history, toEntity]
     );
 
     // ============================================================================
-    // РЕСАЙЗ НОДЫ
+    // РЕСАЙЗ НОДЫ С SOURCE TRACKING
     // ============================================================================
 
     const resizeNode = useCallback(
@@ -151,35 +146,39 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createResizeEntity(previousDto, newWidth, newHeight);
 
-            // ✅ КРИТИЧНО: Применяем изменения через dispatch
-            const newSnapshot = contract.createSnapshot(newDto);
-            contract.applySnapshot(newSnapshot);
-            // ↑ Вызовет store.dispatch(updateStep/updateBranch(...))
+            // 🔥 Отмечаем обновление из ReactFlow
+            updateSourceTracker.startReactFlowUpdate([node.id]);
 
-            // Записываем в историю (для undo/redo)
-            history.recordUpdate(
-                toEntity(newDto, node.type),
-                toEntity(previousDto, node.type)
-            );
+            try {
+                const newSnapshot = contract.createSnapshot(newDto);
+                contract.applySnapshot(newSnapshot);
 
-            console.log(`[useScenarioOperations] ✅ Node resized: ${node.id}`, {
-                newWidth,
-                newHeight,
-            });
+                history.recordUpdate(
+                    toEntity(newDto, node.type),
+                    toEntity(previousDto, node.type)
+                );
+
+                console.log(`[useScenarioOperations] ✅ Node resized: ${node.id}`, {
+                    newWidth,
+                    newHeight,
+                });
+            } finally {
+                setTimeout(() => {
+                    updateSourceTracker.endReactFlowUpdate([node.id]);
+                }, 50);
+            }
         },
         [scenarioId, history, toEntity]
     );
 
     // ============================================================================
-    // УДАЛЕНИЕ НОДЫ
+    // УДАЛЕНИЕ НОДЫ (без source tracking — это всегда intentional)
     // ============================================================================
 
-    // В useScenarioOperations.ts
     const deleteNode = useCallback(
         (node: FlowNode) => {
             if (!scenarioId) return false;
 
-            // ✅ Проверяем, что нода персистентная
             if (node.data.__persisted !== true) {
                 console.log(`[useScenarioOperations] ⚠️ Skipping delete for non-persisted node: ${node.id}`);
                 return false;
@@ -200,12 +199,8 @@ export function useScenarioOperations(scenarioId: Guid | null) {
             }
 
             contract.onBeforeDelete?.(dto);
-
-            // ✅ КРИТИЧНО: Применяем удаление через dispatch
             contract.deleteEntity(dto.id);
-            // ↑ Вызовет store.dispatch(deleteStep/deleteBranch(...))
 
-            // Записываем в историю (для undo/redo)
             history.recordDelete(toEntity(dto, node.type));
 
             console.log(`[useScenarioOperations] ✅ Node deleted: ${node.id}`);
@@ -215,7 +210,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
     );
 
     // ============================================================================
-    // ПРИСОЕДИНЕНИЕ СТЕПА К ВЕТКЕ
+    // ПРИСОЕДИНЕНИЕ СТЕПА К ВЕТКЕ С SOURCE TRACKING
     // ============================================================================
 
     const attachStepToBranch = useCallback(
@@ -248,26 +243,32 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createAttachToBranchEntity(previousDto, branchId, newX, newY);
 
-            // ✅ КРИТИЧНО: Применяем изменения через dispatch
-            const newSnapshot = contract.createSnapshot(newDto);
-            contract.applySnapshot(newSnapshot);
-            // ↑ Вызовет store.dispatch(updateStep(...))
+            // 🔥 Отмечаем обновление из ReactFlow
+            updateSourceTracker.startReactFlowUpdate([stepNode.id]);
 
-            // Записываем в историю (для undo/redo)
-            history.recordUpdate(
-                toEntity(newDto, stepNode.type),
-                toEntity(previousDto, stepNode.type)
-            );
+            try {
+                const newSnapshot = contract.createSnapshot(newDto);
+                contract.applySnapshot(newSnapshot);
 
-            console.log(`[useScenarioOperations] ✅ Step attached to branch: ${stepNode.id}`, {
-                branchId,
-            });
+                history.recordUpdate(
+                    toEntity(newDto, stepNode.type),
+                    toEntity(previousDto, stepNode.type)
+                );
+
+                console.log(`[useScenarioOperations] ✅ Step attached to branch: ${stepNode.id}`, {
+                    branchId,
+                });
+            } finally {
+                setTimeout(() => {
+                    updateSourceTracker.endReactFlowUpdate([stepNode.id]);
+                }, 50);
+            }
         },
         [scenarioId, history, toEntity]
     );
 
     // ============================================================================
-    // ОТСОЕДИНЕНИЕ СТЕПА ОТ ВЕТКИ
+    // ОТСОЕДИНЕНИЕ СТЕПА ОТ ВЕТКИ С SOURCE TRACKING
     // ============================================================================
 
     const detachStepFromBranch = useCallback(
@@ -299,24 +300,30 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createDetachFromBranchEntity(previousDto, newX, newY);
 
-            // ✅ КРИТИЧНО: Применяем изменения через dispatch
-            const newSnapshot = contract.createSnapshot(newDto);
-            contract.applySnapshot(newSnapshot);
-            // ↑ Вызовет store.dispatch(updateStep(...))
+            // 🔥 Отмечаем обновление из ReactFlow
+            updateSourceTracker.startReactFlowUpdate([stepNode.id]);
 
-            // Записываем в историю (для undo/redo)
-            history.recordUpdate(
-                toEntity(newDto, stepNode.type),
-                toEntity(previousDto, stepNode.type)
-            );
+            try {
+                const newSnapshot = contract.createSnapshot(newDto);
+                contract.applySnapshot(newSnapshot);
 
-            console.log(`[useScenarioOperations] ✅ Step detached from branch: ${stepNode.id}`);
+                history.recordUpdate(
+                    toEntity(newDto, stepNode.type),
+                    toEntity(previousDto, stepNode.type)
+                );
+
+                console.log(`[useScenarioOperations] ✅ Step detached from branch: ${stepNode.id}`);
+            } finally {
+                setTimeout(() => {
+                    updateSourceTracker.endReactFlowUpdate([stepNode.id]);
+                }, 50);
+            }
         },
         [scenarioId, history, toEntity]
     );
 
     // ============================================================================
-    // АВТОМАТИЧЕСКОЕ РАСШИРЕНИЕ ВЕТКИ
+    // АВТОМАТИЧЕСКОЕ РАСШИРЕНИЕ ВЕТКИ С SOURCE TRACKING
     // ============================================================================
 
     const autoExpandBranch = useCallback(
@@ -336,27 +343,33 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const newDto = contract.createAutoExpandEntity(previousDto, newWidth, newHeight);
 
-            // ✅ КРИТИЧНО: Применяем изменения через dispatch
-            const newSnapshot = contract.createSnapshot(newDto);
-            contract.applySnapshot(newSnapshot);
-            // ↑ Вызовет store.dispatch(updateBranch(...))
+            // 🔥 Отмечаем обновление из ReactFlow
+            updateSourceTracker.startReactFlowUpdate([branchNode.id]);
 
-            // Записываем в историю (для undo/redo)
-            history.recordUpdate(
-                toEntity(newDto, branchNode.type),
-                toEntity(previousDto, branchNode.type)
-            );
+            try {
+                const newSnapshot = contract.createSnapshot(newDto);
+                contract.applySnapshot(newSnapshot);
 
-            console.log(`[useScenarioOperations] ✅ Branch auto-expanded: ${branchNode.id}`, {
-                newWidth,
-                newHeight,
-            });
+                history.recordUpdate(
+                    toEntity(newDto, branchNode.type),
+                    toEntity(previousDto, branchNode.type)
+                );
+
+                console.log(`[useScenarioOperations] ✅ Branch auto-expanded: ${branchNode.id}`, {
+                    newWidth,
+                    newHeight,
+                });
+            } finally {
+                setTimeout(() => {
+                    updateSourceTracker.endReactFlowUpdate([branchNode.id]);
+                }, 50);
+            }
         },
         [scenarioId, history, toEntity]
     );
 
     // ============================================================================
-    // СОЗДАНИЕ НОДЫ
+    // СОЗДАНИЕ НОДЫ (без source tracking — новая нода всегда external)
     // ============================================================================
 
     const createNode = useCallback(
@@ -375,15 +388,10 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 return;
             }
 
-            // ✅ КРИТИЧНО: Применяем изменения через dispatch
             const snapshot = contract.createSnapshot(dto);
             contract.createFromSnapshot(snapshot);
-            // ↑ Вызовет store.dispatch(addStep/addBranch(...))
 
-            // Записываем в историю (для undo/redo)
             history.recordCreate(toEntity(dto, node.type));
-
-            // Хук жизненного цикла
             contract?.onCreated?.(dto);
 
             console.log(`[useScenarioOperations] ✅ Node created: ${node.id}`);

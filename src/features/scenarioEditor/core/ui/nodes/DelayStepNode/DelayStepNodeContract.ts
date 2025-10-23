@@ -38,7 +38,6 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
         parentId,
         draggable: true,
         selectable: true,
-        extent: 'parent',
         expandParent: true,
     }),
 
@@ -62,7 +61,7 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
 
     createAutoExpandEntity: (dto, newWidth, newHeight) => {
         // Для степов auto-expand не применяется (только для веток)
-        console.warn('[DelayStepNodeContract] Auto-expand not supported for steps');
+        console.warn('[DelayStepNodeContract] Auto-expand not supported for steps', newWidth, newHeight);
         return dto;
     },
 
