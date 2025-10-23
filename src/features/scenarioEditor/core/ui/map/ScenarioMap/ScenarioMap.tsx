@@ -45,7 +45,6 @@ import {
     ensureParentBeforeChild,
     pickDeepestBranchByTopLeft,
 } from '@scenario/core/utils/dropUtils';
-import { isAnyBranchResizing } from '@scenario/core/ui/nodes/BranchNode/branchResizeGuard.ts';
 import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
 import {useScenarioOperations} from "@scenario/core/hooks/useScenarioOperations.ts";
 import type {Guid} from "@app/lib/types/Guid.ts";
@@ -187,7 +186,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     rectOf,
                     ensureParentBeforeChild,
                     pickDeepestBranchByTopLeft,
-                    isAnyBranchResizing,
                 },
                 callbacks: {
                     onStepMoved: (stepId, x, y) => {
@@ -246,10 +244,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
             if (nodeElement == null) continue;
 
             const observer = new ResizeObserver((entries) => {
-
-                if (isAnyBranchResizing()) {
-                    return;
-                }
 
                 for (const entry of entries) {
                     const newWidth = Math.round(entry.contentRect.width);

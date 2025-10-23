@@ -12,7 +12,6 @@ type Utils = {
         abs: { x: number; y: number },
         skipId?: string
     ) => FlowNode | undefined;
-    isAnyBranchResizing: () => boolean;
 };
 
 export type NodeDragStopDeps = {
@@ -80,7 +79,6 @@ export class NodeDragStopHandler {
     };
 
     onNodeDragStop = (_e: React.MouseEvent | React.TouchEvent, node: FlowNode): void => {
-        if (this.u.isAnyBranchResizing()) return;
 
         const all = this.getAll();
         const current = all.find((n) => n.id === node.id) ?? node;
