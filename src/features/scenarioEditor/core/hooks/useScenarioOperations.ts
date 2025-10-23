@@ -68,7 +68,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
     // ============================================================================
 
     const moveNode = useCallback(
-        (node: FlowNode, newX: number, newY: number) => {
+        (node: FlowNode, newX: number, newY: number, childNodes?: FlowNode[]) => {
             if (!scenarioId) return;
 
             const contract = nodeTypeRegistry.get(node.type);
@@ -103,6 +103,33 @@ export function useScenarioOperations(scenarioId: Guid | null) {
             );
 
             console.log(`[useScenarioOperations] ✅ Node moved: ${node.id}`, { newX, newY });
+
+            // Если это ветка и есть дочерние ноды, обновляем их абсолютные координаты
+            if (node.type === 'BranchNode' && childNodes && childNodes.length > 0) {
+                const deltaX = newX - previousDto.x;
+                const deltaY = newY - previousDto.y;
+
+                console.log(
+                    `[useScenarioOperations] 🔄 Updating ${childNodes.length} child steps | Delta: (${deltaX}, ${deltaY})`
+                );
+
+                childNodes.forEach((child) => {
+                    const childContract = nodeTypeRegistry.get(child.type);
+                    if (!childContract?.createMoveEntity) return;
+
+                    const childDto = child.data.object;
+                    if (!childDto) return;
+
+                    const newChildX = childDto.x + deltaX;
+                    const newChildY = childDto.y + deltaY;
+
+                    const newChildDto = childContract.createMoveEntity(childDto, newChildX, newChildY);
+                    const childSnapshot = childContract.createSnapshot(newChildDto);
+                    childContract.applySnapshot(childSnapshot);
+
+                    // НЕ записываем в историю - это автоматическое следствие перемещения ветки
+                });
+            }
 
         },
         [scenarioId, history, toEntity]
@@ -305,7 +332,19 @@ export function useScenarioOperations(scenarioId: Guid | null) {
             const previousDto = branchNode.data.object;
             if (!previousDto) return;
 
+            console.log(`[useScenarioOperations] 🔧 Branch auto-expand | ID: ${branchNode.id}`, {
+                from: { x: previousDto.x, y: previousDto.y, width: previousDto.width, height: previousDto.height },
+                to: { x: newX ?? previousDto.x, y: newY ?? previousDto.y, width: newWidth, height: newHeight }
+            });
+
             const newDto = contract.createAutoExpandEntity(previousDto, newWidth, newHeight, newX, newY);
+
+            console.log(`[useScenarioOperations] 📦 New DTO created:`, {
+                x: newDto.x,
+                y: newDto.y,
+                width: newDto.width,
+                height: newDto.height
+            });
 
             const newSnapshot = contract.createSnapshot(newDto);
             contract.applySnapshot(newSnapshot);
@@ -315,10 +354,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 toEntity(previousDto, branchNode.type)
             );
 
-            console.log(`[useScenarioOperations] ✅ Branch auto-expanded: ${branchNode.id}`, {
-                newWidth,
-                newHeight,
-            });
+            console.log(`[useScenarioOperations] ✅ Branch auto-expanded: ${branchNode.id}`);
         },
         [scenarioId, history, toEntity]
     );

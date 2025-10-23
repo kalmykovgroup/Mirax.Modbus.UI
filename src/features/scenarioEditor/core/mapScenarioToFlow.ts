@@ -165,5 +165,29 @@ export function mapScenarioToFlow(
         }
     }
 
-    return { nodes, edges };
+    // 🔧 ИСПРАВЛЕНИЕ: Пересчитываем относительные координаты для дочерних нод
+    // В Redux хранятся АБСОЛЮТНЫЕ координаты, но ReactFlow требует ОТНОСИТЕЛЬНЫЕ
+    const nodesWithRelativePositions = nodes.map((node) => {
+        if (!node.parentId) return node;
+
+        const parent = nodes.find((n) => n.id === node.parentId);
+        if (!parent) return node;
+
+        const parentDto = parent.data.object;
+        if (!parentDto) return node;
+
+        const nodeDto = node.data.object;
+        if (!nodeDto) return node;
+
+        // Вычисляем относительные координаты
+        const relativeX = nodeDto.x - parentDto.x;
+        const relativeY = nodeDto.y - parentDto.y;
+
+        return {
+            ...node,
+            position: { x: relativeX, y: relativeY },
+        };
+    });
+
+    return { nodes: nodesWithRelativePositions, edges };
 }

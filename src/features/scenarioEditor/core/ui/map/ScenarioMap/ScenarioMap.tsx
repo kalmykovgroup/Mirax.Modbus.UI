@@ -1,6 +1,6 @@
 // src/features/scenarioEditor/core/ui/map/ScenarioMap/ScenarioMap.tsx
 
-import { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
     Background,
     BackgroundVariant,
@@ -160,6 +160,27 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                             const x = stepNode.position.x;
                             const y = stepNode.position.y;
                             operations.detachStepFromBranch(stepNode, x, y);
+                        }
+                    },
+                    onBranchResized: (
+                        branchId: string,
+                        width: number,
+                        height: number,
+                        newX?: number,
+                        newY?: number
+                    ) => {
+                        console.log(
+                            `[ScenarioMap] 📐 BRANCH RESIZED | Branch: ${branchId}`,
+                            { width, height, x: newX, y: newY }
+                        );
+                        const branchNode = rf.getNodes().find((n) => n.id === branchId);
+                        if (branchNode) {
+                            // Обновляем ветку (включая координаты если изменились)
+                            operations.autoExpandBranch(branchNode, width, height, newX, newY);
+
+                            // Дочерние степы обновятся автоматически через useReduxFlowSync
+                            // при следующей синхронизации, т.к. их относительные координаты
+                            // будут пересчитаны в mapScenarioToFlow
                         }
                     },
                 },

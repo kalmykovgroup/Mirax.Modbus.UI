@@ -64,7 +64,6 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
             console.log(`[NodesChange] 🚀 Performance boost: filtered ${filtered}/${changes.length} updates`);
         }
 
-        console.log('[NodesChange]', filteredChanges);
 
         setNodes((nds) => applyNodeChanges(filteredChanges, nds) as FlowNode[]);
 
@@ -102,6 +101,27 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
                     }
                     if (isDraggingBranchRef.current != null) {
                         isDraggingBranchRef.current = false;
+                    }
+
+                    const startPos = dragStateRef.current?.get(id);
+                    const node = nodesRef.current?.find((n) => n.id === id);
+
+                    // Сохраняем позицию ветки после перемещения
+                    if (node && node.type === FlowType.BranchNode && startPos) {
+                        const newX = Math.round(change.position.x);
+                        const newY = Math.round(change.position.y);
+
+                        if (startPos.x !== newX || startPos.y !== newY) {
+                            console.log(
+                                `[NodesChange] 📍 BRANCH MOVED | ID: ${id}`,
+                                { from: startPos, to: { x: newX, y: newY } }
+                            );
+
+                            // Найти все дочерние степы этой ветки
+                            const childSteps = nodesRef.current?.filter((n) => n.parentId === id) ?? [];
+
+                            operations.moveNode(node, newX, newY, childSteps);
+                        }
                     }
 
                     dragStateRef.current?.delete(id);

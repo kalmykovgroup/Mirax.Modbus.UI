@@ -88,11 +88,8 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
     validateOperation: (operation, dto, params) => {
         switch (operation) {
             case 'move':
-                // Проверяем, что новые координаты валидны
-                const { newX, newY } = params as { newX: number; newY: number };
-                if (newX < 0 || newY < 0) {
-                    return { valid: false, error: 'Координаты не могут быть отрицательными' };
-                }
+                // ReactFlow допускает любые координаты (включая отрицательные)
+                // Валидация не требуется
                 return { valid: true };
 
             case 'resize':

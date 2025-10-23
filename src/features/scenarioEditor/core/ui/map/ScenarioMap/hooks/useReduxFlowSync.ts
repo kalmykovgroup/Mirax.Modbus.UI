@@ -136,7 +136,6 @@ export function useReduxFlowSync(params: UseReduxFlowSyncParams): string | null 
                             return currentNode;
                         }
 
-                        console.log(`[ReduxFlowSync] 🔄 Updating node ${currentNode.id}`);
                         return newNode;
                     })
                     .filter((n): n is FlowNode => n != null);

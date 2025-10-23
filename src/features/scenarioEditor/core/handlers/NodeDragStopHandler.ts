@@ -32,7 +32,13 @@ export type NodeDragStopDeps = {
         // Удалить связь между нодами
         onConnectionRemoved?: (sourceId: string, targetId: string, edgeId: string) => void;
         // Авто-рост ветки в UI
-        onBranchResized?: (branchId: string, width: number, height: number) => void;
+        onBranchResized?: (
+            branchId: string,
+            width: number,
+            height: number,
+            newX?: number,
+            newY?: number
+        ) => void;
     };
 };
 
@@ -77,6 +83,14 @@ export class NodeDragStopHandler {
             }
         }
     };
+
+    private getNodeSize(node: FlowNode): { width: number; height: number } {
+        const width =
+            (typeof node.style?.width === 'number' ? node.style.width : node.measured?.width) ?? 0;
+        const height =
+            (typeof node.style?.height === 'number' ? node.style.height : node.measured?.height) ?? 0;
+        return { width, height };
+    }
 
     onNodeDragStop = (_e: React.MouseEvent | React.TouchEvent, node: FlowNode): void => {
 
@@ -135,7 +149,6 @@ export class NodeDragStopHandler {
                                 ...n,
                                 parentId: target.id,
                                 position: { x: relX, y: relY },
-                                extent: 'parent' as const,
                                 expandParent: true,
                             }
                             : n
@@ -153,29 +166,84 @@ export class NodeDragStopHandler {
         // ─────────────────────────────────────────
         // Обычный drag (без Shift)
         // ─────────────────────────────────────────
+        console.log(
+            `[NodeDragStopHandler] 🔍 Checking target | Target: ${target?.id} | Current type: ${current.type} | Is branch: ${current.type === FlowType.BranchNode}`
+        );
+
         if (target && current.type !== FlowType.BranchNode) {
             const br = this.u.rectOf(target, all);
 
+            console.log(
+                `[NodeDragStopHandler] 🎯 Target found | Target: ${target.id} | Current parent: ${current.parentId} | Same branch: ${current.parentId === target.id}`
+            );
+
             // 1) Внутри той же ветки — возможен авто-рост, координаты фиксируем
             if (current.parentId === target.id) {
-                const relX = current.position.x;
-                const relY = current.position.y;
-                const childW = current.width ?? 0;
-                const childH = current.height ?? 0;
+                // ВАЖНО: используем координаты ветки из REDUX STORE, а не из UI
+                // т.к. UI может быть уже обновлен предыдущим setNodes
+                const branchDto = target.data.object;
+                const branchX = branchDto.x;
+                const branchY = branchDto.y;
+                const branchW = branchDto.width;
+                const branchH = branchDto.height;
+
+                // Вычисляем относительные координаты от Redux координат ветки
+                const relX = absTL.x - branchX;
+                const relY = absTL.y - branchY;
+                const { width: childW, height: childH } = this.getNodeSize(current);
+
+                console.log(
+                    `[NodeDragStopHandler] 📏 Step size: ${childW}x${childH} | Branch: ${branchW}x${branchH} | Position: ${relX},${relY} (abs: ${absTL.x},${absTL.y}) | Redux branch pos: (${branchX},${branchY})`
+                );
 
                 if (childW > 0 && childH > 0) {
                     const pad = 12;
-                    const needW = Math.max(br.w, relX + childW + pad);
-                    const needH = Math.max(br.h, relY + childH + pad);
-                    if (needW !== br.w || needH !== br.h) {
-                        this.setNodes((nds): FlowNode[] =>
-                            nds.map((n) =>
-                                n.id === target.id
-                                    ? { ...n, style: { ...(n.style ?? {}), width: needW, height: needH } }
-                                    : n
-                            )
+
+                    // Вычисляем сдвиг ветки при отрицательных координатах
+                    const deltaX = relX < 0 ? Math.abs(relX) + pad : 0;
+                    const deltaY = relY < 0 ? Math.abs(relY) + pad : 0;
+
+                    // Вычисляем новые размеры с учетом отрицательных координат
+                    const needW = Math.max(branchW, (relX < 0 ? 0 : relX) + childW + pad) + deltaX;
+                    const needH = Math.max(branchH, (relY < 0 ? 0 : relY) + childH + pad) + deltaY;
+
+                    // Новые координаты ветки
+                    const newBranchX = branchX - deltaX;
+                    const newBranchY = branchY - deltaY;
+
+                    const needsResize = needW !== branchW || needH !== branchH || deltaX > 0 || deltaY > 0;
+
+                    if (needsResize) {
+                        console.log(
+                            `[NodeDragStopHandler] 📐 Branch expansion: pos(${branchX},${branchY})→(${newBranchX},${newBranchY}) size(${branchW}x${branchH})→(${needW}x${needH}) delta(${deltaX},${deltaY})`
                         );
-                        this.callbacks?.onBranchResized?.(target.id, needW, needH);
+
+                        this.setNodes((nds): FlowNode[] => {
+                            return nds.map((n) => {
+                                // Обновляем ТОЛЬКО ветку (позиция и размеры)
+                                if (n.id === target.id) {
+                                    return {
+                                        ...n,
+                                        position: { x: newBranchX, y: newBranchY },
+                                        style: { ...(n.style ?? {}), width: needW, height: needH }
+                                    };
+                                }
+
+                                // Дочерние степы НЕ обновляем в UI
+                                // Их относительные позиции пересчитаются автоматически в mapScenarioToFlow
+                                // после обновления координат ветки в Redux
+
+                                return n;
+                            });
+                        });
+
+                        this.callbacks?.onBranchResized?.(
+                            target.id,
+                            needW,
+                            needH,
+                            newBranchX,
+                            newBranchY
+                        );
                     }
                 }
 
@@ -186,8 +254,7 @@ export class NodeDragStopHandler {
             // 2) Перенос в ДРУГУЮ ветку (обычный drag без Shift) — только обновляем branchId и координаты
             const relX = absTL.x - br.x;
             const relY = absTL.y - br.y;
-            const childW = current.width ?? 0;
-            const childH = current.height ?? 0;
+            const { width: childW, height: childH } = this.getNodeSize(current);
 
             this.setNodes((nds): FlowNode[] => {
                 let next = nds.map((n) =>
@@ -196,7 +263,6 @@ export class NodeDragStopHandler {
                             ...n,
                             parentId: target.id,
                             position: { x: relX, y: relY },
-                            extent: 'parent' as const,
                             expandParent: true,
                         }
                         : n

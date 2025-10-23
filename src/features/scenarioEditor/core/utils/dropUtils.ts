@@ -91,14 +91,13 @@ export const commitDropToBranch = (
     const relY = dropAbs.y - br.y;
 
     setNodes((nds): FlowNode[] => {
-        // 1) делаем дочерним
+        // 1) делаем дочерним (БЕЗ extent: 'parent' для поддержки отрицательных координат)
         let next = nds.map(n =>
             n.id === nodeId
                 ? {
                     ...n,
                     parentId: target.id,
                     position: { x: relX, y: relY },
-                    extent: 'parent' as const,
                     expandParent: true,
                 }
                 : n
