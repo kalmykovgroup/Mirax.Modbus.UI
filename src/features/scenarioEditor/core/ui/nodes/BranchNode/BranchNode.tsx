@@ -1,5 +1,5 @@
 // src/features/scenarioEditor/core/ui/nodes/BranchNode/BranchNode.tsx
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 import { Handle, type NodeProps, type Node, Position, useReactFlow } from '@xyflow/react';
 import { useSelector } from 'react-redux';
 import styles from './BranchNode.module.css';
@@ -64,10 +64,7 @@ export function BranchNode({ data, selected, id }: Props) {
         // Кастомная функция сравнения: возвращает true если данные идентичны
         (prev, next) => {
             if (prev === next) return true;
-            if (!prev || !next) {
-                console.log('[BranchNode] 🔄 useSelector triggered: prev or next is null');
-                return false;
-            }
+            if (!prev || !next) return false;
 
             // Сравниваем координаты ветки
             if (
@@ -77,13 +74,6 @@ export function BranchNode({ data, selected, id }: Props) {
                 prev.branchHeight !== next.branchHeight ||
                 prev.steps.length !== next.steps.length
             ) {
-                console.log('[BranchNode] 🔄 useSelector triggered: branch props changed', {
-                    branchX: prev.branchX !== next.branchX ? `${prev.branchX}→${next.branchX}` : '=',
-                    branchY: prev.branchY !== next.branchY ? `${prev.branchY}→${next.branchY}` : '=',
-                    branchWidth: prev.branchWidth !== next.branchWidth ? `${prev.branchWidth}→${next.branchWidth}` : '=',
-                    branchHeight: prev.branchHeight !== next.branchHeight ? `${prev.branchHeight}→${next.branchHeight}` : '=',
-                    stepsLength: prev.steps.length !== next.steps.length ? `${prev.steps.length}→${next.steps.length}` : '='
-                });
                 return false;
             }
 
@@ -91,6 +81,10 @@ export function BranchNode({ data, selected, id }: Props) {
             for (let i = 0; i < prev.steps.length; i++) {
                 const s1 = prev.steps[i];
                 const s2 = next.steps[i];
+
+                // Защита от undefined
+                if (!s1 || !s2) return false;
+
                 if (
                     s1.id !== s2.id ||
                     s1.x !== s2.x ||
@@ -98,13 +92,6 @@ export function BranchNode({ data, selected, id }: Props) {
                     s1.width !== s2.width ||
                     s1.height !== s2.height
                 ) {
-                    console.log(`[BranchNode] 🔄 useSelector triggered: step ${i} changed`, {
-                        id: s1.id !== s2.id ? `${s1.id}→${s2.id}` : '=',
-                        x: s1.x !== s2.x ? `${s1.x}→${s2.x}` : '=',
-                        y: s1.y !== s2.y ? `${s1.y}→${s2.y}` : '=',
-                        width: s1.width !== s2.width ? `${s1.width}→${s2.width}` : '=',
-                        height: s1.height !== s2.height ? `${s1.height}→${s2.height}` : '='
-                    });
                     return false;
                 }
             }
@@ -114,44 +101,14 @@ export function BranchNode({ data, selected, id }: Props) {
         }
     );
 
-    // Создаем стабильный ключ для мемоизации (вычисляется один раз при изменении branchAndStepsData)
-    const stepsKey = useMemo(() => {
-        if (!branchAndStepsData) return '';
-        return branchAndStepsData.steps.map(s => `${s.id}:${s.x}:${s.y}:${s.width}:${s.height}`).join('|');
-    }, [branchAndStepsData]);
-
-    // Мемоизируем: обновляется ТОЛЬКО если координаты реально изменились
-    const memoizedData = useMemo(() => {
-        if (!branchAndStepsData) return null;
-
-        const { branchX, branchY, branchWidth, branchHeight, steps } = branchAndStepsData;
-
-        return {
-            branchX,
-            branchY,
-            branchWidth,
-            branchHeight,
-            steps
-        };
-    }, [
-        branchAndStepsData?.branchX,
-        branchAndStepsData?.branchY,
-        branchAndStepsData?.branchWidth,
-        branchAndStepsData?.branchHeight,
-        branchAndStepsData?.steps.length,
-        stepsKey  // ← Используем мемоизированный ключ!
-    ]);
-
     // Ref для хранения последних примененных размеров (чтобы избежать бесконечного цикла)
     const lastAppliedSizeRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
     // Отслеживаем изменения дочерних степов и автоматически расширяем ветку
     useEffect(() => {
-        if (!memoizedData || memoizedData.steps.length === 0) return;
+        if (!branchAndStepsData || branchAndStepsData.steps.length === 0) return;
 
-        console.log(`[BranchNode] ⚡ useEffect TRIGGERED for branch ${id}`);
-
-        const { branchX, branchY, branchWidth: currentWidth, branchHeight: currentHeight, steps: childSteps } = memoizedData;
+        const { branchX, branchY, branchWidth: currentWidth, branchHeight: currentHeight, steps: childSteps } = branchAndStepsData;
 
         const padding = 12;
 
@@ -161,41 +118,12 @@ export function BranchNode({ data, selected, id }: Props) {
         let maxAbsX = -Infinity;
         let maxAbsY = -Infinity;
 
-        console.log(`[BranchNode] 📐 Calculating size for branch ${id}`, {
-            childCount: childSteps.length,
-            currentBranchPos: { x: branchX, y: branchY },
-        });
-
         for (const step of childSteps) {
-            const stepX = step.x;
-            const stepY = step.y;
-            const stepWidth = step.width ?? 100;
-            const stepHeight = step.height ?? 71;
-
-            // Находим границы степа в абсолютных координатах
-            const stepLeft = stepX;
-            const stepTop = stepY;
-            const stepRight = stepX + stepWidth;
-            const stepBottom = stepY + stepHeight;
-
-            minAbsX = Math.min(minAbsX, stepLeft);
-            minAbsY = Math.min(minAbsY, stepTop);
-            maxAbsX = Math.max(maxAbsX, stepRight);
-            maxAbsY = Math.max(maxAbsY, stepBottom);
-
-            console.log(`[BranchNode]   Step ${step.id.substring(0, 8)}:`, {
-                abs: { x: stepX, y: stepY },
-                size: { w: stepWidth, h: stepHeight },
-                bounds: { left: stepLeft, top: stepTop, right: stepRight, bottom: stepBottom }
-            });
+            minAbsX = Math.min(minAbsX, step.x);
+            minAbsY = Math.min(minAbsY, step.y);
+            maxAbsX = Math.max(maxAbsX, step.x + (step.width ?? 100));
+            maxAbsY = Math.max(maxAbsY, step.y + (step.height ?? 71));
         }
-
-        console.log(`[BranchNode] 📐 Absolute bounds:`, {
-            minX: Math.round(minAbsX),
-            minY: Math.round(minAbsY),
-            maxX: Math.round(maxAbsX),
-            maxY: Math.round(maxAbsY)
-        });
 
         // Ветка должна охватывать все степы с padding со всех сторон
         // Левая граница ветки = самый левый степ - padding
@@ -248,7 +176,7 @@ export function BranchNode({ data, selected, id }: Props) {
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [memoizedData, id]); // ← rf и operations стабильны, не нужны в зависимостях
+    }, [branchAndStepsData, id]); // ← rf и operations стабильны, не нужны в зависимостях
 
     return (
         <div

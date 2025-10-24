@@ -1,13 +1,19 @@
 @import '@ui/styles/colors.css';
 
 .rightPanelContainer{
-    height: 500px;
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 5px;
     padding: 5px;
+    align-content: flex-start;
+    flex-direction: row-reverse;
+    border-left: 1px solid #333;
     background-color: var(--right-panel-container-background-color);
     color: var(--right-panel-container-color);
+    overflow-y: auto;
+    justify-content: center;
+    overflow-x: hidden;
+    width: 160px;
 }
 
 .btn{

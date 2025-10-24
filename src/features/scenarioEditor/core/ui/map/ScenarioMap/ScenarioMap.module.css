@@ -1,6 +1,7 @@
 .customFlow :global(.react-flow__panel) {
     margin: 0;
     padding: 0;
+    display: flex;
 }
 
 .flowControls{

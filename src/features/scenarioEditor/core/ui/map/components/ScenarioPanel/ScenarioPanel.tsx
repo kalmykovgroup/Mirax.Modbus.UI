@@ -4,35 +4,35 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RefreshCw, Plus } from 'lucide-react';
 
-import styles from './LeftPanel.module.css';
+import styles from './ScenarioPanel.module.css';
 
-import type { AppDispatch } from '@/baseStore/store';
+import type { AppDispatch } from '@/baseStore/store.ts';
 
 import {
     usePauseScenarioMutation,
     useResumeScenarioMutation,
     useRunScenarioMutation,
     useStopScenarioMutation,
-} from '@/features/scenarioEditor/shared/api/workflowApi';
-import type { RunScenarioResponse } from '@scenario/shared/contracts/server/localDtos/ScenarioEngine/RunScenarioResponse';
+} from '@scenario/shared/api/workflowApi.ts';
+import type { RunScenarioResponse } from '@scenario/shared/contracts/server/localDtos/ScenarioEngine/RunScenarioResponse.ts';
 import {
     addRunningScenario,
     removeRunningScenario,
-} from '@/features/scenarioEditor/store/workflowSlice';
-import type { ScenarioStopMode } from '@scenario/shared/contracts/server/types/ScenarioEngine/ScenarioStopMode';
+} from '@scenario/store/workflowSlice.ts';
+import type { ScenarioStopMode } from '@scenario/shared/contracts/server/types/ScenarioEngine/ScenarioStopMode.ts';
 import {
     selectActiveScenarioId,
     selectScenariosList,
-} from '@scenario/store/scenarioSelectors';
+} from '@scenario/store/scenarioSelectors.ts';
 import {
     refreshScenarioById,
     refreshScenariosList,
     setActiveScenarioId,
     ScenarioLoadStatus,
-} from '@scenario/store/scenarioSlice';
-import {ScenarioItem} from "@scenario/core/ui/map/LeftPanel/ScenarioItem/ScenarioItem.tsx";
+} from '@scenario/store/scenarioSlice.ts';
+import {ScenarioItem} from "@scenario/core/ui/map/components/ScenarioPanel/ScenarioItem/ScenarioItem.tsx";
 
-export function LeftPanel(){
+export function ScenarioPanel(){
     const dispatch = useDispatch<AppDispatch>();
 
     const [query, setQuery] = useState('');
@@ -307,4 +307,4 @@ export function LeftPanel(){
 
 
 
-export default LeftPanel;
+export default ScenarioPanel;

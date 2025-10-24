@@ -5,7 +5,7 @@ import type {RootState} from "@/baseStore/store.ts";
 import {selectScenarioStatus} from "@scenario/store/scenarioSelectors.ts";
 import React, {useCallback, useMemo} from "react";
 import {RotateCw} from "lucide-react";
-import {SimpleMenu} from "@scenario/core/ui/map/LeftPanel/HoverActionMenu/SimpleMenu.tsx";
+import {SimpleMenu} from "@scenario/core/ui/map/components/ScenarioPanel/HoverActionMenu/SimpleMenu.tsx";
 
 interface ScenarioItemProps {
     scenarioId: string;

@@ -15,8 +15,8 @@ import '@xyflow/react/dist/style.css';
 import styles from './ScenarioMap.module.css';
 
 import type { FlowEdge, FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
-import { RightPanel } from '@scenario/core/ui/map/RightPanel/RightPanel';
-import LeftPanel from '@scenario/core/ui/map/LeftPanel/LeftPanel';
+import ScenarioPanel from '@scenario/core/ui/map/components/ScenarioPanel/ScenarioPanel.tsx';
+import { RightSidePanel } from '@scenario/core/ui/map/components/RightSidePanel/RightSidePanel';
 
 import { useTheme } from '@app/providers/theme/useTheme';
 import { useScenarioOperations } from '@scenario/core/hooks/useScenarioOperations';
@@ -286,12 +286,9 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     defaultEdgeOptions={defaultEdgeOptions}
                     className={styles.customFlow}
                 >
-                <Panel position="top-left">
-                    <LeftPanel />
-                </Panel>
 
                 <Panel position="top-right">
-                    <RightPanel />
+                    <RightSidePanel />
                 </Panel>
 
                 <Panel position="bottom-left">

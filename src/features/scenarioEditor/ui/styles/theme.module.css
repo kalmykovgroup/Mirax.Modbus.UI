@@ -42,6 +42,22 @@
 
     /* ===== Координаты на нодах ===== */
     --coordinates-color: #515151;
+
+    /*RIGHT PANEL*/
+
+    --right-panel-container-background-color: #1e1e1e;
+    --right-panel-container-color: black;
+    --right-panel-btn-signal-background: rgba(249, 168, 37, 0.41);
+    --right-panel-btn-delay-background: rgba(51, 51, 51, 0.41);
+    --right-panel-btn-parallel-background: rgba(106, 27, 154, 0.41);
+    --right-panel-btn-jump-background: rgba(204, 0, 0, 0.41);
+    --right-panel-btn-condition-background: rgba(0, 179, 56, 0.41);
+    --right-panel-btn-branch-background: rgba(230, 81, 0, 0.41);
+    --right-panel-btn-system-background: rgba(0, 131, 143, 0.41);
+    --right-panel-btn-activity-modbus-background: rgba(13, 71, 161, 0.41);
+
+
+    /*LEFT PANEL*/
 }
 
 /* ============================================
@@ -84,7 +100,7 @@
 
     /*RIGHT PANEL*/
 
-    --right-panel-container-background-color: transparent;
+    --right-panel-container-background-color: #1e1e1e;
     --right-panel-container-color: black;
     --right-panel-btn-signal-background: rgba(249, 168, 37, 0.41);
     --right-panel-btn-delay-background: rgba(51, 51, 51, 0.41);

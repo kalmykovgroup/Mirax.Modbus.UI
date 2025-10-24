@@ -1,6 +1,6 @@
 // src/features/scenarioEditor/core/ui/map/RightPanel/RightPanel.tsx
 
-import styles from "./RightPanel.module.css";
+import styles from "./NewNodesPanel.module.css";
 import React, { useRef } from "react";
 import { useReactFlow } from "@xyflow/react";
 import {
@@ -8,7 +8,7 @@ import {
     getAll,
     pickDeepestBranchByTopLeft,
     setHoverBranch
-} from "@scenario/core/utils/dropUtils";
+} from "@scenario/core/utils/dropUtils.ts";
 import {
     ConditionStepDto,
     DelayStepDto,
@@ -17,15 +17,15 @@ import {
     ParallelStepDto,
     SignalStepDto,
     ActivitySystemStepDto
-} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto";
-import { BranchDto } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto";
-import { FlowType } from "@scenario/core/ui/nodes/types/flowType";
-import type { FlowNode } from "@scenario/shared/contracts/models/FlowNode";
-import type { FlowNodeData } from "@scenario/shared/contracts/models/FlowNodeData";
+} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
+import { BranchDto } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto.ts";
+import { FlowType } from "@scenario/core/ui/nodes/types/flowType.ts";
+import type { FlowNode } from "@scenario/shared/contracts/models/FlowNode.ts";
+import type { FlowNodeData } from "@scenario/shared/contracts/models/FlowNodeData.ts";
 import { useSelector } from "react-redux";
-import { selectActiveScenarioId } from "@scenario/store/scenarioSelectors";
-import type { Guid } from "@app/lib/types/Guid";
-import { useScenarioOperations } from "@scenario/core/hooks/useScenarioOperations";
+import { selectActiveScenarioId } from "@scenario/store/scenarioSelectors.ts";
+import type { Guid } from "@app/lib/types/Guid.ts";
+import { useScenarioOperations } from "@scenario/core/hooks/useScenarioOperations.ts";
 
 function createByFlowType(type: FlowType, p: any) {
     switch (type) {
@@ -52,7 +52,7 @@ const STEP_FLOW_TYPES: Set<FlowType> = new Set<FlowType>([
     FlowType.Condition,
 ]);
 
-export const RightPanel: React.FC = () => {
+export const NewNodesPanel: React.FC = () => {
     const rf = useReactFlow<FlowNode>();
     const activeId = useSelector(selectActiveScenarioId);
 
