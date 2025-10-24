@@ -32,7 +32,6 @@ export function BranchNode({ data, selected, id }: Props) {
 
     // Получаем DTO ветки из Redux store
     const branchDto = data.object as BranchDto;
-пше
     // Проверяем находимся ли в batch режиме
     const activeScenarioId = useSelector(selectActiveScenarioId);
     const isBatching = useSelector((state: RootState) =>
