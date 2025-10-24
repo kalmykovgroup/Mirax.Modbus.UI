@@ -37,7 +37,20 @@ export const undoThunk = createAsyncThunk<void, { contextId: string }, { state: 
         console.log('[historySlice] Undoing record:', record);
 
         //  Применяем откат через historyRegistry → contract
-        if (record.type === 'create') {
+        if (record.type === 'batch') {
+            // ✅ ДОБАВЛЕНО: Обработка batch - откатываем все записи в обратном порядке
+            const batchRecords = (record as any).records || [];
+            for (let i = batchRecords.length - 1; i >= 0; i--) {
+                const batchRecord = batchRecords[i];
+                if (batchRecord.type === 'create') {
+                    historyRegistry.deleteEntity(batchRecord.entityType, batchRecord.entityId as any);
+                } else if (batchRecord.type === 'update') {
+                    historyRegistry.revertSnapshot(batchRecord.before);
+                } else if (batchRecord.type === 'delete') {
+                    historyRegistry.createFromSnapshot(batchRecord.before);
+                }
+            }
+        } else if (record.type === 'create') {
             historyRegistry.deleteEntity(record.entityType, record.entityId as any);
         } else if (record.type === 'update') {
             historyRegistry.revertSnapshot(record.before);
@@ -67,7 +80,19 @@ export const redoThunk = createAsyncThunk<void, { contextId: string }, { state: 
         console.log('[historySlice] Redoing record:', record);
 
         //  Применяем повтор через historyRegistry → contract
-        if (record.type === 'create') {
+        if (record.type === 'batch') {
+            // ✅ ДОБАВЛЕНО: Обработка batch - применяем все записи в прямом порядке
+            const batchRecords = (record as any).records || [];
+            for (const batchRecord of batchRecords) {
+                if (batchRecord.type === 'create') {
+                    historyRegistry.createFromSnapshot(batchRecord.after);
+                } else if (batchRecord.type === 'update') {
+                    historyRegistry.applySnapshot(batchRecord.after);
+                } else if (batchRecord.type === 'delete') {
+                    historyRegistry.deleteEntity(batchRecord.entityType, batchRecord.entityId as any);
+                }
+            }
+        } else if (record.type === 'create') {
             historyRegistry.createFromSnapshot(record.after);
         } else if (record.type === 'update') {
             historyRegistry.applySnapshot(record.after);

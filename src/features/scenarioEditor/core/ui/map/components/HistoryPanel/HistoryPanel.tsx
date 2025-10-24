@@ -126,22 +126,22 @@ export function HistoryPanel() {
     }, [dispatch, contextId]);
 
     const handleJumpTo = useCallback(
-        (targetIndex: number) => {
+        async (targetIndex: number) => {
             if (!historyContext) return;
 
             const currentIndex = historyContext.past.length - 1;
 
             if (targetIndex < currentIndex) {
-                // Переходим назад - делаем undo несколько раз
+                // ✅ ИСПРАВЛЕНО: Переходим назад - делаем undo последовательно
                 const undoCount = currentIndex - targetIndex;
                 for (let i = 0; i < undoCount; i++) {
-                    dispatch(undoThunk({ contextId }));
+                    await dispatch(undoThunk({ contextId }));
                 }
             } else if (targetIndex > currentIndex) {
-                // Переходим вперед - делаем redo несколько раз
+                // ✅ ИСПРАВЛЕНО: Переходим вперед - делаем redo последовательно
                 const redoCount = targetIndex - currentIndex;
                 for (let i = 0; i < redoCount; i++) {
-                    dispatch(redoThunk({ contextId }));
+                    await dispatch(redoThunk({ contextId }));
                 }
             }
         },
