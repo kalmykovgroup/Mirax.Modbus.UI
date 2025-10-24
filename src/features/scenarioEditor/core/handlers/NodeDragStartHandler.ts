@@ -3,11 +3,11 @@ import type React from 'react';
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode.ts';
 
 export type NodeDragStartDeps = {
-    shiftDragIdsRef: React.MutableRefObject<Set<string>>;
+    shiftDragIdsRef: React.RefObject<Set<string>>;
 };
 
 export class NodeDragStartHandler {
-    private readonly shiftDragIdsRef: React.MutableRefObject<Set<string>>;
+    private readonly shiftDragIdsRef: React.RefObject<Set<string>>;
 
     constructor(deps: NodeDragStartDeps) {
         this.shiftDragIdsRef = deps.shiftDragIdsRef;

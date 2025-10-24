@@ -49,6 +49,8 @@ export function BranchNode({ data, selected, id }: Props) {
         const currentWidth = branchDto.width ?? 300;
         const currentHeight = branchDto.height ?? 100;
 
+        let minRelX = 0; // Минимальная относительная координата X (может быть отрицательной)
+        let minRelY = 0; // Минимальная относительная координата Y (может быть отрицательной)
         let maxX = 0;
         let maxY = 0;
         const padding = 12;
@@ -69,6 +71,10 @@ export function BranchNode({ data, selected, id }: Props) {
             const relX = stepX - branchX;
             const relY = stepY - branchY;
 
+            // Отслеживаем минимальные относительные координаты (для отрицательных)
+            minRelX = Math.min(minRelX, relX);
+            minRelY = Math.min(minRelY, relY);
+
             const rightEdge = relX + stepWidth + padding;
             const bottomEdge = relY + stepHeight + padding;
 
@@ -83,25 +89,47 @@ export function BranchNode({ data, selected, id }: Props) {
             maxY = Math.max(maxY, bottomEdge);
         }
 
-        console.log(`[BranchNode] 📐 Max edges:`, { maxX: Math.round(maxX), maxY: Math.round(maxY) });
+        // Вычисляем сдвиг ветки при отрицательных координатах
+        const deltaX = minRelX < 0 ? Math.abs(minRelX) + padding : 0;
+        const deltaY = minRelY < 0 ? Math.abs(minRelY) + padding : 0;
 
-        // Вычислить необходимый размер (не меньше минимума)
-        const minWidth = 300;
-        const minHeight = 100;
-        const needWidth = Math.max(minWidth, maxX);
-        const needHeight = Math.max(minHeight, maxY);
+        console.log(`[BranchNode] 📐 Min relative coords:`, {
+            minRelX: Math.round(minRelX),
+            minRelY: Math.round(minRelY),
+            delta: { x: deltaX, y: deltaY },
+            maxEdges: { x: Math.round(maxX), y: Math.round(maxY) }
+        });
 
-        // Если размер изменился, вызываем autoExpandBranch
-        if (needWidth !== currentWidth || needHeight !== currentHeight) {
+        // Вычисляем новые размеры:
+        // Ширина = расстояние от самой левой до самой правой точки
+        // needW = maxX - minRelX (если minRelX отрицательный, это добавит его абсолютное значение)
+        const needW = Math.max(300, maxX - minRelX);
+        const needH = Math.max(100, maxY - minRelY);
+
+        // Новые координаты ветки (сдвигаем влево/вверх если есть отрицательные координаты)
+        const newBranchX = branchX + minRelX - padding;
+        const newBranchY = branchY + minRelY - padding;
+
+        const needsResize = needW !== currentWidth || needH !== currentHeight || deltaX > 0 || deltaY > 0;
+
+        // Если размер или позиция изменились, вызываем autoExpandBranch
+        if (needsResize) {
             console.log(`[BranchNode] 📐 Auto-expanding branch ${id}`, {
-                from: { width: currentWidth, height: currentHeight },
-                to: { width: needWidth, height: needHeight },
+                from: { x: branchX, y: branchY, width: currentWidth, height: currentHeight },
+                to: { x: newBranchX, y: newBranchY, width: needW, height: needH },
                 childSteps: childSteps.length,
             });
 
             const branchNode = rf.getNodes().find((n) => n.id === id);
             if (branchNode) {
-                operations.autoExpandBranch(branchNode, needWidth, needHeight);
+                // Передаем новые координаты ветки если есть сдвиг
+                operations.autoExpandBranch(
+                    branchNode,
+                    needW,
+                    needH,
+                    deltaX > 0 || deltaY > 0 ? newBranchX : undefined,
+                    deltaX > 0 || deltaY > 0 ? newBranchY : undefined
+                );
             }
         }
     }, [childSteps, branchDto, id, rf, operations]);

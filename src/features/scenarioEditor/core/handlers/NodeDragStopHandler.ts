@@ -10,7 +10,7 @@ type Utils = {
     pickDeepestBranchByTopLeft: (
         all: FlowNode[],
         abs: { x: number; y: number },
-        skipId?: string
+        skipId?: string | undefined
     ) => FlowNode | undefined;
 };
 
@@ -20,26 +20,26 @@ export type NodeDragStopDeps = {
     setNodes: React.Dispatch<React.SetStateAction<FlowNode[]>>;
     setEdges: React.Dispatch<React.SetStateAction<FlowEdge[]>>;
     setHoverBranch: (branchId: string | undefined) => void;
-    shiftDragIdsRef: React.MutableRefObject<Set<string>>;
-    isBatchMoveRef?: React.MutableRefObject<boolean>; // ✅ ДОБАВЛЕНО для отключения автоматического расширения при батчинге
+    shiftDragIdsRef: React.RefObject<Set<string>>;
+    isBatchMoveRef?: React.RefObject<boolean>; // ✅ ДОБАВЛЕНО для отключения автоматического расширения при батчинге
     utils: Utils;
     callbacks?: {
         // Движение внутри той же ветки (координаты в абсолюте)
         onStepMoved?: (stepId: string, x: number, y: number) => void;
         // Прикрепили/перенесли шаг в ветку (меняем branchId, x, y)
-        onStepAttachedToBranch?: (stepId: string, branchId: string, x: number, y: number) => void;
+        onStepAttachedToBranch?: ((stepId: string, branchId: string, x: number, y: number) => void) | undefined;
         // Вынесли шаг «на поле» (вне ветки) — удалить шаг, его связи и саму ноду из сценария
-        onStepDetachedFromBranch?: (stepId: string) => void;
+        onStepDetachedFromBranch?: ((stepId: string) => void) | undefined;
         // Удалить связь между нодами
-        onConnectionRemoved?: (sourceId: string, targetId: string, edgeId: string) => void;
+        onConnectionRemoved?: ((sourceId: string, targetId: string, edgeId: string) => void) | undefined;
         // Авто-рост ветки в UI
-        onBranchResized?: (
+        onBranchResized?: ((
             branchId: string,
             width: number,
             height: number,
             newX?: number,
             newY?: number
-        ) => void;
+        ) => void) | undefined;
     };
 };
 
@@ -50,7 +50,7 @@ export class NodeDragStopHandler {
     private readonly setEdges;
     private readonly setHoverBranch;
     private readonly shiftDragIdsRef;
-    private readonly isBatchMoveRef?: React.MutableRefObject<boolean>; // ✅ ДОБАВЛЕНО
+    private readonly isBatchMoveRef?: React.RefObject<boolean> | undefined; // ✅ ДОБАВЛЕНО
     private readonly u: Utils;
     private readonly callbacks?: NodeDragStopDeps['callbacks'];
 
