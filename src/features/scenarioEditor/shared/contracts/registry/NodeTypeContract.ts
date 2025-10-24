@@ -11,6 +11,10 @@ import type { Entity, EntitySnapshot } from '@scenario/core/features/historySyst
  */
 export interface BaseNodeDto {
     readonly id: Guid;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
 }
 
 /**

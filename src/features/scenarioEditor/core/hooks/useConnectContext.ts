@@ -63,7 +63,7 @@ export function useConnectContext({ rf, setNodes }: Params) {
         setNodes((nds) =>
             nds.map((n) => {
                 // скопировали shared
-                const data = { ...n.data } as FlowNodeData<object>;
+                const data = { ...n.data } as FlowNodeData;
 
                 if (connectCtx === undefined) {
                     // при сбросе контекста — удаляем свойство
@@ -74,7 +74,7 @@ export function useConnectContext({ rf, setNodes }: Params) {
                     (data as any).connectContext = connectCtx;
                 }
 
-                return { ...n, data };
+                return { ...n, data } as FlowNode;
             })
         );
     }, [connectCtx, setNodes]);
