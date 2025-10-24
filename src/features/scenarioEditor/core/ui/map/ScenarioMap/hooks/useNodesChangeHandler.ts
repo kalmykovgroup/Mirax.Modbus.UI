@@ -285,20 +285,20 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
         // ============================================================================
         // Проверяем: если был батч И dragStateRef теперь пуст - коммитим
         if (isBatchMoveRef.current && (dragStateRef.current?.size ?? 0) === 0) {
-            console.log(`[NodesChange] ✅ All nodes finished moving, committing batch`);
+            console.log(`[NodesChange] ✅ All nodes finished moving, committing batch with delay`);
 
-            // Коммитим батч
-            // Автоматическое расширение веток теперь делает сам BranchNode через useEffect
-            operations.commitBatch('Массовое перемещение нод');
-
-            // ✅ ИСПРАВЛЕНО: Сбрасываем флаг батчинга с задержкой
-            // чтобы все onNodeDragStop успели обработаться и не вызвали дублирующие callbacks
+            // ✅ ИСПРАВЛЕНО: Коммитим batch с задержкой, чтобы BranchNode.useEffect успел добавить resize
+            // Это дает время для автоматического уменьшения/расширения ветки
             setTimeout(() => {
+                operations.commitBatch('Массовое перемещение нод');
+                console.log('[NodesChange] ✅ Batch committed (with delay for branch auto-resize)');
+
+                // Сбрасываем флаг батчинга после коммита
                 if (isBatchMoveRef.current != null) {
                     isBatchMoveRef.current = false;
                     console.log('[NodesChange] 🔄 Batch mode disabled');
                 }
-            }, 50);
+            }, 10);
         }
     }, [setNodes, operations, refs, nodesRef, dragStateRef, resizeStateRef, isDraggingRef, isDraggingBranchRef, pendingBranchResizeRef, skipSyncRef, draggingParentIdsRef, isBatchMoveRef]);
 }
