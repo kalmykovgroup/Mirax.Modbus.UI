@@ -435,3 +435,8 @@ export const selectAllCommands = (state: RootState, contextId: string) => {
     const context = state.history.contexts[contextId];
     return context ? context.past : [];
 };
+
+export const selectIsBatching = (state: RootState, contextId: string) => {
+    const context = state.history.contexts[contextId];
+    return context ? context.isBatching : false;
+};

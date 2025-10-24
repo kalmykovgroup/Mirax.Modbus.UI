@@ -25,21 +25,25 @@ export type NodeDragStopDeps = {
     utils: Utils;
     callbacks?: {
         // Движение внутри той же ветки (координаты в абсолюте)
-        onStepMoved?: (stepId: string, x: number, y: number) => void;
+        // branchResize - опциональная информация о том, что нужно расширить ветку
+        onStepMoved?: (
+            stepId: string,
+            x: number,
+            y: number,
+            branchResize?: {
+                branchId: string;
+                width: number;
+                height: number;
+                newX?: number;
+                newY?: number;
+            }
+        ) => void;
         // Прикрепили/перенесли шаг в ветку (меняем branchId, x, y)
         onStepAttachedToBranch?: ((stepId: string, branchId: string, x: number, y: number) => void) | undefined;
         // Вынесли шаг «на поле» (вне ветки) — удалить шаг, его связи и саму ноду из сценария
         onStepDetachedFromBranch?: ((stepId: string) => void) | undefined;
         // Удалить связь между нодами
         onConnectionRemoved?: ((sourceId: string, targetId: string, edgeId: string) => void) | undefined;
-        // Авто-рост ветки в UI
-        onBranchResized?: ((
-            branchId: string,
-            width: number,
-            height: number,
-            newX?: number,
-            newY?: number
-        ) => void) | undefined;
     };
 };
 
@@ -199,6 +203,8 @@ export class NodeDragStopHandler {
                     `[NodeDragStopHandler] 📏 Step size: ${childW}x${childH} | Branch: ${branchW}x${branchH} | Position: ${relX},${relY} (abs: ${absTL.x},${absTL.y}) | Redux branch pos: (${branchX},${branchY})`
                 );
 
+                let branchResize: { branchId: string; width: number; height: number; newX?: number; newY?: number } | undefined;
+
                 if (childW > 0 && childH > 0) {
                     const pad = 12;
 
@@ -218,9 +224,10 @@ export class NodeDragStopHandler {
 
                     if (needsResize) {
                         console.log(
-                            `[NodeDragStopHandler] 📐 Branch expansion: pos(${branchX},${branchY})→(${newBranchX},${newBranchY}) size(${branchW}x${branchH})→(${needW}x${needH}) delta(${deltaX},${deltaY})`
+                            `[NodeDragStopHandler] 📐 Branch needs expansion: pos(${branchX},${branchY})→(${newBranchX},${newBranchY}) size(${branchW}x${branchH})→(${needW}x${needH}) delta(${deltaX},${deltaY})`
                         );
 
+                        // Обновляем UI
                         this.setNodes((nds): FlowNode[] => {
                             return nds.map((n) => {
                                 // Обновляем ТОЛЬКО ветку (позиция и размеры)
@@ -231,35 +238,27 @@ export class NodeDragStopHandler {
                                         style: { ...(n.style ?? {}), width: needW, height: needH }
                                     };
                                 }
-
-                                // Дочерние степы НЕ обновляем в UI
-                                // Их относительные позиции пересчитаются автоматически в mapScenarioToFlow
-                                // после обновления координат ветки в Redux
-
                                 return n;
                             });
                         });
 
-                        // ✅ ИСПРАВЛЕНО: Не вызываем onBranchResized при батчинге
-                        // Батчинг сам пересчитает размеры всех затронутых веток
-                        if (!this.isBatchMoveRef?.current) {
-                            this.callbacks?.onBranchResized?.(
-                                target.id,
-                                needW,
-                                needH,
-                                newBranchX,
-                                newBranchY
-                            );
-                        } else {
-                            console.log(`[NodeDragStopHandler] ⏸️ Skipping auto-resize during batch move`);
-                        }
+                        // ✅ Передаем информацию о resize в onStepMoved
+                        branchResize = {
+                            branchId: target.id,
+                            width: needW,
+                            height: needH,
+                            newX: newBranchX,
+                            newY: newBranchY,
+                        };
                     }
                 }
 
-                // ✅ ИСПРАВЛЕНО: Не вызываем onStepMoved при батчинге
+                // ✅ Не вызываем onStepMoved при батчинге
                 // При батчинге все ноды обрабатываются в useNodesChangeHandler
                 if (!this.isBatchMoveRef?.current) {
-                    this.callbacks?.onStepMoved?.(current.id, absTL.x, absTL.y);
+                    // Передаем информацию о resize (если есть) в onStepMoved
+                    console.log(`[NodeDragStopHandler] 📤 Calling onStepMoved with branchResize:`, branchResize);
+                    this.callbacks?.onStepMoved?.(current.id, absTL.x, absTL.y, branchResize);
                 } else {
                     console.log(`[NodeDragStopHandler] ⏸️ Skipping onStepMoved during batch move`);
                 }
@@ -300,14 +299,7 @@ export class NodeDragStopHandler {
 
             this.callbacks?.onStepAttachedToBranch?.(current.id, target.id, absTL.x, absTL.y);
 
-            // Дублируем уведомление о возможном авто-росте ветки
-            // ✅ ИСПРАВЛЕНО: Не вызываем onBranchResized при батчинге
-            if (childW > 0 && childH > 0 && !this.isBatchMoveRef?.current) {
-                const pad = 12;
-                const needW = Math.max(br.w, relX + childW + pad);
-                const needH = Math.max(br.h, relY + childH + pad);
-                this.callbacks?.onBranchResized?.(target.id, needW, needH);
-            }
+            // Размеры ветки обновит BranchNode.useEffect автоматически
             return;
         }
 

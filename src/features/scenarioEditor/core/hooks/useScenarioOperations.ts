@@ -386,12 +386,45 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 return;
             }
 
-            const previousDto = branchNode.data.object;
-            if (!previousDto) return;
+            // ✅ ИСПРАВЛЕНО: Берем актуальные данные из Redux store, а не из branchNode.data.object
+            // branchNode.data.object может быть устаревшим из-за асинхронности React updates
+            const state = store.getState();
+            const scenarioState = state.scenario.scenarios[scenarioId];
+
+            if (!scenarioState) {
+                console.error(`[useScenarioOperations] Scenario ${scenarioId} not found in store`);
+                return;
+            }
+
+            // ✅ ИСПРАВЛЕНО: Ветки хранятся в branches, а не в steps
+            const previousDto = scenarioState.branches[branchNode.id];
+            if (!previousDto) {
+                console.error(`[useScenarioOperations] Branch ${branchNode.id} not found in store`);
+                return;
+            }
+
+            // ✅ ИСПРАВЛЕНО: Проверяем, изменились ли размеры на самом деле
+            const targetX = newX ?? previousDto.x;
+            const targetY = newY ?? previousDto.y;
+
+            const isSameSize =
+                Math.round(previousDto.x) === Math.round(targetX) &&
+                Math.round(previousDto.y) === Math.round(targetY) &&
+                Math.round(previousDto.width) === Math.round(newWidth) &&
+                Math.round(previousDto.height) === Math.round(newHeight);
+
+            // Если размеры совпадают - пропускаем (нет смысла создавать запись в истории)
+            if (isSameSize) {
+                console.log(`[useScenarioOperations] ⏭️ Skipping auto-expand: sizes already match | ID: ${branchNode.id}`, {
+                    current: { x: previousDto.x, y: previousDto.y, width: previousDto.width, height: previousDto.height },
+                    target: { x: targetX, y: targetY, width: newWidth, height: newHeight }
+                });
+                return;
+            }
 
             console.log(`[useScenarioOperations] 🔧 Branch auto-expand | ID: ${branchNode.id}`, {
                 from: { x: previousDto.x, y: previousDto.y, width: previousDto.width, height: previousDto.height },
-                to: { x: newX ?? previousDto.x, y: newY ?? previousDto.y, width: newWidth, height: newHeight }
+                to: { x: targetX, y: targetY, width: newWidth, height: newHeight }
             });
 
             const newDto = contract.createAutoExpandEntity(previousDto, newWidth, newHeight, newX, newY);

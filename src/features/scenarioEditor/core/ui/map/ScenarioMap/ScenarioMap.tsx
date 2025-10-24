@@ -137,12 +137,59 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     pickDeepestBranchByTopLeft,
                 },
                 callbacks: {
-                    onStepMoved: (stepId: string, x: number, y: number) => {
-                        console.log(`[ScenarioMap] 📍 STEP MOVED | ID: ${stepId}`, { x, y });
-                        const stepNode = rf.getNodes().find((n) => n.id === stepId);
-                        if (stepNode) {
-                            operations.moveNode(stepNode, x, y);
+                    onStepMoved: (
+                        stepId: string,
+                        x: number,
+                        y: number,
+                        branchResize?: {
+                            branchId: string;
+                            width: number;
+                            height: number;
+                            newX?: number;
+                            newY?: number;
                         }
+                    ) => {
+                        console.log(`[ScenarioMap] 📍 STEP MOVED | ID: ${stepId}`, { x, y, branchResize });
+                        const stepNode = rf.getNodes().find((n) => n.id === stepId);
+                        if (!stepNode) return;
+
+                        // ✅ ВСЕГДА используем batch для одиночного перемещения
+                        // Это позволяет захватить автоматическое уменьшение/расширение ветки из BranchNode.useEffect
+                        operations.startBatch();
+                        console.log(`[ScenarioMap] ✅ Batch started for single node move`);
+
+                        // Перемещаем ноду
+                        operations.moveNode(stepNode, x, y);
+                        console.log(`[ScenarioMap] ✅ Step moved in batch`);
+
+                        // Если нужно расширить ветку - добавляем это в batch
+                        if (branchResize) {
+                            const branchNode = rf.getNodes().find((n) => n.id === branchResize.branchId);
+                            if (branchNode) {
+                                console.log(`[ScenarioMap] 📦 Adding branch resize to batch`, {
+                                    branchId: branchResize.branchId,
+                                    newSize: { w: branchResize.width, h: branchResize.height },
+                                    newPos: { x: branchResize.newX, y: branchResize.newY }
+                                });
+
+                                operations.autoExpandBranch(
+                                    branchNode,
+                                    branchResize.width,
+                                    branchResize.height,
+                                    branchResize.newX,
+                                    branchResize.newY
+                                );
+                                console.log(`[ScenarioMap] ✅ Branch resized in batch`);
+                            } else {
+                                console.warn(`[ScenarioMap] ⚠️ Branch node not found: ${branchResize.branchId}`);
+                            }
+                        }
+
+                        // Коммитим batch с небольшой задержкой, чтобы BranchNode.useEffect успел добавить уменьшение
+                        setTimeout(() => {
+                            operations.commitBatch('Перемещение ноды');
+                            console.log(`[ScenarioMap] ✅ Batch committed (with delay for branch auto-resize)`);
+                        }, 10);
                     },
                     onStepAttachedToBranch: (stepId: string, branchId: string, x: number, y: number) => {
                         console.log(
@@ -161,27 +208,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                             const x = stepNode.position.x;
                             const y = stepNode.position.y;
                             operations.detachStepFromBranch(stepNode, x, y);
-                        }
-                    },
-                    onBranchResized: (
-                        branchId: string,
-                        width: number,
-                        height: number,
-                        newX?: number,
-                        newY?: number
-                    ) => {
-                        console.log(
-                            `[ScenarioMap] 📐 BRANCH RESIZED | Branch: ${branchId}`,
-                            { width, height, x: newX, y: newY }
-                        );
-                        const branchNode = rf.getNodes().find((n) => n.id === branchId);
-                        if (branchNode) {
-                            // Обновляем ветку (включая координаты если изменились)
-                            operations.autoExpandBranch(branchNode, width, height, newX, newY);
-
-                            // Дочерние степы обновятся автоматически через useReduxFlowSync
-                            // при следующей синхронизации, т.к. их относительные координаты
-                            // будут пересчитаны в mapScenarioToFlow
                         }
                     },
                 },

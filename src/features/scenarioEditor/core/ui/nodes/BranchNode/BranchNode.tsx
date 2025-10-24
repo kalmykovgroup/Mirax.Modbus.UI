@@ -10,6 +10,8 @@ import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDt
 import { useCtrlKey } from "@app/lib/hooks/useCtrlKey.ts";
 import { useShiftKey } from "@app/lib/hooks/useShiftKey.ts";
 import { useScenarioOperationsContext } from '@scenario/core/ui/map/ScenarioMap/contexts/ScenarioOperationsContext';
+import { selectActiveScenarioId } from '@scenario/store/scenarioSlice';
+import { selectIsBatching } from '@scenario/core/features/historySystem/historySlice';
 import type { RootState } from '@/baseStore/store';
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
 
@@ -29,6 +31,12 @@ export function BranchNode({ data, selected, id }: Props) {
 
     // Получаем DTO ветки из Redux store
     const branchDto = data.object as BranchDto;
+
+    // Проверяем находимся ли в batch режиме
+    const activeScenarioId = useSelector(selectActiveScenarioId);
+    const isBatching = useSelector((state: RootState) =>
+        selectIsBatching(state, activeScenarioId ?? 'no-scenario')
+    );
 
     // Подписываемся на данные ветки И степов из Redux одновременно
     // КРИТИЧНО: Получаем координаты ветки из ТОГО ЖЕ селектора для консистентности
@@ -148,11 +156,12 @@ export function BranchNode({ data, selected, id }: Props) {
 
         // Если размер или позиция изменились, вызываем autoExpandBranch
         if (needsResize) {
-            console.log(`[BranchNode] 📐 Auto-expanding branch ${id}`, {
+            console.log(`[BranchNode] 📐 Auto-expanding branch ${id}${isBatching ? ' (in batch mode)' : ''}`, {
                 from: { x: branchX, y: branchY, width: currentWidth, height: currentHeight },
                 to: { x: newBranchX, y: newBranchY, width: needW, height: needH },
                 lastApplied,
                 childSteps: childSteps.length,
+                isBatching,
             });
 
             // Сохраняем новые размеры в ref ДО вызова autoExpandBranch
