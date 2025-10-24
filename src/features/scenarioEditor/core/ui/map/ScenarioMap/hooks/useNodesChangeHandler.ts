@@ -5,11 +5,13 @@ import { applyNodeChanges, type OnNodesChange } from '@xyflow/react';
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
 import type { FlowStateRefs } from './useFlowState';
 import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import { absOf } from '@scenario/core/utils/dropUtils';
+import type {useScenarioOperations} from "@scenario/core/hooks/useScenarioOperations.ts";
 
 interface UseNodesChangeHandlerParams {
     readonly refs: FlowStateRefs;
     readonly setNodes: React.Dispatch<React.SetStateAction<FlowNode[]>>;
-    readonly operations: ReturnType<typeof import('@scenario/core/hooks/useScenarioOperations').useScenarioOperations>;
+    readonly operations: ReturnType<typeof useScenarioOperations>;
 }
 
 function hasChildren(nodeId: string, allNodes: FlowNode[]): boolean {
@@ -27,6 +29,7 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
         pendingBranchResizeRef,
         skipSyncRef,
         draggingParentIdsRef,
+        isBatchMoveRef,
     } = refs;
 
     return useCallback((changes) => {
@@ -67,6 +70,29 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
 
         setNodes((nds) => applyNodeChanges(filteredChanges, nds) as FlowNode[]);
 
+        // ============================================================================
+        // БАТЧИНГ: Определяем по размеру dragStateRef при первом dragEnd
+        // ============================================================================
+        const dragEndChanges = filteredChanges.filter(
+            (change): change is typeof change & { dragging: false; position: { x: number; y: number } } =>
+                change.type === 'position' &&
+                'dragging' in change &&
+                change.dragging === false &&
+                'position' in change &&
+                change.position != null
+        );
+
+        // Проверяем: если есть dragEnd события И dragStateRef содержит >1 записей - это батч
+        const hasBatchMove = dragEndChanges.length > 0 && (dragStateRef.current?.size ?? 0) > 1;
+
+        if (hasBatchMove && !isBatchMoveRef.current) {
+            console.log(`[NodesChange] 🔄 Starting batch (dragState size: ${dragStateRef.current?.size ?? 0})`);
+            if (isBatchMoveRef.current != null) {
+                isBatchMoveRef.current = true;
+            }
+            operations.startBatch();
+        }
+
         for (const change of filteredChanges) {
             if (change.type === 'position' && 'position' in change && change.position != null) {
                 const { id, dragging } = change;
@@ -75,9 +101,11 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
                     if (dragStateRef.current && !dragStateRef.current.has(id)) {
                         const node = nodesRef.current?.find((n) => n.id === id);
                         if (node) {
+                            // ВАЖНО: Сохраняем АБСОЛЮТНЫЕ координаты для корректного сравнения
+                            const absPos = absOf(node, nodesRef.current ?? []);
                             dragStateRef.current.set(id, {
-                                x: Math.round(node.position.x),
-                                y: Math.round(node.position.y),
+                                x: Math.round(absPos.x),
+                                y: Math.round(absPos.y),
                             });
 
                             const isBranch = node.type === 'BranchNode';
@@ -92,7 +120,11 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
                                 skipSyncRef.current = true;
                             }
 
-                            console.log(`[NodesChange] 🚀 DRAG START | Type: ${node.type} | ID: ${id}`);
+                            console.log(`[NodesChange] 🚀 DRAG START | Type: ${node.type} | ID: ${id}`, {
+                                absolute: absPos,
+                                relative: node.position,
+                                hasParent: !!node.parentId,
+                            });
                         }
                     }
                 } else if (dragging === false) {
@@ -101,26 +133,53 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
                     }
                     if (isDraggingBranchRef.current != null) {
                         isDraggingBranchRef.current = false;
-                    }
+                    }5
 
                     const startPos = dragStateRef.current?.get(id);
                     const node = nodesRef.current?.find((n) => n.id === id);
 
-                    // Сохраняем позицию ветки после перемещения
-                    if (node && node.type === FlowType.BranchNode && startPos) {
-                        const newX = Math.round(change.position.x);
-                        const newY = Math.round(change.position.y);
+                    // Сохраняем позицию ЛЮБОЙ ноды после перемещения
+                    if (node && startPos) {
+                        // ВАЖНО: Для дочерних нод position - это ОТНОСИТЕЛЬНЫЕ координаты!
+                        // Создаем обновленную ноду с новыми координатами
+                        const updatedNode: FlowNode = {
+                            ...node,
+                            position: {
+                                x: Math.round(change.position.x),
+                                y: Math.round(change.position.y),
+                            },
+                        };
+
+                        // Вычисляем АБСОЛЮТНЫЕ координаты с учетом всех родителей
+                        const absPos = absOf(updatedNode, nodesRef.current ?? []);
+                        const newX = Math.round(absPos.x);
+                        const newY = Math.round(absPos.y);
 
                         if (startPos.x !== newX || startPos.y !== newY) {
-                            console.log(
-                                `[NodesChange] 📍 BRANCH MOVED | ID: ${id}`,
-                                { from: startPos, to: { x: newX, y: newY } }
-                            );
+                            if (node.type === FlowType.BranchNode) {
+                                console.log(
+                                    `[NodesChange] 📍 BRANCH MOVED | ID: ${id}`,
+                                    { from: startPos, to: { x: newX, y: newY } }
+                                );
 
-                            // Найти все дочерние степы этой ветки
-                            const childSteps = nodesRef.current?.filter((n) => n.parentId === id) ?? [];
+                                // Найти все дочерние степы этой ветки
+                                const childSteps = nodesRef.current?.filter((n) => n.parentId === id) ?? [];
 
-                            operations.moveNode(node, newX, newY, childSteps);
+                                operations.moveNode(node, newX, newY, childSteps);
+                            } else {
+                                // Обычный степ (может быть дочерним, используем абсолютные координаты)
+                                console.log(
+                                    `[NodesChange] 📍 STEP MOVED | Type: ${node.type} | ID: ${id}`,
+                                    {
+                                        from: startPos,
+                                        to: { x: newX, y: newY },
+                                        relative: { x: updatedNode.position.x, y: updatedNode.position.y },
+                                        hasParent: !!node.parentId,
+                                    }
+                                );
+
+                                operations.moveNode(node, newX, newY);
+                            }
                         }
                     }
 
@@ -209,5 +268,22 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
                 );
             }
         }
-    }, [setNodes, operations, refs, nodesRef, dragStateRef, resizeStateRef, isDraggingRef, isDraggingBranchRef, pendingBranchResizeRef, skipSyncRef, draggingParentIdsRef]);
+
+        // ============================================================================
+        // БАТЧИНГ: Фиксируем батч только когда ВСЕ ноды закончили перемещение
+        // ============================================================================
+        // Проверяем: если был батч И dragStateRef теперь пуст - коммитим
+        if (isBatchMoveRef.current && (dragStateRef.current?.size ?? 0) === 0) {
+            console.log(`[NodesChange] ✅ All nodes finished moving, committing batch`);
+
+            // Коммитим батч
+            // Автоматическое расширение веток теперь делает сам BranchNode через useEffect
+            operations.commitBatch('Массовое перемещение нод');
+
+            // Сбрасываем флаг батчинга
+            if (isBatchMoveRef.current != null) {
+                isBatchMoveRef.current = false;
+            }
+        }
+    }, [setNodes, operations, refs, nodesRef, dragStateRef, resizeStateRef, isDraggingRef, isDraggingBranchRef, pendingBranchResizeRef, skipSyncRef, draggingParentIdsRef, isBatchMoveRef]);
 }

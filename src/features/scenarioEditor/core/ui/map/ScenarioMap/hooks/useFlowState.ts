@@ -25,7 +25,8 @@ export interface FlowStateRefs {
 
 readonly skipSyncRef: React.RefObject<boolean>;
 readonly shiftDragIdsRef: React.RefObject<Set<string>>;
-readonly draggingParentIdsRef: React.RefObject<Set<string>>; // ✅ ДОБАВЛЕНО
+readonly draggingParentIdsRef: React.RefObject<Set<string>>;
+readonly isBatchMoveRef: React.RefObject<boolean>; // ✅ ДОБАВЛЕНО для отключения NodeDragStopHandler при батчинге
 }
 
 export interface FlowState {
@@ -57,7 +58,8 @@ export function useFlowState(): FlowState {
 
     const skipSyncRef = useRef<boolean>(false);
     const shiftDragIdsRef = useRef<Set<string>>(new Set());
-    const draggingParentIdsRef = useRef<Set<string>>(new Set()); // ✅ ДОБАВЛЕНО
+    const draggingParentIdsRef = useRef<Set<string>>(new Set());
+    const isBatchMoveRef = useRef<boolean>(false); // ✅ ДОБАВЛЕНО для отключения NodeDragStopHandler
 
     return {
         nodes,
@@ -77,7 +79,8 @@ export function useFlowState(): FlowState {
             pendingBranchResizeRef,
             skipSyncRef,
             shiftDragIdsRef,
-            draggingParentIdsRef, // ✅ ДОБАВЛЕНО
+            draggingParentIdsRef,
+            isBatchMoveRef, // ✅ ДОБАВЛЕНО
         },
     };
 }

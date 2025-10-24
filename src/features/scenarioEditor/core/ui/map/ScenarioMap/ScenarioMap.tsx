@@ -42,6 +42,7 @@ import { useEdgesChangeHandler } from './hooks/useEdgesChangeHandler';
 import { useConnectionHandler } from './hooks/useConnectionHandler';
 import { useShiftDragMode } from './hooks/useShiftDragMode';
 import {edgeTypes, defaultEdgeOptions, flowSettings, generateNodeTypes} from './config/flowConfig';
+import { ScenarioOperationsProvider } from './contexts/ScenarioOperationsContext';
 
 export interface ScenarioEditorProps {}
 
@@ -129,6 +130,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 setEdges,
                 setHoverBranch,
                 shiftDragIdsRef: refs.shiftDragIdsRef,
+                isBatchMoveRef: refs.isBatchMoveRef, // ✅ ДОБАВЛЕНО
                 utils: {
                     absOf,
                     rectOf,
@@ -263,26 +265,27 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     // ============================================================================
     return (
         <div data-theme={theme} className={styles.containerScenarioMap} style={{ height: '70vh' }}>
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                onEdgeMouseEnter={handleEdgeMouseEnter}
-                onEdgeMouseLeave={handleEdgeMouseLeave}
-                onNodesChange={onNodesChangeHandler}
-                onEdgesChange={onEdgesChangeHandler}
-                onSelectionChange={handleSelectionChange}
-                onConnect={onConnect}
-                onConnectStart={onConnectStart}
-                onConnectEnd={onConnectEnd}
-                isValidConnection={isValidConnection}
-                onNodeDragStart={dragStartHandler.onNodeDragStart}
-                onNodeDragStop={dragStopHandler.onNodeDragStop}
-                {...flowSettings}
-                defaultEdgeOptions={defaultEdgeOptions}
-                className={styles.customFlow}
-            >
+            <ScenarioOperationsProvider operations={operations}>
+                <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    nodeTypes={nodeTypes}
+                    edgeTypes={edgeTypes}
+                    onEdgeMouseEnter={handleEdgeMouseEnter}
+                    onEdgeMouseLeave={handleEdgeMouseLeave}
+                    onNodesChange={onNodesChangeHandler}
+                    onEdgesChange={onEdgesChangeHandler}
+                    onSelectionChange={handleSelectionChange}
+                    onConnect={onConnect}
+                    onConnectStart={onConnectStart}
+                    onConnectEnd={onConnectEnd}
+                    isValidConnection={isValidConnection}
+                    onNodeDragStart={dragStartHandler.onNodeDragStart}
+                    onNodeDragStop={dragStopHandler.onNodeDragStop}
+                    {...flowSettings}
+                    defaultEdgeOptions={defaultEdgeOptions}
+                    className={styles.customFlow}
+                >
                 <Panel position="top-left">
                     <LeftPanel />
                 </Panel>
@@ -317,6 +320,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     variant={BackgroundVariant.Lines}
                 />
             </ReactFlow>
+            </ScenarioOperationsProvider>
         </div>
     );
 };

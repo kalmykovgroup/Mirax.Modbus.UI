@@ -496,5 +496,10 @@ export function useScenarioOperations(scenarioId: Guid | null) {
         undo: history.undo,
         redo: history.redo,
         historySize: history.historySize,
+
+        // Batching для массовых операций
+        startBatch: history.startBatch,
+        commitBatch: history.commitBatch,
+        cancelBatch: history.cancelBatch,
     };
 }

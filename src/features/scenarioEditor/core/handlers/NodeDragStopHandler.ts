@@ -21,6 +21,7 @@ export type NodeDragStopDeps = {
     setEdges: React.Dispatch<React.SetStateAction<FlowEdge[]>>;
     setHoverBranch: (branchId: string | undefined) => void;
     shiftDragIdsRef: React.MutableRefObject<Set<string>>;
+    isBatchMoveRef?: React.MutableRefObject<boolean>; // ✅ ДОБАВЛЕНО для отключения автоматического расширения при батчинге
     utils: Utils;
     callbacks?: {
         // Движение внутри той же ветки (координаты в абсолюте)
@@ -49,6 +50,7 @@ export class NodeDragStopHandler {
     private readonly setEdges;
     private readonly setHoverBranch;
     private readonly shiftDragIdsRef;
+    private readonly isBatchMoveRef?: React.MutableRefObject<boolean>; // ✅ ДОБАВЛЕНО
     private readonly u: Utils;
     private readonly callbacks?: NodeDragStopDeps['callbacks'];
 
@@ -59,6 +61,7 @@ export class NodeDragStopHandler {
         this.setEdges = deps.setEdges;
         this.setHoverBranch = deps.setHoverBranch;
         this.shiftDragIdsRef = deps.shiftDragIdsRef;
+        this.isBatchMoveRef = deps.isBatchMoveRef; // ✅ ДОБАВЛЕНО
         this.u = deps.utils;
         this.callbacks = deps.callbacks;
     }
@@ -237,13 +240,19 @@ export class NodeDragStopHandler {
                             });
                         });
 
-                        this.callbacks?.onBranchResized?.(
-                            target.id,
-                            needW,
-                            needH,
-                            newBranchX,
-                            newBranchY
-                        );
+                        // ✅ ИСПРАВЛЕНО: Не вызываем onBranchResized при батчинге
+                        // Батчинг сам пересчитает размеры всех затронутых веток
+                        if (!this.isBatchMoveRef?.current) {
+                            this.callbacks?.onBranchResized?.(
+                                target.id,
+                                needW,
+                                needH,
+                                newBranchX,
+                                newBranchY
+                            );
+                        } else {
+                            console.log(`[NodeDragStopHandler] ⏸️ Skipping auto-resize during batch move`);
+                        }
                     }
                 }
 
@@ -286,7 +295,8 @@ export class NodeDragStopHandler {
             this.callbacks?.onStepAttachedToBranch?.(current.id, target.id, absTL.x, absTL.y);
 
             // Дублируем уведомление о возможном авто-росте ветки
-            if (childW > 0 && childH > 0) {
+            // ✅ ИСПРАВЛЕНО: Не вызываем onBranchResized при батчинге
+            if (childW > 0 && childH > 0 && !this.isBatchMoveRef?.current) {
                 const pad = 12;
                 const needW = Math.max(br.w, relX + childW + pad);
                 const needH = Math.max(br.h, relY + childH + pad);
