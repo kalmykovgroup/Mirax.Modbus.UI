@@ -10,10 +10,11 @@ import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDt
 import { useCtrlKey } from "@app/lib/hooks/useCtrlKey.ts";
 import { useShiftKey } from "@app/lib/hooks/useShiftKey.ts";
 import { useScenarioOperationsContext } from '@scenario/core/ui/map/ScenarioMap/contexts/ScenarioOperationsContext';
-import { selectActiveScenarioId } from '@scenario/store/scenarioSlice';
+
 import { selectIsBatching } from '@scenario/core/features/historySystem/historySlice';
 import type { RootState } from '@/baseStore/store';
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
+import {selectActiveScenarioId} from "@scenario/store/scenarioSelectors.ts";
 
 type Props = NodeProps<Node<FlowNodeData<BranchDto>>>;
 
