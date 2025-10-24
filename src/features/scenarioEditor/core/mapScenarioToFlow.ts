@@ -7,7 +7,7 @@ import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
 import type { FlowEdge, FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
 import { nodeTypeRegistry } from '@scenario/shared/contracts/registry/NodeTypeRegistry';
 import {
-    selectBranchesByScenarioId,
+    selectBranchesListInScenario,
     selectStepsByBranchId,
 } from '@scenario/store/scenarioSelectors';
 import { StepType } from '@scenario/shared/contracts/server/types/Api.Shared/StepType';
@@ -17,7 +17,7 @@ function handleFromOrder(order: unknown): string | undefined {
     return n >= 1 && n <= 3 ? `s${n}` : undefined;
 }
 
-// 🔥 Helper: Группировка массива по ключу
+// Helper: Группировка массива по ключу
 function groupBy<T>(array: T[], keyFn: (item: T) => string | undefined): Map<string, T[]> {
     const map = new Map<string, T[]>();
 
@@ -48,9 +48,16 @@ export function mapScenarioToFlow(
     const addedEdgeKeys = new Set<string>();
 
     // 🚀 ОПТИМИЗАЦИЯ: Получаем ВСЕ данные один раз
-    const branches = selectBranchesByScenarioId(state, scenarioId);
-    const allRelations = Object.values(state.scenario.relations);
-    const allBranches = Object.values(state.scenario.branches);
+    const scenarioState = state.scenario.scenarios[scenarioId];
+
+    if (!scenarioState) {
+        console.error(`[mapScenarioToFlow] Scenario ${scenarioId} not found in store`);
+        return { nodes: [], edges: [] };
+    }
+
+    const branches = selectBranchesListInScenario(state, scenarioId);
+    const allRelations = Object.values(scenarioState.relations);
+    const allBranches = Object.values(scenarioState.branches);
 
     // 🚀 ОПТИМИЗАЦИЯ: Группируем relations по parentStepId для O(1) lookup
     const relationsByParentStepId = groupBy(
@@ -79,7 +86,7 @@ export function mapScenarioToFlow(
         const branchNode = branchContract.mapFromDto(branch, undefined);
         nodes.push(branchNode);
 
-        const steps = selectStepsByBranchId(state, branch.id);
+        const steps = selectStepsByBranchId(state, scenarioId, branch.id);
 
         for (const step of steps) {
             const stepContract = nodeTypeRegistry.get(step.type);

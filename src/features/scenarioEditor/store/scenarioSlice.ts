@@ -30,24 +30,27 @@ export enum ScenarioLoadStatus {
     Error = 'Error',
 }
 
+// ============================================================================
+// НОВАЯ СТРУКТУРА: каждый сценарий изолирован
+// ============================================================================
+
 export interface ScenarioState {
-    readonly scenarios: Record<Guid, ScenarioDto>;
+     scenario: ScenarioDto;
     readonly branches: Record<Guid, BranchDto>;
     readonly steps: Record<Guid, StepBaseDto>;
     readonly relations: Record<Guid, StepRelationDto>;
-    readonly activeScenarioId: Guid | null;
-    readonly scenarioStatuses: Record<Guid, ScenarioLoadStatus>;
-    readonly scenarioErrors: Record<Guid, string>;
+     status: ScenarioLoadStatus;
+     error?: string | undefined;
 }
 
-const initialState: ScenarioState = {
+export interface ScenariosState {
+    readonly scenarios: Record<Guid, ScenarioState>;
+    readonly activeScenarioId: Guid | null;
+}
+
+const initialState: ScenariosState = {
     scenarios: {},
-    branches: {},
-    steps: {},
-    relations: {},
     activeScenarioId: null,
-    scenarioStatuses: {},
-    scenarioErrors: {},
 };
 
 function normalizeScenario(scenario: ScenarioDto): {
@@ -146,14 +149,11 @@ export const refreshScenarioById =
         async (dispatch: AppDispatch, getState: () => RootState): Promise<ScenarioDto | undefined> => {
             try {
                 const state = getState();
-                const currentStatus = state.scenario.scenarioStatuses[id];
+                const scenarioState = state.scenario.scenarios[id];
 
                 // Если не форсируем и статус Loaded, возвращаем из стейта
-                if (!forceRefetch && currentStatus === ScenarioLoadStatus.Loaded) {
-                    const scenario = state.scenario.scenarios[id];
-                    if (scenario != null) {
-                        return scenario;
-                    }
+                if (!forceRefetch && scenarioState?.status === ScenarioLoadStatus.Loaded) {
+                    return scenarioState.scenario;
                 }
 
                 // Устанавливаем статус загрузки
@@ -211,21 +211,52 @@ const scenariosSlice = createSlice({
         },
 
         setScenariosList(state, action: PayloadAction<ScenarioDto[]>) {
-            state.scenarios = {};
-            for (const s of action.payload) {
-                state.scenarios[s.id] = s;
-                // При загрузке списка все сценарии имеют статус NotLoaded
-                if (state.scenarioStatuses[s.id] == null) {
-                    state.scenarioStatuses[s.id] = ScenarioLoadStatus.NotLoaded;
+            // Очищаем все кроме уже загруженных сценариев
+            const loadedIds = new Set<Guid>();
+            for (const scenarioId in state.scenarios) {
+                if (state.scenarios[scenarioId]?.status === ScenarioLoadStatus.Loaded) {
+                    loadedIds.add(scenarioId);
                 }
             }
+
+            // Сохраняем только загруженные сценарии
+            const newScenarios: Record<Guid, ScenarioState> = {};
+            for (const id of loadedIds) {
+                const existing = state.scenarios[id];
+                if (existing) {
+                    newScenarios[id] = existing;
+                }
+            }
+
+            // Добавляем новые сценарии со статусом NotLoaded
+            for (const s of action.payload) {
+                const existing: ScenarioState | undefined = newScenarios[s.id];
+                if (!existing) {
+                    newScenarios[s.id] = {
+                        scenario: s,
+                        branches: {},
+                        steps: {},
+                        relations: {},
+                        status: ScenarioLoadStatus.NotLoaded,
+                    };
+                } else {
+                    // Обновляем только scenario DTO, но не затрагиваем загруженные данные
+                    existing.scenario = s;
+                }
+            }
+
+            state.scenarios = newScenarios;
         },
 
         setScenarioStatus(state, action: PayloadAction<{ id: Guid; status: ScenarioLoadStatus }>) {
             const { id, status } = action.payload;
-            state.scenarioStatuses[id] = status;
-            if (status !== ScenarioLoadStatus.Error) {
-                delete state.scenarioErrors[id];
+            const scenarioState = state.scenarios[id];
+
+            if (scenarioState) {
+                scenarioState.status = status;
+                if (status !== ScenarioLoadStatus.Error) {
+                    delete scenarioState.error;
+                }
             }
         },
 
@@ -234,92 +265,135 @@ const scenariosSlice = createSlice({
             action: PayloadAction<{ id: Guid; status: ScenarioLoadStatus.Error; error: string }>
         ) {
             const { id, status, error } = action.payload;
-            state.scenarioStatuses[id] = status;
-            state.scenarioErrors[id] = error;
+            const scenarioState = state.scenarios[id];
+
+            if (scenarioState) {
+                scenarioState.status = status;
+                scenarioState.error = error;
+            }
         },
 
         upsertScenarioFull(state, action: PayloadAction<ScenarioDto>) {
             const dto = action.payload;
             const normalized = normalizeScenario(dto);
 
-            state.scenarios[dto.id] = dto;
-
+            const branches: Record<Guid, BranchDto> = {};
             for (const b of normalized.branches) {
-                state.branches[b.id] = b;
+                branches[b.id] = b;
             }
 
+            const steps: Record<Guid, StepBaseDto> = {};
             for (const s of normalized.steps) {
-                state.steps[s.id] = s;
+                steps[s.id] = s;
             }
 
+            const relations: Record<Guid, StepRelationDto> = {};
             for (const r of normalized.relations) {
-                state.relations[r.id] = r;
+                relations[r.id] = r;
             }
+
+            const existing = state.scenarios[dto.id];
+
+            const newState: ScenarioState = {
+                scenario: dto,
+                branches,
+                steps,
+                relations,
+                status: existing?.status ?? ScenarioLoadStatus.Loaded,
+            };
+
+            if (existing?.error) {
+                (newState as any).error = existing.error;
+            }
+
+            state.scenarios[dto.id] = newState;
         },
 
         clearScenarios(state) {
             state.scenarios = {};
-            state.branches = {};
-            state.steps = {};
-            state.relations = {};
             state.activeScenarioId = null;
-            state.scenarioStatuses = {};
-            state.scenarioErrors = {};
         },
 
         // ============================================================================
         // STEP MUTATIONS
         // ============================================================================
 
-        addStep(state, action: PayloadAction<{ branchId: Guid; step: StepBaseDto }>) {
-            const { branchId, step } = action.payload;
+        addStep(state, action: PayloadAction<{ scenarioId: Guid; branchId: Guid; step: StepBaseDto }>) {
+            const { scenarioId, branchId, step } = action.payload;
+            const scenarioState = state.scenarios[scenarioId];
 
-            state.steps[step.id] = step;
+            if (!scenarioState) {
+                console.error(`[scenarioSlice] Scenario ${scenarioId} not found`);
+                return;
+            }
 
-            const branch = state.branches[branchId];
-            if (branch != null) {
-                state.branches[branchId] = {
+            // Добавляем step в словарь
+            scenarioState.steps[step.id] = step;
+
+            // Обновляем branch
+            const branch = scenarioState.branches[branchId];
+            if (branch) {
+                scenarioState.branches[branchId] = {
                     ...branch,
                     steps: [...branch.steps, step],
                 };
             }
         },
 
-        updateStep(state, action: PayloadAction<{ stepId: Guid; changes: Partial<StepBaseDto> }>) {
-            const { stepId, changes } = action.payload;
+        updateStep(state, action: PayloadAction<{ scenarioId: Guid; stepId: Guid; changes: Partial<StepBaseDto> }>) {
+            const { scenarioId, stepId, changes } = action.payload;
+            const scenarioState = state.scenarios[scenarioId];
 
-            const step = state.steps[stepId];
-            if (step != null) {
-                state.steps[stepId] = { ...step, ...changes };
+            if (!scenarioState) {
+                console.error(`[scenarioSlice] Scenario ${scenarioId} not found`);
+                return;
+            }
 
-                const branch = state.branches[step.branchId];
-                if (branch != null) {
-                    const steps = branch.steps.map((s) => (s.id === stepId ? state.steps[stepId] : s));
-                    state.branches[step.branchId] = {
-                        ...branch,
-                        steps: [...steps] as StepBaseDto[],
-                    };
-                }
+            const step = scenarioState.steps[stepId];
+            if (!step) {
+                console.error(`[scenarioSlice] Step ${stepId} not found in scenario ${scenarioId}`);
+                return;
+            }
+
+            // Обновляем step
+            scenarioState.steps[stepId] = { ...step, ...changes };
+
+            // Обновляем step в branch
+            const branch = scenarioState.branches[step.branchId];
+            if (branch) {
+                scenarioState.branches[step.branchId] = {
+                    ...branch,
+                    steps: branch.steps.map((s) => (s.id === stepId ? scenarioState.steps[stepId] : s)) as StepBaseDto[],
+                };
             }
         },
 
-        deleteStep(state, action: PayloadAction<{ branchId: Guid; stepId: Guid }>) {
-            const { branchId, stepId } = action.payload;
+        deleteStep(state, action: PayloadAction<{ scenarioId: Guid; branchId: Guid; stepId: Guid }>) {
+            const { scenarioId, branchId, stepId } = action.payload;
+            const scenarioState = state.scenarios[scenarioId];
 
-            delete state.steps[stepId];
+            if (!scenarioState) {
+                console.error(`[scenarioSlice] Scenario ${scenarioId} not found`);
+                return;
+            }
 
-            const branch = state.branches[branchId];
+            // Удаляем step
+            delete scenarioState.steps[stepId];
+
+            // Удаляем step из branch
+            const branch = scenarioState.branches[branchId];
             if (branch) {
-                state.branches[branchId] = {
+                scenarioState.branches[branchId] = {
                     ...branch,
                     steps: branch.steps.filter((s) => s.id !== stepId),
                 };
             }
 
-            for (const relId in state.relations) {
-                const rel = state.relations[relId];
-                if (rel != null && (rel.parentStepId === stepId || rel.childStepId === stepId)) {
-                    delete state.relations[relId];
+            // Удаляем все связи с этим степом
+            for (const relId in scenarioState.relations) {
+                const rel = scenarioState.relations[relId];
+                if (rel != undefined && (rel.parentStepId === stepId || rel.childStepId === stepId)) {
+                    delete scenarioState.relations[relId];
                 }
             }
         },
@@ -332,29 +406,49 @@ const scenariosSlice = createSlice({
             state,
             action: PayloadAction<{ scenarioId: Guid; branch: BranchDto; parentStepId: Guid | null }>
         ) {
-            const { branch } = action.payload;
-            state.branches[branch.id] = branch;
+            const { scenarioId, branch } = action.payload;
+            const scenarioState = state.scenarios[scenarioId];
+
+            if (!scenarioState) {
+                console.error(`[scenarioSlice] Scenario ${scenarioId} not found`);
+                return;
+            }
+
+            scenarioState.branches[branch.id] = branch;
         },
 
-        updateBranch(state, action: PayloadAction<{ branchId: Guid; changes: Partial<BranchDto> }>) {
-            const { branchId, changes } = action.payload;
+        updateBranch(state, action: PayloadAction<{ scenarioId: Guid; branchId: Guid; changes: Partial<BranchDto> }>) {
+            const { scenarioId, branchId, changes } = action.payload;
+            const scenarioState = state.scenarios[scenarioId];
 
-            const branch = state.branches[branchId];
-            if (branch != null) {
-                state.branches[branchId] = { ...branch, ...changes };
+            if (!scenarioState) {
+                console.error(`[scenarioSlice] Scenario ${scenarioId} not found`);
+                return;
+            }
+
+            const branch = scenarioState.branches[branchId];
+            if (branch) {
+                scenarioState.branches[branchId] = { ...branch, ...changes };
             }
         },
 
-        deleteBranch(state, action: PayloadAction<{ branchId: Guid }>) {
-            const { branchId } = action.payload;
+        deleteBranch(state, action: PayloadAction<{ scenarioId: Guid; branchId: Guid }>) {
+            const { scenarioId, branchId } = action.payload;
+            const scenarioState = state.scenarios[scenarioId];
 
-            const branch = state.branches[branchId];
-            if (branch != null) {
+            if (!scenarioState) {
+                console.error(`[scenarioSlice] Scenario ${scenarioId} not found`);
+                return;
+            }
+
+            const branch = scenarioState.branches[branchId];
+            if (branch) {
+                // Удаляем все степы ветки
                 for (const step of branch.steps) {
-                    delete state.steps[step.id];
+                    delete scenarioState.steps[step.id];
                 }
 
-                delete state.branches[branchId];
+                delete scenarioState.branches[branchId];
             }
         },
 
@@ -362,21 +456,30 @@ const scenariosSlice = createSlice({
         // RELATION MUTATIONS
         // ============================================================================
 
-        addRelation(state, action: PayloadAction<StepRelationDto>) {
-            const relation = action.payload;
-            state.relations[relation.id] = relation;
+        addRelation(state, action: PayloadAction<{ scenarioId: Guid; relation: StepRelationDto }>) {
+            const { scenarioId, relation } = action.payload;
+            const scenarioState = state.scenarios[scenarioId];
 
-            const parentStep = state.steps[relation.parentStepId];
-            if (parentStep != null) {
-                state.steps[relation.parentStepId] = {
+            if (!scenarioState) {
+                console.error(`[scenarioSlice] Scenario ${scenarioId} not found`);
+                return;
+            }
+
+            scenarioState.relations[relation.id] = relation;
+
+            // Обновляем childRelations у родительского степа
+            const parentStep = scenarioState.steps[relation.parentStepId];
+            if (parentStep) {
+                scenarioState.steps[relation.parentStepId] = {
                     ...parentStep,
                     childRelations: [...parentStep.childRelations, relation],
                 };
             }
 
-            const childStep = state.steps[relation.childStepId];
-            if (childStep != null) {
-                state.steps[relation.childStepId] = {
+            // Обновляем parentRelations у дочернего степа
+            const childStep = scenarioState.steps[relation.childStepId];
+            if (childStep) {
+                scenarioState.steps[relation.childStepId] = {
                     ...childStep,
                     parentRelations: [...childStep.parentRelations, relation],
                 };
@@ -385,34 +488,48 @@ const scenariosSlice = createSlice({
 
         updateRelation(
             state,
-            action: PayloadAction<{ relationId: Guid; changes: Partial<StepRelationDto> }>
+            action: PayloadAction<{ scenarioId: Guid; relationId: Guid; changes: Partial<StepRelationDto> }>
         ) {
-            const { relationId, changes } = action.payload;
+            const { scenarioId, relationId, changes } = action.payload;
+            const scenarioState = state.scenarios[scenarioId];
 
-            const relation = state.relations[relationId];
-            if (relation != null) {
-                state.relations[relationId] = { ...relation, ...changes };
+            if (!scenarioState) {
+                console.error(`[scenarioSlice] Scenario ${scenarioId} not found`);
+                return;
+            }
+
+            const relation = scenarioState.relations[relationId];
+            if (relation) {
+                scenarioState.relations[relationId] = { ...relation, ...changes };
             }
         },
 
-        deleteRelation(state, action: PayloadAction<Guid>) {
-            const relationId = action.payload;
+        deleteRelation(state, action: PayloadAction<{ scenarioId: Guid; relationId: Guid }>) {
+            const { scenarioId, relationId } = action.payload;
+            const scenarioState = state.scenarios[scenarioId];
 
-            const relation = state.relations[relationId];
-            if (relation != null) {
-                delete state.relations[relationId];
+            if (!scenarioState) {
+                console.error(`[scenarioSlice] Scenario ${scenarioId} not found`);
+                return;
+            }
 
-                const parentStep = state.steps[relation.parentStepId];
-                if (parentStep != null) {
-                    state.steps[relation.parentStepId] = {
+            const relation = scenarioState.relations[relationId];
+            if (relation) {
+                delete scenarioState.relations[relationId];
+
+                // Удаляем из childRelations родительского степа
+                const parentStep = scenarioState.steps[relation.parentStepId];
+                if (parentStep) {
+                    scenarioState.steps[relation.parentStepId] = {
                         ...parentStep,
                         childRelations: parentStep.childRelations.filter((r) => r.id !== relationId),
                     };
                 }
 
-                const childStep = state.steps[relation.childStepId];
-                if (childStep != null) {
-                    state.steps[relation.childStepId] = {
+                // Удаляем из parentRelations дочернего степа
+                const childStep = scenarioState.steps[relation.childStepId];
+                if (childStep) {
+                    scenarioState.steps[relation.childStepId] = {
                         ...childStep,
                         parentRelations: childStep.parentRelations.filter((r) => r.id !== relationId),
                     };
@@ -445,6 +562,100 @@ export const {
 const scenarioPersistConfig = {
     key: 'scenario',
     storage,
+    version: 1,
+    migrate: async (state: any) => {
+        // Миграция со старой структуры на новую
+        if (state && state._persist) {
+            // Проверяем, старая ли это структура (branches/steps/relations на верхнем уровне)
+            if (state.branches !== undefined || state.steps !== undefined || state.relations !== undefined) {
+                console.log('[scenarioSlice] Migrating from old state structure to new isolated structure');
+
+                // Создаем новую структуру
+                const newScenarios: Record<Guid, ScenarioState> = {};
+
+                // Если есть старые scenarios, конвертируем их
+                if (state.scenarios) {
+                    for (const [scenarioId, scenarioDto] of Object.entries(state.scenarios as Record<Guid, any>)) {
+                        if (scenarioDto && typeof scenarioDto === 'object') {
+                            // Собираем ветки, степы и связи для этого сценария
+                            const scenarioBranches: Record<Guid, BranchDto> = {};
+                            const scenarioSteps: Record<Guid, StepBaseDto> = {};
+                            const scenarioRelations: Record<Guid, StepRelationDto> = {};
+
+                            // Фильтруем данные по scenarioId (если есть в старых данных)
+                            // Это не идеально, но лучше потерять данные чем упасть
+
+                            const newScenarioState: ScenarioState = {
+                                scenario: scenarioDto,
+                                branches: scenarioBranches,
+                                steps: scenarioSteps,
+                                relations: scenarioRelations,
+                                status: state.scenarioStatuses?.[scenarioId] ?? ScenarioLoadStatus.NotLoaded,
+                            };
+
+                            const errorMsg = state.scenarioErrors?.[scenarioId];
+                            if (errorMsg) {
+                                (newScenarioState as any).error = errorMsg;
+                            }
+
+                            newScenarios[scenarioId] = newScenarioState;
+                        }
+                    }
+                }
+
+                return Promise.resolve({
+                    scenarios: newScenarios,
+                    activeScenarioId: state.activeScenarioId ?? null,
+                    _persist: state._persist,
+                });
+            }
+        }
+
+        return Promise.resolve(state);
+    },
 };
 
 export const scenarioReducer = persistReducer(scenarioPersistConfig, scenariosSlice.reducer);
+
+// ============================================================================
+// HELPER FUNCTIONS для контрактов
+// ============================================================================
+
+/**
+ * Находит scenarioId по stepId
+ * Используется в контрактах степов для dispatch
+ */
+export function findScenarioIdByStepId(state: ScenariosState, stepId: Guid): Guid | null {
+    for (const [scenarioId, scenarioState] of Object.entries(state.scenarios)) {
+        if (scenarioState.steps[stepId]) {
+            return scenarioId;
+        }
+    }
+    return null;
+}
+
+/**
+ * Находит scenarioId по branchId
+ * Используется в контрактах веток для dispatch
+ */
+export function findScenarioIdByBranchId(state: ScenariosState, branchId: Guid): Guid | null {
+    for (const [scenarioId, scenarioState] of Object.entries(state.scenarios)) {
+        if (scenarioState.branches[branchId]) {
+            return scenarioId;
+        }
+    }
+    return null;
+}
+
+/**
+ * Находит scenarioId по relationId
+ * Используется в контрактах связей для dispatch
+ */
+export function findScenarioIdByRelationId(state: ScenariosState, relationId: Guid): Guid | null {
+    for (const [scenarioId, scenarioState] of Object.entries(state.scenarios)) {
+        if (scenarioState.relations[relationId]) {
+            return scenarioId;
+        }
+    }
+    return null;
+}

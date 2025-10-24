@@ -11,26 +11,20 @@ import { mapScenarioToFlow } from '@scenario/core/mapScenarioToFlow';
 import { selectActiveScenarioId } from '@scenario/store/scenarioSelectors';
 
 interface ScenarioData {
-    readonly scenario: NonNullable<RootState['scenario']['scenarios'][string]>;
-    readonly branches: RootState['scenario']['branches'];
-    readonly steps: RootState['scenario']['steps'];
-    readonly relations: RootState['scenario']['relations'];
+    readonly scenarioState: NonNullable<RootState['scenario']['scenarios'][string]>;
 }
 
 const makeSelectScenarioData = () =>
     createSelector(
         [
             (state: RootState) => state.scenario.scenarios,
-            (state: RootState) => state.scenario.branches,
-            (state: RootState) => state.scenario.steps,
-            (state: RootState) => state.scenario.relations,
             (_: RootState, scenarioId: string | null) => scenarioId,
         ],
-        (scenarios, branches, steps, relations, scenarioId): ScenarioData | null => {
+        (scenarios, scenarioId): ScenarioData | null => {
             if (scenarioId == null) return null;
-            const scenario = scenarios[scenarioId];
-            if (scenario == null) return null;
-            return { scenario, branches, steps, relations };
+            const scenarioState = scenarios[scenarioId];
+            if (scenarioState == null) return null;
+            return { scenarioState };
         }
     );
 
@@ -100,13 +94,8 @@ export function useReduxFlowSync(params: UseReduxFlowSyncParams): string | null 
 
         const minimalState: RootState = {
             scenario: {
-                scenarios: { [activeId]: scenarioData.scenario },
-                branches: scenarioData.branches,
-                steps: scenarioData.steps,
-                relations: scenarioData.relations,
+                scenarios: { [activeId]: scenarioData.scenarioState },
                 activeScenarioId: activeId,
-                scenarioStatuses: {},
-                scenarioErrors: {},
             },
         } as RootState;
 

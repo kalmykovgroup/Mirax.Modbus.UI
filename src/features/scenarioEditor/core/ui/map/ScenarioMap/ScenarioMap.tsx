@@ -99,7 +99,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         operations,
     });
 
-    const onEdgesChangeHandler = useEdgesChangeHandler({ setEdges });
+    const onEdgesChangeHandler = useEdgesChangeHandler({ setEdges, operations });
 
     const { onConnect } = useConnectionHandler({
         rf,
@@ -197,10 +197,16 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         getNodes: rf.getNodes,
         getEdges: rf.getEdges,
         onDeleted: (payload) => {
+            // Удаляем ноды
             for (const node of payload.nodes) {
                 if (node.data.__persisted === true) {
                     operations.deleteNode(node);
                 }
+            }
+
+            // Удаляем связи
+            for (const edge of payload.edges) {
+                operations.deleteRelation(edge.id);
             }
         },
     });

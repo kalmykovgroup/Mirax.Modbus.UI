@@ -160,7 +160,7 @@ export const RightPanel: React.FC = () => {
                     y: drop.y,
                     width: 300,
                     height: 100,
-                };
+                } as BranchDto;
             } else if (STEP_FLOW_TYPES.has(type)) {
                 finalDto = {
                     ...finalDto,
@@ -168,6 +168,8 @@ export const RightPanel: React.FC = () => {
                     branchId: target.id as Guid,
                     x: drop.x,
                     y: drop.y,
+                    width: 100,
+                    height: 71,
                 };
             }
 
@@ -186,14 +188,26 @@ export const RightPanel: React.FC = () => {
                 )
             );
 
-            //  Получаем обновлённую ноду для записи в историю
-            const finalNode = rf.getNodes().find(n => n.id === id);
-            if (!finalNode) return;
+            // ИСПРАВЛЕНИЕ: Создаем finalNode вручную вместо получения из rf.getNodes()
+            // rf.getNodes() может вернуть старое состояние из-за асинхронности React
+            const finalNode: FlowNode = {
+                id,
+                type,
+                position: drop,
+                data: {
+                    object: finalDto,
+                    x: drop.x,
+                    y: drop.y,
+                    __persisted: true,
+                },
+                draggable: true,
+                selectable: true,
+            };
 
             //  Вызываем createNode из operations (аналог moveNode в ScenarioMap)
             operations.createNode(finalNode);
 
-            console.log(`[RightPanel]  Created ${type}: ${id}`, { target: target.id, drop });
+            console.log(`[RightPanel]  Created ${type}: ${id}`, { target: target.id, drop, branchId: (finalDto as any).branchId });
         };
 
         window.addEventListener('mousemove', move);

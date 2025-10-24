@@ -4,7 +4,7 @@ import type { EntitySnapshot, Entity } from '@scenario/core/features/historySyst
 import  { Guid } from '@app/lib/types/Guid';
 import type { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto';
 import { store } from '@/baseStore/store';
-import { addRelation,  deleteRelation } from '@scenario/store/scenarioSlice';
+import { addRelation, deleteRelation, findScenarioIdByStepId, findScenarioIdByRelationId } from '@scenario/store/scenarioSlice';
 
 
 export interface StepRelationContract {
@@ -51,7 +51,7 @@ export interface StepRelationContract {
     readonly applySnapshot: (snapshot: EntitySnapshot<Entity>) => void;
     readonly revertSnapshot: (snapshot: EntitySnapshot<Entity>) => void;
     readonly createFromSnapshot: (snapshot: EntitySnapshot<Entity>) => void;
-    readonly deleteEntity: (entityId: Guid) => void;
+    readonly deleteEntity: (entityId: Guid, scenarioId?: Guid) => void;
 }
 
 export const stepRelationContract: StepRelationContract = {
@@ -142,10 +142,19 @@ export const stepRelationContract: StepRelationContract = {
     applySnapshot: (snapshot) => {
         console.log('[StepRelationContract] Applying snapshot (redo):', snapshot.entityId);
 
-        // Убираем entityType перед отправкой в Redux
         const { entityType, ...dto } = snapshot.data;
+        const relation = dto as StepRelationDto;
+        const state = store.getState();
 
-        store.dispatch(addRelation(dto as StepRelationDto));
+        // Находим scenarioId через parentStepId (оба степа должны быть в одном сценарии)
+        const scenarioId = findScenarioIdByStepId(state.scenario, relation.parentStepId);
+
+        if (!scenarioId) {
+            console.error(`[StepRelationContract] Scenario not found for relation ${relation.id} (parentStep: ${relation.parentStepId})`);
+            return;
+        }
+
+        store.dispatch(addRelation({ scenarioId, relation }));
 
         console.log('[StepRelationContract] ✅ Snapshot applied');
     },
@@ -153,10 +162,19 @@ export const stepRelationContract: StepRelationContract = {
     revertSnapshot: (snapshot) => {
         console.log('[StepRelationContract] Reverting snapshot (undo):', snapshot.entityId);
 
-        // Убираем entityType перед отправкой в Redux
         const { entityType, ...dto } = snapshot.data;
+        const relation = dto as StepRelationDto;
+        const state = store.getState();
 
-        store.dispatch(addRelation(dto as StepRelationDto));
+        // Находим scenarioId через parentStepId
+        const scenarioId = findScenarioIdByStepId(state.scenario, relation.parentStepId);
+
+        if (!scenarioId) {
+            console.error(`[StepRelationContract] Scenario not found for relation ${relation.id} (parentStep: ${relation.parentStepId})`);
+            return;
+        }
+
+        store.dispatch(addRelation({ scenarioId, relation }));
 
         console.log('[StepRelationContract] ✅ Snapshot reverted');
     },
@@ -164,22 +182,49 @@ export const stepRelationContract: StepRelationContract = {
     createFromSnapshot: (snapshot) => {
         console.log('[StepRelationContract] Creating relation from snapshot:', snapshot.entityId);
 
-        // Убираем entityType перед отправкой в Redux
         const { entityType, ...dto } = snapshot.data;
+        const relation = dto as StepRelationDto;
+        const state = store.getState();
 
-        store.dispatch(addRelation(dto as StepRelationDto));
+        // Находим scenarioId через parentStepId
+        const scenarioId = findScenarioIdByStepId(state.scenario, relation.parentStepId);
+
+        if (!scenarioId) {
+            console.error(`[StepRelationContract] Scenario not found for relation ${relation.id} (parentStep: ${relation.parentStepId})`);
+            return;
+        }
+
+        store.dispatch(addRelation({ scenarioId, relation }));
 
         console.log('[StepRelationContract] ✅ Relation created from snapshot');
     },
 
-    deleteEntity: (entityId) => {
+    deleteEntity: (entityId, scenarioId) => {
         console.log('[StepRelationContract] Deleting entity:', entityId);
 
         const state = store.getState();
-        const relation = state.scenario.relations[entityId];
+
+        // scenarioId может быть передан явно (из useScenarioOperations) или найден через relationId
+        let actualScenarioId: string | undefined | null = scenarioId;
+        if (!actualScenarioId) {
+            actualScenarioId = findScenarioIdByRelationId(state.scenario, entityId);
+        }
+
+        if (!actualScenarioId) {
+            console.error(`[StepRelationContract] Scenario not found for relation ${entityId}`);
+            return;
+        }
+
+        const scenarioState = state.scenario.scenarios[actualScenarioId];
+        if (!scenarioState) {
+            console.error(`[StepRelationContract] Scenario ${actualScenarioId} not found in store`);
+            return;
+        }
+
+        const relation = scenarioState.relations[entityId];
 
         if (relation) {
-            store.dispatch(deleteRelation(entityId));
+            store.dispatch(deleteRelation({ scenarioId: actualScenarioId, relationId: entityId }));
             console.log('[StepRelationContract] ✅ Entity deleted');
         } else {
             console.warn(`[StepRelationContract] ⚠️ Relation ${entityId} not found for deletion`);

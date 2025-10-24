@@ -6,7 +6,7 @@ import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDt
 import type { EntitySnapshot, Entity } from '@scenario/core/features/historySystem/types';
 
 import { store } from '@/baseStore/store';
-import { updateBranch, addBranch, deleteBranch } from '@scenario/store/scenarioSlice';
+import { updateBranch, addBranch, deleteBranch, findScenarioIdByBranchId } from '@scenario/store/scenarioSlice';
 import { BranchNode } from './BranchNode';
 import { ctrlKeyStore } from '@app/lib/hooks/ctrlKeyStore';
 
@@ -25,7 +25,7 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
             id: dto.id,
             type: FlowType.BranchNode,
             position: { x: dto.x, y: dto.y },
-            data: { object: dto, x: dto.x, y: dto.y },
+            data: { object: dto, x: dto.x, y: dto.y, __persisted: true },
             style: { width: dto.width, height: dto.height },
             parentId,
             // Изначально BranchNode неактивна для перетаскивания и выбора
@@ -148,8 +148,17 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
 
     applySnapshot: (snapshot) => {
         const { entityType, ...dto } = snapshot.data;
+        const state = store.getState();
+        const scenarioId = findScenarioIdByBranchId(state.scenario, dto.id);
+
+        if (!scenarioId) {
+            console.error(`[BranchNodeContract] Scenario not found for branch ${dto.id}`);
+            return;
+        }
+
         store.dispatch(
             updateBranch({
+                scenarioId,
                 branchId: dto.id,
                 changes: dto as any,
             })
@@ -158,8 +167,17 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
 
     revertSnapshot: (snapshot) => {
         const { entityType, ...dto } = snapshot.data;
+        const state = store.getState();
+        const scenarioId = findScenarioIdByBranchId(state.scenario, dto.id);
+
+        if (!scenarioId) {
+            console.error(`[BranchNodeContract] Scenario not found for branch ${dto.id}`);
+            return;
+        }
+
         store.dispatch(
             updateBranch({
+                scenarioId,
                 branchId: dto.id,
                 changes: dto as any,
             })
@@ -168,9 +186,16 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
 
     createFromSnapshot: (snapshot) => {
         const { entityType, ...dto } = snapshot.data;
+        const scenarioId = (dto as any).scenarioId;
+
+        if (!scenarioId) {
+            console.error(`[BranchNodeContract] scenarioId not found in snapshot data`);
+            return;
+        }
+
         store.dispatch(
             addBranch({
-                scenarioId: (dto as any).scenarioId,
+                scenarioId,
                 branch: dto as any,
                 parentStepId: (dto as any).parallelStepId ?? (dto as any).conditionStepId ?? null,
             })
@@ -178,6 +203,14 @@ export const BranchNodeContract: NodeTypeContract<BranchDto> = {
     },
 
     deleteEntity: (entityId) => {
-        store.dispatch(deleteBranch({ branchId: entityId }));
+        const state = store.getState();
+        const scenarioId = findScenarioIdByBranchId(state.scenario, entityId);
+
+        if (!scenarioId) {
+            console.error(`[BranchNodeContract] Scenario not found for branch ${entityId}`);
+            return;
+        }
+
+        store.dispatch(deleteBranch({ scenarioId, branchId: entityId }));
     },
 } as const;

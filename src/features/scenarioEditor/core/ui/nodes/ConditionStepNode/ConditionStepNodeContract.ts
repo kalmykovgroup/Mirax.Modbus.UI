@@ -6,7 +6,7 @@ import type { ConditionStepDto } from '@scenario/shared/contracts/server/remoteS
 import type { EntitySnapshot, Entity } from '@scenario/core/features/historySystem/types';
 import type { Guid } from '@app/lib/types/Guid';
 import { store } from '@/baseStore/store';
-import { updateStep, addStep, deleteStep } from '@scenario/store/scenarioSlice';
+import { updateStep, addStep, deleteStep, findScenarioIdByStepId } from '@scenario/store/scenarioSlice';
 import { ConditionStepNode } from './ConditionStepNode';
 
 export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
@@ -283,8 +283,17 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
         // Убираем entityType перед отправкой в Redux
         const { entityType, ...dto } = snapshot.data;
 
+        const state = store.getState();
+        const scenarioId = findScenarioIdByStepId(state.scenario, dto.id);
+
+        if (!scenarioId) {
+            console.error(`[ConditionStepNodeContract] Scenario not found for step ${dto.id}`);
+            return;
+        }
+
         store.dispatch(
             updateStep({
+                scenarioId,
                 stepId: dto.id,
                 changes: dto as any,
             })
@@ -299,8 +308,17 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
         // Убираем entityType перед отправкой в Redux
         const { entityType, ...dto } = snapshot.data;
 
+        const state = store.getState();
+        const scenarioId = findScenarioIdByStepId(state.scenario, dto.id);
+
+        if (!scenarioId) {
+            console.error(`[ConditionStepNodeContract] Scenario not found for step ${dto.id}`);
+            return;
+        }
+
         store.dispatch(
             updateStep({
+                scenarioId,
                 stepId: dto.id,
                 changes: dto as any,
             })
@@ -318,9 +336,26 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
         // Убираем entityType перед отправкой в Redux
         const { entityType, ...dto } = snapshot.data;
 
+        const branchId = (dto as any).branchId;
+        const state = store.getState();
+
+        let scenarioId: Guid | null = null;
+        for (const [sid, scenarioState] of Object.entries(state.scenario.scenarios)) {
+            if (scenarioState.branches[branchId]) {
+                scenarioId = sid;
+                break;
+            }
+        }
+
+        if (!scenarioId) {
+            console.error(`[ConditionStepNodeContract] Scenario not found for branch ${branchId}`);
+            return;
+        }
+
         store.dispatch(
             addStep({
-                branchId: (dto as any).branchId,
+                scenarioId,
+                branchId,
                 step: dto as any,
             })
         );
@@ -332,7 +367,14 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
         console.log('[ConditionStepNodeContract] Deleting entity:', entityId);
 
         const state = store.getState();
-        const step = state.scenario.steps[entityId];
+        const scenarioId = findScenarioIdByStepId(state.scenario, entityId);
+
+        if (!scenarioId) {
+            console.error(`[ConditionStepNodeContract] Scenario not found for step ${entityId}`);
+            return;
+        }
+
+        const step = state.scenario.scenarios[scenarioId]?.steps[entityId];
 
         if (step) {
             // Проверяем дочерние ветки перед удалением
@@ -341,7 +383,7 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
                 (step as any).stepBranchRelations.length > 0
             ) {
                 console.error(
-                    '[ConditionStepNodeContract] ⚠️ Cannot delete: Step has branch relations!',
+                    '[ConditionStepNodeContract] Cannot delete: Step has branch relations!',
                     (step as any).stepBranchRelations
                 );
                 // TODO: Можно добавить автоматическое удаление или показать предупреждение
@@ -350,13 +392,14 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
 
             store.dispatch(
                 deleteStep({
+                    scenarioId,
                     branchId: step.branchId,
                     stepId: entityId,
                 })
             );
             console.log('[ConditionStepNodeContract]  Entity deleted');
         } else {
-            console.warn(`[ConditionStepNodeContract] ⚠️ Step ${entityId} not found for deletion`);
+            console.warn(`[ConditionStepNodeContract] Step ${entityId} not found for deletion`);
         }
     },
 } as const;

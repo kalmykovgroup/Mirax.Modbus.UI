@@ -1,12 +1,12 @@
 // src/features/scenarioEditor/core/ui/map/LeftPanel/LeftPanel.tsx
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { RefreshCw, Plus, RotateCw } from 'lucide-react';
+import { RefreshCw, Plus } from 'lucide-react';
 
 import styles from './LeftPanel.module.css';
 
-import type { AppDispatch, RootState } from '@/baseStore/store';
+import type { AppDispatch } from '@/baseStore/store';
 
 import {
     usePauseScenarioMutation,
@@ -19,12 +19,10 @@ import {
     addRunningScenario,
     removeRunningScenario,
 } from '@/features/scenarioEditor/store/workflowSlice';
-import { SimpleMenu } from '@scenario/core/ui/map/LeftPanel/HoverActionMenu/SimpleMenu';
 import type { ScenarioStopMode } from '@scenario/shared/contracts/server/types/ScenarioEngine/ScenarioStopMode';
 import {
     selectActiveScenarioId,
     selectScenariosList,
-    selectScenarioStatus,
 } from '@scenario/store/scenarioSelectors';
 import {
     refreshScenarioById,
@@ -32,6 +30,7 @@ import {
     setActiveScenarioId,
     ScenarioLoadStatus,
 } from '@scenario/store/scenarioSlice';
+import {ScenarioItem} from "@scenario/core/ui/map/LeftPanel/ScenarioItem/ScenarioItem.tsx";
 
 export function LeftPanel(){
     const dispatch = useDispatch<AppDispatch>();
@@ -306,104 +305,6 @@ export function LeftPanel(){
     );
 }
 
-interface ScenarioItemProps {
-    scenarioId: string;
-    title: string;
-    isActive: boolean;
-    isLoading: boolean;
-    isRefreshing: boolean;
-    onSelect: (id: string, status: ScenarioLoadStatus) => void;
-    onRefresh: (id: string, event: React.MouseEvent) => void;
-    onPlay: (id: string) => void;
-    onPause: (id: string) => void;
-    onResume: (id: string) => void;
-    onCancel: (id: string) => void;
-    onTerminate: (id: string) => void;
-}
 
-function ScenarioItem({
-                          scenarioId,
-                          title,
-                          isActive,
-                          isLoading,
-                          isRefreshing,
-                          onSelect,
-                          onRefresh,
-                          onPlay,
-                          onPause,
-                          onResume,
-                          onCancel,
-                          onTerminate,
-                      }: ScenarioItemProps){
-    const status = useSelector((state: RootState) => selectScenarioStatus(state, scenarioId));
-
-    const statusIcon = useMemo(() => {
-        if (isLoading || isRefreshing) return '⏳ ';
-        switch (status) {
-            case ScenarioLoadStatus.Loading:
-                return '⏳ ';
-            case ScenarioLoadStatus.Error:
-                return '❌ ';
-            case ScenarioLoadStatus.Loaded:
-                return '✅ ';
-            default:
-                return '';
-        }
-    }, [status, isLoading, isRefreshing]);
-
-    const handleClick = useCallback(() => {
-        if (!isLoading && !isRefreshing) {
-            onSelect(scenarioId, status);
-        }
-    }, [isLoading, isRefreshing, onSelect, scenarioId, status]);
-
-    return (
-        <div
-            className={`${styles.scenarioItem} ${isActive ? styles.itemActive : ''} ${
-                isLoading ? styles.itemLoading : ''
-            }`}
-            onClick={handleClick}
-            title={title}
-        >
-            <div className={styles.itemTitle}>
-                {statusIcon}
-                {title}
-            </div>
-
-            <button
-                className={`${styles.refreshBtn} ${isRefreshing ? styles.refreshBtnLoading : ''}`}
-                title="Принудительно обновить"
-                onClick={(e) => onRefresh(scenarioId, e)}
-                disabled={isRefreshing}
-            >
-                <RotateCw size={14} />
-            </button>
-
-            <SimpleMenu
-                label="Действия"
-                placement="bottom"
-                onAction={(action) => {
-                    switch (action) {
-                        case 'play':
-                            onPlay(scenarioId);
-                            break;
-                        case 'pause':
-                            onPause(scenarioId);
-                            break;
-                        case 'resume':
-                            onResume(scenarioId);
-                            break;
-                        case 'cancel':
-                            onCancel(scenarioId);
-                            break;
-                        case 'terminated':
-                            onTerminate(scenarioId);
-                            break;
-                    }
-                }}
-            />
-        </div>
-    );
-}
 
 export default LeftPanel;

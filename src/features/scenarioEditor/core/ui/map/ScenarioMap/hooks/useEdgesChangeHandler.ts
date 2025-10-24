@@ -6,10 +6,11 @@ import type { FlowEdge } from '@/features/scenarioEditor/shared/contracts/models
 
 interface UseEdgesChangeHandlerParams {
     readonly setEdges: React.Dispatch<React.SetStateAction<FlowEdge[]>>;
+    readonly operations: ReturnType<typeof import('@scenario/core/hooks/useScenarioOperations').useScenarioOperations>;
 }
 
 export function useEdgesChangeHandler(params: UseEdgesChangeHandlerParams): OnEdgesChange<FlowEdge> {
-    const { setEdges } = params;
+    const { setEdges, operations } = params;
 
     return useCallback((changes) => {
         console.log('[EdgesChange]', changes);
@@ -24,7 +25,8 @@ export function useEdgesChangeHandler(params: UseEdgesChangeHandlerParams): OnEd
 
             if (change.type === 'remove') {
                 console.log(`[EdgesChange] 🗑️ EDGE REMOVED | ID: ${change.id}`);
+                operations.deleteRelation(change.id);
             }
         }
-    }, [setEdges]);
+    }, [setEdges, operations]);
 }

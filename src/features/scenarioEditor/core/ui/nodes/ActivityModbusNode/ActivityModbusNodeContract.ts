@@ -6,7 +6,7 @@ import type { ActivityModbusStepDto } from '@scenario/shared/contracts/server/re
 import type { EntitySnapshot, Entity } from '@scenario/core/features/historySystem/types';
 import type { Guid } from '@app/lib/types/Guid';
 import { store } from '@/baseStore/store';
-import { updateStep, addStep, deleteStep } from '@scenario/store/scenarioSlice';
+import { updateStep, addStep, deleteStep, findScenarioIdByStepId } from '@scenario/store/scenarioSlice';
 import { ActivityModbusNode } from './ActivityModbusNode';
 
 export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto> = {
@@ -264,9 +264,17 @@ export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto>
         console.log('[ActivityModbusNodeContract] Applying snapshot (redo):', snapshot.entityId);
 
         const { entityType, ...dto } = snapshot.data;
+        const state = store.getState();
+        const scenarioId = findScenarioIdByStepId(state.scenario, dto.id);
+
+        if (!scenarioId) {
+            console.error(`[ActivityModbusNodeContract] Scenario not found for step ${dto.id}`);
+            return;
+        }
 
         store.dispatch(
             updateStep({
+                scenarioId,
                 stepId: dto.id,
                 changes: dto as any,
             })
@@ -279,9 +287,17 @@ export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto>
         console.log('[ActivityModbusNodeContract] Reverting snapshot (undo):', snapshot.entityId);
 
         const { entityType, ...dto } = snapshot.data;
+        const state = store.getState();
+        const scenarioId = findScenarioIdByStepId(state.scenario, dto.id);
+
+        if (!scenarioId) {
+            console.error(`[ActivityModbusNodeContract] Scenario not found for step ${dto.id}`);
+            return;
+        }
 
         store.dispatch(
             updateStep({
+                scenarioId,
                 stepId: dto.id,
                 changes: dto as any,
             })
@@ -297,10 +313,26 @@ export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto>
         );
 
         const { entityType, ...dto } = snapshot.data;
+        const branchId = (dto as any).branchId;
+        const state = store.getState();
+
+        let scenarioId: Guid | null = null;
+        for (const [sid, scenarioState] of Object.entries(state.scenario.scenarios)) {
+            if (scenarioState.branches[branchId]) {
+                scenarioId = sid;
+                break;
+            }
+        }
+
+        if (!scenarioId) {
+            console.error(`[ActivityModbusNodeContract] Scenario not found for branch ${branchId}`);
+            return;
+        }
 
         store.dispatch(
             addStep({
-                branchId: (dto as any).branchId,
+                scenarioId,
+                branchId,
                 step: dto as any,
             })
         );
@@ -312,11 +344,19 @@ export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto>
         console.log('[ActivityModbusNodeContract] Deleting entity:', entityId);
 
         const state = store.getState();
-        const step = state.scenario.steps[entityId];
+        const scenarioId = findScenarioIdByStepId(state.scenario, entityId);
+
+        if (!scenarioId) {
+            console.error(`[ActivityModbusNodeContract] Scenario not found for step ${entityId}`);
+            return;
+        }
+
+        const step = state.scenario.scenarios[scenarioId]?.steps[entityId];
 
         if (step) {
             store.dispatch(
                 deleteStep({
+                    scenarioId,
                     branchId: step.branchId,
                     stepId: entityId,
                 })

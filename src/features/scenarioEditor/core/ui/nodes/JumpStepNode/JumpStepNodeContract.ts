@@ -6,7 +6,7 @@ import type { JumpStepDto } from '@scenario/shared/contracts/server/remoteServer
 import type { EntitySnapshot, Entity } from '@scenario/core/features/historySystem/types';
 import type { Guid } from '@app/lib/types/Guid';
 import { store } from '@/baseStore/store';
-import { updateStep, addStep, deleteStep } from '@scenario/store/scenarioSlice';
+import { updateStep, addStep, deleteStep, findScenarioIdByStepId } from '@scenario/store/scenarioSlice';
 import { JumpStepNode } from './JumpStepNode';
 
 export const JumpStepNodeContract: NodeTypeContract<JumpStepDto> = {
@@ -176,24 +176,56 @@ export const JumpStepNodeContract: NodeTypeContract<JumpStepDto> = {
 
     applySnapshot: (snapshot) => {
         const { entityType, ...dto } = snapshot.data;
-        store.dispatch(updateStep({ stepId: dto.id, changes: dto as any }));
+        const state = store.getState();
+        const scenarioId = findScenarioIdByStepId(state.scenario, dto.id);
+        if (!scenarioId) {
+            console.error(`[JumpStepNodeContract] Scenario not found for step ${dto.id}`);
+            return;
+        }
+        store.dispatch(updateStep({ scenarioId, stepId: dto.id, changes: dto as any }));
     },
 
     revertSnapshot: (snapshot) => {
         const { entityType, ...dto } = snapshot.data;
-        store.dispatch(updateStep({ stepId: dto.id, changes: dto as any }));
+        const state = store.getState();
+        const scenarioId = findScenarioIdByStepId(state.scenario, dto.id);
+        if (!scenarioId) {
+            console.error(`[JumpStepNodeContract] Scenario not found for step ${dto.id}`);
+            return;
+        }
+        store.dispatch(updateStep({ scenarioId, stepId: dto.id, changes: dto as any }));
     },
 
     createFromSnapshot: (snapshot) => {
         const { entityType, ...dto } = snapshot.data;
-        store.dispatch(addStep({ branchId: (dto as any).branchId, step: dto as any }));
+        const branchId = (dto as any).branchId;
+        const state = store.getState();
+        let scenarioId: Guid | null = null;
+        for (const [sid, scenarioState] of Object.entries(state.scenario.scenarios)) {
+            if (scenarioState.branches[branchId]) {
+                scenarioId = sid;
+                break;
+            }
+        }
+        if (!scenarioId) {
+            console.error(`[JumpStepNodeContract] Scenario not found for branch ${branchId}`);
+            return;
+        }
+        store.dispatch(addStep({ scenarioId, branchId, step: dto as any }));
     },
 
     deleteEntity: (entityId) => {
         const state = store.getState();
-        const step = state.scenario.steps[entityId];
+        const scenarioId = findScenarioIdByStepId(state.scenario, entityId);
+        if (!scenarioId) {
+            console.error(`[JumpStepNodeContract] Scenario not found for step ${entityId}`);
+            return;
+        }
+        const step = state.scenario.scenarios[scenarioId]?.steps[entityId];
         if (step) {
-            store.dispatch(deleteStep({ branchId: step.branchId, stepId: entityId }));
+            store.dispatch(deleteStep({ scenarioId, branchId: step.branchId, stepId: entityId }));
+        } else {
+            console.warn(`[JumpStepNodeContract] Step ${entityId} not found for deletion`);
         }
     },
 } as const;

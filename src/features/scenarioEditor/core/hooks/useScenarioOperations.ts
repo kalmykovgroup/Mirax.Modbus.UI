@@ -11,6 +11,8 @@ import type {
     StepRelationDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto.ts";
 import { stepRelationContract } from "@scenario/core/ui/edges/StepRelationContract.ts";
+import { store } from '@/baseStore/store';
+import { updateStep } from '@scenario/store/scenarioSlice';
 
 export function useScenarioOperations(scenarioId: Guid | null) {
     const history = useHistory(scenarioId ?? 'no-scenario', {
@@ -113,6 +115,14 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                     `[useScenarioOperations] 🔄 Updating ${childNodes.length} child steps | Delta: (${deltaX}, ${deltaY})`
                 );
 
+                const state = store.getState();
+                const scenarioState = state.scenario.scenarios[scenarioId];
+
+                if (!scenarioState) {
+                    console.error(`[useScenarioOperations] Scenario ${scenarioId} not found when moving child steps`);
+                    return;
+                }
+
                 childNodes.forEach((child) => {
                     const childContract = nodeTypeRegistry.get(child.type);
                     if (!childContract?.createMoveEntity) return;
@@ -120,12 +130,40 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                     const childDto = child.data.object;
                     if (!childDto) return;
 
+                    // ПРОВЕРКА: Степ должен существовать в store перед обновлением
+                    // Это защита от race condition, когда степ только что создан
+                    if (!scenarioState.steps[childDto.id]) {
+                        console.warn(
+                            `[useScenarioOperations] ⚠️ Skipping move for non-existent step: ${childDto.id}`,
+                            'Step not yet in store (race condition). Current coordinates:',
+                            { x: childDto.x, y: childDto.y, deltaX, deltaY, target: { x: childDto.x + deltaX, y: childDto.y + deltaY } }
+                        );
+                        return;
+                    }
+
+                    console.log(`[useScenarioOperations] 📍 Moving child step: ${childDto.id}`, {
+                        current: { x: childDto.x, y: childDto.y },
+                        delta: { deltaX, deltaY },
+                        target: { x: childDto.x + deltaX, y: childDto.y + deltaY }
+                    });
+
                     const newChildX = childDto.x + deltaX;
                     const newChildY = childDto.y + deltaY;
 
                     const newChildDto = childContract.createMoveEntity(childDto, newChildX, newChildY);
-                    const childSnapshot = childContract.createSnapshot(newChildDto);
-                    childContract.applySnapshot(childSnapshot);
+
+                    // ИСПРАВЛЕНИЕ: Используем прямой dispatch вместо applySnapshot
+                    // applySnapshot пытается найти scenarioId через store, что может не сработать
+                    // для новосозданных степов. Используем уже известный scenarioId.
+                    store.dispatch(
+                        updateStep({
+                            scenarioId,
+                            stepId: childDto.id,
+                            changes: newChildDto as any,
+                        })
+                    );
+
+                    console.log(`[useScenarioOperations] ✅ Child step moved: ${child.id}`, { newChildX, newChildY });
 
                     // НЕ записываем в историю - это автоматическое следствие перемещения ветки
                 });
@@ -197,6 +235,25 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             const dto = node.data.object;
             if (!dto) return false;
+
+            // СНАЧАЛА удаляем все связи этой ноды
+            const state = store.getState();
+            const scenarioState = state.scenario.scenarios[scenarioId];
+            if (!scenarioState) {
+                console.error(`[useScenarioOperations] Scenario ${scenarioId} not found in store`);
+                return false;
+            }
+            const relationsToDelete = Object.values(scenarioState.relations).filter(
+                (rel) => rel.parentStepId === node.id || rel.childStepId === node.id
+            );
+
+            if (relationsToDelete.length > 0) {
+                console.log(`[useScenarioOperations] 🗑️ Deleting ${relationsToDelete.length} relations for node ${node.id}`);
+                for (const relation of relationsToDelete) {
+                    stepRelationContract.deleteEntity(relation.id);
+                    history.recordDelete(toEntity(relation, 'StepRelation'));
+                }
+            }
 
             const validation = contract?.validateOperation?.('delete', dto, {});
             if (validation && !validation.valid) {
@@ -390,8 +447,42 @@ export function useScenarioOperations(scenarioId: Guid | null) {
         [scenarioId, history, toEntity]
     );
 
+    // ============================================================================
+    // УДАЛЕНИЕ СВЯЗИ (RELATION)
+    // ============================================================================
+
+    const deleteRelation = useCallback(
+        (relationId: Guid) => {
+            if (!scenarioId) return;
+
+            const state = store.getState();
+            const scenarioState = state.scenario.scenarios[scenarioId];
+
+            if (!scenarioState) {
+                console.error(`[useScenarioOperations] Scenario ${scenarioId} not found in store`);
+                return;
+            }
+
+            const relation = scenarioState.relations[relationId];
+
+            if (!relation) {
+                console.warn(`[useScenarioOperations] Relation ${relationId} not found`);
+                return;
+            }
+
+            console.log(`[useScenarioOperations] 🗑️ Deleting relation: ${relationId}`, relation);
+
+            stepRelationContract.deleteEntity(relationId, scenarioId);
+            history.recordDelete(toEntity(relation, 'StepRelation'));
+
+            console.log(`[useScenarioOperations] ✅ Relation deleted: ${relationId}`);
+        },
+        [scenarioId, history, toEntity]
+    );
+
     return {
         createRelation,
+        deleteRelation,
         moveNode,
         resizeNode,
         deleteNode,
