@@ -17,6 +17,7 @@ import {
     selectCanRedo,
 } from '@scenario/core/features/historySystem/historySlice.ts';
 import type { HistoryRecord } from '@scenario/core/features/historySystem/types.ts';
+import {useConfirm} from "@ui/components/ConfirmProvider/ConfirmProvider.tsx";
 
 interface HistoryItemProps {
     record: HistoryRecord;
@@ -87,6 +88,8 @@ export function HistoryPanel() {
     const dispatch = useDispatch<AppDispatch>();
     const activeId = useSelector(selectActiveScenarioId);
 
+    const confirm = useConfirm();
+
     // Используем activeId как contextId для истории
     const contextId = activeId ?? '';
 
@@ -106,10 +109,20 @@ export function HistoryPanel() {
         }
     }, [dispatch, contextId, canRedo]);
 
-    const handleClear = useCallback(() => {
-        if (window.confirm('Очистить всю историю изменений? Это действие нельзя отменить.')) {
-            dispatch(clearHistory({ contextId }));
-        }
+    const handleClear = useCallback(async () => {
+
+        const ok = await confirm({
+            title: 'Очистить всю историю изменений? Это действие нельзя отменить.',
+            description: 'Данные будут удалены.',
+            confirmText: 'Очистить',
+            cancelText: 'Отменить',
+            danger: true,
+        });
+
+        if (!ok) return;
+
+        dispatch(clearHistory({ contextId }));
+
     }, [dispatch, contextId]);
 
     const handleJumpTo = useCallback(

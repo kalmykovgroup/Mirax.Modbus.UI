@@ -15,7 +15,6 @@ import '@xyflow/react/dist/style.css';
 import styles from './ScenarioMap.module.css';
 
 import type { FlowEdge, FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
-import ScenarioPanel from '@scenario/core/ui/map/components/ScenarioPanel/ScenarioPanel.tsx';
 import { RightSidePanel } from '@scenario/core/ui/map/components/RightSidePanel/RightSidePanel';
 
 import { useTheme } from '@app/providers/theme/useTheme';

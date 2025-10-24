@@ -140,8 +140,6 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
 
                     // Сохраняем позицию ЛЮБОЙ ноды после перемещения
                     if (node && startPos) {
-                        // ВАЖНО: Для дочерних нод position - это ОТНОСИТЕЛЬНЫЕ координаты!
-                        // Создаем обновленную ноду с новыми координатами
                         const updatedNode: FlowNode = {
                             ...node,
                             position: {
@@ -150,26 +148,40 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
                             },
                         };
 
-                        // Вычисляем АБСОЛЮТНЫЕ координаты с учетом всех родителей
                         const absPos = absOf(updatedNode, nodesRef.current ?? []);
                         const newX = Math.round(absPos.x);
                         const newY = Math.round(absPos.y);
 
                         if (startPos.x !== newX || startPos.y !== newY) {
-                            if (node.type === FlowType.BranchNode) {
-                                console.log(
-                                    `[NodesChange] 📍 BRANCH MOVED | ID: ${id}`,
-                                    { from: startPos, to: { x: newX, y: newY } }
-                                );
+                            // ✅ ИСПРАВЛЕНО: Используем флаг isBatchMoveRef вместо проверки size
+                            // При одиночном перемещении NodeDragStopHandler обрабатывает все через callbacks
+                            const isBatch = isBatchMoveRef.current === true;
 
-                                // Найти все дочерние степы этой ветки
-                                const childSteps = nodesRef.current?.filter((n) => n.parentId === id) ?? [];
+                            if (isBatch) {
+                                if (node.type === FlowType.BranchNode) {
+                                    console.log(
+                                        `[NodesChange] 📍 BATCH BRANCH MOVED | ID: ${id}`,
+                                        { from: startPos, to: { x: newX, y: newY } }
+                                    );
 
-                                operations.moveNode(node, newX, newY, childSteps);
+                                    const childSteps = nodesRef.current?.filter((n) => n.parentId === id) ?? [];
+                                    operations.moveNode(node, newX, newY, childSteps);
+                                } else {
+                                    console.log(
+                                        `[NodesChange] 📍 BATCH STEP MOVED | Type: ${node.type} | ID: ${id}`,
+                                        {
+                                            from: startPos,
+                                            to: { x: newX, y: newY },
+                                            relative: { x: updatedNode.position.x, y: updatedNode.position.y },
+                                            hasParent: !!node.parentId,
+                                        }
+                                    );
+
+                                    operations.moveNode(node, newX, newY);
+                                }
                             } else {
-                                // Обычный степ (может быть дочерним, используем абсолютные координаты)
                                 console.log(
-                                    `[NodesChange] 📍 STEP MOVED | Type: ${node.type} | ID: ${id}`,
+                                    `[NodesChange] 📍 SINGLE DRAG END | Type: ${node.type} | ID: ${id}`,
                                     {
                                         from: startPos,
                                         to: { x: newX, y: newY },
@@ -177,8 +189,7 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
                                         hasParent: !!node.parentId,
                                     }
                                 );
-
-                                operations.moveNode(node, newX, newY);
+                                // NodeDragStopHandler обработает через onStepMoved callback
                             }
                         }
                     }

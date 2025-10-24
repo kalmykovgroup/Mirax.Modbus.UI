@@ -256,7 +256,13 @@ export class NodeDragStopHandler {
                     }
                 }
 
-                this.callbacks?.onStepMoved?.(current.id, absTL.x, absTL.y);
+                // ✅ ИСПРАВЛЕНО: Не вызываем onStepMoved при батчинге
+                // При батчинге все ноды обрабатываются в useNodesChangeHandler
+                if (!this.isBatchMoveRef?.current) {
+                    this.callbacks?.onStepMoved?.(current.id, absTL.x, absTL.y);
+                } else {
+                    console.log(`[NodeDragStopHandler] ⏸️ Skipping onStepMoved during batch move`);
+                }
                 return;
             }
 
