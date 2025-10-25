@@ -99,10 +99,15 @@ export function useScenarioOperations(scenarioId: Guid | null) {
             contract.applySnapshot(newSnapshot);
 
             // Записываем в историю
-            history.recordUpdate(
-                toEntity(newDto, node.type),
-                toEntity(previousDto, node.type)
-            );
+            const newEntity = toEntity(newDto, node.type);
+            const prevEntity = toEntity(previousDto, node.type);
+
+            console.log('[useScenarioOperations] moveNode - previousDto:', previousDto);
+            console.log('[useScenarioOperations] moveNode - newDto:', newDto);
+            console.log('[useScenarioOperations] moveNode - prevEntity:', prevEntity);
+            console.log('[useScenarioOperations] moveNode - newEntity:', newEntity);
+
+            history.recordUpdate(newEntity, prevEntity);
 
             console.log(`[useScenarioOperations] ✅ Node moved: ${node.id}`, { newX, newY });
 
@@ -439,10 +444,15 @@ export function useScenarioOperations(scenarioId: Guid | null) {
             const newSnapshot = contract.createSnapshot(newDto);
             contract.applySnapshot(newSnapshot);
 
-            history.recordUpdate(
-                toEntity(newDto, branchNode.type),
-                toEntity(previousDto, branchNode.type)
-            );
+            const newEntity = toEntity(newDto, branchNode.type);
+            const prevEntity = toEntity(previousDto, branchNode.type);
+
+            console.log('[useScenarioOperations] autoExpandBranch - previousDto:', previousDto);
+            console.log('[useScenarioOperations] autoExpandBranch - newDto:', newDto);
+            console.log('[useScenarioOperations] autoExpandBranch - prevEntity:', prevEntity);
+            console.log('[useScenarioOperations] autoExpandBranch - newEntity:', newEntity);
+
+            history.recordUpdate(newEntity, prevEntity);
 
             console.log(`[useScenarioOperations] ✅ Branch auto-expanded: ${branchNode.id}`);
         },

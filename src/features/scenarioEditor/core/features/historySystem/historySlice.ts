@@ -194,8 +194,14 @@ export const historySlice = createSlice({
             if (!context.isRecording) return;
 
             //  Создаём снимки через historyRegistry → contract
+            console.log('[historySlice] recordUpdate - previousEntity:', previousEntity);
+            console.log('[historySlice] recordUpdate - newEntity:', newEntity);
+
             const beforeSnapshot = historyRegistry.createSnapshot(previousEntity);
             const afterSnapshot = historyRegistry.createSnapshot(newEntity);
+
+            console.log('[historySlice] recordUpdate - beforeSnapshot:', beforeSnapshot);
+            console.log('[historySlice] recordUpdate - afterSnapshot:', afterSnapshot);
 
             const record: UpdateRecord = {
                 id: crypto.randomUUID(),
@@ -207,7 +213,7 @@ export const historySlice = createSlice({
                 after: afterSnapshot,
             };
 
-            console.log('[historySlice] Обновление истории');
+            console.log('[historySlice] recordUpdate - final record:', record);
 
             if (context.isBatching) {
                 state.contexts[contextId] = {

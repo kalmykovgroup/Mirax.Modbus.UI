@@ -177,7 +177,7 @@ export const NewNodesPanel: React.FC = () => {
             rf.setNodes((nds) =>
                 nds.map(n =>
                     n.id === id
-                        ? {
+? {
                             ...n,
                             data: {
                                 ...n.data,
