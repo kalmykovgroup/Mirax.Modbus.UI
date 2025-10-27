@@ -7,7 +7,6 @@
     color: var(--color-text);
 }
 
-
 .topNav[data-theme="dark"] {
     --color-bg: #282a35;;
     --color-text: rgba(255, 255, 255, 0.94);
@@ -16,8 +15,6 @@
     --color-bg: rgba(255,255,255,.87);
     --color-text: #242424;
 }
-
-
 
 .topNav__content {
     max-width: 1200px;
