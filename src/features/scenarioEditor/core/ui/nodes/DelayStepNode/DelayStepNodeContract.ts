@@ -140,7 +140,8 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
     },
 
     onBeforeDelete: (dto) => {
-        console.log(`[DelayStepNodeContract] 🗑️ Deleting step: ${dto.id}`, dto);
+        console.log(`[DelayStepNodeContract] 🗑️ onBeforeDelete called for step: ${dto.id}`, dto);
+        console.log(`[DelayStepNodeContract] 🗑️ This is called BEFORE deleteEntity dispatches deleteStep`);
 
         // Можно добавить логику очистки дочерних связей
         if (dto.childRelations && dto.childRelations.length > 0) {

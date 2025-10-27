@@ -241,7 +241,19 @@ export function useScenarioOperations(scenarioId: Guid | null) {
             const dto = node.data.object;
             if (!dto) return false;
 
-            // СНАЧАЛА удаляем все связи этой ноды
+            const validation = contract?.validateOperation?.('delete', dto, {});
+            if (validation && !validation.valid) {
+                console.error('[useScenarioOperations] Delete validation failed:', validation.error);
+                alert(validation.error);
+                return false;
+            }
+
+            // ✅ ИСПРАВЛЕНИЕ: Используем batch для группировки удаления ноды и всех её связей
+            // Это гарантирует, что при Undo все восстановится одной операцией
+
+            // Получаем все связи, которые будут удалены вместе с нодой
+            // ВАЖНО: scenarioSlice.deleteStep сам удалит эти связи из Redux,
+            // нам нужно только записать их удаление в историю
             const state = store.getState();
             const scenarioState = state.scenario.scenarios[scenarioId];
             if (!scenarioState) {
@@ -252,25 +264,33 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 (rel) => rel.parentStepId === node.id || rel.childStepId === node.id
             );
 
+            // Если есть связи - используем batch
             if (relationsToDelete.length > 0) {
-                console.log(`[useScenarioOperations] 🗑️ Deleting ${relationsToDelete.length} relations for node ${node.id}`);
+                console.log(`[useScenarioOperations] 🗑️ Deleting node with ${relationsToDelete.length} relations in batch`);
+
+                history.startBatch();
+
+                // ⚠️ НЕ вызываем stepRelationContract.deleteEntity()!
+                // deleteStep в scenarioSlice сам удалит связи из Redux.
+                // Мы только записываем удаление связей в историю для Undo/Redo и сохранения на сервер.
                 for (const relation of relationsToDelete) {
-                    stepRelationContract.deleteEntity(relation.id);
                     history.recordDelete(toEntity(relation, 'StepRelation'));
                 }
+
+                // Удаляем ноду (deleteStep внутри contract.deleteEntity удалит и связи)
+                contract.onBeforeDelete?.(dto);
+                contract.deleteEntity(dto.id); // Это вызовет deleteStep, который удалит связи
+                history.recordDelete(toEntity(dto, node.type));
+
+                history.commitBatch(`Удаление ноды "${dto.name || node.id}" со связями`);
+            } else {
+                // Если связей нет - удаляем просто ноду
+                console.log(`[useScenarioOperations] 🗑️ Deleting node without relations`);
+
+                contract.onBeforeDelete?.(dto);
+                contract.deleteEntity(dto.id);
+                history.recordDelete(toEntity(dto, node.type));
             }
-
-            const validation = contract?.validateOperation?.('delete', dto, {});
-            if (validation && !validation.valid) {
-                console.error('[useScenarioOperations] Delete validation failed:', validation.error);
-                alert(validation.error);
-                return false;
-            }
-
-            contract.onBeforeDelete?.(dto);
-            contract.deleteEntity(dto.id);
-
-            history.recordDelete(toEntity(dto, node.type));
 
             console.log(`[useScenarioOperations] ✅ Node deleted: ${node.id}`);
             return true;
@@ -359,15 +379,54 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 return;
             }
 
+            // ✅ ИСПРАВЛЕНИЕ: При отсоединении ноды из ветки нужно удалить все её связи
+            // Получаем все связи ДО отсоединения
+            const state = store.getState();
+            const scenarioState = state.scenario.scenarios[scenarioId];
+            if (!scenarioState) {
+                console.error(`[useScenarioOperations] Scenario ${scenarioId} not found in store`);
+                return;
+            }
+            const relationsToDelete = Object.values(scenarioState.relations).filter(
+                (rel) => rel.parentStepId === stepNode.id || rel.childStepId === stepNode.id
+            );
+
             const newDto = contract.createDetachFromBranchEntity(previousDto, newX, newY);
 
-            const newSnapshot = contract.createSnapshot(newDto);
-            contract.applySnapshot(newSnapshot);
+            // Если есть связи - используем batch для группировки отсоединения и удаления связей
+            if (relationsToDelete.length > 0) {
+                console.log(`[useScenarioOperations] 🔓 Detaching step with ${relationsToDelete.length} relations in batch`);
 
-            history.recordUpdate(
-                toEntity(newDto, stepNode.type),
-                toEntity(previousDto, stepNode.type)
-            );
+                history.startBatch();
+
+                // Записываем удаление всех связей в историю
+                for (const relation of relationsToDelete) {
+                    // Удаляем связь из Redux
+                    stepRelationContract.deleteEntity(relation.id);
+                    // Записываем удаление в историю
+                    history.recordDelete(toEntity(relation, 'StepRelation'));
+                }
+
+                // Отсоединяем ноду от ветки
+                const newSnapshot = contract.createSnapshot(newDto);
+                contract.applySnapshot(newSnapshot);
+                history.recordUpdate(
+                    toEntity(newDto, stepNode.type),
+                    toEntity(previousDto, stepNode.type)
+                );
+
+                history.commitBatch(`Отсоединение ноды "${previousDto.name || stepNode.id}" от ветки со связями`);
+            } else {
+                // Если связей нет - просто отсоединяем
+                console.log(`[useScenarioOperations] 🔓 Detaching step without relations`);
+
+                const newSnapshot = contract.createSnapshot(newDto);
+                contract.applySnapshot(newSnapshot);
+                history.recordUpdate(
+                    toEntity(newDto, stepNode.type),
+                    toEntity(previousDto, stepNode.type)
+                );
+            }
 
             console.log(`[useScenarioOperations] ✅ Step detached from branch: ${stepNode.id}`);
 
