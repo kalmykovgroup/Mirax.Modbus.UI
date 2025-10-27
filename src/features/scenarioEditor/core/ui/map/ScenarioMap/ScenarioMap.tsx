@@ -42,6 +42,10 @@ import { useConnectionHandler } from './hooks/useConnectionHandler';
 import { useShiftDragMode } from './hooks/useShiftDragMode';
 import {edgeTypes, defaultEdgeOptions, flowSettings, generateNodeTypes} from './config/flowConfig';
 import { ScenarioOperationsProvider } from './contexts/ScenarioOperationsContext';
+import { SaveIndicator } from '@scenario/core/ui/map/components/SaveIndicator/SaveIndicator';
+import { SaveSettingsButton } from '@scenario/core/ui/map/components/SaveSettingsButton/SaveSettingsButton';
+import { ManualSaveButton } from '@scenario/core/ui/map/components/ManualSaveButton/ManualSaveButton';
+import { PreviewOperationsButton } from '@scenario/core/ui/map/components/PreviewOperationsButton/PreviewOperationsButton';
 
 export interface ScenarioEditorProps {}
 
@@ -313,6 +317,8 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 >
 
                 <Panel position="top-right">
+                    <SaveSettingsButton />
+                    <SaveIndicator />
                     <RightSidePanel />
                 </Panel>
 
@@ -326,7 +332,11 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     </button>
                 </Panel>
 
-                <Controls className={`${styles.flowControls}`} position="top-left" />
+                <Panel position="top-left">
+                    <Controls className={`${styles.flowControls}`} />
+                    <ManualSaveButton scenarioId={activeId} />
+                    <PreviewOperationsButton scenarioId={activeId} />
+                </Panel>
                 <Background
                     id="1"
                     gap={7}

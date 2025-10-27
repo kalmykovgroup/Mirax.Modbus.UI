@@ -1,0 +1,36 @@
+/* src/features/scenarioEditor/core/ui/map/components/ManualSaveButton/ManualSaveButton.module.css */
+
+.button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #3a82f6;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(58, 130, 246, 0.3);
+}
+
+.button:hover:not(:disabled) {
+    background: #2563eb;
+    box-shadow: 0 4px 12px rgba(58, 130, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+.button:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(58, 130, 246, 0.3);
+}
+
+.button:disabled {
+    background: #1a1a1a;
+    color: #555;
+    cursor: not-allowed;
+    box-shadow: none;
+    border: 1px solid #333;
+}

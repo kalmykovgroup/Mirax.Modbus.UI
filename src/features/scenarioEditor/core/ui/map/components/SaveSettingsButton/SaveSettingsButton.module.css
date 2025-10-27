@@ -1,0 +1,25 @@
+/* src/features/scenarioEditor/core/ui/map/components/SaveSettingsButton/SaveSettingsButton.module.css */
+
+.button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 8px;
+}
+
+.button:hover {
+    background: #252525;
+    color: #fff;
+    border-color: #444;
+}
+
+.button:active {
+    transform: scale(0.95);
+}
