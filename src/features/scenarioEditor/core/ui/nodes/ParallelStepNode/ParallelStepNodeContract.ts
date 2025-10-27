@@ -131,18 +131,10 @@ export const ParallelStepNodeContract: NodeTypeContract<ParallelStepDto> = {
                 return { valid: true };
 
             case 'delete':
-                if (dto.childRelations && dto.childRelations.length > 0) {
-                    return {
-                        valid: false,
-                        error: 'Нельзя удалить степ с дочерними связями',
-                    };
-                }
-                //  Проверяем stepBranchRelations
+                // Степ можно удалить всегда. Связи будут удалены автоматически в deleteNode через batch.
+                // TODO: Обработать удаление stepBranchRelations (дочерних веток параллелизма)
                 if (dto.stepBranchRelations && dto.stepBranchRelations.length > 0) {
-                    return {
-                        valid: false,
-                        error: 'Нельзя удалить параллельный шаг с дочерними ветками',
-                    };
+                    console.warn('[ParallelStepNodeContract] Deleting parallel step with child branches:', dto.stepBranchRelations);
                 }
                 return { valid: true };
 

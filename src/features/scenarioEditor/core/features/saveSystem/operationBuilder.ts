@@ -133,7 +133,7 @@ function processRecords(records: HistoryRecord[]): ScenarioOperationDto[] {
  * - Update(s) + Delete = Delete (с изначальными данными)
  * - Delete остаётся Delete
  */
-function mergeOperations(operations: ScenarioOperationDto[]): ScenarioOperationDto[] {
+function mergeOperations(operations: ScenarioOperationDto[], historyRecords: HistoryRecord[]): ScenarioOperationDto[] {
     // Группируем операции по entityId
     const operationsByEntity = new Map<string, ScenarioOperationDto[]>();
 
@@ -243,7 +243,7 @@ export function buildOperationsFromHistory(
     console.log('[operationBuilder] Extracted', operations.length, 'raw operations');
 
     // Объединяем множественные операции над одной сущностью
-    const mergedOperations = mergeOperations(operations);
+    const mergedOperations = mergeOperations(operations, historyRecords);
 
     console.log('[operationBuilder] After merge:', mergedOperations.length, 'operations');
 

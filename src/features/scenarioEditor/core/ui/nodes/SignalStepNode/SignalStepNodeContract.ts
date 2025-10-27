@@ -114,19 +114,10 @@ export const SignalStepNodeContract: NodeTypeContract<SignalStepDto> = {
                 return { valid: true };
 
             case 'delete':
-                // Проверяем, что нет дочерних связей
-                if (dto.childRelations && dto.childRelations.length > 0) {
-                    return {
-                        valid: false,
-                        error: 'Нельзя удалить степ с дочерними связями. Сначала удалите связи.',
-                    };
-                }
-
-                // Проверяем, что нет родительских связей (опционально)
+                // Степ можно удалить всегда. Связи будут удалены автоматически в deleteNode через batch.
                 if (dto.parentRelations && dto.parentRelations.length > 0) {
                     console.warn('[SignalStepNodeContract] Step has parent relations, they will be cleaned up');
                 }
-
                 return { valid: true };
 
             case 'auto-expand':

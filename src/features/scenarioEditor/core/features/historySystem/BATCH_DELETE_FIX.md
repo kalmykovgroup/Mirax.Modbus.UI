@@ -176,6 +176,69 @@ onStepDetachedFromBranch: (stepId) => {
 4. Проверить операции предпросмотра: должны быть операции Delete для связи и ноды
 5. После сохранения на сервере связь и нода должны быть удалены
 
+## Исправление валидации
+
+### Проблема
+
+В контрактах нод была валидация, которая запрещала удаление ноды, если у неё есть связи:
+
+```typescript
+case 'delete':
+    if (dto.childRelations && dto.childRelations.length > 0) {
+        return {
+            valid: false,
+            error: 'Нельзя удалить степ с дочерними связями. Сначала удалите связи.',
+        };
+    }
+    return { valid: true };
+```
+
+### Решение
+
+Убрана валидация из всех контрактов нод. Теперь ноду можно удалить всегда, а связи удаляются автоматически через batch:
+
+```typescript
+case 'delete':
+    // Степ можно удалить всегда. Связи будут удалены автоматически в deleteNode через batch.
+    return { valid: true };
+```
+
+### ScenarioMap.tsx - исправление двойного удаления
+
+**До исправления:**
+```typescript
+onDeleted: (payload) => {
+    // Удаляем ноды
+    for (const node of payload.nodes) {
+        operations.deleteNode(node); // ← Удаляет связи внутри
+    }
+    // Удаляем связи
+    for (const edge of payload.edges) {
+        operations.deleteRelation(edge.id); // ← Двойное удаление!
+    }
+}
+```
+
+**После исправления:**
+```typescript
+onDeleted: (payload) => {
+    // Удаляем ноды (deleteNode автоматически удалит связи этих нод через batch)
+    for (const node of payload.nodes) {
+        if (node.data.__persisted === true) {
+            operations.deleteNode(node);
+        }
+    }
+
+    // Удаляем только те связи, которые НЕ связаны с удаляемыми нодами
+    const deletedNodeIds = new Set(payload.nodes.map(n => n.id));
+    for (const edge of payload.edges) {
+        if (!deletedNodeIds.has(edge.source) && !deletedNodeIds.has(edge.target)) {
+            operations.deleteRelation(edge.id);
+        }
+    }
+}
+```
+
 ## Код изменений
 
 ### useScenarioOperations.ts:223-297
@@ -260,13 +323,17 @@ describe('deleteNode with relations', () => {
 
 ## Связанные файлы
 
-- `useScenarioOperations.ts` - основное исправление
+- `useScenarioOperations.ts` - основное исправление deleteNode, attachStepToBranch
+- `ScenarioMap.tsx` - исправление onDeleted (избежание двойного удаления связей)
 - `historySlice.ts` - логика undo/redo для batch (уже работала корректно)
 - `scenarioSlice.ts` - deleteStep удаляет связи в Redux (не изменён)
 - `operationBuilder.ts` - конвертация истории в операции API (не изменён)
+- Все `*NodeContract.ts` - убрана валидация delete (теперь можно удалять ноды со связями)
 
 ## Дополнительные улучшения
 
 - ✅ Добавлены логи для отладки батч-операций
 - ✅ Описание батча включает имя ноды для лучшей читаемости в истории
 - ✅ Обработка случая когда у ноды нет связей (не создаём пустой батч)
+- ✅ Убрана валидация delete из всех контрактов нод (DelayStepNodeContract, JumpStepNodeContract, ActivityModbusNodeContract, ActivitySystemNodeContract, SignalStepNodeContract, ConditionStepNodeContract, ParallelStepNodeContract)
+- ✅ ScenarioMap.tsx теперь не удаляет связи повторно при Delete key (избегает двойного удаления)

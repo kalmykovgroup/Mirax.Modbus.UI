@@ -117,13 +117,7 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
                 return { valid: true };
 
             case 'delete':
-                // Проверяем, что нет дочерних связей
-                if (dto.childRelations && dto.childRelations.length > 0) {
-                    return {
-                        valid: false,
-                        error: 'Нельзя удалить степ с дочерними связями. Сначала удалите связи.',
-                    };
-                }
+                // Степ можно удалить всегда. Связи будут удалены автоматически в deleteNode через batch.
                 return { valid: true };
 
             default:

@@ -229,16 +229,21 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         getNodes: rf.getNodes,
         getEdges: rf.getEdges,
         onDeleted: (payload) => {
-            // Удаляем ноды
+            // Удаляем ноды (deleteNode автоматически удалит связи этих нод через batch)
             for (const node of payload.nodes) {
                 if (node.data.__persisted === true) {
                     operations.deleteNode(node);
                 }
             }
 
-            // Удаляем связи
+            // Удаляем только те связи, которые НЕ связаны с удаляемыми нодами
+            // (связи нод уже удалены в deleteNode)
+            const deletedNodeIds = new Set(payload.nodes.map(n => n.id));
             for (const edge of payload.edges) {
-                operations.deleteRelation(edge.id);
+                // Если оба конца связи НЕ удаляются, значит это самостоятельное удаление связи
+                if (!deletedNodeIds.has(edge.source) && !deletedNodeIds.has(edge.target)) {
+                    operations.deleteRelation(edge.id);
+                }
             }
         },
     });

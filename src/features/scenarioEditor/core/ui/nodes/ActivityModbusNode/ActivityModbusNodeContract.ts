@@ -123,12 +123,7 @@ export const ActivityModbusNodeContract: NodeTypeContract<ActivityModbusStepDto>
                 return { valid: true };
 
             case 'delete':
-                if (dto.childRelations && dto.childRelations.length > 0) {
-                    return {
-                        valid: false,
-                        error: 'Нельзя удалить степ с дочерними связями. Сначала удалите связи.',
-                    };
-                }
+                // Степ можно удалить всегда. Связи будут удалены автоматически в deleteNode через batch.
                 return { valid: true };
 
             case 'auto-expand':

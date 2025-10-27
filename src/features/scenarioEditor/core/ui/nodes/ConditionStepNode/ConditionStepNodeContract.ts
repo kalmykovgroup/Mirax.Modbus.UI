@@ -134,18 +134,10 @@ export const ConditionStepNodeContract: NodeTypeContract<ConditionStepDto> = {
                 return { valid: true };
 
             case 'delete':
-                if (dto.childRelations && dto.childRelations.length > 0) {
-                    return {
-                        valid: false,
-                        error: 'Нельзя удалить степ с дочерними связями. Сначала удалите связи.',
-                    };
-                }
-                //  Проверяем stepBranchRelations
+                // Степ можно удалить всегда. Связи будут удалены автоматически в deleteNode через batch.
+                // TODO: Обработать удаление stepBranchRelations (дочерних веток условия)
                 if (dto.stepBranchRelations && dto.stepBranchRelations.length > 0) {
-                    return {
-                        valid: false,
-                        error: 'Нельзя удалить условный шаг с дочерними ветками. Сначала удалите ветки.',
-                    };
+                    console.warn('[ConditionStepNodeContract] Deleting condition with child branches:', dto.stepBranchRelations);
                 }
                 return { valid: true };
 

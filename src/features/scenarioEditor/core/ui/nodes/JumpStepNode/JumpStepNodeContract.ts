@@ -117,12 +117,7 @@ export const JumpStepNodeContract: NodeTypeContract<JumpStepDto> = {
                 return { valid: true };
 
             case 'delete':
-                if (dto.childRelations && dto.childRelations.length > 0) {
-                    return {
-                        valid: false,
-                        error: 'Нельзя удалить степ с дочерними связями',
-                    };
-                }
+                // Степ можно удалить всегда. Связи будут удалены автоматически в deleteNode через batch.
                 //  Предупреждаем, если есть jumpToStepId
                 if (dto.jumpToStepId) {
                     console.warn(`[JumpStepNodeContract] Deleting Jump pointing to: ${dto.jumpToStepId}`);
