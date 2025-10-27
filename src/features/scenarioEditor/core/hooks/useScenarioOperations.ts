@@ -330,15 +330,54 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 return;
             }
 
+            // ✅ ИСПРАВЛЕНИЕ: При переносе ноды в другую ветку нужно удалить все её связи
+            // Получаем все связи ДО переноса
+            const state = store.getState();
+            const scenarioState = state.scenario.scenarios[scenarioId];
+            if (!scenarioState) {
+                console.error(`[useScenarioOperations] Scenario ${scenarioId} not found in store`);
+                return;
+            }
+            const relationsToDelete = Object.values(scenarioState.relations).filter(
+                (rel) => rel.parentStepId === stepNode.id || rel.childStepId === stepNode.id
+            );
+
             const newDto = contract.createAttachToBranchEntity(previousDto, branchId, newX, newY);
 
-            const newSnapshot = contract.createSnapshot(newDto);
-            contract.applySnapshot(newSnapshot);
+            // Если есть связи - используем batch для группировки переноса и удаления связей
+            if (relationsToDelete.length > 0) {
+                console.log(`[useScenarioOperations] 📌 Attaching step with ${relationsToDelete.length} relations in batch`);
 
-            history.recordUpdate(
-                toEntity(newDto, stepNode.type),
-                toEntity(previousDto, stepNode.type)
-            );
+                history.startBatch();
+
+                // Удаляем все связи
+                for (const relation of relationsToDelete) {
+                    // Удаляем связь из Redux
+                    stepRelationContract.deleteEntity(relation.id);
+                    // Записываем удаление в историю
+                    history.recordDelete(toEntity(relation, 'StepRelation'));
+                }
+
+                // Присоединяем ноду к новой ветке
+                const newSnapshot = contract.createSnapshot(newDto);
+                contract.applySnapshot(newSnapshot);
+                history.recordUpdate(
+                    toEntity(newDto, stepNode.type),
+                    toEntity(previousDto, stepNode.type)
+                );
+
+                history.commitBatch(`Перенос ноды "${previousDto.name || stepNode.id}" в другую ветку`);
+            } else {
+                // Если связей нет - просто присоединяем
+                console.log(`[useScenarioOperations] 📌 Attaching step without relations`);
+
+                const newSnapshot = contract.createSnapshot(newDto);
+                contract.applySnapshot(newSnapshot);
+                history.recordUpdate(
+                    toEntity(newDto, stepNode.type),
+                    toEntity(previousDto, stepNode.type)
+                );
+            }
 
             console.log(`[useScenarioOperations] ✅ Step attached to branch: ${stepNode.id}`, {
                 branchId,

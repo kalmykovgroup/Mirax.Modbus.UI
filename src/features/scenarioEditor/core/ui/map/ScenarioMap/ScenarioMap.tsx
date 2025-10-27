@@ -206,12 +206,13 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                         }
                     },
                     onStepDetachedFromBranch: (stepId: string) => {
-                        console.log(`[ScenarioMap] 🔓 STEP DETACHED | ID: ${stepId}`);
+                        console.log(`[ScenarioMap] 🔓 STEP DETACHED TO FREE SPACE | ID: ${stepId} | This means DELETE`);
                         const stepNode = rf.getNodes().find((n) => n.id === stepId);
                         if (stepNode) {
-                            const x = stepNode.position.x;
-                            const y = stepNode.position.y;
-                            operations.detachStepFromBranch(stepNode, x, y);
+                            // Вынос ноды на свободное пространство = УДАЛЕНИЕ ноды
+                            // NodeDragStopHandler уже удалил связи визуально через removeNodeConnections
+                            // Нам нужно удалить ноду и записать удаление связей в историю
+                            operations.deleteNode(stepNode);
                         }
                     },
                 },
