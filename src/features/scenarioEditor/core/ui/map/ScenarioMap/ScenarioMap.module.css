@@ -23,11 +23,23 @@
 
 .rightTopPanel{
     align-items: flex-start;
+    pointer-events: none; /* Панель не перехватывает события мыши */
+}
+
+/* Контент внутри панели остается интерактивным */
+.rightTopPanel > * {
+    pointer-events: auto;
 }
 
 .bottomRightPanel{
     max-width: 100%;
     width: 100%;
     justify-content: flex-end;
+    pointer-events: none; /* Панель не перехватывает события мыши */
+}
+
+/* Контент внутри панели остается интерактивным */
+.bottomRightPanel > * {
+    pointer-events: auto;
 }
 

@@ -245,7 +245,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     // ============================================================================
     // SELECTION
     // ============================================================================
-    const { onSelectionChange, deleteSelected } = useSelection({
+    const { onSelectionChange /*deleteSelected*/ } = useSelection({
         setNodes,
         setEdges,
         getNodes: rf.getNodes,

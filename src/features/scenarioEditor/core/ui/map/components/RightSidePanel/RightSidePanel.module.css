@@ -6,6 +6,12 @@
     height: 70vh;
     overflow: hidden;
     align-items: flex-end;
+    pointer-events: none; /* Контейнер не перехватывает события мыши */
+}
+
+/* Все дочерние элементы остаются интерактивными */
+.rightSidePanelContainer > * {
+    pointer-events: auto;
 }
 
 .tabs {
@@ -51,4 +57,10 @@
     min-height: 0;
     width: 310px;
     align-items: flex-end;
+    pointer-events: none; /* Контейнер не перехватывает события мыши */
+}
+
+/* Все дочерние элементы остаются интерактивными */
+.content > * {
+    pointer-events: auto;
 }
