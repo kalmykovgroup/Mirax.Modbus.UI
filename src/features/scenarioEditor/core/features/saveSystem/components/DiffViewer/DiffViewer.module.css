@@ -1,0 +1,171 @@
+/* src/features/scenarioEditor/core/features/saveSystem/components/DiffViewer/DiffViewer.module.css */
+
+.viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: var(--color-bg-secondary, #252525);
+}
+
+.header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--color-border, #333);
+    background-color: var(--color-bg-primary, #1e1e1e);
+}
+
+.title {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text-primary, #fff);
+}
+
+.subtitle {
+    font-size: 12px;
+    color: var(--color-text-secondary, #aaa);
+    font-family: 'Courier New', monospace;
+}
+
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+}
+
+/* Single view (Create/Delete) */
+.singleView {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Update view */
+.updateView {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Field changes */
+.fieldChanges {
+    background-color: var(--color-bg-tertiary, #2a2a2a);
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--color-border, #333);
+}
+
+.fieldChangesTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-primary, #fff);
+    margin-bottom: 12px;
+}
+
+.fieldChange {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-border-subtle, #444);
+}
+
+.fieldChange:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.fieldName {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-primary, #6496ff);
+    margin-bottom: 8px;
+    font-family: 'Courier New', monospace;
+}
+
+.fieldValues {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fieldValue {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.fieldLabel {
+    font-size: 12px;
+    color: var(--color-text-secondary, #aaa);
+    min-width: 60px;
+}
+
+.oldValue {
+    color: #f44336;
+    background-color: rgba(244, 67, 54, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+}
+
+.newValue {
+    color: #4caf50;
+    background-color: rgba(76, 175, 80, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+}
+
+.noChanges {
+    padding: 16px;
+    text-align: center;
+    color: var(--color-text-secondary, #aaa);
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* Full JSONs */
+.fullJsons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+/* JSON view */
+.jsonView {
+    background-color: var(--color-bg-tertiary, #2a2a2a);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--color-border, #333);
+}
+
+.jsonTitle {
+    padding: 12px 16px;
+    background-color: var(--color-bg-quaternary, #1a1a1a);
+    border-bottom: 1px solid var(--color-border, #333);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-primary, #fff);
+}
+
+.jsonContent {
+    margin: 0;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 12px;
+    font-family: 'Courier New', Consolas, monospace;
+    line-height: 1.6;
+    color: var(--color-text-primary, #fff);
+}
+
+.jsonContent code {
+    display: block;
+    white-space: pre;
+}
+
+/* Responsive для узких экранов */
+@media (max-width: 768px) {
+    .fullJsons {
+        grid-template-columns: 1fr;
+    }
+}

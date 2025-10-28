@@ -45,7 +45,6 @@ import { ScenarioOperationsProvider } from './contexts/ScenarioOperationsContext
 import { SaveIndicator } from '@scenario/core/ui/map/components/SaveIndicator/SaveIndicator';
 import { SaveSettingsButton } from '@scenario/core/ui/map/components/SaveSettingsButton/SaveSettingsButton';
 import { ManualSaveButton } from '@scenario/core/ui/map/components/ManualSaveButton/ManualSaveButton';
-import { PreviewOperationsButton } from '@scenario/core/ui/map/components/PreviewOperationsButton/PreviewOperationsButton';
 import { NodeContextMenu, useNodeContextMenu, initializeNodeContextMenuProviders } from '@scenario/core/ui/nodes/shared/NodeContextMenu';
 
 export interface ScenarioEditorProps {}
@@ -379,14 +378,9 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 </Panel>
 
                 <Panel className={styles.rightTopPanel} position="top-right">
+                    <ManualSaveButton scenarioId={activeId} />
                     <SaveSettingsButton />
                     <RightSidePanel />
-                </Panel>
-
-
-                <Panel position="bottom-left">
-                    <ManualSaveButton scenarioId={activeId} />
-                    <PreviewOperationsButton scenarioId={activeId} />
                 </Panel>
 
                 <Panel className={styles.bottomRightPanel}  position="bottom-right">

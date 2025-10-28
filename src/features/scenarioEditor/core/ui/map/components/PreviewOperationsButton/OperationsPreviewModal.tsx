@@ -2,18 +2,37 @@
 
 import { useState } from 'react';
 import { X, Copy, Check } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/baseStore/store';
 import type { ScenarioOperationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/ScenarioOperationDto';
 import { formatOperationForDisplay } from '@scenario/core/features/saveSystem/operationBuilder';
+import { buildOperationsDiff } from '@scenario/core/features/saveSystem/operationDiffBuilder';
+import { ChangeItem } from '@scenario/core/features/saveSystem/components/ChangeItem/ChangeItem';
+import { DiffViewer } from '@scenario/core/features/saveSystem/components/DiffViewer/DiffViewer';
+import type { OperationDiff } from '@scenario/core/features/saveSystem/operationDiffBuilder';
+import type { Guid } from '@app/lib/types/Guid';
 import styles from './OperationsPreviewModal.module.css';
 
 interface OperationsPreviewModalProps {
     operations: ScenarioOperationDto[];
+    scenarioId: Guid | null;
     onClose: () => void;
 }
 
-export function OperationsPreviewModal({ operations, onClose }: OperationsPreviewModalProps) {
-    const [activeTab, setActiveTab] = useState<'list' | 'json'>('list');
+export function OperationsPreviewModal({ operations, scenarioId, onClose }: OperationsPreviewModalProps) {
+    const [activeTab, setActiveTab] = useState<'diff' | 'json'>('diff');
     const [copied, setCopied] = useState(false);
+    const [selectedChange, setSelectedChange] = useState<OperationDiff | null>(null);
+
+    // Получаем историю для построения diff
+    const historyContext = useSelector((state: RootState) =>
+        scenarioId ? state.history.contexts[scenarioId] : null
+    );
+
+    // Строим diff для операций
+    const changes = historyContext
+        ? buildOperationsDiff(operations, historyContext.past, historyContext.lastSyncedIndex)
+        : [];
 
     const handleCopy = async () => {
         try {
@@ -37,10 +56,10 @@ export function OperationsPreviewModal({ operations, onClose }: OperationsPrevie
 
                 <div className={styles.tabs}>
                     <button
-                        className={`${styles.tab} ${activeTab === 'list' ? styles.activeTab : ''}`}
-                        onClick={() => setActiveTab('list')}
+                        className={`${styles.tab} ${activeTab === 'diff' ? styles.activeTab : ''}`}
+                        onClick={() => setActiveTab('diff')}
                     >
-                        Список ({operations.length})
+                        Изменения ({operations.length})
                     </button>
                     <button
                         className={`${styles.tab} ${activeTab === 'json' ? styles.activeTab : ''}`}
@@ -51,16 +70,43 @@ export function OperationsPreviewModal({ operations, onClose }: OperationsPrevie
                 </div>
 
                 <div className={styles.content}>
-                    {activeTab === 'list' && (
-                        <div className={styles.list}>
-                            {operations.map((op, index) => (
-                                <div key={op.opId || index} className={styles.listItem}>
-                                    <div className={styles.listItemNumber}>{index + 1}</div>
-                                    <div className={styles.listItemText}>
-                                        {formatOperationForDisplay(op)}
+                    {activeTab === 'diff' && (
+                        <div className={styles.diffView}>
+                            {/* Левая панель: список изменений */}
+                            <div className={styles.changesList}>
+                                {changes.length > 0 ? (
+                                    changes.map((change) => (
+                                        <ChangeItem
+                                            key={change.opId}
+                                            change={change}
+                                            isSelected={selectedChange?.opId === change.opId}
+                                            onClick={() => setSelectedChange(change)}
+                                        />
+                                    ))
+                                ) : (
+                                    <div className={styles.list}>
+                                        {operations.map((op, index) => (
+                                            <div key={op.opId || index} className={styles.listItem}>
+                                                <div className={styles.listItemNumber}>{index + 1}</div>
+                                                <div className={styles.listItemText}>
+                                                    {formatOperationForDisplay(op)}
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                </div>
-                            ))}
+                                )}
+                            </div>
+
+                            {/* Правая панель: детальный diff */}
+                            <div className={styles.diffPanel}>
+                                {selectedChange ? (
+                                    <DiffViewer diff={selectedChange} />
+                                ) : (
+                                    <div className={styles.diffPlaceholder}>
+                                        Выберите изменение для просмотра деталей
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 

@@ -27,9 +27,9 @@
     background: #1e1e1e;
     border: 1px solid #333;
     border-radius: 8px;
-    width: 90%;
-    max-width: 800px;
-    max-height: 80vh;
+    width: 95%;
+    max-width: 1400px;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -228,4 +228,53 @@
 
 .closeButtonFooter:active {
     transform: scale(0.98);
+}
+
+/* Diff view styles */
+.diffView {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    height: 100%;
+    overflow: hidden;
+}
+
+.changesList {
+    border-right: 1px solid #333;
+    overflow-y: auto;
+    background-color: #1e1e1e;
+}
+
+.diffPanel {
+    overflow-y: auto;
+    background-color: #252525;
+}
+
+.diffPlaceholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #888;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .diffView {
+        grid-template-columns: 300px 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .diffView {
+        grid-template-columns: 1fr;
+    }
+
+    .changesList {
+        border-right: none;
+        border-bottom: 1px solid #333;
+        max-height: 30vh;
+    }
 }

@@ -168,10 +168,25 @@ export const historySlice = createSlice({
                     batchBuffer: [...context.batchBuffer, record],
                 };
             } else {
+                // Если добавляем новую операцию после Undo (past.length < lastSyncedIndex),
+                // нужно скорректировать lastSyncedIndex
+                const newPastLength = context.past.length + 1;
+                const newLastSyncedIndex = Math.min(context.lastSyncedIndex, context.past.length);
+
+                if (newLastSyncedIndex < context.lastSyncedIndex) {
+                    console.log(
+                        '[historySlice] Recording after undo, adjusting lastSyncedIndex:',
+                        context.lastSyncedIndex,
+                        '→',
+                        newLastSyncedIndex
+                    );
+                }
+
                 state.contexts[contextId] = {
                     ...context,
                     past: [...context.past, record],
                     future: [],
+                    lastSyncedIndex: newLastSyncedIndex,
                 };
             }
         },
@@ -222,10 +237,25 @@ export const historySlice = createSlice({
                     batchBuffer: [...context.batchBuffer, record],
                 };
             } else {
+                // Если добавляем новую операцию после Undo (past.length < lastSyncedIndex),
+                // нужно скорректировать lastSyncedIndex
+                const newPastLength = context.past.length + 1;
+                const newLastSyncedIndex = Math.min(context.lastSyncedIndex, context.past.length);
+
+                if (newLastSyncedIndex < context.lastSyncedIndex) {
+                    console.log(
+                        '[historySlice] Recording after undo, adjusting lastSyncedIndex:',
+                        context.lastSyncedIndex,
+                        '→',
+                        newLastSyncedIndex
+                    );
+                }
+
                 state.contexts[contextId] = {
                     ...context,
                     past: [...context.past, record],
                     future: [],
+                    lastSyncedIndex: newLastSyncedIndex,
                 };
             }
         },
@@ -265,10 +295,25 @@ export const historySlice = createSlice({
                     batchBuffer: [...context.batchBuffer, record],
                 };
             } else {
+                // Если добавляем новую операцию после Undo (past.length < lastSyncedIndex),
+                // нужно скорректировать lastSyncedIndex
+                const newPastLength = context.past.length + 1;
+                const newLastSyncedIndex = Math.min(context.lastSyncedIndex, context.past.length);
+
+                if (newLastSyncedIndex < context.lastSyncedIndex) {
+                    console.log(
+                        '[historySlice] Recording after undo, adjusting lastSyncedIndex:',
+                        context.lastSyncedIndex,
+                        '→',
+                        newLastSyncedIndex
+                    );
+                }
+
                 state.contexts[contextId] = {
                     ...context,
                     past: [...context.past, record],
                     future: [],
+                    lastSyncedIndex: newLastSyncedIndex,
                 };
             }
         },
@@ -293,7 +338,9 @@ export const historySlice = createSlice({
                 '[historySlice] Undo committed. Past:',
                 context.past.length - 1,
                 'Future:',
-                context.future.length + 1
+                context.future.length + 1,
+                'LastSyncedIndex (unchanged):',
+                context.lastSyncedIndex
             );
         },
 
@@ -317,7 +364,9 @@ export const historySlice = createSlice({
                 '[historySlice] Redo committed. Past:',
                 context.past.length + 1,
                 'Future:',
-                context.future.length - 1
+                context.future.length - 1,
+                'LastSyncedIndex (unchanged):',
+                context.lastSyncedIndex
             );
         },
 
@@ -356,12 +405,26 @@ export const historySlice = createSlice({
                     records: context.batchBuffer,
                 };
 
+                // Если добавляем новую операцию после Undo (past.length < lastSyncedIndex),
+                // нужно скорректировать lastSyncedIndex
+                const newLastSyncedIndex = Math.min(context.lastSyncedIndex, context.past.length);
+
+                if (newLastSyncedIndex < context.lastSyncedIndex) {
+                    console.log(
+                        '[historySlice] Committing batch after undo, adjusting lastSyncedIndex:',
+                        context.lastSyncedIndex,
+                        '→',
+                        newLastSyncedIndex
+                    );
+                }
+
                 state.contexts[contextId] = {
                     ...context,
                     past: [...context.past, batchRecord],
                     future: [],
                     isBatching: false,
                     batchBuffer: [],
+                    lastSyncedIndex: newLastSyncedIndex,
                 };
             } else {
                 state.contexts[contextId] = {

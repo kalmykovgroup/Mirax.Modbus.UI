@@ -56,12 +56,20 @@ export function useSaveScenario(scenarioId: Guid | null): UseSaveScenarioResult 
 
         const { past, future, lastSyncedIndex } = historyContext;
 
+        console.log('[useSaveScenario] Building operations:', {
+            pastLength: past.length,
+            futureLength: future.length,
+            lastSyncedIndex,
+        });
+
         // Если нет несохраненных операций и не было Undo
         if (past.length === 0 && lastSyncedIndex === 0) {
             return [];
         }
 
-        return buildOperationsFromHistory(past, lastSyncedIndex, future);
+        const ops = buildOperationsFromHistory(past, lastSyncedIndex, future);
+        console.log('[useSaveScenario] Operations built:', ops.length);
+        return ops;
     }, [historyContext?.past, historyContext?.lastSyncedIndex, historyContext?.future]);
 
     // ✅ ВАЛИДАЦИЯ: canSave теперь учитывает валидность всех нод

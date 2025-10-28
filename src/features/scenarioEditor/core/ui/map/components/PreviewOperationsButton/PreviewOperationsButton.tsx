@@ -26,13 +26,13 @@ export function PreviewOperationsButton({ scenarioId }: PreviewOperationsButtonP
                 title={hasOperations ? 'Предпросмотр изменений' : 'Нет изменений для просмотра'}
             >
                 <Eye size={18} />
-                <span>Предпросмотр</span>
                 {hasOperations && <span className={styles.badge}>{operations.length}</span>}
             </button>
 
             {isModalOpen && (
                 <OperationsPreviewModal
                     operations={operations}
+                    scenarioId={scenarioId}
                     onClose={() => setIsModalOpen(false)}
                 />
             )}

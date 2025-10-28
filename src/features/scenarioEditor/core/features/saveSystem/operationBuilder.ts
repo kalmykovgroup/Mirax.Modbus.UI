@@ -410,10 +410,23 @@ export function buildOperationsFromHistory(
     lastSyncedIndex: number = 0,
     futureRecords: HistoryRecord[] = []
 ): ScenarioOperationDto[] {
-    // Случай 1: Были сделаны Undo после последнего сохранения
-    if (historyRecords.length < lastSyncedIndex) {
-        // Количество откаченных операций
-        const undoneCount = lastSyncedIndex - historyRecords.length;
+    console.log('[buildOperationsFromHistory] Input:', {
+        pastLength: historyRecords.length,
+        lastSyncedIndex,
+        futureLength: futureRecords.length,
+    });
+
+    const allOperations: ScenarioOperationDto[] = [];
+
+    // Часть 1: Обрабатываем откачённые синхронизированные операции
+    // lastSyncedIndex показывает сколько операций было синхронизировано
+    // past.length показывает сколько операций сейчас в истории
+    // Если past.length < lastSyncedIndex, значит были откачены синхронизированные операции
+    // Эти операции находятся в начале future
+    const undoneCount = Math.max(0, lastSyncedIndex - historyRecords.length);
+
+    if (undoneCount > 0) {
+        console.log('[buildOperationsFromHistory] Undo detected, undoneCount:', undoneCount);
 
         // Откаченные операции находятся в начале future
         const undoneRecords = futureRecords.slice(0, undoneCount);
@@ -421,19 +434,34 @@ export function buildOperationsFromHistory(
         // Создаем компенсирующие операции для откаченных изменений
         const reverseOperations = processUndoneRecords(undoneRecords);
 
-        return reverseOperations;
+        console.log('[buildOperationsFromHistory] Reverse operations created:', reverseOperations.length);
+        allOperations.push(...reverseOperations);
     }
 
-    // Случай 2: Нормальная синхронизация - берем только новые операции после lastSyncedIndex
-    const newRecords = historyRecords.slice(lastSyncedIndex);
+    // Часть 2: Обрабатываем новые операции после lastSyncedIndex
+    // Индекс для slice зависит от того, были ли Undo:
+    // - Если past.length >= lastSyncedIndex, берём от lastSyncedIndex
+    // - Если past.length < lastSyncedIndex, то все операции в past - это новые (после Undo)
+    const startIndex = Math.min(lastSyncedIndex, historyRecords.length);
+    const newRecords = historyRecords.slice(startIndex);
 
-    if (newRecords.length === 0) {
-        return [];
+    if (newRecords.length > 0) {
+        console.log('[buildOperationsFromHistory] Processing new records:', newRecords.length, 'from index', startIndex);
+
+        const operations = processRecords(newRecords);
+        const mergedOperations = mergeOperations(operations, newRecords);
+
+        console.log('[buildOperationsFromHistory] New operations created:', mergedOperations.length);
+        allOperations.push(...mergedOperations);
     }
 
-    const operations = processRecords(newRecords);
-    const mergedOperations = mergeOperations(operations, newRecords);
-    return mergedOperations;
+    if (allOperations.length === 0) {
+        console.log('[buildOperationsFromHistory] No operations to sync');
+    } else {
+        console.log('[buildOperationsFromHistory] Total operations to sync:', allOperations.length);
+    }
+
+    return allOperations;
 }
 
 /**

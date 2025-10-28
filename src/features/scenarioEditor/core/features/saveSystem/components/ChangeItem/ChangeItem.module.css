@@ -1,0 +1,91 @@
+/* src/features/scenarioEditor/core/features/saveSystem/components/ChangeItem/ChangeItem.module.css */
+
+.item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    border-bottom: 1px solid var(--color-border, #333);
+    background-color: transparent;
+    color: var(--color-text-primary, #fff);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.item:hover {
+    background-color: var(--color-bg-hover, rgba(255, 255, 255, 0.05));
+}
+
+.item.selected {
+    background-color: var(--color-bg-selected, rgba(100, 150, 255, 0.15));
+    border-left: 3px solid var(--color-primary, #6496ff);
+}
+
+.icon {
+    font-size: 20px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.content {
+    flex: 1;
+    min-width: 0;
+}
+
+.name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-primary, #fff);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--color-text-secondary, #aaa);
+}
+
+.action {
+    font-weight: 500;
+}
+
+.separator {
+    color: var(--color-text-tertiary, #666);
+}
+
+.type {
+    font-style: italic;
+}
+
+/* Цветовое кодирование по типу операции */
+.action-create .icon {
+    color: #4caf50;
+}
+
+.action-update .icon {
+    color: #2196f3;
+}
+
+.action-delete .icon {
+    color: #f44336;
+}
+
+.action-create .action {
+    color: #4caf50;
+}
+
+.action-update .action {
+    color: #2196f3;
+}
+
+.action-delete .action {
+    color: #f44336;
+}
