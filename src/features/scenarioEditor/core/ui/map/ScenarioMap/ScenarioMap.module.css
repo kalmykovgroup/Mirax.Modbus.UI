@@ -4,11 +4,6 @@
     display: flex;
 }
 
-.flowControls{
-    color: red;
-    flex-direction: row; /* Делаем горизонтально */
-    gap: 4px;
-}
 
 .rmb-panning {
     cursor: grabbing !important;
@@ -44,5 +39,36 @@
 /* Контент внутри панели остается интерактивным */
 .bottomRightPanel > * {
     pointer-events: auto;
+}
+
+.topLeftPanel{
+    align-items: flex-start;
+    pointer-events: none; /* Панель не перехватывает события мыши */
+    max-height: 100%;
+    height: calc(100% - 50px);
+}
+
+.flowControls{
+    display: flex;
+    position: relative;
+    color: #b15c05;
+    height: 160px;
+    gap: 5px;
+}
+
+.flowControls .controls{
+    top: 0;
+}
+.flowControls .controls button{
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid #717171;
+}
+
+.flowControls .controls button:hover{
+    background: rgba(255, 255, 255, 0.49);
+}
+
+.flowControls .controls button:last-child{
+    border-bottom: 1px solid rgba(113, 113, 113, 0);
 }
 

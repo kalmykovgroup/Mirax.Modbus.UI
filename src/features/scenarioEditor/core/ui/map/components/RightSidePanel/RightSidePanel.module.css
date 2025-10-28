@@ -19,15 +19,16 @@
     border-bottom: 1px solid #333;
     background: #1a1a1a;
     flex-shrink: 0;
+    height: 35px;
 }
 
 .tab {
+    width: 150px;
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 12px 16px;
     background: transparent;
     border: none;
     color: #888;
@@ -36,6 +37,11 @@
     font-weight: 500;
     transition: all 0.2s;
     border-bottom: 2px solid transparent;
+    border-right: 1px solid #333;
+}
+
+.tab:nth-last-child{
+    border-right: none;
 }
 
 .tab:hover {
@@ -55,7 +61,6 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    width: 310px;
     align-items: flex-end;
     pointer-events: none; /* Контейнер не перехватывает события мыши */
 }
