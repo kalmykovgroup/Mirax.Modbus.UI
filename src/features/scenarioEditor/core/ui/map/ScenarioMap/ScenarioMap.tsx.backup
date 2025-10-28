@@ -1,6 +1,6 @@
 // src/features/scenarioEditor/core/ui/map/ScenarioMap/ScenarioMap.tsx
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
     Background,
     BackgroundVariant,
@@ -47,8 +47,6 @@ import { SaveSettingsButton } from '@scenario/core/ui/map/components/SaveSetting
 import { ManualSaveButton } from '@scenario/core/ui/map/components/ManualSaveButton/ManualSaveButton';
 import { NodeContextMenu, useNodeContextMenu, initializeNodeContextMenuProviders } from '@scenario/core/ui/nodes/shared/NodeContextMenu';
 
-
-type RightSidePanelTab = 'create' | 'history' | 'scenarios';
 export interface ScenarioEditorProps {}
 
 export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
@@ -56,11 +54,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const rf = useReactFlow<FlowNode, FlowEdge>();
 
     const nodeTypes = useMemo(() => generateNodeTypes(), []); // ✅ ИСПРАВЛЕНИЕ
-    // ============================================================================
-    // RIGHT SIDE PANEL STATE
-    // ============================================================================
-    const [rightPanelActiveTab, setRightPanelActiveTab] = useState<RightSidePanelTab | null>(null);
-
 
     // ============================================================================
     // STATE & REFS
@@ -349,15 +342,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         [contextMenu, setNodes]
     );
 
-
-    // ============================================================================
-    // PANE CLICK HANDLER - Закрытие правой панели
-    // ============================================================================
-    const handlePaneClick = useCallback(() => {
-        // Закрываем правую панель при клике на пустое поле
-        setRightPanelActiveTab(null);
-    }, []);
-
     // ============================================================================
     // RENDER
     // ============================================================================
@@ -381,7 +365,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     onNodeDragStart={dragStartHandler.onNodeDragStart}
                     onNodeDragStop={dragStopHandler.onNodeDragStop}
                     onNodeContextMenu={handleNodeContextMenu}
-                    onPaneClick={handlePaneClick}
                     proOptions={{ hideAttribution: true }}
                     {...flowSettings}
                     defaultEdgeOptions={defaultEdgeOptions}
@@ -397,10 +380,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 <Panel className={styles.rightTopPanel} position="top-right">
                     <ManualSaveButton scenarioId={activeId} />
                     <SaveSettingsButton />
-                    <RightSidePanel
-                        activeTab={rightPanelActiveTab}
-                        onTabChange={setRightPanelActiveTab}
-                    />
+                    <RightSidePanel />
                 </Panel>
 
                 <Panel className={styles.bottomRightPanel}  position="bottom-right">

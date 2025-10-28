@@ -11,9 +11,17 @@ import {NewNodesPanel} from "@scenario/core/ui/map/components/NewNodesPanel/NewN
 
 type Tab = 'create' | 'history' | 'scenarios';
 
+interface RightSidePanelProps {
+    activeTab?: Tab | null;
+    onTabChange?: (tab: Tab | null) => void;
+}
 
-export function RightSidePanel() {
-    const [activeTab, setActiveTab] = useState<Tab | null>(null);
+export function RightSidePanel({ activeTab: externalActiveTab, onTabChange }: RightSidePanelProps = {}) {
+    const [internalActiveTab, setInternalActiveTab] = useState<Tab | null>(null);
+
+    // Используем внешнее состояние, если оно передано, иначе внутреннее
+    const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
+    const setActiveTab = onTabChange || setInternalActiveTab;
 
     const handleTabClick = (tab: Tab) => {
         setActiveTab((current) => (current === tab ? null : tab));
