@@ -3,7 +3,7 @@ import type { SendSignalStepType } from "@scenario/shared/contracts/server/types
 import type { StepType } from "@scenario/shared/contracts/server/types/Api.Shared/StepType.ts";
 import type {Guid} from "@app/lib/types/Guid.ts";
 
-/** База Update (C# UpdateStepBase) — дискриминатор: "kind" */
+/** База Update (C# UpdateStepBase) — дискриминатор: "type" */
 interface UpdateStepBase {
     /** Guid — обязательный */
     id: Guid;
@@ -35,26 +35,26 @@ interface UpdateActivityStepBase extends UpdateStepBase {
 /** Modbus Activity (C# UpdateActivityModbusStepRequest) */
 export interface UpdateActivityModbusStepRequest extends UpdateActivityStepBase {
     // дискриминатор для полиморфной сериализации на бэке
-    kind: StepType.ActivityModbus;
+    type: StepType.ActivityModbus;
     modbusDeviceActionId?: string | null;   // Guid?
     modbusDeviceAddressId?: string | null;  // Guid?
 }
 
 /** System Activity (C# UpdateActivitySystemStepRequest) */
 export interface UpdateActivitySystemStepRequest extends UpdateActivityStepBase {
-    kind: StepType.ActivitySystem;
+    type: StepType.ActivitySystem;
     systemActionId?: string | null; // Guid?
 }
 
 /** Delay (C# UpdateDelayStepRequest) */
 export interface UpdateDelayStepRequest extends UpdateStepBase {
-    kind: StepType.Delay;
+    type: StepType.Delay;
     timeSpan?: string | null; // ISO 8601 duration
 }
 
 /** Signal (C# UpdateSignalStepRequest) */
 export interface UpdateSignalStepRequest extends UpdateStepBase {
-    kind: StepType.Signal;
+    type: StepType.Signal;
     awaitSignalStepType?: AwaitSignalStepType | null;
     sendSignalStepType?: SendSignalStepType | null;
     signalKey?: string | null;
@@ -63,18 +63,18 @@ export interface UpdateSignalStepRequest extends UpdateStepBase {
 
 /** Jump (C# UpdateJumpStepRequest) */
 export interface UpdateJumpStepRequest extends UpdateStepBase {
-    kind: StepType.Jump;
+    type: StepType.Jump;
     jumpToStepId?: Guid | null; // Guid?
 }
 
 /** Parallel (C# UpdateParallelStepRequest) */
 export interface UpdateParallelStepRequest extends UpdateStepBase {
-    kind: StepType.Parallel;
+    type: StepType.Parallel;
 }
 
 /** Condition (C# UpdateConditionStepRequest) */
 export interface UpdateConditionStepRequest extends UpdateStepBase {
-    kind: StepType.Condition;
+    type: StepType.Condition;
 }
 
 /** Объединяющий дискриминированный тип */

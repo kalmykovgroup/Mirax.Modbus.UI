@@ -147,11 +147,11 @@ export const ActivityModbusStepDto = {
     ): ActivityModbusStepDto {
         return {
             ...base(FlowType.ActivityModbus, p),
-            sessionId: p.sessionId ?? "",
-            connectionConfigId: p.connectionConfigId ?? "",
-            modbusDeviceActionId: p.modbusDeviceActionId ?? "",
+            sessionId: p.sessionId ?? undefined,
+            connectionConfigId: p.connectionConfigId ?? undefined,
+            modbusDeviceActionId: p.modbusDeviceActionId ?? undefined,
             modbusDeviceAction: p.modbusDeviceAction ?? null,
-            modbusDeviceAddressId: p.modbusDeviceAddressId ?? "",
+            modbusDeviceAddressId: p.modbusDeviceAddressId ?? undefined,
             modbusDeviceAddress: p.modbusDeviceAddress ?? null,
         };
     },
@@ -172,7 +172,7 @@ export const ActivitySystemStepDto = {
     ): ActivitySystemStepDto {
         return {
             ...base(FlowType.ActivitySystem, p),
-            systemActionId: p.systemActionId ?? "",
+            systemActionId: p.systemActionId ?? undefined,
             systemAction: p.systemAction ?? null,
         };
     },
@@ -220,8 +220,8 @@ export const SignalStepDto = {
             ...base(FlowType.Signal, p),
             awaitSignalStepType: p.awaitSignalStepType,
             sendSignalStepType: p.sendSignalStepType,
-            signalKey: p.signalKey ?? "",
-            sendSignalData: p.sendSignalData ?? "",
+            signalKey: p.signalKey ?? undefined,
+            sendSignalData: p.sendSignalData ?? undefined,
         };
     },
 } as const;
@@ -242,7 +242,7 @@ export const JumpStepDto = {
     ): JumpStepDto {
         return {
             ...base(FlowType.Jump, p),
-            jumpToStepId: p.jumpToStepId ?? "",
+            jumpToStepId: p.jumpToStepId ?? undefined,
         };
     },
 } as const;

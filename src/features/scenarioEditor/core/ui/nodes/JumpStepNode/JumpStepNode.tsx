@@ -6,10 +6,11 @@ import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.
 import type {
     JumpStepDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
+import { withValidation } from '@scenario/core/ui/nodes/shared/withValidation/withValidation';
 
 type Props = NodeProps<Node<FlowNodeData<JumpStepDto>>>;
 
-export function JumpStepNode({ data, selected}: Props) {
+function JumpStepNodeComponent({ data, selected}: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
     const type : FlowType | undefined = data?.connectContext?.from.type;
@@ -64,3 +65,5 @@ export function JumpStepNode({ data, selected}: Props) {
         </div>
     );
 }
+
+export const JumpStepNode = withValidation(JumpStepNodeComponent);

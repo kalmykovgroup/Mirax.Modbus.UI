@@ -32,7 +32,7 @@ export function SaveIndicator() {
             {status === 'saved' && (
                 <>
                     <CheckCircle size={16} />
-                    <span>Сохранено</span>
+                    {/*<span>Сохранено</span>*/}
                     {lastSaveTimestamp && (
                         <span className={styles.time}>{formatTime(lastSaveTimestamp)}</span>
                     )}
@@ -45,7 +45,7 @@ export function SaveIndicator() {
                     <span>Ошибка</span>
                     {lastSaveError && (
                         <span className={styles.errorText} title={lastSaveError}>
-                            {lastSaveError.substring(0, 30)}...
+                            {lastSaveError}
                         </span>
                     )}
                 </>

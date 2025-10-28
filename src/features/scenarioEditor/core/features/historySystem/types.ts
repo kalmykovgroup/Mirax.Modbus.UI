@@ -153,6 +153,8 @@ export interface HistoryContext {
     readonly   isBatching: boolean;
     readonly  batchBuffer: HistoryRecord[];
     readonly   config: HistoryConfig;
+    /** Индекс в past до которого все операции уже синхронизированы с сервером */
+    readonly  lastSyncedIndex: number;
 }
 
 /**

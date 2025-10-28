@@ -12,6 +12,10 @@
     background: #1a1a1a;
     border: 1px solid #333;
     margin-bottom: 8px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .indicator.saved {
@@ -54,7 +58,7 @@
 .errorText {
     font-size: 11px;
     opacity: 0.8;
-    max-width: 150px;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

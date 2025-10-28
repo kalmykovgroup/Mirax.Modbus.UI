@@ -35,20 +35,105 @@ function mapEntityType(entityType: string): DbEntityType {
 }
 
 /**
+ * Очищает payload от лишних полей, используя подход "чёрного списка"
+ * Удаляет только известные проблемные поля (навигационные свойства, readonly поля),
+ * всё остальное пропускает без изменений.
+ *
+ * Это позволяет автоматически поддерживать новые поля без изменения кода.
+ */
+function cleanPayload(data: any, action: DbActionType): any {
+    // "Чёрный список" - поля которые ТОЧНО НЕ должны отправляться на сервер
+    const excludeFields = new Set([
+        // Внутренние поля клиента
+        'entityType',           // FlowType - внутренний тип клиента
+        '__persisted',          // Флаг клиента о сохранении
+
+    ]);
+
+    // Создаём очищенный объект
+    const cleaned: any = {};
+
+    // Копируем все поля, кроме тех что в чёрном списке
+    for (const key in data) {
+        if (data.hasOwnProperty(key) && !excludeFields.has(key)) {
+            cleaned[key] = data[key];
+        }
+    }
+
+    return cleaned;
+}
+
+/**
  * Извлекает payload из снимка
  * Снимки имеют структуру: { entityId, entityType, data, timestamp }
- * Нам нужно взять data (это и есть DTO сущности)
+ * Нам нужно взять data (это и есть DTO сущности), но убрать entityType
+ *
+ * ВАЖНО: Для полиморфной десериализации .NET поле '$type' ДОЛЖНО быть первым в JSON
  */
-function extractPayload(snapshot: any): unknown {
+function extractPayload(snapshot: any, action: DbActionType): unknown {
     if (!snapshot) return null;
 
     // Если это EntitySnapshot - берём data
     if (snapshot.data) {
-        return snapshot.data;
+        const data = snapshot.data;
+
+        // Убираем entityType - это внутренний тип клиента (FlowType)
+        // ВАЖНО: Трансформируем 'type' в '$type' для .NET и помещаем первым
+        const { entityType, type, ...rest } = data;
+
+        let cleaned: any;
+
+        // Для шагов (есть поле type) применяем очистку
+        if (type !== undefined) {
+            // Сначала очищаем от лишних полей
+            const dataWithType = { type, ...rest };
+            cleaned = cleanPayload(dataWithType, action);
+
+            // Затем трансформируем type в $type и помещаем на первое место
+            const { type: stepType, ...restCleaned } = cleaned;
+            return { $type: stepType, ...restCleaned };
+        }
+
+        // Для Branch просто убираем entityType
+        return rest;
     }
 
     // Иначе возвращаем как есть
     return snapshot;
+}
+
+/**
+ * Валидирует payload перед отправкой на сервер
+ * Возвращает null если payload невалиден и не должен быть отправлен
+ */
+function validatePayload(payload: any, action: DbActionType, entityType: string): string | null {
+    // Проверяем только для Create и Update
+    if (action !== DbActionType.Create && action !== DbActionType.Update) {
+        return null; // Delete всегда валиден
+    }
+
+    // Валидация для ActivitySystemNode
+    if (entityType === 'ActivitySystemNode') {
+        if (!payload.systemActionId) {
+            return 'ActivitySystemStep requires systemActionId';
+        }
+    }
+
+    // Валидация для ActivityModbusNode
+    if (entityType === 'ActivityModbusNode') {
+        if (!payload.modbusDeviceActionId || !payload.modbusDeviceAddressId) {
+            return 'ActivityModbusStep requires modbusDeviceActionId and modbusDeviceAddressId';
+        }
+    }
+
+    // Валидация для DelayStepNode
+    if (entityType === 'DelayStepNode') {
+        if (!payload.timeSpan) {
+            return 'DelayStep requires timeSpan';
+        }
+    }
+
+    return null; // Валидация пройдена
 }
 
 /**
@@ -66,17 +151,17 @@ function convertRecordToOperation(record: HistoryRecord): ScenarioOperationDto |
     switch (record.type) {
         case 'create':
             action = DbActionType.Create;
-            payload = extractPayload(record.after);
+            payload = extractPayload(record.after, action);
             break;
 
         case 'update':
             action = DbActionType.Update;
-            payload = extractPayload(record.after);
+            payload = extractPayload(record.after, action);
             break;
 
         case 'delete':
             action = DbActionType.Delete;
-            payload = extractPayload(record.before);
+            payload = extractPayload(record.before, action);
             break;
 
         default:
@@ -86,6 +171,17 @@ function convertRecordToOperation(record: HistoryRecord): ScenarioOperationDto |
 
     if (!payload) {
         console.warn('[operationBuilder] No payload for record:', record);
+        return null;
+    }
+
+    // Валидация payload перед отправкой
+    const validationError = validatePayload(payload, action, record.entityType);
+    if (validationError) {
+        console.warn(`[operationBuilder] Skipping invalid operation: ${validationError}`, {
+            entityType: record.entityType,
+            entityId: (payload as any)?.id,
+            action,
+        });
         return null;
     }
 
@@ -173,7 +269,6 @@ function mergeOperations(operations: ScenarioOperationDto[], historyRecords: His
 
         // Create + ... + Delete = пропускаем (сущность создана и удалена)
         if (firstOp.action === DbActionType.Create && lastOp.action === DbActionType.Delete) {
-            console.log(`[operationBuilder] Skipping Create+Delete for entity: ${entityKey}`);
             continue;
         }
 
@@ -184,7 +279,6 @@ function mergeOperations(operations: ScenarioOperationDto[], historyRecords: His
                 action: DbActionType.Create, // Но оставляем действие Create
                 opId: firstOp.opId, // Используем ID первой операции
             });
-            console.log(`[operationBuilder] Merged Create+Updates for entity: ${entityKey}`);
             continue;
         }
 
@@ -198,7 +292,7 @@ function mergeOperations(operations: ScenarioOperationDto[], historyRecords: His
                 // Извлекаем before из первого Update
                 const historyRecord = historyRecords.find(r => r.id === firstUpdate.opId);
                 const beforePayload = historyRecord && historyRecord.type === 'update'
-                    ? extractPayload(historyRecord.before)
+                    ? extractPayload(historyRecord.before, DbActionType.Delete)
                     : firstUpdate.payload;
 
                 mergedOperations.push({
@@ -209,14 +303,12 @@ function mergeOperations(operations: ScenarioOperationDto[], historyRecords: His
                 mergedOperations.push(lastOp);
             }
 
-            console.log(`[operationBuilder] Merged Updates+Delete for entity: ${entityKey}`);
             continue;
         }
 
         // Update(s) = Update с финальными данными
         if (lastOp.action === DbActionType.Update) {
             mergedOperations.push(lastOp);
-            console.log(`[operationBuilder] Merged ${entityOps.length} Updates for entity: ${entityKey}`);
             continue;
         }
 
@@ -228,25 +320,113 @@ function mergeOperations(operations: ScenarioOperationDto[], historyRecords: His
 }
 
 /**
+ * Создает "обратную" операцию для откаченной записи истории
+ */
+function createReverseOperation(record: HistoryRecord): ScenarioOperationDto | null {
+    if (record.type === 'batch') {
+        // Для batch не создаем обратную операцию на этом уровне,
+        // они будут обработаны рекурсивно
+        return null;
+    }
+
+    let action: DbActionType;
+    let payload: unknown;
+
+    if (record.type === 'create') {
+        // Create была откачена → нужно Delete
+        action = DbActionType.Delete;
+        payload = extractPayload(record.after, action);
+    } else if (record.type === 'update') {
+        // Update была откачена → нужно Update с before состоянием
+        action = DbActionType.Update;
+        payload = extractPayload(record.before, action);
+    } else if (record.type === 'delete') {
+        // Delete была откачена → нужно Create с before состоянием
+        action = DbActionType.Create;
+        payload = extractPayload(record.before, action);
+    } else {
+        return null;
+    }
+
+    // Валидация payload перед созданием обратной операции
+    const validationError = validatePayload(payload, action, record.entityType);
+    if (validationError) {
+        console.warn(`[operationBuilder] Skipping invalid reverse operation: ${validationError}`, {
+            entityType: record.entityType,
+            entityId: (payload as any)?.id,
+            action,
+            recordType: record.type,
+        });
+        return null;
+    }
+
+    return {
+        opId: crypto.randomUUID(),
+        entity: mapEntityType(record.entityType),
+        action,
+        payload,
+    };
+}
+
+/**
+ * Обрабатывает откаченные операции из future для создания компенсирующих операций
+ */
+function processUndoneRecords(undoneRecords: HistoryRecord[]): ScenarioOperationDto[] {
+    const operations: ScenarioOperationDto[] = [];
+
+    for (const record of undoneRecords) {
+        if (record.type === 'batch') {
+            // Рекурсивно обрабатываем записи внутри batch
+            const batchRecord = record as BatchRecord;
+            const batchOps = processUndoneRecords(batchRecord.records);
+            operations.push(...batchOps);
+        } else {
+            const reverseOp = createReverseOperation(record);
+            if (reverseOp) {
+                operations.push(reverseOp);
+            }
+        }
+    }
+
+    return operations;
+}
+
+/**
  * Основная функция: конвертирует массив записей истории в массив операций для сервера
  *
  * @param historyRecords - Массив записей из history.past
+ * @param lastSyncedIndex - Индекс до которого операции уже синхронизированы с сервером
+ * @param futureRecords - Массив записей из history.future (для обработки Undo)
  * @returns Массив операций готовых для отправки на сервер
  */
 export function buildOperationsFromHistory(
-    historyRecords: HistoryRecord[]
+    historyRecords: HistoryRecord[],
+    lastSyncedIndex: number = 0,
+    futureRecords: HistoryRecord[] = []
 ): ScenarioOperationDto[] {
-    console.log('[operationBuilder] Building operations from history:', historyRecords.length, 'records');
+    // Случай 1: Были сделаны Undo после последнего сохранения
+    if (historyRecords.length < lastSyncedIndex) {
+        // Количество откаченных операций
+        const undoneCount = lastSyncedIndex - historyRecords.length;
 
-    const operations = processRecords(historyRecords);
+        // Откаченные операции находятся в начале future
+        const undoneRecords = futureRecords.slice(0, undoneCount);
 
-    console.log('[operationBuilder] Extracted', operations.length, 'raw operations');
+        // Создаем компенсирующие операции для откаченных изменений
+        const reverseOperations = processUndoneRecords(undoneRecords);
 
-    // Объединяем множественные операции над одной сущностью
-    const mergedOperations = mergeOperations(operations, historyRecords);
+        return reverseOperations;
+    }
 
-    console.log('[operationBuilder] After merge:', mergedOperations.length, 'operations');
+    // Случай 2: Нормальная синхронизация - берем только новые операции после lastSyncedIndex
+    const newRecords = historyRecords.slice(lastSyncedIndex);
 
+    if (newRecords.length === 0) {
+        return [];
+    }
+
+    const operations = processRecords(newRecords);
+    const mergedOperations = mergeOperations(operations, newRecords);
     return mergedOperations;
 }
 

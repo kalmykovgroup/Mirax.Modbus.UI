@@ -26,6 +26,7 @@ import { useSelector } from "react-redux";
 import { selectActiveScenarioId } from "@scenario/store/scenarioSelectors.ts";
 import type { Guid } from "@app/lib/types/Guid.ts";
 import { useScenarioOperations } from "@scenario/core/hooks/useScenarioOperations.ts";
+import { useScenarioValidation } from "@scenario/core/features/validation/useScenarioValidation.ts";
 
 function createByFlowType(type: FlowType, p: any) {
     switch (type) {
@@ -59,6 +60,9 @@ export const NewNodesPanel: React.FC = () => {
     //  Хук для операций со сценарием
     const operations = useScenarioOperations(activeId);
 
+    // ✅ ВАЛИДАЦИЯ: Проверяем, есть ли невалидные ноды
+    const validation = useScenarioValidation(activeId);
+
     const hoverBranchIdRef = useRef<string | null>(null);
 
     const setHover = (id: string | null) => {
@@ -69,6 +73,24 @@ export const NewNodesPanel: React.FC = () => {
 
     const startCreateNode = (type: FlowType) => (e: React.MouseEvent) => {
         e.preventDefault();
+
+        // ✅ ВАЛИДАЦИЯ: Блокируем создание новых нод, если есть невалидные
+        if (validation.hasInvalidNodes) {
+            console.warn('[NewNodesPanel] Cannot create node: scenario has invalid nodes', validation.invalidNodes);
+
+            // Формируем сообщение с перечислением невалидных нод
+            const invalidNodesList = validation.invalidNodes
+                .map(node => `- "${node.nodeName}": ${node.errors.join(', ')}`)
+                .join('\n');
+
+            alert(
+                `Невозможно создать новую ноду!\n\n` +
+                `Сначала заполните данные в существующих нодах:\n\n${invalidNodesList}`
+            );
+
+            return;
+        }
+
         const id = crypto.randomUUID();
 
         const move = (ev: MouseEvent) => {
@@ -170,7 +192,7 @@ export const NewNodesPanel: React.FC = () => {
                     y: drop.y,
                     width: 100,
                     height: 71,
-                };
+                } as any; // Cast to any для избежания ошибок типизации
             }
 
             //  Обновляем ноду с финальным DTO

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Apolon 1/source/repos/Organization-Code-Mirax/Mirax.Modbus.AspNet.Server/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

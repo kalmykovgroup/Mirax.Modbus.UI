@@ -322,9 +322,8 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     className={styles.customFlow}
                 >
 
-                <Panel position="top-right">
+                <Panel className={styles.rightTopPanel} position="top-right">
                     <SaveSettingsButton />
-                    <SaveIndicator />
                     <RightSidePanel />
                 </Panel>
 
@@ -342,6 +341,10 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     <Controls className={`${styles.flowControls}`} />
                     <ManualSaveButton scenarioId={activeId} />
                     <PreviewOperationsButton scenarioId={activeId} />
+                </Panel>
+
+                <Panel className={styles.bottomRightPanel}  position="bottom-right">
+                    <SaveIndicator />
                 </Panel>
                 <Background
                     id="1"

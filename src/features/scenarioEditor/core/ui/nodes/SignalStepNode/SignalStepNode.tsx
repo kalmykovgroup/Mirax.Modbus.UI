@@ -4,13 +4,14 @@ import {type NodeProps, Handle, Position, type Node} from "@xyflow/react";
 import {formatWithMode} from "@app/lib/utils/format.ts";
 import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
 import type {SignalStepDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
+import { withValidation } from '@scenario/core/ui/nodes/shared/withValidation/withValidation';
 
 
 
 type Props = NodeProps<Node<FlowNodeData<SignalStepDto>>>;
 
 
-export function SignalStepNode({ data, selected}: Props) {
+function SignalStepNodeComponent({ data, selected}: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
 
@@ -45,3 +46,5 @@ export function SignalStepNode({ data, selected}: Props) {
         </div>
     );
 }
+
+export const SignalStepNode = withValidation(SignalStepNodeComponent);

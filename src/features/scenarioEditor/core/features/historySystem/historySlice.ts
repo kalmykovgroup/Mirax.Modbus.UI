@@ -128,6 +128,7 @@ export const historySlice = createSlice({
                     isBatching: false,
                     batchBuffer: [],
                     config,
+                    lastSyncedIndex: 0,
                 };
             }
         },
@@ -394,6 +395,23 @@ export const historySlice = createSlice({
                     past: [],
                     future: [],
                     batchBuffer: [],
+                    lastSyncedIndex: 0,
+                };
+            }
+        },
+
+        /**
+         * Помечает все текущие операции как синхронизированные с сервером
+         * Вызывается после успешного сохранения на сервер
+         */
+        markAsSynced: (state, action: PayloadAction<{ contextId: string }>) => {
+            const { contextId } = action.payload;
+            const context = state.contexts[contextId];
+
+            if (context) {
+                state.contexts[contextId] = {
+                    ...context,
+                    lastSyncedIndex: context.past.length,
                 };
             }
         },
@@ -411,6 +429,7 @@ export const {
     commitBatch,
     cancelBatch,
     clearHistory,
+    markAsSynced,
 } = historySlice.actions;
 
 export default historySlice.reducer;

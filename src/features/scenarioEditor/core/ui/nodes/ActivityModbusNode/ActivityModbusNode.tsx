@@ -7,9 +7,10 @@ import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.
 import type {
     ActivityModbusStepDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
+import { withValidation } from '@scenario/core/ui/nodes/shared/withValidation/withValidation';
 
 type Props = NodeProps<Node<FlowNodeData<ActivityModbusStepDto>>>;
-export function ActivityModbusNode({ data, selected }: Props) {
+function ActivityModbusNodeComponent({ data, selected }: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
     const type : FlowType | undefined = data?.connectContext?.from.type;
@@ -43,3 +44,6 @@ export function ActivityModbusNode({ data, selected }: Props) {
         </div>
     );
 }
+
+// Экспортируем обернутый компонент с валидацией
+export const ActivityModbusNode = withValidation(ActivityModbusNodeComponent);

@@ -6,9 +6,10 @@ import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.
 import type {
     ParallelStepDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
+import { withValidation } from '@scenario/core/ui/nodes/shared/withValidation/withValidation';
 
 type Props = NodeProps<Node<FlowNodeData<ParallelStepDto>>>;
-export function ParallelStepNode({ data, selected}: Props) {
+function ParallelStepNodeComponent({ data, selected}: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
 
@@ -57,3 +58,5 @@ export function ParallelStepNode({ data, selected}: Props) {
         </div>
     );
 }
+
+export const ParallelStepNode = withValidation(ParallelStepNodeComponent);

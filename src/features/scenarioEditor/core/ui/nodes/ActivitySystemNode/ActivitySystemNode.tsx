@@ -7,10 +7,11 @@ import  {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
 import type {
     ActivitySystemStepDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
+import { withValidation } from '@scenario/core/ui/nodes/shared/withValidation/withValidation';
 
 type Props = NodeProps<Node<FlowNodeData<ActivitySystemStepDto>>>;
 
-export function ActivitySystemNode({ data, selected }: Props) {
+function ActivitySystemNodeComponent({ data, selected }: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
     const type : FlowType | undefined = data?.connectContext?.from.type;
@@ -45,3 +46,5 @@ export function ActivitySystemNode({ data, selected }: Props) {
         </div>
     );
 }
+
+export const ActivitySystemNode = withValidation(ActivitySystemNodeComponent);

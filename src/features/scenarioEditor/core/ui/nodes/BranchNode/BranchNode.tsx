@@ -15,10 +15,11 @@ import { selectIsBatching } from '@scenario/core/features/historySystem/historyS
 import type { RootState } from '@/baseStore/store';
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
 import {selectActiveScenarioId} from "@scenario/store/scenarioSelectors.ts";
+import { withValidation } from '@scenario/core/ui/nodes/shared/withValidation/withValidation';
 
 type Props = NodeProps<Node<FlowNodeData<BranchDto>>>;
 
-export function BranchNode({ data, selected, id }: Props) {
+function BranchNodeComponent({ data, selected, id }: Props) {
     const isCtrlPressed = useCtrlKey();
     const isShiftPressed = useShiftKey();
     const rf = useReactFlow<FlowNode>();
@@ -218,3 +219,5 @@ export function BranchNode({ data, selected, id }: Props) {
         </div>
     );
 }
+
+export const BranchNode = withValidation(BranchNodeComponent);

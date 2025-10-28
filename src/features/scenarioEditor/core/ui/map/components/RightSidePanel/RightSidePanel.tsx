@@ -20,7 +20,7 @@ export function RightSidePanel() {
     };
 
     return (
-        <div className={styles.container}>
+        <div className={styles.rightSidePanelContainer}>
             <div className={styles.tabs}>
                 <button
                     className={`${styles.tab} ${activeTab === 'scenarios' ? styles.active : ''}`}

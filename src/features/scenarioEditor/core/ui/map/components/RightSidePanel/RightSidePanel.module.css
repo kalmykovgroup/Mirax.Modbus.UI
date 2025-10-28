@@ -1,6 +1,6 @@
 /* src/features/scenarioEditor/core/ui/map/RightSidePanel/RightSidePanel.module.css */
 
-.container {
+.rightSidePanelContainer {
     display: flex;
     flex-direction: column;
     height: 70vh;
