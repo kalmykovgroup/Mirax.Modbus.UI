@@ -114,6 +114,11 @@ export const refreshScenariosList =
     (forceRefetch = true) =>
         async (dispatch: AppDispatch): Promise<ScenarioDto[]> => {
             try {
+                // Если принудительное обновление - инвалидируем кеш перед запросом
+                if (forceRefetch) {
+                    dispatch(scenarioApi.util.invalidateTags([{ type: 'ScenarioList', id: 'ALL' }]));
+                }
+
                 const subscription = dispatch(
                     scenarioApi.endpoints.getAllScenarios.initiate(undefined, {
                         forceRefetch,
@@ -151,6 +156,13 @@ export const refreshScenarioById =
                 const state = getState();
                 const scenarioState = state.scenario.scenarios[id];
 
+                // 🔍 ДИАГНОСТИКА: Логируем состояние перед загрузкой
+                if (forceRefetch && scenarioState) {
+                    console.warn('[refreshScenarioById] 🔄 Force refetching scenario:', id);
+                    console.warn('  - Current relations count:', Object.keys(scenarioState.relations).length);
+                    console.warn('  - Current relations:', Object.keys(scenarioState.relations));
+                }
+
                 // Если не форсируем и статус Loaded, возвращаем из стейта
                 if (!forceRefetch && scenarioState?.status === ScenarioLoadStatus.Loaded) {
                     return scenarioState.scenario;
@@ -183,6 +195,14 @@ export const refreshScenarioById =
                     },
                     { id: 'fetch-scenario-one' }
                 )) as ScenarioDto;
+
+                // 🔍 ДИАГНОСТИКА: Логируем данные от сервера
+                if (dto != null && forceRefetch) {
+                    const normalized = normalizeScenario(dto);
+                    console.warn('[refreshScenarioById] 📥 Received from server:');
+                    console.warn('  - Relations count:', normalized.relations.length);
+                    console.warn('  - Relations:', normalized.relations.map(r => r.id));
+                }
 
                 if (dto != null) {
                     dispatch(scenariosSlice.actions.upsertScenarioFull(dto));
@@ -293,6 +313,23 @@ const scenariosSlice = createSlice({
             }
 
             const existing = state.scenarios[dto.id];
+
+            // 🔍 ДИАГНОСТИКА: Логируем изменения в relations
+            if (existing) {
+                const oldRelationIds = Object.keys(existing.relations);
+                const newRelationIds = Object.keys(relations);
+
+                const deletedRelations = oldRelationIds.filter(id => !newRelationIds.includes(id));
+                const addedRelations = newRelationIds.filter(id => !oldRelationIds.includes(id));
+
+                if (deletedRelations.length > 0 || addedRelations.length > 0) {
+                    console.warn('[upsertScenarioFull] 🔄 Relations changed from server:');
+                    console.warn('  - Deleted:', deletedRelations);
+                    console.warn('  - Added:', addedRelations);
+                    console.warn('  - Old count:', oldRelationIds.length);
+                    console.warn('  - New count:', newRelationIds.length);
+                }
+            }
 
             const newState: ScenarioState = {
                 scenario: dto,

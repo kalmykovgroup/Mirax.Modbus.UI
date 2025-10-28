@@ -200,7 +200,7 @@ export const stepRelationContract: StepRelationContract = {
     },
 
     deleteEntity: (entityId, scenarioId) => {
-        console.log('[StepRelationContract] Deleting entity:', entityId);
+        console.log('[StepRelationContract] 🗑️ Deleting entity:', entityId);
 
         const state = store.getState();
 
@@ -224,8 +224,26 @@ export const stepRelationContract: StepRelationContract = {
         const relation = scenarioState.relations[entityId];
 
         if (relation) {
+            console.log('[StepRelationContract] 🔍 Relation details before delete:', {
+                id: relation.id,
+                parentStepId: relation.parentStepId,
+                childStepId: relation.childStepId,
+                totalRelations: Object.keys(scenarioState.relations).length
+            });
+
             store.dispatch(deleteRelation({ scenarioId: actualScenarioId, relationId: entityId }));
-            console.log('[StepRelationContract] ✅ Entity deleted');
+
+            // Проверяем, что связь действительно удалена
+            const stateAfter = store.getState();
+            const scenarioStateAfter = stateAfter.scenario.scenarios[actualScenarioId];
+            const stillExists = scenarioStateAfter?.relations[entityId];
+
+            if (stillExists) {
+                console.error('[StepRelationContract] ❌ Relation still exists after delete!', entityId);
+            } else {
+                console.log('[StepRelationContract] ✅ Entity deleted successfully. Remaining relations:',
+                    Object.keys(scenarioStateAfter?.relations || {}).length);
+            }
         } else {
             console.warn(`[StepRelationContract] ⚠️ Relation ${entityId} not found for deletion`);
         }

@@ -366,6 +366,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     onNodeDragStart={dragStartHandler.onNodeDragStart}
                     onNodeDragStop={dragStopHandler.onNodeDragStop}
                     onNodeContextMenu={handleNodeContextMenu}
+                    proOptions={{ hideAttribution: true }}
                     {...flowSettings}
                     defaultEdgeOptions={defaultEdgeOptions}
                     className={styles.customFlow}

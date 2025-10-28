@@ -24,6 +24,8 @@
 .rightTopPanel{
     align-items: flex-start;
     pointer-events: none; /* Панель не перехватывает события мыши */
+    max-height: 100%;
+    height: calc(100% - 50px);
 }
 
 /* Контент внутри панели остается интерактивным */
@@ -32,6 +34,7 @@
 }
 
 .bottomRightPanel{
+    height: 50px;
     max-width: 100%;
     width: 100%;
     justify-content: flex-end;

@@ -29,6 +29,9 @@
     margin: 0 0 16px;
     font-size: 14px;
     color: #cbd5e1;
+    white-space: pre-wrap; /* Сохраняет переносы строк */
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 .actions {

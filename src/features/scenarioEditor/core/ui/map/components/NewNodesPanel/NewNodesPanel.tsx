@@ -27,6 +27,8 @@ import { selectActiveScenarioId } from "@scenario/store/scenarioSelectors.ts";
 import type { Guid } from "@app/lib/types/Guid.ts";
 import { useScenarioOperations } from "@scenario/core/hooks/useScenarioOperations.ts";
 import { useScenarioValidation } from "@scenario/core/features/validation/useScenarioValidation.ts";
+import { useConfirm } from "@ui/components/ConfirmProvider/ConfirmProvider.tsx";
+import { focusOnInvalidNode } from "@scenario/core/features/validation/focusInvalidNode.ts";
 
 function createByFlowType(type: FlowType, p: any) {
     switch (type) {
@@ -63,6 +65,9 @@ export const NewNodesPanel: React.FC = () => {
     // ✅ ВАЛИДАЦИЯ: Проверяем, есть ли невалидные ноды
     const validation = useScenarioValidation(activeId);
 
+    // Confirm dialog
+    const confirm = useConfirm();
+
     const hoverBranchIdRef = useRef<string | null>(null);
 
     const setHover = (id: string | null) => {
@@ -71,7 +76,7 @@ export const NewNodesPanel: React.FC = () => {
         setHoverBranch(rf.setNodes as any, id);
     };
 
-    const startCreateNode = (type: FlowType) => (e: React.MouseEvent) => {
+    const startCreateNode = (type: FlowType) => async (e: React.MouseEvent) => {
         e.preventDefault();
 
         // ✅ ВАЛИДАЦИЯ: Блокируем создание новых нод, если есть невалидные
@@ -80,13 +85,22 @@ export const NewNodesPanel: React.FC = () => {
 
             // Формируем сообщение с перечислением невалидных нод
             const invalidNodesList = validation.invalidNodes
-                .map(node => `- "${node.nodeName}": ${node.errors.join(', ')}`)
-                .join('\n');
+                .map((node, index) => `${index + 1}. "${node.nodeName}" (${node.nodeType}):\n   ${node.errors.join('\n   ')}`)
+                .join('\n\n');
 
-            alert(
-                `Невозможно создать новую ноду!\n\n` +
-                `Сначала заполните данные в существующих нодах:\n\n${invalidNodesList}`
-            );
+            // Показываем диалог с кнопкой перехода к первой ошибке
+            const shouldFocus = await confirm({
+                title: 'Невозможно создать новую ноду',
+                description: `Сначала заполните данные в существующих нодах (${validation.invalidNodes.length}):\n\n${invalidNodesList}`,
+                confirmText: 'Перейти к первой ошибке',
+                cancelText: 'Отмена',
+                danger: false,
+            });
+
+            // Если пользователь нажал "Перейти к первой ошибке"
+            if (shouldFocus && validation.invalidNodes.length > 0) {
+                focusOnInvalidNode(rf, validation.invalidNodes[0].nodeId);
+            }
 
             return;
         }

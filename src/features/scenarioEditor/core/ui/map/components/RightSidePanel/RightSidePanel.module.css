@@ -3,7 +3,7 @@
 .rightSidePanelContainer {
     display: flex;
     flex-direction: column;
-    height: 70vh;
+    height: 100%;
     overflow: hidden;
     align-items: flex-end;
     pointer-events: none; /* Контейнер не перехватывает события мыши */
