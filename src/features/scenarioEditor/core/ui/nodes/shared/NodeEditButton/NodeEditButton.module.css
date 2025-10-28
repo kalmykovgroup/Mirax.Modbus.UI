@@ -1,0 +1,45 @@
+/* src/features/scenarioEditor/core/ui/nodes/shared/NodeEditButton/NodeEditButton.module.css */
+
+.button {
+    /* Абсолютное позиционирование - правый верхний угол */
+    position: absolute;
+    top: 0px;
+    right: 0px; /* Сдвиг влево, чтобы не перекрывать ValidationErrorBadge */
+
+    /* Высокий z-index для отображения поверх всех элементов ноды */
+    z-index: 1000;
+
+    /* Стили кнопки */
+    background: rgba(58, 130, 246, 0.95);
+    border: none;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(58, 130, 246, 0.4);
+
+    /* Плавная анимация появления/исчезновения */
+    transition: all 0.2s ease;
+
+    /* Не блокируем события мыши когда невидима */
+    pointer-events: auto;
+}
+
+.button:hover {
+    background: #2563eb;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(58, 130, 246, 0.6);
+}
+
+.button:active {
+    transform: scale(0.95);
+}
+
+/* Когда opacity = 0, убираем pointer events */
+.button[style*="opacity: 0"] {
+    pointer-events: none;
+}

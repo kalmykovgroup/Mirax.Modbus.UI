@@ -7,6 +7,7 @@ import type { EntitySnapshot, Entity } from '@scenario/core/features/historySyst
 
 import { store } from '@/baseStore/store';
 import { updateBranch, addBranch, deleteBranch, findScenarioIdByBranchId } from '@scenario/store/scenarioSlice';
+
 import { BranchNode } from './BranchNode';
 import { ctrlKeyStore } from '@app/lib/hooks/ctrlKeyStore';
 

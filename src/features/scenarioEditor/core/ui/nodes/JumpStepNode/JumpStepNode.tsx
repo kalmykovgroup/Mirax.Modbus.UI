@@ -7,8 +7,12 @@ import type {
     JumpStepDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
+import { useNodeEdit } from '../shared/NodeEditButton';
+import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
 
 type Props = NodeProps<Node<FlowNodeData<JumpStepDto>>>;
+
+const JumpStepEditContract = createPlaceholderContract('Переход');
 
 export function JumpStepNode({ id, data, selected}: Props) {
 
@@ -18,10 +22,12 @@ export function JumpStepNode({ id, data, selected}: Props) {
     const validateTarget = type != FlowType.BranchNode
 
     const { ValidationIndicator, containerClassName } = useValidationIndicator(id);
+    const { EditButton, containerProps } = useNodeEdit(id, selected, JumpStepEditContract);
 
     return (
-        <div className={`${styles.container} ${containerClassName}`} aria-selected={selected}>
+        <div className={`${styles.container} ${containerClassName}`} aria-selected={selected} {...containerProps}>
             {ValidationIndicator}
+            {EditButton}
             <span className={styles.coordinates}>
                 <span>x:{formatWithMode(data.x, 2, true)}</span>
                 <span>y:{formatWithMode(data.y, 2, true)}</span>

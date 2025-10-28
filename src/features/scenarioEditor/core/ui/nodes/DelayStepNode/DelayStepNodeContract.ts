@@ -7,6 +7,7 @@ import type { EntitySnapshot, Entity } from '@scenario/core/features/historySyst
 import type { Guid } from '@app/lib/types/Guid';
 import { store } from '@/baseStore/store';
 import { updateStep, addStep, deleteStep, findScenarioIdByStepId } from '@scenario/store/scenarioSlice';
+
 import { DelayStepNode } from './DelayStepNode';
 
 export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
@@ -89,7 +90,7 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
     // Пример исправления validateOperation для DelayStepNodeContract.ts
     // Применить аналогичные изменения ко всем контрактам из списка
 
-    validateOperation: (operation, dto, params) => {
+    validateOperation: (operation,  dto, params) => {
         switch (operation) {
             case 'move':
                 // ReactFlow допускает любые координаты (включая отрицательные)

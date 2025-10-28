@@ -7,6 +7,7 @@ import type { EntitySnapshot, Entity } from '@scenario/core/features/historySyst
 import type { Guid } from '@app/lib/types/Guid';
 import { store } from '@/baseStore/store';
 import { updateStep, addStep, deleteStep, findScenarioIdByStepId } from '@scenario/store/scenarioSlice';
+
 import { ParallelStepNode } from './ParallelStepNode';
 
 export const ParallelStepNodeContract: NodeTypeContract<ParallelStepDto> = {

@@ -6,12 +6,16 @@ import type {DelayStepDto} from "@scenario/shared/contracts/server/remoteServerD
 import DelayTimeInput from "@scenario/core/ui/nodes/DelayStepNode/DelayTimeInput/DelayTimeInput.tsx";
 import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
 import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
+import { useNodeEdit } from '../shared/NodeEditButton';
+import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
 
 const onChangeDto = (dto: DelayStepDto) =>{
     console.log(dto);
 }
 
 type Props = NodeProps<Node<FlowNodeData<DelayStepDto>>>;
+
+const DelayEditContract = createPlaceholderContract('Задержка');
 
 export function DelayStepNode({ id, data, selected}: Props) {
 
@@ -24,10 +28,17 @@ export function DelayStepNode({ id, data, selected}: Props) {
 
     // Валидация
     const { ValidationIndicator, containerClassName } = useValidationIndicator(id);
+    const { EditButton, containerProps } = useNodeEdit(id, selected, DelayEditContract);
 
     return (
-        <div className={`${styles.container} ${containerClassName}`} aria-selected={selected}>
+        <div 
+            className={`${styles.container} ${containerClassName}`} 
+            aria-selected={selected}
+            {...containerProps}
+        >
             {ValidationIndicator}
+            {EditButton}
+            
             <span className={styles.coordinates}>
                 <span>x:{formatWithMode(data.x, 2, true)}</span>
                 <span>y:{formatWithMode(data.y, 2, true)}</span>

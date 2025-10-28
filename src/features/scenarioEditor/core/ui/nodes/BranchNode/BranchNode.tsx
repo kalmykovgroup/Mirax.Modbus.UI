@@ -16,11 +16,16 @@ import type { RootState } from '@/baseStore/store';
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
 import {selectActiveScenarioId} from "@scenario/store/scenarioSelectors.ts";
 import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
+import { useNodeEdit } from '../shared/NodeEditButton';
+import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
 
 type Props = NodeProps<Node<FlowNodeData<BranchDto>>>;
 
+const BranchEditContract = createPlaceholderContract('Ветка');
+
 export function BranchNode({ data, selected, id }: Props) {
     const { ValidationIndicator, containerClassName } = useValidationIndicator(id);
+    const { EditButton, containerProps } = useNodeEdit(id, selected, BranchEditContract);
     const isCtrlPressed = useCtrlKey();
     const isShiftPressed = useShiftKey();
     const rf = useReactFlow<FlowNode>();
@@ -197,7 +202,7 @@ export function BranchNode({ data, selected, id }: Props) {
             data-shift-mode={isShiftPressed}
             data-draggable={isCtrlPressed}
             data-selectable={isCtrlPressed}
-        >
+         {...containerProps}>
             <div className={styles.bg} />
 
             <span className={styles.coordinates}>

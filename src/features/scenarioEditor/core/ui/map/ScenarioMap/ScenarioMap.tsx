@@ -46,6 +46,7 @@ import { SaveIndicator } from '@scenario/core/ui/map/components/SaveIndicator/Sa
 import { SaveSettingsButton } from '@scenario/core/ui/map/components/SaveSettingsButton/SaveSettingsButton';
 import { ManualSaveButton } from '@scenario/core/ui/map/components/ManualSaveButton/ManualSaveButton';
 import { NodeContextMenu, useNodeContextMenu, initializeNodeContextMenuProviders } from '@scenario/core/ui/nodes/shared/NodeContextMenu';
+import { NodeEditModalProvider } from '@scenario/core/ui/nodes/shared/NodeEditModal';
 
 
 type RightSidePanelTab = 'create' | 'history' | 'scenarios';
@@ -364,6 +365,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     return (
         <div data-theme={theme} className={styles.containerScenarioMap} style={{ height: '70vh' }}>
             <ScenarioOperationsProvider operations={operations}>
+                <NodeEditModalProvider>
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}
@@ -431,6 +433,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     />
                 )}
             </ReactFlow>
+                </NodeEditModalProvider>
             </ScenarioOperationsProvider>
         </div>
     );
