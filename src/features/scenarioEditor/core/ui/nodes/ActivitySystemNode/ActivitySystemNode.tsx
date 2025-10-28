@@ -7,18 +7,21 @@ import  {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
 import type {
     ActivitySystemStepDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
-import { withValidation } from '@scenario/core/ui/nodes/shared/withValidation/withValidation';
+import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
 
 type Props = NodeProps<Node<FlowNodeData<ActivitySystemStepDto>>>;
 
-function ActivitySystemNodeComponent({ data, selected }: Props) {
+export function ActivitySystemNode({ id, data, selected }: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
     const type : FlowType | undefined = data?.connectContext?.from.type;
     const validateTarget = type != FlowType.BranchNode
 
+    const { ValidationIndicator, containerClassName } = useValidationIndicator(id);
+
     return (
-        <div className={styles.container} aria-selected={selected}>
+        <div className={`${styles.container} ${containerClassName}`} aria-selected={selected}>
+            {ValidationIndicator}
             <span className={styles.coordinates}>
                 <span>x:{formatWithMode(data.x, 2, true)}</span>
                 <span>y:{formatWithMode(data.y, 2, true)}</span>
@@ -46,5 +49,3 @@ function ActivitySystemNodeComponent({ data, selected }: Props) {
         </div>
     );
 }
-
-export const ActivitySystemNode = withValidation(ActivitySystemNodeComponent);

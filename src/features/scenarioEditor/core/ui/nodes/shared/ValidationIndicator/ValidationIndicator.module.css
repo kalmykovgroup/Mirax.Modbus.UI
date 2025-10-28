@@ -1,0 +1,30 @@
+/* src/features/scenarioEditor/core/ui/nodes/shared/ValidationIndicator/ValidationIndicator.module.css */
+
+/* Overlay для красноватого затемнения - будет внутри ноды */
+.invalidOverlay {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(220, 53, 69, 0.06);
+    pointer-events: none;
+    border-radius: 5px;
+    z-index: 1;
+}
+
+/* Класс для контейнера ноды с ошибками */
+.invalidNode {
+    filter: drop-shadow(0 0 6px rgba(220, 53, 69, 0.4));
+    animation: errorPulse 3s ease-in-out infinite;
+}
+
+@keyframes errorPulse {
+    0%, 100% {
+        filter: drop-shadow(0 0 6px rgba(220, 53, 69, 0.4));
+    }
+    50% {
+        filter: drop-shadow(0 0 10px rgba(220, 53, 69, 0.6));
+    }
+}

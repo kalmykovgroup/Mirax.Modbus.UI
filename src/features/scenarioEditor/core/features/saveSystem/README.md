@@ -109,11 +109,16 @@ Body: {
 
 ## Расширение
 
-Для добавления новых типов сущностей обновите `ENTITY_TYPE_MAP` в `operationBuilder.ts`:
+Для добавления новых типов сущностей:
+
+1. Добавьте новый тип в `StepType` enum (если это шаг) или в `FlowType` (если другая сущность)
+2. Обновите `ENTITY_TYPE_MAP` в `operationBuilder.ts`:
 
 ```typescript
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+
 const ENTITY_TYPE_MAP: Record<string, DbEntityType> = {
-  'YourNewNodeType': DbEntityType.Step,
+  [FlowType.YourNewStep]: DbEntityType.Step,
   // ...
 };
 ```

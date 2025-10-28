@@ -4,19 +4,25 @@ import type { HistoryRecord, BatchRecord } from '@scenario/core/features/history
 import type { ScenarioOperationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/ScenarioOperationDto';
 import { DbActionType } from '@scenario/shared/contracts/server/types/Api.Shared/Scenario/DbActionType';
 import { DbEntityType } from '@scenario/shared/contracts/server/types/Api.Shared/Scenario/DbEntityType';
+import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
 
 /**
- * Маппинг типов сущностей из entityType в DbEntityType
+ * Маппинг типов сущностей из FlowType в DbEntityType
  */
 const ENTITY_TYPE_MAP: Record<string, DbEntityType> = {
-    'BranchNode': DbEntityType.Branch,
-    'DelayStepNode': DbEntityType.Step,
-    'ActivitySystemNode': DbEntityType.Step,
-    'SignalStepNode': DbEntityType.Step,
-    'ActivityModbusNode': DbEntityType.Step,
-    'ParallelStepNode': DbEntityType.Step,
-    'JumpStepNode': DbEntityType.Step,
-    'ConditionStepNode': DbEntityType.Step,
+    // FlowType значения (из StepType enum)
+    [FlowType.ActivitySystem]: DbEntityType.Step,
+    [FlowType.ActivityModbus]: DbEntityType.Step,
+    [FlowType.Delay]: DbEntityType.Step,
+    [FlowType.Condition]: DbEntityType.Step,
+    [FlowType.Parallel]: DbEntityType.Step,
+    [FlowType.Signal]: DbEntityType.Step,
+    [FlowType.Jump]: DbEntityType.Step,
+
+    // Branch
+    [FlowType.BranchNode]: DbEntityType.Branch,
+
+    // Relation (не FlowType, но используется в системе)
     'StepRelation': DbEntityType.StepRelation,
 };
 
@@ -112,22 +118,22 @@ function validatePayload(payload: any, action: DbActionType, entityType: string)
         return null; // Delete всегда валиден
     }
 
-    // Валидация для ActivitySystemNode
-    if (entityType === 'ActivitySystemNode') {
+    // Валидация для ActivitySystem
+    if (entityType === FlowType.ActivitySystem) {
         if (!payload.systemActionId) {
             return 'ActivitySystemStep requires systemActionId';
         }
     }
 
-    // Валидация для ActivityModbusNode
-    if (entityType === 'ActivityModbusNode') {
+    // Валидация для ActivityModbus
+    if (entityType === FlowType.ActivityModbus) {
         if (!payload.modbusDeviceActionId || !payload.modbusDeviceAddressId) {
             return 'ActivityModbusStep requires modbusDeviceActionId and modbusDeviceAddressId';
         }
     }
 
-    // Валидация для DelayStepNode
-    if (entityType === 'DelayStepNode') {
+    // Валидация для Delay
+    if (entityType === FlowType.Delay) {
         if (!payload.timeSpan) {
             return 'DelayStep requires timeSpan';
         }

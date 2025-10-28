@@ -46,6 +46,7 @@ import { SaveIndicator } from '@scenario/core/ui/map/components/SaveIndicator/Sa
 import { SaveSettingsButton } from '@scenario/core/ui/map/components/SaveSettingsButton/SaveSettingsButton';
 import { ManualSaveButton } from '@scenario/core/ui/map/components/ManualSaveButton/ManualSaveButton';
 import { PreviewOperationsButton } from '@scenario/core/ui/map/components/PreviewOperationsButton/PreviewOperationsButton';
+import { NodeContextMenu, useNodeContextMenu, initializeNodeContextMenuProviders } from '@scenario/core/ui/nodes/shared/NodeContextMenu';
 
 export interface ScenarioEditorProps {}
 
@@ -76,6 +77,27 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     // OPERATIONS
     // ============================================================================
     const operations = useScenarioOperations(activeId);
+
+    // ============================================================================
+    // CONTEXT MENU
+    // ============================================================================
+    const contextMenu = useNodeContextMenu();
+
+    // Инициализируем провайдеры контекстного меню с обработчиком удаления
+    React.useEffect(() => {
+        initializeNodeContextMenuProviders((node: FlowNode) => {
+            // Обработчик удаления ноды
+            if (node.data.__persisted === true) {
+                operations.deleteNode(node);
+            } else {
+                // Для неперсистентных нод просто удаляем из состояния
+                setNodes((nds) => nds.filter((n) => n.id !== node.id));
+            }
+
+            // Закрываем меню после удаления
+            contextMenu.closeMenu();
+        });
+    }, [operations, setNodes, contextMenu]);
 
     // ============================================================================
     // CONNECTION CONTEXT
@@ -296,6 +318,32 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     );
 
     // ============================================================================
+    // NODE CONTEXT MENU (Right Click)
+    // ============================================================================
+    const handleNodeContextMenu = useCallback(
+        (event: React.MouseEvent, node: FlowNode): void => {
+            event.preventDefault(); // Предотвращаем стандартное контекстное меню браузера
+
+            // Выделяем ноду при открытии контекстного меню
+            setNodes((nds) =>
+                nds.map((n) => ({
+                    ...n,
+                    selected: n.id === node.id,
+                }))
+            );
+
+            // Получаем позицию клика
+            const position = {
+                x: event.clientX,
+                y: event.clientY,
+            };
+
+            contextMenu.openMenu(node, position);
+        },
+        [contextMenu, setNodes]
+    );
+
+    // ============================================================================
     // RENDER
     // ============================================================================
     return (
@@ -317,6 +365,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     isValidConnection={isValidConnection}
                     onNodeDragStart={dragStartHandler.onNodeDragStart}
                     onNodeDragStop={dragStopHandler.onNodeDragStop}
+                    onNodeContextMenu={handleNodeContextMenu}
                     {...flowSettings}
                     defaultEdgeOptions={defaultEdgeOptions}
                     className={styles.customFlow}
@@ -327,15 +376,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     <RightSidePanel />
                 </Panel>
 
-                <Panel position="bottom-left">
-                    <button
-                        className={styles.deleteBtn}
-                        onClick={deleteSelected}
-                        title="Удалить выбранное (Del/Backspace)"
-                    >
-                        Удалить
-                    </button>
-                </Panel>
 
                 <Panel position="top-left">
                     <Controls className={`${styles.flowControls}`} />
@@ -360,6 +400,16 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     color="var(--grid-color-secondary, #767676)"
                     variant={BackgroundVariant.Lines}
                 />
+
+                {/* Context Menu */}
+                {contextMenu.state.isOpen && contextMenu.state.node && contextMenu.state.position && (
+                    <NodeContextMenu
+                        node={contextMenu.state.node}
+                        actions={contextMenu.state.actions}
+                        position={contextMenu.state.position}
+                        onClose={contextMenu.closeMenu}
+                    />
+                )}
             </ReactFlow>
             </ScenarioOperationsProvider>
         </div>
