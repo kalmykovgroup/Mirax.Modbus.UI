@@ -1,6 +1,6 @@
 // src/features/scenarioEditor/core/ui/map/HistoryPanel/HistoryPanel.tsx
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Undo, Redo, Trash2, X } from 'lucide-react';
 
@@ -15,6 +15,7 @@ import {
     selectHistoryContext,
     selectCanUndo,
     selectCanRedo,
+    registerConfirmUndo,
 } from '@scenario/core/features/historySystem/historySlice.ts';
 import type { HistoryRecord } from '@scenario/core/features/historySystem/types.ts';
 import {useConfirm} from "@ui/components/ConfirmProvider/ConfirmProvider.tsx";
@@ -395,6 +396,30 @@ export function HistoryPanel() {
 
     // Состояние для модального окна
     const [selectedRecord, setSelectedRecord] = useState<HistoryRecord | null>(null);
+
+    // Функция подтверждения для важных операций
+    const confirmFn = useCallback(async (record: HistoryRecord) => {
+        console.log('[HistoryPanel] Confirming undo for user-edit operation:', record);
+        return await confirm({
+            title: 'Отменить изменения?',
+            description: 'Вы редактировали эту ноду/ветку через UI. Отменить изменения?',
+            confirmText: 'Нет',
+            cancelText: 'Да',
+            danger: true,
+        });
+    }, [confirm]);
+
+    // Регистрируем глобальную функцию подтверждения при монтировании
+    useEffect(() => {
+        console.log('[HistoryPanel] Registering confirm function');
+        registerConfirmUndo(confirmFn);
+
+        // Очищаем при размонтировании
+        return () => {
+            console.log('[HistoryPanel] Unregistering confirm function');
+            registerConfirmUndo(null);
+        };
+    }, [confirmFn]);
 
     const handleOpenModal = useCallback((record: HistoryRecord) => {
         setSelectedRecord(record);

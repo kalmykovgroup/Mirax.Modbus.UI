@@ -25,7 +25,7 @@ export interface UseHistoryResult {
     readonly canRedo: boolean;
     readonly historySize: number;
     readonly lastCommand: any;
-    readonly undo: (confirmFn?: (record: any) => Promise<boolean>) => Promise<void>;
+    readonly undo: () => Promise<void>;
     readonly redo: () => void;
     readonly recordCreate: <T extends Entity>(entity: T) => void;
     readonly recordUpdate: <T extends Entity>(newEntity: T, previousEntity: T, metadata?: Record<string, unknown>) => void;
@@ -92,26 +92,14 @@ export function useHistory(
 
     // Actions
     const handleUndo = useCallback(
-        async (confirmFn?: (record: any) => Promise<boolean>) => {
+        async () => {
             console.log('[useHistory] Undo called, canUndo:', canUndo);
             if (!canUndo) return;
 
-            // Проверяем нужно ли подтверждение
-            if (confirmFn && context) {
-                const lastRecord = context.past[context.past.length - 1];
-                if (lastRecord?.metadata?.label === 'user-edit') {
-                    console.log('[useHistory] User-edit operation detected, asking for confirmation');
-                    const confirmed = await confirmFn(lastRecord);
-                    if (!confirmed) {
-                        console.log('[useHistory] Undo cancelled by user');
-                        return;
-                    }
-                }
-            }
-
-            dispatch(undoThunk({ contextId }));
+            // Подтверждение теперь обрабатывается внутри undoThunk
+            await dispatch(undoThunk({ contextId }));
         },
-        [dispatch, contextId, canUndo, context]
+        [dispatch, contextId, canUndo]
     );
 
     const handleRedo = useCallback(() => {

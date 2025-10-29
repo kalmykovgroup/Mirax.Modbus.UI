@@ -9,12 +9,47 @@ import type {
     UpdateRecord,
     DeleteRecord,
     Entity,
+    HistoryRecord,
 } from './types';
 import { historyRegistry } from './historyRegistry';
 
 const initialState: HistoryState = {
     contexts: {},
 };
+
+// ============================================================================
+// ГЛОБАЛЬНЫЙ ОБРАБОТЧИК ПОДТВЕРЖДЕНИЯ
+// ============================================================================
+
+type ConfirmUndoFn = (record: HistoryRecord) => Promise<boolean>;
+let globalConfirmUndoFn: ConfirmUndoFn | null = null;
+
+/**
+ * Регистрирует глобальную функцию подтверждения отката.
+ * Вызывается из React компонента (HistoryPanel).
+ */
+export function registerConfirmUndo(fn: ConfirmUndoFn | null) {
+    console.log('[historySlice] Registering confirm undo function:', !!fn);
+    globalConfirmUndoFn = fn;
+}
+
+/**
+ * Проверяет, нужно ли подтверждение для записи истории
+ */
+function needsConfirmation(record: HistoryRecord): boolean {
+    // Проверяем метку на самой записи
+    if (record?.metadata?.label === 'user-edit') {
+        return true;
+    }
+
+    // Если это batch, проверяем метки во вложенных записях
+    if (record?.type === 'batch') {
+        const batchRecords = (record as any).records || [];
+        return batchRecords.some((r: any) => r?.metadata?.label === 'user-edit');
+    }
+
+    return false;
+}
 
 // ============================================================================
 // THUNKS (вызывают методы из контрактов ВНЕ reducer)
@@ -35,6 +70,27 @@ export const undoThunk = createAsyncThunk<void, { contextId: string }, { state: 
         if (!record) return;
 
         console.log('[historySlice] Undoing record:', record);
+
+        // ✅ ПРОВЕРКА ПОДТВЕРЖДЕНИЯ перед откатом
+        if (needsConfirmation(record)) {
+            console.log('[historySlice] Record needs confirmation (user-edit label found)');
+
+            if (globalConfirmUndoFn) {
+                console.log('[historySlice] Calling global confirm function');
+                const confirmed = await globalConfirmUndoFn(record);
+
+                if (!confirmed) {
+                    console.log('[historySlice] Undo cancelled by user');
+                    return; // Отменяем откат
+                }
+
+                console.log('[historySlice] Undo confirmed by user, proceeding');
+            } else {
+                console.warn('[historySlice] No confirm function registered, but record needs confirmation!');
+            }
+        } else {
+            console.log('[historySlice] Record does not need confirmation, proceeding');
+        }
 
         //  Применяем откат через historyRegistry → contract
         if (record.type === 'batch') {
@@ -170,7 +226,6 @@ export const historySlice = createSlice({
             } else {
                 // Если добавляем новую операцию после Undo (past.length < lastSyncedIndex),
                 // нужно скорректировать lastSyncedIndex
-                const newPastLength = context.past.length + 1;
                 const newLastSyncedIndex = Math.min(context.lastSyncedIndex, context.past.length);
 
                 if (newLastSyncedIndex < context.lastSyncedIndex) {
@@ -241,7 +296,6 @@ export const historySlice = createSlice({
             } else {
                 // Если добавляем новую операцию после Undo (past.length < lastSyncedIndex),
                 // нужно скорректировать lastSyncedIndex
-                const newPastLength = context.past.length + 1;
                 const newLastSyncedIndex = Math.min(context.lastSyncedIndex, context.past.length);
 
                 if (newLastSyncedIndex < context.lastSyncedIndex) {
@@ -299,7 +353,6 @@ export const historySlice = createSlice({
             } else {
                 // Если добавляем новую операцию после Undo (past.length < lastSyncedIndex),
                 // нужно скорректировать lastSyncedIndex
-                const newPastLength = context.past.length + 1;
                 const newLastSyncedIndex = Math.min(context.lastSyncedIndex, context.past.length);
 
                 if (newLastSyncedIndex < context.lastSyncedIndex) {

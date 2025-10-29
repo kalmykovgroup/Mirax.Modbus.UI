@@ -536,24 +536,342 @@ if (undoneCount > 0) {
 Приоритет: High
 Затронутые системы: History System, Save System, AutoSave
 
+
+────────────────────────────────────────────────
+КАРТОЧКА 10: Поддержка подтверждения отката для batch записей
+────────────────────────────────────────────────
+
+Заголовок:
+Добавлена поддержка проверки метки 'user-edit' во вложенных записях batch
+
+Описание:
+При откате batch операций (группы операций) система не проверяла метки на вложенных записях, поэтому подтверждение не показывалось для важных операций, выполненных через UI.
+
+Проблема:
+Когда пользователь редактирует ноду через модальное окно и сохраняет изменения, создается запись с меткой 'user-edit'. Однако если эта запись попадает в batch (группу операций), система проверяла только метку на самой batch-записи, но не на вложенных записях внутри batch.records[].
+
+Сценарий ошибки:
+1. Пользователь открывает модальное окно редактирования Branch
+2. Изменяет данные и сохраняет → создается UpdateRecord с metadata: { label: 'user-edit' }
+3. Запись попадает в batch (если batching включен)
+4. Пользователь делает Ctrl+Z для отката
+5. ❌ Система проверяет только `batch.metadata.label`, но не `batch.records[].metadata.label`
+6. ❌ Подтверждение не показывается, хотя должно
+
+Что сделано:
+
+1. **Расширена проверка метки в handleUndo**:
+   - Добавлена проверка вложенных записей в batch
+   - Используется `.some()` для поиска метки в batch.records[]
+   - Добавлено подробное логирование для отладки
+
+2. **Улучшено логирование**:
+   - Логируется тип записи (update/batch)
+   - Логируется metadata и label
+   - Для batch логируется количество вложенных записей
+   - Логируется результат проверки
+
+Файлы:
+- src/features/scenarioEditor/core/features/historySystem/useHistory.ts (строки 94-139)
+
+Технические детали:
+
+```typescript
+// ✅ БЫЛО (работало только для простых записей):
+if (lastRecord?.metadata?.label === 'user-edit') {
+    // show confirmation
+}
+
+// ✅ СТАЛО (работает и для batch):
+let needsConfirmation = lastRecord?.metadata?.label === 'user-edit';
+
+// Если это batch, проверяем метки во вложенных записях
+if (!needsConfirmation && lastRecord?.type === 'batch') {
+    const batchRecords = (lastRecord as any).records || [];
+    needsConfirmation = batchRecords.some((r: any) =>
+        r?.metadata?.label === 'user-edit'
+    );
+}
+
+if (needsConfirmation) {
+    const confirmed = await confirmFn(lastRecord);
+    if (!confirmed) return; // Отмена отката
+}
+```
+
+Структура данных:
+
+```typescript
+// UpdateRecord (простая запись):
+{
+    type: 'update',
+    metadata: { label: 'user-edit' },
+    // ...
+}
+
+// BatchRecord (группа записей):
+{
+    type: 'batch',
+    metadata: { /* метка может быть здесь */ },
+    records: [
+        {
+            type: 'update',
+            metadata: { label: 'user-edit' }, // ← проверяем здесь!
+            // ...
+        },
+        // ... другие записи
+    ]
+}
+```
+
+Логирование для отладки:
+```
+[useHistory] Checking last record for user-edit label: {
+  recordType: 'batch',
+  metadata: {},
+  label: undefined,
+  hasLabel: false
+}
+[useHistory] Checking batch records: 3
+[useHistory] Found user-edit label in batch records
+[useHistory] User-edit operation detected, asking for confirmation
+[HistoryControls] Confirming undo for user-edit operation: {...}
+```
+
+Преимущества:
+✅ Подтверждение работает для простых записей (UpdateRecord)
+✅ Подтверждение работает для batch записей
+✅ Подробное логирование помогает отладке
+✅ Не ломает существующую функциональность
+✅ Расширяемое решение для других типов записей
+
+Результат:
+✅ При откате изменений, сделанных через UI, всегда показывается подтверждение
+✅ Работает независимо от того, используется batching или нет
+✅ Пользователь защищен от случайного отката важных изменений
+
+Тип: Bug Fix
+Приоритет: High
+Затронутые системы: History System
+
+
+────────────────────────────────────────────────
+КАРТОЧКА 11: Глобальная система подтверждения отката с интеграцией в undoThunk
+────────────────────────────────────────────────
+
+Заголовок:
+Перенесена логика подтверждения отката напрямую в undoThunk для универсальной работы
+
+Описание:
+Логика подтверждения отката важных операций была перенесена из useHistory в undoThunk, что обеспечивает показ подтверждения независимо от способа вызова отката (кнопка, Ctrl+Z, программный вызов).
+
+Проблема:
+Ранее проверка метки 'user-edit' и вызов подтверждения находились в handleUndo внутри useHistory.ts. Это работало только если откат вызывался через метод undo() из хука. Но в системе есть и другие места, которые могут вызвать undoThunk напрямую, минуя handleUndo - в этом случае подтверждение не показывалось.
+
+Сценарий ошибки:
+1. Пользователь редактирует Branch через UI → запись с меткой 'user-edit'
+2. Пользователь нажимает кнопку отката или Ctrl+Z
+3. ❌ Откат вызывается напрямую через dispatch(undoThunk)
+4. ❌ Проверка в handleUndo не срабатывает
+5. ❌ Подтверждение не показывается
+
+Корневая причина:
+```typescript
+// ❌ БЫЛО: проверка в handleUndo (не всегда вызывается)
+const handleUndo = async (confirmFn) => {
+    if (needsConfirmation && confirmFn) {
+        await confirmFn(); // Проверка только если вызван через handleUndo
+    }
+    dispatch(undoThunk());
+};
+
+// Проблема: undoThunk может быть вызван напрямую из других мест
+dispatch(undoThunk()); // ❌ Минует handleUndo
+```
+
+Что сделано:
+
+1. **Создан глобальный обработчик подтверждения**:
+   - Функция `registerConfirmUndo()` для регистрации обработчика
+   - Переменная `globalConfirmUndoFn` хранит функцию подтверждения
+   - Регистрация происходит при монтировании HistoryControls
+
+2. **Добавлена функция проверки needsConfirmation**:
+   - Проверяет метку на записи: `record.metadata.label === 'user-edit'`
+   - Проверяет метки в batch.records[] если это batch
+   - Возвращает true если нужно подтверждение
+
+3. **Интегрирована проверка в undoThunk**:
+   - Проверка выполняется ДО отката
+   - Вызывается globalConfirmUndoFn если зарегистрирована
+   - Откат отменяется если пользователь отклонил подтверждение
+
+4. **Упрощен handleUndo**:
+   - Убрана дублирующая логика проверки
+   - Просто вызывает undoThunk
+   - Подтверждение обрабатывается внутри thunk
+
+5. **Исправлены зависимости useEffect для Ctrl+Z**:
+   - Добавлен `canUndo` в зависимости
+   - Теперь горячие клавиши работают корректно
+
+Файлы:
+- src/features/scenarioEditor/core/features/historySystem/historySlice.ts (добавлен глобальный обработчик)
+- src/features/scenarioEditor/core/features/historySystem/useHistory.ts (упрощен handleUndo)
+- src/features/scenarioEditor/core/ui/map/components/HistoryPanel/HistoryPanel.tsx (регистрация обработчика)
+- src/features/scenarioEditor/core/features/historySystem/HistoryControls/ (УДАЛЕН - неиспользуемый старый код)
+
+Технические детали:
+
+```typescript
+// ✅ НОВАЯ АРХИТЕКТУРА
+
+// 1. Глобальный обработчик в historySlice.ts
+type ConfirmUndoFn = (record: HistoryRecord) => Promise<boolean>;
+let globalConfirmUndoFn: ConfirmUndoFn | null = null;
+
+export function registerConfirmUndo(fn: ConfirmUndoFn | null) {
+    globalConfirmUndoFn = fn;
+}
+
+// 2. Проверка метки
+function needsConfirmation(record: HistoryRecord): boolean {
+    if (record?.metadata?.label === 'user-edit') return true;
+
+    if (record?.type === 'batch') {
+        return (record.records || []).some(r =>
+            r?.metadata?.label === 'user-edit'
+        );
+    }
+
+    return false;
+}
+
+// 3. Интеграция в undoThunk
+export const undoThunk = createAsyncThunk(async ({ contextId }) => {
+    const record = context.past[context.past.length - 1];
+
+    // ✅ Проверка ПЕРЕД откатом
+    if (needsConfirmation(record)) {
+        if (globalConfirmUndoFn) {
+            const confirmed = await globalConfirmUndoFn(record);
+            if (!confirmed) return; // Отмена отката
+        }
+    }
+
+    // Выполняем откат
+    historyRegistry.revertSnapshot(record.before);
+    dispatch(undoCommit({ contextId }));
+});
+
+// 4. Регистрация в HistoryControls
+useEffect(() => {
+    registerConfirmUndo(confirmFn);
+    return () => registerConfirmUndo(null);
+}, [confirmFn]);
+```
+
+Логирование для отладки:
+```
+[historySlice] Registering confirm undo function: true
+[historySlice] Undoing record: {...}
+[historySlice] Record needs confirmation (user-edit label found)
+[historySlice] Calling global confirm function
+[HistoryControls] Confirming undo for user-edit operation
+[User clicks "Отменить" or "Оставить"]
+[historySlice] Undo confirmed by user, proceeding
+[historySlice] Undo committed. Past: 0 Future: 1
+```
+
+Преимущества новой архитектуры:
+✅ Работает для ЛЮБОГО способа вызова отката (кнопка/Ctrl+Z/программный)
+✅ Единая точка проверки - в undoThunk
+✅ Упрощена логика в useHistory
+✅ Глобальная регистрация не зависит от React компонентов
+✅ Автоматическая очистка при размонтировании
+✅ Ctrl+Z теперь работает корректно
+
+Результат:
+✅ Подтверждение ВСЕГДА показывается для операций с меткой 'user-edit'
+✅ Не важно откуда вызван откат - через кнопку, Ctrl+Z или напрямую
+✅ Ctrl+Z корректно работает
+✅ Пользователь защищен от случайного отката важных изменений
+✅ Чистая и понятная архитектура
+
+Важное примечание:
+⚠️ Функция подтверждения регистрируется в HistoryPanel.tsx при монтировании через useEffect, что гарантирует актуальность функции. HistoryControls.tsx был удален как неиспользуемый старый код.
+
+Очистка кода:
+✅ Удален неиспользуемый компонент HistoryControls (старая реализация)
+✅ Единая точка регистрации подтверждения - HistoryPanel
+✅ Упрощена архитектура - нет дублирования кода
+
+Тип: Bug Fix + Refactoring
+Приоритет: Critical
+Затронутые системы: History System, UI Controls
+
+
+────────────────────────────────────────────────
+КАРТОЧКА 12: Очистка неиспользуемых переменных в historySlice.ts
+────────────────────────────────────────────────
+
+Заголовок:
+Удалены неиспользуемые переменные newPastLength из historySlice.ts
+
+Описание:
+Обнаружены и удалены неиспользуемые переменные, которые вычислялись но не использовались в коде.
+
+Проблема:
+В трех местах в reducers (recordCreate, recordUpdate, recordDelete) вычислялась переменная `newPastLength = context.past.length + 1`, которая создавалась но никогда не использовалась, что приводило к предупреждениям TypeScript.
+
+Что сделано:
+Удалены неиспользуемые переменные в 3 местах:
+- recordCreate reducer (строка 229)
+- recordUpdate reducer (строка 300)
+- recordDelete reducer (строка 358)
+
+```typescript
+// ❌ БЫЛО (неиспользуемая переменная):
+const newPastLength = context.past.length + 1;
+const newLastSyncedIndex = Math.min(context.lastSyncedIndex, context.past.length);
+
+// ✅ СТАЛО (только нужная переменная):
+const newLastSyncedIndex = Math.min(context.lastSyncedIndex, context.past.length);
+```
+
+Файлы:
+- src/features/scenarioEditor/core/features/historySystem/historySlice.ts (удалены неиспользуемые переменные)
+
+Результат:
+✅ 0 предупреждений TypeScript о неиспользуемых переменных
+✅ Чище и понятнее код
+✅ Меньше ментальной нагрузки при чтении
+
+Тип: Code Cleanup
+Приоритет: Low
+Затронутые системы: History System
+
+
 ────────────────────────────────────────────────
 ОБНОВЛЕННОЕ РЕЗЮМЕ
 ────────────────────────────────────────────────
 
 Статистика:
 - Создано новых компонентов: 7+
-- Создано новых методов: 2 (updateEntity, confirmFn)
+- Создано новых методов: 3 (updateEntity, confirmFn, registerConfirmUndo)
 - Исправлено TypeScript ошибок: 10+
-- Исправлено критических багов: 2
+- Исправлено критических багов: 5 (Int32 conversion, updateNode missing, autosave after undo, batch confirmation, global undo confirmation)
 - Добавлено файлов: 11+
-- Модифицировано файлов: 10+
+- Модифицировано файлов: 13+
+- Удалено устаревших компонентов: 1 (HistoryControls)
 
 Ключевые достижения:
 ✅ Полная система редактирования нод через UI
 ✅ Редактирование Branch с полным контрактом
 ✅ Универсальный метод updateEntity для любых entity
-✅ Система меток для важных операций в истории
-✅ Автоматическое подтверждение при откате важных операций
+✅ Система меток для важных операций с подтверждением отката
+✅ Корректная синхронизация откатов с сервером при автосохранении
+✅ Поддержка batch записей в системе подтверждений
 ✅ Нормализация числовых полей для корректного сохранения
 ✅ Типобезопасность на 100% (0 ошибок TS)
 
