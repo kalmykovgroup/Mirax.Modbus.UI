@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Read(//c/Users/Apolon 1/source/repos/Organization-Code-Mirax/Mirax.Modbus.AspNet.Server/**)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

@@ -17,11 +17,9 @@ import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models
 import {selectActiveScenarioId} from "@scenario/store/scenarioSelectors.ts";
 import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
 import { useNodeEdit } from '../shared/NodeEditButton';
-import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
+import { BranchEditContract } from './BranchEditContract';
 
 type Props = NodeProps<Node<FlowNodeData<BranchDto>>>;
-
-const BranchEditContract = createPlaceholderContract('Ветка');
 
 export function BranchNode({ data, selected, id }: Props) {
     const { ValidationIndicator, containerClassName } = useValidationIndicator(id);
@@ -204,6 +202,8 @@ export function BranchNode({ data, selected, id }: Props) {
             data-selectable={isCtrlPressed}
          {...containerProps}>
             <div className={styles.bg} />
+
+            {EditButton}
 
             <span className={styles.coordinates}>
                 <span>x:{formatWithMode(data.x, 2, true)}</span>
