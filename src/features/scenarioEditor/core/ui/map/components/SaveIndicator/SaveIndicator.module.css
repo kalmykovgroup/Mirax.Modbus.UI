@@ -24,10 +24,16 @@
     background: #22c55e10;
 }
 
-.indicator.saving {
+.indicator.unsaved {
     color: #eab308;
     border-color: #eab30840;
     background: #eab30810;
+}
+
+.indicator.saving {
+    color: #3b82f6;
+    border-color: #3b82f640;
+    background: #3b82f610;
 }
 
 .indicator.error {
