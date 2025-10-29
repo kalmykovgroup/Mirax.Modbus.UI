@@ -1,0 +1,41 @@
+/* src/features/scenarioEditor/core/ui/map/components/LockButton/LockButton.module.css */
+
+.lockButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background: #1a1a1a;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.lockButton:hover {
+    background: #2a2a2a;
+    border-color: #555;
+}
+
+.lockButton.locked {
+    color: #ef4444;
+    border-color: #ef444440;
+    background: #ef444410;
+}
+
+.lockButton.locked:hover {
+    background: #ef444420;
+    border-color: #ef444460;
+}
+
+.lockButton.unlocked {
+    color: #22c55e;
+    border-color: #22c55e40;
+    background: #22c55e10;
+}
+
+.lockButton.unlocked:hover {
+    background: #22c55e20;
+    border-color: #22c55e60;
+}

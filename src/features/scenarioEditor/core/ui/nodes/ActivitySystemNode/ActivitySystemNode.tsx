@@ -23,7 +23,7 @@ export function ActivitySystemNode({ id, data, selected }: Props) {
 
     return (
         <div 
-            className={`${styles.container} ${containerClassName}`} 
+            className={`${styles.activitySystemStepNodeContainer} ${containerClassName}`}
             aria-selected={selected}
             {...containerProps}
         >

@@ -7,6 +7,8 @@ import type { FlowStateRefs } from './useFlowState';
 import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
 import { absOf } from '@scenario/core/utils/dropUtils';
 import type {useScenarioOperations} from "@scenario/core/hooks/useScenarioOperations.ts";
+import { useSelector } from 'react-redux';
+import { selectIsLocked } from '@scenario/core/features/lockSystem/lockSlice';
 
 interface UseNodesChangeHandlerParams {
     readonly refs: FlowStateRefs;
@@ -32,9 +34,27 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
         isBatchMoveRef,
     } = refs;
 
+    const isLocked = useSelector(selectIsLocked);
+
     return useCallback((changes) => {
+        // Блокируем изменения позиции и выделения при блокировке
+        const filteredByLock = isLocked
+            ? changes.filter((change) => {
+                if (change.type === 'position') {
+                    console.log('[NodesChange] 🔒 Position change blocked: scenario is locked');
+                    return false;
+                }
+                if (change.type === 'select' && change.selected === true) {
+                    console.log('[NodesChange] 🔒 Selection blocked: scenario is locked');
+                    return false;
+                }
+                // Разрешаем dimensions и deselect
+                return true;
+            })
+            : changes;
+
         // Обнаруживаем parent ноды в drag
-        for (const change of changes) {
+        for (const change of filteredByLock) {
             if (change.type === 'position' && 'dragging' in change) {
                 const node = nodesRef.current?.find((n) => n.id === change.id);
 
@@ -49,7 +69,7 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
         }
 
         // Фильтруем position changes детей во время drag parent
-        const filteredChanges = changes.filter((change) => {
+        const filteredChanges = filteredByLock.filter((change) => {
             if (change.type !== 'position') return true;
 
             const node = nodesRef.current?.find((n) => n.id === change.id);
@@ -62,7 +82,7 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
             return true;
         });
 
-        const filtered = changes.length - filteredChanges.length;
+        const filtered = filteredByLock.length - filteredChanges.length;
         if (filtered > 0) {
             console.log(`[NodesChange] 🚀 Performance boost: filtered ${filtered}/${changes.length} updates`);
         }
@@ -300,5 +320,5 @@ export function useNodesChangeHandler(params: UseNodesChangeHandlerParams): OnNo
                 }
             }, 10);
         }
-    }, [setNodes, operations, refs, nodesRef, dragStateRef, resizeStateRef, isDraggingRef, isDraggingBranchRef, pendingBranchResizeRef, skipSyncRef, draggingParentIdsRef, isBatchMoveRef]);
+    }, [setNodes, operations, refs, nodesRef, dragStateRef, resizeStateRef, isDraggingRef, isDraggingBranchRef, pendingBranchResizeRef, skipSyncRef, draggingParentIdsRef, isBatchMoveRef, isLocked]);
 }

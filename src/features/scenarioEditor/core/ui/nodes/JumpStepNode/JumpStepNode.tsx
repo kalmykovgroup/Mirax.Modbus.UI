@@ -25,7 +25,7 @@ export function JumpStepNode({ id, data, selected}: Props) {
     const { EditButton, containerProps } = useNodeEdit(id, selected, JumpStepEditContract);
 
     return (
-        <div className={`${styles.container} ${containerClassName}`} aria-selected={selected} {...containerProps}>
+        <div className={`${styles.jumpStepNodeContainer} ${containerClassName}`} aria-selected={selected} {...containerProps}>
             {ValidationIndicator}
             {EditButton}
             <span className={styles.coordinates}>

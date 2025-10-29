@@ -1,6 +1,6 @@
 @import '@scenario/ui/styles/commonToNode.css';
 
-.container{
+.parallelStepNodeContainer{
     position: relative;
     box-sizing: border-box;
     border: 1px solid var(--color-parallel);
@@ -11,6 +11,10 @@
     justify-content: center;
     align-items: center;
     padding: 5px;
+}
+
+.parallelStepNodeContainer:hover{
+    box-shadow: 0 0 7px var(--color-parallel);
 }
 
 .source[aria-selected="true"]{
@@ -31,7 +35,7 @@
 }
 
 
-.container[aria-selected="true"] {
+.parallelStepNodeContainer[aria-selected="true"] {
    box-shadow: 0 0 7px var(--color-parallel);
 }
 

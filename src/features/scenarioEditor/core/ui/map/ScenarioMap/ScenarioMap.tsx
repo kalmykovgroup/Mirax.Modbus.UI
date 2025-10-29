@@ -45,11 +45,13 @@ import { ScenarioOperationsProvider } from './contexts/ScenarioOperationsContext
 import { SaveIndicator } from '@scenario/core/ui/map/components/SaveIndicator/SaveIndicator';
 import { SaveSettingsButton } from '@scenario/core/ui/map/components/SaveSettingsButton/SaveSettingsButton';
 import { ManualSaveButton } from '@scenario/core/ui/map/components/ManualSaveButton/ManualSaveButton';
+import { LockButton } from '@scenario/core/ui/map/components/LockButton/LockButton';
 import { NodeContextMenu, useNodeContextMenu, initializeNodeContextMenuProviders } from '@scenario/core/ui/nodes/shared/NodeContextMenu';
 import { NodeEditModalProvider } from '@scenario/core/ui/nodes/shared/NodeEditModal';
 import { useHistoryHotkeys } from '@scenario/core/hooks/useHistoryHotkeys';
 import { useDispatch, useSelector } from 'react-redux';
 import { undoThunk, redoThunk, selectCanUndo, selectCanRedo } from '@scenario/core/features/historySystem/historySlice';
+import { selectIsLocked } from '@scenario/core/features/lockSystem/lockSlice';
 import type { AppDispatch, RootState } from '@/baseStore/store';
 
 
@@ -60,6 +62,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const { theme } = useTheme();
     const rf = useReactFlow<FlowNode, FlowEdge>();
     const dispatch = useDispatch<AppDispatch>();
+    const isLocked = useSelector(selectIsLocked);
 
     const nodeTypes = useMemo(() => generateNodeTypes(), []); // ✅ ИСПРАВЛЕНИЕ
     // ============================================================================
@@ -417,10 +420,16 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     {...flowSettings}
                     defaultEdgeOptions={defaultEdgeOptions}
                     className={styles.customFlow}
+                    nodesDraggable={!isLocked}
+                    nodesConnectable={!isLocked}
+                    nodesFocusable={!isLocked}
+                    edgesFocusable={!isLocked}
+                    elementsSelectable={!isLocked}
                 >
                 <Panel className={styles.topLeftPanel} position="top-left">
                     <div className={styles.flowControls} >
                         <Controls className={styles.controls!} />
+                        <LockButton />
                     </div>
 
                 </Panel>

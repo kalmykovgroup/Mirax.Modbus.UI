@@ -24,7 +24,7 @@ export function ActivityModbusNode({ id, data, selected }: Props) {
     const { EditButton, containerProps } = useNodeEdit(id, selected, ActivityModbusEditContract);
 
     return (
-        <div className={`${styles.container} ${containerClassName}`} aria-selected={selected} {...containerProps}>
+        <div className={`${styles.activityModbusStepNodeContainer} ${containerClassName}`} aria-selected={selected} {...containerProps}>
             {ValidationIndicator}
             {EditButton}
             <span className={styles.coordinates}>

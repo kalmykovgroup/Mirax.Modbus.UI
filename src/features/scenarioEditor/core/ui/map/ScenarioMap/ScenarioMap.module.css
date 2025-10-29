@@ -48,6 +48,11 @@
     height: calc(100% - 50px);
 }
 
+/* Контент внутри панели остается интерактивным */
+.topLeftPanel > * {
+    pointer-events: auto;
+}
+
 .flowControls{
     display: flex;
     position: relative;

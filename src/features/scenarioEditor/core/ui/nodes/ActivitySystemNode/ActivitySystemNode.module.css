@@ -1,6 +1,6 @@
 @import '@scenario/ui/styles/commonToNode.css';
 
-.container{
+.activitySystemStepNodeContainer{
     position: relative;
     box-sizing: border-box;
     background-clip: content-box; /* фон остаётся у исходного размера */
@@ -14,6 +14,10 @@
     padding: 5px;
 
 }
+.activitySystemStepNodeContainer:hover{
+    box-shadow: 0 0 7px var(--color-activity-system);
+}
+
 .source[aria-selected="true"]{
     background: var(--source-active-styles-bkg);
     box-shadow: var(--source-active-styles-box-shadow);
@@ -30,6 +34,6 @@
     color: var(--color-activity-system);
 }
 
-.container[aria-selected="true"] {
+.activitySystemStepNodeContainer[aria-selected="true"] {
     box-shadow: 0 0 7px var(--color-activity-system);
 }

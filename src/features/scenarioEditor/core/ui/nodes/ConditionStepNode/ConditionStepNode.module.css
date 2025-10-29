@@ -1,6 +1,6 @@
 @import '@scenario/ui/styles/commonToNode.css';
 
-.container{
+.conditionStepNodeContainer{
     position: relative;
     box-sizing: border-box;
     background-clip: content-box; /* фон остаётся у исходного размера */
@@ -14,7 +14,12 @@
     padding: 5px;
 
 }
-.container[aria-selected="true"] {
+
+.conditionStepNodeContainer:hover{
+    box-shadow: 0 0 7px var(--color-condition);
+}
+
+.conditionStepNodeContainer[aria-selected="true"] {
     box-shadow: 0 0 7px var(--color-condition);
 }
 

@@ -1,6 +1,6 @@
 @import '@scenario/ui/styles/commonToNode.css';
 
-.container{
+.jumpStepNodeContainer{
     position: relative;
     box-sizing: border-box;
     background-clip: content-box; /* фон остаётся у исходного размера */
@@ -15,6 +15,10 @@
     min-width: 70px;
     min-height: 21px;
 
+}
+
+.jumpStepNodeContainer:hover{
+    box-shadow: 0 0 7px var(--color-jump);
 }
 
 .source[aria-selected="true"]{
@@ -43,7 +47,7 @@
     background: rgba(255, 255, 255, 0.03); /* невидимый */
 }
 
-.container[aria-selected="true"] {
+.jumpStepNodeContainer[aria-selected="true"] {
     box-shadow: 0 0 7px var(--color-jump);
 }
 

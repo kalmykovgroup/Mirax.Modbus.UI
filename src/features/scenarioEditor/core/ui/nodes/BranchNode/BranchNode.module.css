@@ -14,6 +14,10 @@
     /* НЕ добавляем cursor здесь - ReactFlow сам управляет курсорами */
 }
 
+.branchNodeContainer:hover{
+    box-shadow: 0 0 7px var(--color-branch);
+}
+
 /* Выделенная ветка — показываем границу */
 .branchNodeContainer[aria-selected='true'] {
     box-shadow: 0 0 7px var(--color-branch);

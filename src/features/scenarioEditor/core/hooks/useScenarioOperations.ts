@@ -2,6 +2,7 @@
 // ОБНОВЛЕНИЕ: добавлен source tracking для избежания циклических обновлений
 
 import { useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import { useHistory } from '@scenario/core/features/historySystem/useHistory';
 import { type Guid } from '@app/lib/types/Guid';
 import { nodeTypeRegistry } from '@scenario/shared/contracts/registry/NodeTypeRegistry';
@@ -13,8 +14,10 @@ import type {
 import { stepRelationContract } from "@scenario/core/ui/edges/StepRelationContract.ts";
 import { store } from '@/baseStore/store';
 import { updateStep } from '@scenario/store/scenarioSlice';
+import { selectIsLocked } from '@scenario/core/features/lockSystem/lockSlice';
 
 export function useScenarioOperations(scenarioId: Guid | null) {
+    const isLocked = useSelector(selectIsLocked);
     const history = useHistory(scenarioId ?? 'no-scenario', {
         autoInit: !!scenarioId,
         config: { maxHistorySize: 100, enableBatching: true },
@@ -30,6 +33,11 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
     const createRelation = useCallback(
         (parentStepId: Guid, childStepId: Guid, conditionExpression?: string | null, conditionOrder?: number) => {
+            if (isLocked) {
+                console.warn('[useScenarioOperations] Operation blocked: scenario is locked');
+                return null;
+            }
+
             if (!scenarioId) {
                 console.error('[useScenarioOperations] Cannot create relation: no scenarioId');
                 return null;
@@ -62,7 +70,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             return relationDto;
         },
-        [scenarioId, history, toEntity]
+        [scenarioId, history, toEntity, isLocked]
     );
 
     // ============================================================================
@@ -71,6 +79,11 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
     const moveNode = useCallback(
         (node: FlowNode, newX: number, newY: number, childNodes?: FlowNode[]) => {
+            if (isLocked) {
+                console.warn('[useScenarioOperations] Move blocked: scenario is locked');
+                return;
+            }
+
             if (!scenarioId) return;
 
             const contract = nodeTypeRegistry.get(node.type);
@@ -222,6 +235,11 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
     const deleteNode = useCallback(
         (node: FlowNode) => {
+            if (isLocked) {
+                console.warn('[useScenarioOperations] Delete blocked: scenario is locked');
+                return false;
+            }
+
             console.log('[ScenarioMap] 🗑️ Deleted:', node);
 
             if (!scenarioId){
@@ -479,6 +497,9 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
     const autoExpandBranch = useCallback(
         (branchNode: FlowNode, newWidth: number, newHeight: number, newX?: number, newY?: number) => {
+            // ⚠️ НЕ блокируем autoExpandBranch при isLocked, так как это автоматическая операция
+            // которая не меняет логику сценария, а только визуальное представление
+
             if (!scenarioId) return;
 
             const contract = nodeTypeRegistry.get(branchNode.type);
@@ -563,6 +584,11 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
     const createNode = useCallback(
         (node: FlowNode) => {
+            if (isLocked) {
+                console.warn('[useScenarioOperations] Create blocked: scenario is locked');
+                return;
+            }
+
             if (!scenarioId) return;
 
             const dto = node.data.object;
@@ -585,7 +611,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
             console.log(`[useScenarioOperations] ✅ Node created: ${node.id}`);
         },
-        [scenarioId, history, toEntity]
+        [scenarioId, history, toEntity, isLocked]
     );
 
     // ============================================================================
@@ -594,6 +620,11 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
     const deleteRelation = useCallback(
         (relationId: Guid) => {
+            if (isLocked) {
+                console.warn('[useScenarioOperations] Delete relation blocked: scenario is locked');
+                return;
+            }
+
             if (!scenarioId) return;
 
             const state = store.getState();

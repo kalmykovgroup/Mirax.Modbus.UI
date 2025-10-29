@@ -29,6 +29,7 @@ import {contextsReducer} from "@chartsPage/charts/core/store/chartsSlice.ts";
 import {uiReducer} from "@/baseStore/uiSlice.ts";
 import historySlice from "@scenario/core/features/historySystem/historySlice.ts";
 import saveSettingsReducer from "@scenario/core/features/saveSystem/saveSettingsSlice.ts";
+import lockReducer from "@scenario/core/features/lockSystem/lockSlice.ts";
 export const rootReducer = combineReducers({
     // Persisted slices
     auth: authReducer,
@@ -45,6 +46,7 @@ export const rootReducer = combineReducers({
 
     history: historySlice,
     saveSettings: saveSettingsReducer,
+    scenarioLock: lockReducer,
 
     ui: uiReducer,
     //Mirax

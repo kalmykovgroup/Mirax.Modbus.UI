@@ -32,7 +32,7 @@ export function DelayStepNode({ id, data, selected}: Props) {
 
     return (
         <div 
-            className={`${styles.container} ${containerClassName}`} 
+            className={`${styles.delayStepNodeContainer} ${containerClassName}`}
             aria-selected={selected}
             {...containerProps}
         >
