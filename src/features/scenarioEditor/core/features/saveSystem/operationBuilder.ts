@@ -535,11 +535,17 @@ export function buildOperationsFromHistory(
 
     if (allOperations.length === 0) {
         console.log('[buildOperationsFromHistory] No operations to sync');
-    } else {
-        console.log('[buildOperationsFromHistory] Total operations to sync:', allOperations.length);
+        return allOperations;
     }
 
-    return allOperations;
+    // Объединяем все операции (включая reverse и новые) чтобы избежать дубликатов
+    console.log('[buildOperationsFromHistory] Operations before merge:', allOperations.length);
+    const mergedAllOperations = mergeOperations(allOperations, [...historyRecords, ...futureRecords]);
+    console.log('[buildOperationsFromHistory] Operations after merge:', mergedAllOperations.length);
+
+    console.log('[buildOperationsFromHistory] Total operations to sync:', mergedAllOperations.length);
+
+    return mergedAllOperations;
 }
 
 /**

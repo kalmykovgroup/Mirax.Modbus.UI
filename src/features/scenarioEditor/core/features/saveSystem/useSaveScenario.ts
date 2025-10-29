@@ -115,6 +115,7 @@ export function useSaveScenario(scenarioId: Guid | null): UseSaveScenarioResult 
         }
 
         console.log('[useSaveScenario] Starting save:', operations.length, 'operations');
+        console.log('[useSaveScenario] Operations to save:', operations);
 
         dispatch(setSaveInProgress(true));
 
@@ -128,6 +129,17 @@ export function useSaveScenario(scenarioId: Guid | null): UseSaveScenarioResult 
 
             if (failedOps.length > 0) {
                 console.error('[useSaveScenario] Some operations failed:', failedOps);
+
+                // Логируем payload каждой упавшей операции
+                failedOps.forEach((op, index) => {
+                    console.error(`[useSaveScenario] Failed operation ${index + 1}:`, {
+                        entity: op.entity,
+                        action: op.action,
+                        opId: op.opId,
+                        payload: op.payload,
+                        error: op.result.errorMessage,
+                    });
+                });
 
                 // Формируем детальное сообщение об ошибке
                 const errorMessages = failedOps.map(op =>

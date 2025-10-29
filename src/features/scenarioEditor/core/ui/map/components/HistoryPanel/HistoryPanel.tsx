@@ -18,7 +18,8 @@ import {
     registerConfirmUndo,
 } from '@scenario/core/features/historySystem/historySlice.ts';
 import type { HistoryRecord } from '@scenario/core/features/historySystem/types.ts';
-import {useConfirm} from "@ui/components/ConfirmProvider/ConfirmProvider.tsx";
+import { useConfirm } from "@ui/components/ConfirmProvider/ConfirmProvider.tsx";
+import { useHistoryHotkeys } from '@scenario/core/hooks/useHistoryHotkeys';
 
 // Тип для описания изменения поля
 interface FieldDiff {
@@ -440,6 +441,12 @@ export function HistoryPanel() {
             dispatch(redoThunk({ contextId }));
         }
     }, [dispatch, contextId, canRedo]);
+
+    // Регистрируем горячие клавиши для истории
+    useHistoryHotkeys({
+        onUndo: handleUndo,
+        onRedo: handleRedo,
+    }, !!activeId); // Включены только если есть активный сценарий
 
     const handleClear = useCallback(async () => {
 
