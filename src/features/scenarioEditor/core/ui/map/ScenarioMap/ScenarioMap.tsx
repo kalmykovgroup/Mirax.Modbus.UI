@@ -47,6 +47,10 @@ import { SaveSettingsButton } from '@scenario/core/ui/map/components/SaveSetting
 import { ManualSaveButton } from '@scenario/core/ui/map/components/ManualSaveButton/ManualSaveButton';
 import { NodeContextMenu, useNodeContextMenu, initializeNodeContextMenuProviders } from '@scenario/core/ui/nodes/shared/NodeContextMenu';
 import { NodeEditModalProvider } from '@scenario/core/ui/nodes/shared/NodeEditModal';
+import { useHistoryHotkeys } from '@scenario/core/hooks/useHistoryHotkeys';
+import { useDispatch, useSelector } from 'react-redux';
+import { undoThunk, redoThunk, selectCanUndo, selectCanRedo } from '@scenario/core/features/historySystem/historySlice';
+import type { AppDispatch, RootState } from '@/baseStore/store';
 
 
 type RightSidePanelTab = 'create' | 'history' | 'scenarios';
@@ -55,6 +59,7 @@ export interface ScenarioEditorProps {}
 export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const { theme } = useTheme();
     const rf = useReactFlow<FlowNode, FlowEdge>();
+    const dispatch = useDispatch<AppDispatch>();
 
     const nodeTypes = useMemo(() => generateNodeTypes(), []); // ✅ ИСПРАВЛЕНИЕ
     // ============================================================================
@@ -300,6 +305,30 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     // BRANCH INTERACTIVITY
     // ============================================================================
     useBranchNodeInteractivity();
+
+    // ============================================================================
+    // HISTORY HOTKEYS (Undo/Redo)
+    // ============================================================================
+    const canUndo = useSelector((state: RootState) => selectCanUndo(state, activeId ?? ''));
+    const canRedo = useSelector((state: RootState) => selectCanRedo(state, activeId ?? ''));
+
+    const handleUndo = useCallback(() => {
+        if (canUndo && activeId) {
+            dispatch(undoThunk({ contextId: activeId }));
+        }
+    }, [dispatch, activeId, canUndo]);
+
+    const handleRedo = useCallback(() => {
+        if (canRedo && activeId) {
+            dispatch(redoThunk({ contextId: activeId }));
+        }
+    }, [dispatch, activeId, canRedo]);
+
+    // Регистрируем горячие клавиши глобально для всего редактора сценариев
+    useHistoryHotkeys({
+        onUndo: handleUndo,
+        onRedo: handleRedo,
+    }, !!activeId); // Включены только если есть активный сценарий
 
     // ============================================================================
     // EDGE HOVER
