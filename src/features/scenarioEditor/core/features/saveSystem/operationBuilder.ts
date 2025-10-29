@@ -274,11 +274,13 @@ function processRecords(records: HistoryRecord[]): ScenarioOperationDto[] {
  * Логика:
  * - Create + Update(s) = Create (с финальными данными)
  * - Create + Delete = ничего (сущность создана и удалена, не отправляем)
- * - Update(s) = Update (с финальными данными)
+ * - Update(s) = Update (с финальными данными для forward, с начальными для reverse)
  * - Update(s) + Delete = Delete (с изначальными данными)
  * - Delete остаётся Delete
+ *
+ * @param isReverseOperation - true если это reverse операции (Undo), false для forward (Redo/новые изменения)
  */
-function mergeOperations(operations: ScenarioOperationDto[], historyRecords: HistoryRecord[]): ScenarioOperationDto[] {
+function mergeOperations(operations: ScenarioOperationDto[], historyRecords: HistoryRecord[], isReverseOperation: boolean = false): ScenarioOperationDto[] {
     // Группируем операции по entityId
     const operationsByEntity = new Map<string, ScenarioOperationDto[]>();
 
@@ -369,9 +371,17 @@ function mergeOperations(operations: ScenarioOperationDto[], historyRecords: His
             continue;
         }
 
-        // Update(s) = Update с финальными данными
+        // Update(s) = Update
+        // ⚠️ ВАЖНО: Для reverse операций (Undo) нужна ПЕРВАЯ операция (самое старое состояние)
+        // Для forward операций (Redo/новые изменения) нужна ПОСЛЕДНЯЯ операция (финальное состояние)
         if (lastOp.action === DbActionType.Update) {
-            mergedOperations.push(lastOp);
+            if (isReverseOperation) {
+                // Для Undo берём самое старое состояние (первую операцию)
+                mergedOperations.push(firstOp);
+            } else {
+                // Для Redo и новых изменений берём финальное состояние (последнюю операцию)
+                mergedOperations.push(lastOp);
+            }
             continue;
         }
 
@@ -510,8 +520,11 @@ export function buildOperationsFromHistory(
         // Создаем компенсирующие операции для откаченных изменений
         const reverseOperations = processUndoneRecords(undoneRecords);
 
-        console.log('[buildOperationsFromHistory] ✅ Reverse operations created:', reverseOperations.length, reverseOperations);
-        allOperations.push(...reverseOperations);
+        // ⚠️ ВАЖНО: Для reverse операций merge должен брать ПЕРВУЮ операцию (isReverseOperation = true)
+        const mergedReverseOps = mergeOperations(reverseOperations, undoneRecords, true);
+
+        console.log('[buildOperationsFromHistory] ✅ Reverse operations created:', mergedReverseOps.length, mergedReverseOps);
+        allOperations.push(...mergedReverseOps);
     } else {
         console.log('[buildOperationsFromHistory] ❌ No undo detected (undoneCount = 0)');
     }
@@ -527,7 +540,8 @@ export function buildOperationsFromHistory(
         console.log('[buildOperationsFromHistory] Processing new records:', newRecords.length, 'from index', startIndex);
 
         const operations = processRecords(newRecords);
-        const mergedOperations = mergeOperations(operations, newRecords);
+        // ⚠️ ВАЖНО: Для новых операций (forward) merge должен брать ПОСЛЕДНЮЮ операцию (isReverseOperation = false)
+        const mergedOperations = mergeOperations(operations, newRecords, false);
 
         console.log('[buildOperationsFromHistory] New operations created:', mergedOperations.length);
         allOperations.push(...mergedOperations);
@@ -538,14 +552,12 @@ export function buildOperationsFromHistory(
         return allOperations;
     }
 
-    // Объединяем все операции (включая reverse и новые) чтобы избежать дубликатов
-    console.log('[buildOperationsFromHistory] Operations before merge:', allOperations.length);
-    const mergedAllOperations = mergeOperations(allOperations, [...historyRecords, ...futureRecords]);
-    console.log('[buildOperationsFromHistory] Operations after merge:', mergedAllOperations.length);
+    // ⚠️ НЕ делаем финальный merge всех операций вместе!
+    // Reverse и forward операции уже смержены отдельно с правильными флагами
+    // Финальный merge может привести к неправильному объединению reverse и forward операций
+    console.log('[buildOperationsFromHistory] Total operations to sync:', allOperations.length);
 
-    console.log('[buildOperationsFromHistory] Total operations to sync:', mergedAllOperations.length);
-
-    return mergedAllOperations;
+    return allOperations;
 }
 
 /**

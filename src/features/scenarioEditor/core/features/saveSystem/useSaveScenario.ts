@@ -172,6 +172,9 @@ export function useSaveScenario(scenarioId: Guid | null): UseSaveScenarioResult 
     // Автосохранение с debounce
     const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Получаем задержку из .env (по умолчанию 3000 мс)
+    const autoSaveDelay = Number(import.meta.env.VITE_AUTO_SAVE_DELAY_MS) || 3000;
+
     useEffect(() => {
         // Очищаем предыдущий таймер
         if (saveTimerRef.current) {
@@ -179,18 +182,28 @@ export function useSaveScenario(scenarioId: Guid | null): UseSaveScenarioResult 
             saveTimerRef.current = null;
         }
 
-        // Если автосохранение выключено или нечего сохранять - не запускаем таймер
-        // Проверяем operations.length (не historySize), так как даже с пустым past могут быть reverse операции после undo
-        if (!autoSave || !scenarioId || operations.length === 0) {
+        // Если автосохранение выключено или нет scenarioId - не запускаем таймер
+        if (!autoSave || !scenarioId || !historyContext) {
             return;
         }
 
-        // Запускаем таймер на 3 секунды
-        console.log('[useSaveScenario] Auto-save timer started (3s)');
+        // Проверяем, есть ли что сохранять
+        // Используем напрямую данные из historyContext вместо operations.length
+        // чтобы избежать лишних пересчётов операций при каждом изменении истории
+        const hasUnsavedChanges =
+            historyContext.past.length !== historyContext.lastSyncedIndex ||
+            historyContext.future.length > 0;
+
+        if (!hasUnsavedChanges) {
+            return;
+        }
+
+        // Запускаем таймер
+        console.log('[useSaveScenario] Auto-save timer started (' + autoSaveDelay + 'ms)');
         saveTimerRef.current = setTimeout(() => {
             console.log('[useSaveScenario] Auto-save triggered');
             save();
-        }, 3000);
+        }, autoSaveDelay);
 
         // Cleanup
         return () => {
@@ -200,7 +213,15 @@ export function useSaveScenario(scenarioId: Guid | null): UseSaveScenarioResult 
             }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [operations.length, autoSave, scenarioId]); // save не добавляем в deps чтобы избежать циклических пересозданий таймера
+    }, [
+        // Отслеживаем изменения в самой истории напрямую
+        historyContext?.past.length,
+        historyContext?.future.length,
+        historyContext?.lastSyncedIndex,
+        autoSave,
+        scenarioId,
+        autoSaveDelay
+    ]); // save не добавляем в deps чтобы избежать циклических пересозданий таймера
 
     return {
         save,
