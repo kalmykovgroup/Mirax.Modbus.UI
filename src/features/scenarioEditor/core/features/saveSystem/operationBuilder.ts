@@ -191,14 +191,12 @@ function convertRecordToOperation(record: HistoryRecord): ScenarioOperationDto |
         return null;
     }
 
-    const operation: ScenarioOperationDto = {
+    return {
         opId: record.id,
         entity: mapEntityType(record.entityType),
         action,
         payload,
-    };
-
-    return operation;
+    } as ScenarioOperationDto;
 }
 
 /**
