@@ -41,6 +41,41 @@ function mapEntityType(entityType: string): DbEntityType {
 }
 
 /**
+ * Нормализует числовые поля - преобразует строки в числа, null/undefined в 0
+ */
+function normalizeNumericFields(data: any): any {
+    const numericFields = new Set(['x', 'y', 'width', 'height', 'conditionOrder']);
+
+    const normalized: any = {};
+
+    for (const key in data) {
+        if (data.hasOwnProperty(key)) {
+            const value = data[key];
+
+            // Если это числовое поле и значение не число
+            if (numericFields.has(key)) {
+                if (typeof value === 'string') {
+                    // Преобразуем строку в число
+                    const parsed = parseFloat(value);
+                    normalized[key] = isNaN(parsed) ? 0 : parsed;
+                } else if (value === null || value === undefined) {
+                    // null/undefined -> 0
+                    normalized[key] = 0;
+                } else {
+                    // Уже число
+                    normalized[key] = value;
+                }
+            } else {
+                // Не числовое поле - копируем как есть
+                normalized[key] = value;
+            }
+        }
+    }
+
+    return normalized;
+}
+
+/**
  * Очищает payload от лишних полей, используя подход "чёрного списка"
  * Удаляет только известные проблемные поля (навигационные свойства, readonly поля),
  * всё остальное пропускает без изменений.
@@ -95,13 +130,17 @@ function extractPayload(snapshot: any, action: DbActionType): unknown {
             const dataWithType = { type, ...rest };
             cleaned = cleanPayload(dataWithType, action);
 
+            // Нормализуем числовые поля
+            cleaned = normalizeNumericFields(cleaned);
+
             // Затем трансформируем type в $type и помещаем на первое место
             const { type: stepType, ...restCleaned } = cleaned;
             return { $type: stepType, ...restCleaned };
         }
 
-        // Для Branch просто убираем entityType
-        return rest;
+        // Для Branch очищаем и нормализуем числовые поля
+        const cleanedBranch = cleanPayload(rest, action);
+        return normalizeNumericFields(cleanedBranch);
     }
 
     // Иначе возвращаем как есть

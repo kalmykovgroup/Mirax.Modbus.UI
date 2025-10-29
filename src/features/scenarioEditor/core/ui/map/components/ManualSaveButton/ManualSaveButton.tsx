@@ -40,7 +40,7 @@ export function ManualSaveButton({ scenarioId }: ManualSaveButtonProps) {
     useEffect(() => {
         if (!isContextMenuOpen) return;
 
-        const handleClickOutside = (event: MouseEvent) => {
+        const handleClickOutside = (_event: MouseEvent) => {
             setIsContextMenuOpen(false);
         };
 
