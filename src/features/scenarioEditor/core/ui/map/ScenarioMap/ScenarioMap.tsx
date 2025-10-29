@@ -46,6 +46,7 @@ import { SaveIndicator } from '@scenario/core/ui/map/components/SaveIndicator/Sa
 import { SaveSettingsButton } from '@scenario/core/ui/map/components/SaveSettingsButton/SaveSettingsButton';
 import { ManualSaveButton } from '@scenario/core/ui/map/components/ManualSaveButton/ManualSaveButton';
 import { LockButton } from '@scenario/core/ui/map/components/LockButton/LockButton';
+import { FieldLockPanelButton } from '@scenario/core/ui/map/components/FieldLockPanelButton/FieldLockPanelButton';
 import { NodeContextMenu, useNodeContextMenu, initializeNodeContextMenuProviders } from '@scenario/core/ui/nodes/shared/NodeContextMenu';
 import { NodeEditModalProvider } from '@scenario/core/ui/nodes/shared/NodeEditModal';
 import { useHistoryHotkeys } from '@scenario/core/hooks/useHistoryHotkeys';
@@ -430,6 +431,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     <div className={styles.flowControls} >
                         <Controls className={styles.controls!} />
                         <LockButton />
+                        <FieldLockPanelButton />
                     </div>
 
                 </Panel>

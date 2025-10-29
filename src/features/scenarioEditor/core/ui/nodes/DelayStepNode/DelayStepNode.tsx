@@ -8,6 +8,7 @@ import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.
 import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
 import { useNodeEdit } from '../shared/NodeEditButton';
 import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
+import { Block } from '@scenario/core/features/fieldLockSystem';
 
 const onChangeDto = (dto: DelayStepDto) =>{
     console.log(dto);
@@ -46,14 +47,21 @@ export function DelayStepNode({ id, data, selected}: Props) {
 
 
             <div className={styles.inputContainer}>
-                <div className={`${styles.form__group} ${styles.field}`}>
-                    <DelayTimeInput
-                        value={dto.timeSpan} // здесь у вас миллисекунды строкой, например "60000"
-                        onChange={(nextMs) => onChangeDto({ ...dto, timeSpan: nextMs })}
-                        minMs={0}
-                        maxMs={Number.MAX_SAFE_INTEGER}
-                    />
-                </div>
+                <Block
+                    group="delayNodeTime"
+                    label="Время задержки"
+                    description="Настройка времени задержки выполнения"
+                    mode="inline"
+                >
+                    <div className={`${styles.form__group} ${styles.field}`}>
+                        <DelayTimeInput
+                            value={dto.timeSpan} // здесь у вас миллисекунды строкой, например "60000"
+                            onChange={(nextMs) => onChangeDto({ ...dto, timeSpan: nextMs })}
+                            minMs={0}
+                            maxMs={Number.MAX_SAFE_INTEGER}
+                        />
+                    </div>
+                </Block>
             </div>
 
             <Handle

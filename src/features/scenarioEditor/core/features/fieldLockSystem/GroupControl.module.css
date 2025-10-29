@@ -1,0 +1,125 @@
+/* src/features/scenarioEditor/core/features/fieldLockSystem/GroupControl.module.css */
+
+.groupControl {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background: #1a1a1a;
+    transition: all 0.2s;
+}
+
+.groupControl:hover {
+    background: #222;
+    border-color: #444;
+}
+
+.groupInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.groupLabel {
+    font-size: 13px;
+    font-weight: 500;
+    color: #e0e0e0;
+    margin-bottom: 2px;
+}
+
+.groupDescription {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stateButton {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid;
+    border-radius: 4px;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.stateButton:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.stateButton:active {
+    transform: translateY(0);
+}
+
+/* Visible state (green) */
+.stateVisible {
+    color: #22c55e;
+    border-color: #22c55e40;
+    background: #22c55e10;
+}
+
+.stateVisible:hover {
+    background: #22c55e20;
+    border-color: #22c55e60;
+}
+
+/* Locked state (red) */
+.stateLocked {
+    color: #ef4444;
+    border-color: #ef444440;
+    background: #ef444410;
+}
+
+.stateLocked:hover {
+    background: #ef444420;
+    border-color: #ef444460;
+}
+
+/* Hidden state (gray) */
+.stateHidden {
+    color: #888;
+    border-color: #44444440;
+    background: #44444410;
+}
+
+.stateHidden:hover {
+    background: #44444420;
+    border-color: #44444460;
+}
+
+.stateLabel {
+    font-size: 11px;
+}
+
+/* Disabled state */
+.stateButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .groupControl {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .stateButton {
+        justify-content: center;
+    }
+
+    .stateLabel {
+        display: none;
+    }
+}
