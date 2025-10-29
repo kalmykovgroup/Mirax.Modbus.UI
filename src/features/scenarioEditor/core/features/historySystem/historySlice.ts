@@ -197,9 +197,10 @@ export const historySlice = createSlice({
                 contextId: string;
                 newEntity: Entity;
                 previousEntity: Entity;
+                metadata?: Record<string, unknown>;
             }>
         ) => {
-            const { contextId, newEntity, previousEntity } = action.payload;
+            const { contextId, newEntity, previousEntity, metadata } = action.payload;
             const context = state.contexts[contextId];
 
             if (!context) {
@@ -227,6 +228,7 @@ export const historySlice = createSlice({
                 timestamp: Date.now(),
                 before: beforeSnapshot,
                 after: afterSnapshot,
+                metadata,
             };
 
             console.log('[historySlice] recordUpdate - final record:', record);

@@ -70,8 +70,8 @@ export function NodeEditModalProvider({ children }: NodeEditModalProviderProps) 
                 },
             };
 
-            // Сохраняем через operations (попадает в историю)
-            operations.updateNode(updatedNode);
+            // Сохраняем через operations (попадает в историю с меткой 'user-edit')
+            operations.updateEntity(updatedNode, 'user-edit');
 
             // Закрываем модальное окно
             closeEditModal();

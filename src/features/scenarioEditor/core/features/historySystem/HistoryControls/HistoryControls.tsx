@@ -4,6 +4,7 @@ import React, { useCallback, useEffect } from 'react';
 import { Undo2, Redo2, RotateCcw } from 'lucide-react';
 import styles from './HistoryControls.module.css';
 import {useHistory} from "@scenario/core/features/historySystem/useHistory.ts";
+import { useConfirm } from '@/ui/components/ConfirmProvider';
 
 interface HistoryControlsProps {
     readonly contextId: string;
@@ -18,13 +19,34 @@ export const HistoryControls: React.FC<HistoryControlsProps> = ({ contextId }) =
         },
     });
 
+    const confirm = useConfirm();
+
+    // Функция подтверждения для важных операций
+    const confirmFn = useCallback(async (record: any) => {
+        console.log('[HistoryControls] Confirming undo for user-edit operation:', record);
+        return await confirm({
+            title: 'Отменить изменения?',
+            description: 'Вы редактировали эту ноду/ветку через UI. Отменить изменения?',
+            confirmText: 'Отменить',
+            cancelText: 'Оставить',
+            danger: true,
+        });
+    }, [confirm]);
+
+    // Обработчик undo с подтверждением
+    const handleUndo = useCallback(async () => {
+        if (canUndo) {
+            await undo(confirmFn);
+        }
+    }, [canUndo, undo, confirmFn]);
+
     // Горячие клавиши
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             // Ctrl+Z (Cmd+Z на Mac) - Undo
             if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
                 e.preventDefault();
-                if (canUndo) undo();
+                handleUndo();
             }
 
             // Ctrl+Shift+Z (Cmd+Shift+Z на Mac) - Redo
@@ -42,7 +64,7 @@ export const HistoryControls: React.FC<HistoryControlsProps> = ({ contextId }) =
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [canUndo, canRedo, undo, redo]);
+    }, [canRedo, redo, handleUndo]);
 
     const handleClear = useCallback(() => {
         if (window.confirm('Очистить всю историю? Это действие необратимо.')) {
@@ -54,7 +76,7 @@ export const HistoryControls: React.FC<HistoryControlsProps> = ({ contextId }) =
         <div className={styles.container}>
             <button
                 className={styles.btn}
-                onClick={undo}
+                onClick={handleUndo}
                 disabled={!canUndo}
                 title={`Отменить (Ctrl+Z)${lastCommand ? ` - ${lastCommand.description || lastCommand.type}` : ''}`}
             >

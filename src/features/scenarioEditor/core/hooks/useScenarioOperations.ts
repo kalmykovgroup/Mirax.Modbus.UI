@@ -621,6 +621,87 @@ export function useScenarioOperations(scenarioId: Guid | null) {
         [scenarioId, history, toEntity]
     );
 
+    // ============================================================================
+    // УНИВЕРСАЛЬНОЕ ОБНОВЛЕНИЕ ENTITY (для редактирования через UI)
+    // ============================================================================
+
+    /**
+     * Универсальный метод обновления entity (Step или Branch).
+     * Используется для сохранения изменений из модальных окон редактирования.
+     * Создает одну запись в истории с меткой 'user-edit' для важных изменений.
+     *
+     * @param node - Нода с обновленными данными
+     * @param label - Метка для записи истории ('user-edit' для важных операций)
+     */
+    const updateEntity = useCallback(
+        (node: FlowNode, label?: string) => {
+            if (!scenarioId) {
+                console.error('[useScenarioOperations] Cannot update: no scenarioId');
+                return;
+            }
+
+            const contract = nodeTypeRegistry.get(node.type);
+            if (!contract) {
+                console.error(`[useScenarioOperations] No contract found for type: ${node.type}`);
+                return;
+            }
+
+            const newDto = node.data.object;
+            if (!newDto) {
+                console.error('[useScenarioOperations] No DTO in node.data.object');
+                return;
+            }
+
+            // Получаем старое состояние из Redux
+            const state = store.getState();
+            const scenarioState = state.scenario.scenarios[scenarioId];
+
+            if (!scenarioState) {
+                console.error(`[useScenarioOperations] Scenario ${scenarioId} not found`);
+                return;
+            }
+
+            let previousDto: any;
+
+            // Определяем откуда взять предыдущее состояние
+            if (node.type === 'BranchNode') {
+                previousDto = scenarioState.branches[node.id];
+            } else {
+                previousDto = scenarioState.steps[node.id];
+            }
+
+            if (!previousDto) {
+                console.error(`[useScenarioOperations] Entity ${node.id} not found in store`);
+                return;
+            }
+
+            console.log('[useScenarioOperations] 📝 Updating entity:', node.id, {
+                type: node.type,
+                previous: previousDto,
+                new: newDto,
+                label,
+            });
+
+            // Применяем изменения через snapshot
+            const newSnapshot = contract.createSnapshot(newDto);
+            contract.applySnapshot(newSnapshot);
+
+            // Записываем в историю
+            const newEntity = toEntity(newDto, node.type);
+            const prevEntity = toEntity(previousDto, node.type);
+
+            // Записываем с меткой если она указана
+            if (label) {
+                history.recordUpdate(newEntity, prevEntity, { label });
+            } else {
+                history.recordUpdate(newEntity, prevEntity);
+            }
+
+            console.log(`[useScenarioOperations] ✅ Entity updated: ${node.id}`);
+        },
+        [scenarioId, history, toEntity]
+    );
+
     return {
         createRelation,
         deleteRelation,
@@ -631,6 +712,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
         detachStepFromBranch,
         autoExpandBranch,
         createNode,
+        updateEntity,
 
         canUndo: history.canUndo,
         canRedo: history.canRedo,

@@ -25,10 +25,10 @@ export interface UseHistoryResult {
     readonly canRedo: boolean;
     readonly historySize: number;
     readonly lastCommand: any;
-    readonly undo: () => void;
+    readonly undo: (confirmFn?: (record: any) => Promise<boolean>) => Promise<void>;
     readonly redo: () => void;
     readonly recordCreate: <T extends Entity>(entity: T) => void;
-    readonly recordUpdate: <T extends Entity>(newEntity: T, previousEntity: T) => void;
+    readonly recordUpdate: <T extends Entity>(newEntity: T, previousEntity: T, metadata?: Record<string, unknown>) => void;
     readonly recordDelete: <T extends Entity>(entity: T) => void;
     readonly startBatch: () => void;
     readonly commitBatch: (description?: string) => void;
@@ -91,12 +91,28 @@ export function useHistory(
     }, [context]);
 
     // Actions
-    const handleUndo = useCallback(() => {
-        console.log('[useHistory] Undo called, canUndo:', canUndo);
-        if (canUndo) {
+    const handleUndo = useCallback(
+        async (confirmFn?: (record: any) => Promise<boolean>) => {
+            console.log('[useHistory] Undo called, canUndo:', canUndo);
+            if (!canUndo) return;
+
+            // Проверяем нужно ли подтверждение
+            if (confirmFn && context) {
+                const lastRecord = context.past[context.past.length - 1];
+                if (lastRecord?.metadata?.label === 'user-edit') {
+                    console.log('[useHistory] User-edit operation detected, asking for confirmation');
+                    const confirmed = await confirmFn(lastRecord);
+                    if (!confirmed) {
+                        console.log('[useHistory] Undo cancelled by user');
+                        return;
+                    }
+                }
+            }
+
             dispatch(undoThunk({ contextId }));
-        }
-    }, [dispatch, contextId, canUndo]);
+        },
+        [dispatch, contextId, canUndo, context]
+    );
 
     const handleRedo = useCallback(() => {
         console.log('[useHistory] Redo called, canRedo:', canRedo);
@@ -115,9 +131,9 @@ export function useHistory(
     );
 
     const handleRecordUpdate = useCallback(
-        <T extends Entity>(newEntity: T, previousEntity: T) => {
-            console.log('[useHistory] Recording update:', newEntity.id);
-            dispatch(recordUpdate({ contextId, newEntity, previousEntity }));
+        <T extends Entity>(newEntity: T, previousEntity: T, metadata?: Record<string, unknown>) => {
+            console.log('[useHistory] Recording update:', newEntity.id, metadata);
+            dispatch(recordUpdate({ contextId, newEntity, previousEntity, metadata }));
         },
         [dispatch, contextId]
     );

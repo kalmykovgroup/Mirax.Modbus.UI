@@ -57,13 +57,17 @@ function normalizeNumericFields(data: any): any {
                 if (typeof value === 'string') {
                     // Преобразуем строку в число
                     const parsed = parseFloat(value);
-                    normalized[key] = isNaN(parsed) ? 0 : parsed;
+                    normalized[key] = isNaN(parsed) ? 0 : Math.round(parsed);
                 } else if (value === null || value === undefined) {
                     // null/undefined -> 0
                     normalized[key] = 0;
+                } else if (typeof value === 'number') {
+                    // Округляем числа до целых для координат и размеров
+                    normalized[key] = Math.round(value);
                 } else {
-                    // Уже число
-                    normalized[key] = value;
+                    // Неожиданный тип - пытаемся преобразовать
+                    const parsed = Number(value);
+                    normalized[key] = isNaN(parsed) ? 0 : Math.round(parsed);
                 }
             } else {
                 // Не числовое поле - копируем как есть
@@ -71,6 +75,8 @@ function normalizeNumericFields(data: any): any {
             }
         }
     }
+
+    console.log('[operationBuilder] normalizeNumericFields:', { input: data, output: normalized });
 
     return normalized;
 }
