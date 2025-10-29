@@ -3,34 +3,42 @@
 import { useState, useEffect, useMemo } from 'react';
 import { X, Save } from 'lucide-react';
 import { useSelector } from 'react-redux';
+import type { Edge } from '@xyflow/react';
 import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
-import type { NodeEditContract } from './types';
+import type { NodeEditContract, EdgeEditContract } from './types';
 import { selectAllGroups, selectIsGroupLocked, selectGlobalLock } from '@scenario/core/features/fieldLockSystem';
 import { selectIsLocked } from '@scenario/core/features/lockSystem/lockSlice';
 import styles from './NodeEditModal.module.css';
 
 interface NodeEditModalProps {
-    node: FlowNode;
-    contract: NodeEditContract;
-    onSave: (node: FlowNode, updatedDto: any) => void;
+    node?: FlowNode;
+    edge?: Edge;
+    contract: NodeEditContract | EdgeEditContract;
+    onSave: (nodeOrEdge: FlowNode | Edge, updatedDto: any) => void;
     onCancel: () => void;
+    stackDepth?: number;
+    isTopmost?: boolean;
 }
 
-export function NodeEditModal({ node, contract, onSave, onCancel }: NodeEditModalProps) {
-    const [draftDto, setDraftDto] = useState(node.data.object);
+export function NodeEditModal({ node, edge, contract, onSave, onCancel, stackDepth = 0, isTopmost = true }: NodeEditModalProps) {
+    // Определяем начальный DTO в зависимости от того, что редактируем
+    const initialDto = node ? node.data.object : edge?.data?.relationDto;
+
+    const [draftDto, setDraftDto] = useState(initialDto);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
-    const [originalDto] = useState(node.data.object);
+    const [originalDto] = useState(initialDto);
 
     // Селекторы для проверки блокировок
     const allGroups = useSelector(selectAllGroups);
     const scenarioLock = useSelector(selectIsLocked);
     const globalLock = useSelector(selectGlobalLock);
 
-    // Сброс состояния при изменении ноды
+    // Сброс состояния при изменении ноды или edge
     useEffect(() => {
-        setDraftDto(node.data.object);
+        const newDto = node ? node.data.object : edge?.data?.relationDto;
+        setDraftDto(newDto);
         setValidationErrors([]);
-    }, [node]);
+    }, [node, edge]);
 
     // Проверка изменений: сравниваем draftDto с originalDto
     const hasChanges = useMemo(() => {
@@ -78,7 +86,7 @@ export function NodeEditModal({ node, contract, onSave, onCancel }: NodeEditModa
         }
 
         console.log('[NodeEditModal] Saving changes', { originalDto, draftDto });
-        onSave(node, draftDto);
+        onSave((node || edge)!, draftDto);
     };
 
     // Определяем можно ли сохранять: есть изменения И не все поля заблокированы
@@ -102,18 +110,58 @@ export function NodeEditModal({ node, contract, onSave, onCancel }: NodeEditModa
     };
 
     const modalWidth = contract.width || 600;
-    const title = contract.title || 'Редактирование ноды';
+    const defaultTitle = node ? 'Редактирование ноды' : 'Редактирование связи';
+    const title = contract.title || defaultTitle;
+
+    // Смещение для вложенных окон
+    const offsetX = stackDepth * 30;
+    const offsetY = stackDepth * 30;
+
+    // Затемнение фона только для верхнего окна
+    const overlayOpacity = isTopmost ? 0.5 : 0;
 
     return (
-        <div className={styles.overlay} onClick={handleOverlayClick}>
-            <div className={styles.modal} style={{ width: modalWidth }}>
+        <div
+            className={styles.overlay}
+            onClick={handleOverlayClick}
+            style={{
+                backgroundColor: `rgba(0, 0, 0, ${overlayOpacity})`,
+                pointerEvents: isTopmost ? 'auto' : 'none',
+            }}
+        >
+            <div
+                className={styles.modal}
+                data-stack-depth={stackDepth}
+                data-is-topmost={isTopmost}
+                style={{
+                    width: modalWidth,
+                    transform: `translate(${offsetX}px, ${offsetY}px)`,
+                    pointerEvents: 'auto',
+                }}
+            >
                 {/* Header */}
                 <div className={styles.header}>
-                    <h2 className={styles.title}>{title}</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h2 className={styles.title}>{title}</h2>
+                        {stackDepth > 0 && (
+                            <span
+                                style={{
+                                    fontSize: '12px',
+                                    color: '#888',
+                                    background: '#2a2a2a',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                }}
+                                title={`Глубина вложенности: ${stackDepth + 1}`}
+                            >
+                                Уровень {stackDepth + 1}
+                            </span>
+                        )}
+                    </div>
                     <button
                         className={styles.closeButton}
                         onClick={handleCancel}
-                        title="Закрыть"
+                        title={stackDepth > 0 ? 'Вернуться назад' : 'Закрыть'}
                     >
                         <X size={20} />
                     </button>
@@ -132,11 +180,17 @@ export function NodeEditModal({ node, contract, onSave, onCancel }: NodeEditModa
                         </div>
                     )}
 
-                    {contract.renderContent({
-                        node,
-                        dto: draftDto,
-                        onChange: handleChange,
-                    })}
+                    {node
+                        ? contract.renderContent({
+                              node,
+                              dto: draftDto,
+                              onChange: handleChange,
+                          })
+                        : contract.renderContent({
+                              edge: edge!,
+                              dto: draftDto,
+                              onChange: handleChange,
+                          })}
                 </div>
 
                 {/* Footer */}

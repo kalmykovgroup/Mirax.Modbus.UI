@@ -1,4 +1,4 @@
-import {type Guid, newGuid} from "@app/lib/types/Guid.ts";
+import { Guid } from "@app/lib/types/Guid.ts";
 
 export interface StepRelationDto {
     id: Guid;
@@ -26,7 +26,7 @@ export const StepRelationDto = {
         conditionOrder?: number;
     }): StepRelationDto {
         return {
-            id: p.id ?? newGuid(),
+            id: p.id ?? Guid.NewGuid(),
             parentStepId: p.parentStepId,
             childStepId: p.childStepId,
             conditionExpression: p.conditionExpression ?? null,

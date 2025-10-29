@@ -1,0 +1,30 @@
+/* src/features/scenarioEditor/core/ui/edges/shared/EdgeEditButton/EdgeEditButton.module.css */
+
+.edgeEditButton {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #3a82f6;
+    color: #fff;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+.edgeEditButton:hover,
+.edgeEditButton.hovered {
+    background: #2563eb;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.edgeEditButton:active {
+    transform: translate(-50%, -50%) scale(0.95);
+}

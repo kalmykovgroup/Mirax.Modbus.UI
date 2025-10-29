@@ -1,6 +1,6 @@
 // src/features/scenarioEditor/core/hooks/useHistoryHotkeys.ts
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export interface HistoryHotkeysCallbacks {
     onUndo?: () => void;
@@ -11,6 +11,7 @@ export interface HistoryHotkeysCallbacks {
  * Хук для обработки горячих клавиш истории (Undo/Redo)
  *
  * Использует e.code для независимости от раскладки клавиатуры
+ * Использует useRef для стабилизации зависимостей и предотвращения лишних перерегистраций
  *
  * Поддерживаемые комбинации:
  * - Ctrl+Z (Cmd+Z на Mac) - Undo
@@ -24,6 +25,14 @@ export function useHistoryHotkeys(
     callbacks: HistoryHotkeysCallbacks,
     enabled: boolean = true
 ): void {
+    // Используем useRef для хранения актуальных callbacks без перерегистрации обработчика
+    const callbacksRef = useRef(callbacks);
+
+    // Обновляем ref при каждом рендере, но это не триггерит useEffect
+    useEffect(() => {
+        callbacksRef.current = callbacks;
+    }, [callbacks]);
+
     useEffect(() => {
         if (!enabled) return;
 
@@ -38,7 +47,7 @@ export function useHistoryHotkeys(
             if (isCtrlOrCmd && e.code === 'KeyZ' && !e.shiftKey) {
                 e.preventDefault();
                 console.log('[useHistoryHotkeys] Ctrl+Z pressed - calling onUndo');
-                callbacks.onUndo?.();
+                callbacksRef.current.onUndo?.();
                 return;
             }
 
@@ -46,7 +55,7 @@ export function useHistoryHotkeys(
             if (isCtrlOrCmd && e.code === 'KeyZ' && e.shiftKey) {
                 e.preventDefault();
                 console.log('[useHistoryHotkeys] Ctrl+Shift+Z pressed - calling onRedo');
-                callbacks.onRedo?.();
+                callbacksRef.current.onRedo?.();
                 return;
             }
 
@@ -54,17 +63,17 @@ export function useHistoryHotkeys(
             if (isCtrlOrCmd && e.code === 'KeyY') {
                 e.preventDefault();
                 console.log('[useHistoryHotkeys] Ctrl+Y pressed - calling onRedo');
-                callbacks.onRedo?.();
+                callbacksRef.current.onRedo?.();
                 return;
             }
         };
 
-        console.log('[useHistoryHotkeys] Registering history hotkeys');
+        console.log('[useHistoryHotkeys] Registering history hotkeys (once per enabled state)');
         window.addEventListener('keydown', handleKeyDown);
 
         return () => {
             console.log('[useHistoryHotkeys] Unregistering history hotkeys');
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [callbacks, enabled]);
+    }, [enabled]); // Теперь зависит только от enabled!
 }

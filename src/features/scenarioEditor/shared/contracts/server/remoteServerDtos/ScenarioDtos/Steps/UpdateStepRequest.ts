@@ -9,6 +9,7 @@ interface UpdateStepBase {
     id: Guid;
 
     name?: string | null;
+    description?: string | null;
     taskQueue?: string | null;
     /** перенос шага в другую ветку (если разрешён) */
     branchId?: Guid | null; // Guid

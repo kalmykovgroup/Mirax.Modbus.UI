@@ -13,6 +13,7 @@ interface CreateStepBase {
 
     branchId: Guid; // Guid
     name: string;
+    description?: string | null;
     taskQueue: string;
 
     /** координаты/размеры диаграммы — соответствуют C# int */

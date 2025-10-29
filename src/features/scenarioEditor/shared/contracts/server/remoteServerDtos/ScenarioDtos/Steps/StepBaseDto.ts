@@ -29,16 +29,17 @@ export interface StepBaseDto {
 
     branchId: Guid;
     name: string;
+    description?: string | undefined;
     taskQueue: string;
 
-    defaultInput?: string | null;
-    defaultOutput?: string | null;
+    defaultInput?: string | undefined;
+    defaultOutput?: string | undefined;
 
     // Координаты/размер (в пикселях canvas редактора)
-    x: number;       // C# int → TS number
-    y: number;       // C# int → TS number
-    width: number;   // C# int → TS number
-    height: number;  // C# int → TS number
+    x: number;
+    y: number;
+    width: number;
+    height: number;
 
     childRelations: StepRelationDto[];
     parentRelations: StepRelationDto[];
@@ -51,15 +52,15 @@ export interface ActivityModbusStepDto extends StepBaseDto {
     connectionConfigId: Guid;
 
     modbusDeviceActionId: Guid;
-    modbusDeviceAction?: ModbusDeviceActionDto | null;
+    modbusDeviceAction?: ModbusDeviceActionDto | undefined;
 
     modbusDeviceAddressId: Guid;
-    modbusDeviceAddress?: ModbusDeviceAddressDto | null;
+    modbusDeviceAddress?: ModbusDeviceAddressDto | undefined;
 }
 
 export interface ActivitySystemStepDto extends StepBaseDto {
     systemActionId: Guid;
-    systemAction?: SystemActionDto | null;
+    systemAction?: SystemActionDto | undefined;
 }
 
 export interface DelayStepDto extends StepBaseDto {
@@ -104,25 +105,27 @@ const base = (
     p: {
         id?: string;
         branchId: string;
-        name?: string;
-        taskQueue?: string;
-        defaultInput?: string | null;
-        defaultOutput?: string | null;
-        x?: number;
-        y?: number;
-        width?: number;
-        height?: number;
-        childRelations?: StepRelationDto[];
-        parentRelations?: StepRelationDto[];
+        name?: string | undefined;
+        description?: string | undefined;
+        taskQueue?: string | undefined;
+        defaultInput?: string | undefined;
+        defaultOutput?: string | undefined;
+        x?: number | undefined;
+        y?: number | undefined;
+        width?: number | undefined;
+        height?: number | undefined;
+        childRelations?: StepRelationDto[] | undefined;
+        parentRelations?: StepRelationDto[] | undefined;
     }
 ): StepBaseDto => ({
     id: p.id ?? genId(),
     type,
     branchId: p.branchId,
     name: p.name ?? "",
+    description: p.description,
     taskQueue: p.taskQueue ?? "",
-    defaultInput: p.defaultInput ?? null,
-    defaultOutput: p.defaultOutput ?? null,
+    defaultInput: p.defaultInput ?? undefined,
+    defaultOutput: p.defaultOutput ?? undefined,
     x: p.x ?? 0,
     y: p.y ?? 0,
     width: p.width ?? 0,
@@ -136,13 +139,16 @@ export const ActivityModbusStepDto = {
     create(
         p: {
             branchId: string;
-            name?: string;
-            taskQueue?: string;
-            defaultInput?: string | null;
-            defaultOutput?: string | null;
-            x?: number; y?: number; width?: number; height?: number;
-            childRelations?: StepRelationDto[];
-            parentRelations?: StepRelationDto[];
+            name?: string | undefined;
+            taskQueue?: string | undefined;
+            defaultInput?: string | undefined;
+            defaultOutput?: string  | undefined;
+            x?: number | undefined;
+            y?: number | undefined;
+            width?: number | undefined;
+            height?: number | undefined;
+            childRelations?: StepRelationDto[] | undefined;
+            parentRelations?: StepRelationDto[] | undefined;
         } & Partial<ActivityModbusStepDto>
     ): ActivityModbusStepDto {
         return {
@@ -150,10 +156,10 @@ export const ActivityModbusStepDto = {
             sessionId: p.sessionId ?? undefined,
             connectionConfigId: p.connectionConfigId ?? undefined,
             modbusDeviceActionId: p.modbusDeviceActionId ?? undefined,
-            modbusDeviceAction: p.modbusDeviceAction ?? null,
+            modbusDeviceAction: p.modbusDeviceAction ?? undefined,
             modbusDeviceAddressId: p.modbusDeviceAddressId ?? undefined,
-            modbusDeviceAddress: p.modbusDeviceAddress ?? null,
-        };
+            modbusDeviceAddress: p.modbusDeviceAddress ?? undefined,
+        } as ActivityModbusStepDto;
     },
 } as const;
 
@@ -161,20 +167,23 @@ export const ActivitySystemStepDto = {
     create(
         p: {
             branchId: string;
-            name?: string;
-            taskQueue?: string;
-            defaultInput?: string | null;
-            defaultOutput?: string | null;
-            x?: number; y?: number; width?: number; height?: number;
-            childRelations?: StepRelationDto[];
-            parentRelations?: StepRelationDto[];
+            name?: string | undefined;
+            taskQueue?: string | undefined;
+            defaultInput?: string | undefined;
+            defaultOutput?: string | undefined;
+            x?: number | undefined;
+            y?: number | undefined;
+            width?: number | undefined;
+            height?: number | undefined;
+            childRelations?: StepRelationDto[] | undefined;
+            parentRelations?: StepRelationDto[] | undefined;
         } & Partial<ActivitySystemStepDto>
     ): ActivitySystemStepDto {
         return {
             ...base(FlowType.ActivitySystem, p),
             systemActionId: p.systemActionId ?? undefined,
-            systemAction: p.systemAction ?? null,
-        };
+            systemAction: p.systemAction ?? undefined,
+        } as ActivitySystemStepDto;
     },
 } as const;
 
@@ -182,20 +191,23 @@ export const DelayStepDto = {
     create(
         p: {
             branchId: string;
-            name?: string;
-            taskQueue?: string;
-            timeSpan?: string;
-            defaultInput?: string | null;
-            defaultOutput?: string | null;
-            x?: number; y?: number; width?: number; height?: number;
-            childRelations?: StepRelationDto[];
-            parentRelations?: StepRelationDto[];
+            name?: string | undefined;
+            taskQueue?: string | undefined;
+            timeSpan?: string | undefined;
+            defaultInput?: string | undefined;
+            defaultOutput?: string | undefined;
+            x?: number  | undefined;
+            y?: number | undefined;
+            width?: number | undefined;
+            height?: number | undefined;
+            childRelations?: StepRelationDto[] | undefined;
+            parentRelations?: StepRelationDto[] | undefined;
         } & Partial<DelayStepDto>
     ): DelayStepDto {
         return {
             ...base(FlowType.Delay, p),
             timeSpan: p.timeSpan ?? "PT0S",
-        };
+        } as DelayStepDto;
     },
 } as const;
 
@@ -203,17 +215,20 @@ export const SignalStepDto = {
     create(
         p: {
             branchId: string;
-            name?: string;
-            taskQueue?: string;
+            name?: string | undefined;
+            taskQueue?: string | undefined;
             awaitSignalStepType: AwaitSignalStepType;
             sendSignalStepType: SendSignalStepType;
-            signalKey?: string;
-            sendSignalData?: string;
-            defaultInput?: string | null;
-            defaultOutput?: string | null;
-            x?: number; y?: number; width?: number; height?: number;
-            childRelations?: StepRelationDto[];
-            parentRelations?: StepRelationDto[];
+            signalKey?: string | undefined;
+            sendSignalData?: string | undefined;
+            defaultInput?: string | undefined;
+            defaultOutput?: string | undefined;
+            x?: number | undefined;
+            y?: number | undefined;
+            width?: number | undefined;
+            height?: number | undefined;
+            childRelations?: StepRelationDto[] | undefined;
+            parentRelations?: StepRelationDto[] | undefined;
         } & Partial<SignalStepDto>
     ): SignalStepDto {
         return {
@@ -222,7 +237,7 @@ export const SignalStepDto = {
             sendSignalStepType: p.sendSignalStepType,
             signalKey: p.signalKey ?? undefined,
             sendSignalData: p.sendSignalData ?? undefined,
-        };
+        } as SignalStepDto;
     },
 } as const;
 
@@ -230,20 +245,23 @@ export const JumpStepDto = {
     create(
         p: {
             branchId: string;
-            name?: string;
-            taskQueue?: string;
-            jumpToStepId?: string;
-            defaultInput?: string | null;
-            defaultOutput?: string | null;
-            x?: number; y?: number; width?: number; height?: number;
-            childRelations?: StepRelationDto[];
-            parentRelations?: StepRelationDto[];
+            name?: string | undefined;
+            taskQueue?: string | undefined;
+            jumpToStepId?: string | undefined;
+            defaultInput?: string | undefined;
+            defaultOutput?: string | undefined;
+            x?: number | undefined;
+            y?: number | undefined;
+            width?: number | undefined;
+            height?: number | undefined;
+            childRelations?: StepRelationDto[] | undefined;
+            parentRelations?: StepRelationDto[] | undefined;
         } & Partial<JumpStepDto>
     ): JumpStepDto {
         return {
             ...base(FlowType.Jump, p),
             jumpToStepId: p.jumpToStepId ?? undefined,
-        };
+        } as JumpStepDto;
     },
 } as const;
 
@@ -251,14 +269,17 @@ export const ParallelStepDto = {
     create(
         p: {
             branchId: string;
-            name?: string;
-            taskQueue?: string;
-            defaultInput?: string | null;
-            defaultOutput?: string | null;
-            x?: number; y?: number; width?: number; height?: number;
-            childRelations?: StepRelationDto[];
-            parentRelations?: StepRelationDto[];
-            stepBranchRelations?: ParallelStepBranchRelationDto[];
+            name?: string | undefined;
+            taskQueue?: string | undefined;
+            defaultInput?: string | undefined;
+            defaultOutput?: string | undefined;
+            x?: number | undefined;
+            y?: number | undefined;
+            width?: number | undefined;
+            height?: number | undefined;
+            childRelations?: StepRelationDto[] | undefined;
+            parentRelations?: StepRelationDto[] | undefined;
+            stepBranchRelations?: ParallelStepBranchRelationDto[] | undefined;
         } & Partial<ParallelStepDto>
     ): ParallelStepDto {
         return {
@@ -272,14 +293,17 @@ export const ConditionStepDto = {
     create(
         p: {
             branchId: string;
-            name?: string;
-            taskQueue?: string;
-            defaultInput?: string | null;
-            defaultOutput?: string | null;
-            x?: number; y?: number; width?: number; height?: number;
-            childRelations?: StepRelationDto[];
-            parentRelations?: StepRelationDto[];
-            stepBranchRelations?: ConditionStepBranchRelationDto[];
+            name?: string | undefined;
+            taskQueue?: string | undefined;
+            defaultInput?: string | undefined;
+            defaultOutput?: string | undefined;
+            x?: number | undefined;
+            y?: number | undefined;
+            width?: number | undefined;
+            height?: number | undefined;
+            childRelations?: StepRelationDto[] | undefined;
+            parentRelations?: StepRelationDto[] | undefined;
+            stepBranchRelations?: ConditionStepBranchRelationDto[] | undefined;
         } & Partial<ConditionStepDto>
     ): ConditionStepDto {
         return {

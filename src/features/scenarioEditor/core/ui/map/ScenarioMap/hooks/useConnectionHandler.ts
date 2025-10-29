@@ -38,7 +38,15 @@ export function useConnectionHandler(params: UseConnectionHandlerParams) {
             }
 
             setEdges((eds) =>
-                addEdge({ ...connection, id: relationDto.id, type: 'step' }, eds)
+                addEdge(
+                    {
+                        ...connection,
+                        id: relationDto.id,
+                        type: 'step',
+                        data: { relationDto }, // Добавляем relationDto для возможности редактирования
+                    },
+                    eds
+                )
             );
 
             setNodes((nds) =>

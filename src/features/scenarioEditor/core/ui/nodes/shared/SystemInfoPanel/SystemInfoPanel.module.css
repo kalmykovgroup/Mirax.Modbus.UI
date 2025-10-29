@@ -1,0 +1,129 @@
+/* src/features/scenarioEditor/core/ui/nodes/shared/SystemInfoPanel/SystemInfoPanel.module.css */
+
+.systemInfoPanel {
+    padding: 16px;
+    background: #f5f5f5;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #666;
+}
+
+.header {
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #333;
+    font-size: 14px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.label {
+    font-weight: 500;
+    color: #555;
+}
+
+.value {
+    font-family: monospace;
+    font-size: 12px;
+    color: #333;
+    word-break: break-all;
+}
+
+.additionalInfo {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #ddd;
+}
+
+.relationsSection {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #ddd;
+}
+
+.relationsSectionTitle {
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #555;
+    font-size: 13px;
+}
+
+.relationsList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.relationItem {
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    background: #fff;
+    border-radius: 4px;
+    border: 1px solid #e0e0e0;
+}
+
+.relationNumber {
+    font-weight: 500;
+    color: #888;
+    min-width: 20px;
+}
+
+.relationDetails {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.relationStep {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.relationLabel {
+    font-weight: 500;
+    color: #666;
+    font-size: 12px;
+}
+
+.relationStepName {
+    font-weight: 600;
+    color: #3a82f6;
+    font-size: 13px;
+}
+
+.relationStepId {
+    font-family: monospace;
+    font-size: 10px;
+    color: #999;
+}
+
+.relationCondition {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.conditionCode {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    background: #f9f9f9;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #e0e0e0;
+    color: #d63384;
+}
+
+.relationOrder {
+    font-size: 12px;
+    color: #666;
+}

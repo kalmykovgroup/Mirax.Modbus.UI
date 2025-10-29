@@ -74,6 +74,84 @@ export function useScenarioOperations(scenarioId: Guid | null) {
     );
 
     // ============================================================================
+    // ОБНОВЛЕНИЕ СВЯЗИ (для редактирования edges)
+    // ============================================================================
+
+    const updateRelation = useCallback(
+        (relationDto: any, entityType: string, label?: string) => {
+            if (isLocked) {
+                console.warn('[useScenarioOperations] Operation blocked: scenario is locked');
+                return;
+            }
+
+            if (!scenarioId) {
+                console.error('[useScenarioOperations] Cannot update relation: no scenarioId');
+                return;
+            }
+
+            console.log('[useScenarioOperations] 📝 Updating relation:', relationDto.id, {
+                type: entityType,
+                dto: relationDto,
+                label,
+            });
+
+            // Получаем старое состояние из Redux
+            const state = store.getState();
+            const scenarioState = state.scenario.scenarios[scenarioId];
+
+            if (!scenarioState) {
+                console.error(`[useScenarioOperations] Scenario ${scenarioId} not found`);
+                return;
+            }
+
+            let previousDto: any;
+
+            // Определяем откуда взять предыдущее состояние
+            if (entityType === 'StepRelation') {
+                previousDto = scenarioState.relations[relationDto.id];
+            } else if (entityType === 'ConditionStepBranchRelation' || entityType === 'ParallelStepBranchRelation') {
+                // Для branch relations ищем в шаге
+                const step = Object.values(scenarioState.steps).find((s: any) => {
+                    const relations = s.stepBranchRelations || [];
+                    return relations.some((r: any) => r.id === relationDto.id);
+                });
+
+                if (step) {
+                    previousDto = (step as any).stepBranchRelations?.find((r: any) => r.id === relationDto.id);
+                }
+            }
+
+            if (!previousDto) {
+                console.error(`[useScenarioOperations] Relation ${relationDto.id} not found in store`);
+                return;
+            }
+
+            // Применяем изменения через snapshot (только для StepRelation, для остальных напрямую через Redux)
+            if (entityType === 'StepRelation') {
+                const newSnapshot = stepRelationContract.createSnapshot(relationDto);
+                stepRelationContract.applySnapshot(newSnapshot);
+            } else {
+                // Для ConditionStepBranchRelation и ParallelStepBranchRelation обновляем через Redux
+                // TODO: Реализовать applySnapshot для этих типов или обновлять напрямую
+                console.warn('[useScenarioOperations] Direct Redux update not yet implemented for', entityType);
+            }
+
+            // Записываем в историю
+            const newEntity = toEntity(relationDto, entityType);
+            const prevEntity = toEntity(previousDto, entityType);
+
+            if (label) {
+                history.recordUpdate(newEntity, prevEntity, { label });
+            } else {
+                history.recordUpdate(newEntity, prevEntity);
+            }
+
+            console.log(`[useScenarioOperations] ✅ Relation updated: ${relationDto.id}`);
+        },
+        [scenarioId, history, toEntity, isLocked]
+    );
+
+    // ============================================================================
     // ПЕРЕМЕЩЕНИЕ НОДЫ С SOURCE TRACKING
     // ============================================================================
 
@@ -735,6 +813,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
 
     return {
         createRelation,
+        updateRelation,
         deleteRelation,
         moveNode,
         resizeNode,

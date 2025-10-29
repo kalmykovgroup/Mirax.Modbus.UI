@@ -13,14 +13,16 @@ export function useEdgesChangeHandler(params: UseEdgesChangeHandlerParams): OnEd
     const { setEdges, operations } = params;
 
     return useCallback((changes) => {
-        console.log('[EdgesChange]', changes);
+        // Закомментировано избыточное логирование (срабатывает при каждом hover)
+        // console.log('[EdgesChange]', changes);
+
         setEdges((eds) => applyEdgeChanges(changes, eds) as FlowEdge[]);
 
         for (const change of changes) {
             if (change.type === 'select') {
-                console.log(
-                    `[EdgesChange] 🎯 EDGE ${change.selected ? 'SELECTED' : 'DESELECTED'} | ID: ${change.id}`
-                );
+                // console.log(
+                //     `[EdgesChange] 🎯 EDGE ${change.selected ? 'SELECTED' : 'DESELECTED'} | ID: ${change.id}`
+                // );
             }
 
             if (change.type === 'remove') {

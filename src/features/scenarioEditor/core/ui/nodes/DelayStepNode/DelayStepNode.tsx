@@ -7,7 +7,7 @@ import DelayTimeInput from "@scenario/core/ui/nodes/DelayStepNode/DelayTimeInput
 import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
 import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
 import { useNodeEdit } from '../shared/NodeEditButton';
-import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
+import { DelayStepEditContract } from './DelayStepEditContract';
 import { Block } from '@scenario/core/features/fieldLockSystem';
 
 const onChangeDto = (dto: DelayStepDto) =>{
@@ -15,8 +15,6 @@ const onChangeDto = (dto: DelayStepDto) =>{
 }
 
 type Props = NodeProps<Node<FlowNodeData<DelayStepDto>>>;
-
-const DelayEditContract = createPlaceholderContract('Задержка');
 
 export function DelayStepNode({ id, data, selected}: Props) {
 
@@ -29,7 +27,7 @@ export function DelayStepNode({ id, data, selected}: Props) {
 
     // Валидация
     const { ValidationIndicator, containerClassName } = useValidationIndicator(id);
-    const { EditButton, containerProps } = useNodeEdit(id, selected, DelayEditContract);
+    const { EditButton, containerProps } = useNodeEdit(id, selected, DelayStepEditContract);
 
     return (
         <div 

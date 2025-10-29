@@ -65,17 +65,6 @@ export function mapScenarioToFlow(
         (rel) => rel.parentStepId
     );
 
-    // 🚀 ИСПРАВЛЕНО: Child branches связаны через parallelStepId ИЛИ conditionStepId
-    const childBranchesByParallelStepId = groupBy(
-        allBranches.filter((b) => b.parallelStepId != null),
-        (b) => b.parallelStepId!
-    );
-
-    const childBranchesByConditionStepId = groupBy(
-        allBranches.filter((b) => b.conditionStepId != null),
-        (b) => b.conditionStepId!
-    );
-
     for (const branch of branches) {
         const branchContract = nodeTypeRegistry.get(FlowType.BranchNode);
         if (branchContract == null) {
@@ -118,7 +107,10 @@ export function mapScenarioToFlow(
                     target: rel.childStepId,
                     ...(maybeHandle != null ? { sourceHandle: maybeHandle } : {}),
                     type: 'step',
-                    data: { order: rel.conditionOrder ?? undefined },
+                    data: {
+                        order: rel.conditionOrder ?? undefined,
+                        relationDto: rel, // Добавляем полный DTO для редактирования
+                    },
                 });
 
                 addedEdgeKeys.add(rel.id);
@@ -129,26 +121,28 @@ export function mapScenarioToFlow(
 
                 if (mode == null) continue;
 
-                // 🚀 ИСПРАВЛЕНО: Получаем child branches из правильной Map
-                const childBranches =
-                    mode === 'parallel'
-                        ? childBranchesByParallelStepId.get(step.id) ?? []
-                        : childBranchesByConditionStepId.get(step.id) ?? [];
+                // Получаем stepBranchRelations из самого шага
+                const stepBranchRelations = (step as any).stepBranchRelations ?? [];
 
-                for (const childBranch of childBranches) {
-                    const edgeKey = `bl:${mode}:${step.id}->${childBranch.id}`;
+                for (const relation of stepBranchRelations) {
+                    const childBranch = allBranches.find((b) => b.id === relation.branchId);
 
-                    if (addedEdgeKeys.has(edgeKey)) continue;
+                    if (!childBranch) {
+                        console.warn(`[mapScenarioToFlow] Branch ${relation.branchId} not found for relation ${relation.id}`);
+                        continue;
+                    }
+
+                    if (addedEdgeKeys.has(relation.id)) continue;
 
                     const isCondition = mode === 'condition';
 
                     edges.push({
-                        id: edgeKey,
+                        id: relation.id,
                         source: step.id,
                         target: childBranch.id,
                         sourceHandle:
-                            isCondition && childBranch.conditionOrder != null
-                                ? handleFromOrder(childBranch.conditionOrder) ?? null
+                            isCondition && relation.conditionOrder != null
+                                ? handleFromOrder(relation.conditionOrder) ?? null
                                 : null,
                         targetHandle: 't1',
                         type: 'branchLink',
@@ -156,17 +150,18 @@ export function mapScenarioToFlow(
                             mode,
                             label:
                                 isCondition
-                                    ? (childBranch.conditionExpression ?? '').trim() ||
-                                    (childBranch.conditionOrder != null
-                                        ? `#${childBranch.conditionOrder}`
+                                    ? (relation.conditionExpression ?? '').trim() ||
+                                    (relation.conditionOrder != null
+                                        ? `#${relation.conditionOrder}`
                                         : undefined)
-                                    : childBranch.conditionOrder != null
-                                        ? `#${childBranch.conditionOrder}`
+                                    : relation.conditionOrder != null
+                                        ? `#${relation.conditionOrder}`
                                         : undefined,
+                            relationDto: relation, // Добавляем полный DTO связи для редактирования
                         },
                     });
 
-                    addedEdgeKeys.add(edgeKey);
+                    addedEdgeKeys.add(relation.id);
                 }
             }
         }

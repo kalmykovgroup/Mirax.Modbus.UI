@@ -1,0 +1,99 @@
+/* src/features/scenarioEditor/core/ui/edges/StepRelation/StepRelationEditContract.module.css */
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 4px;
+}
+
+.infoGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.infoRow {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.infoLabel {
+    font-weight: 500;
+    color: #666;
+    font-size: 13px;
+    min-width: 80px;
+}
+
+.infoValue {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    background: #f9f9f9;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #e0e0e0;
+    color: #d63384;
+}
+
+.stepName {
+    font-weight: 600;
+    color: #3a82f6;
+    font-size: 14px;
+}
+
+.stepId {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: #999;
+}
+
+.fieldGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.label {
+    font-weight: 500;
+    font-size: 14px;
+    color: #333;
+}
+
+.input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    max-width: 150px;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #3a82f6;
+    box-shadow: 0 0 0 3px rgba(58, 130, 246, 0.1);
+}
+
+.textarea {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: 'Courier New', monospace;
+    resize: vertical;
+    transition: border-color 0.2s;
+}
+
+.textarea:focus {
+    outline: none;
+    border-color: #3a82f6;
+    box-shadow: 0 0 0 3px rgba(58, 130, 246, 0.1);
+}
+
+.hint {
+    font-size: 12px;
+    color: #666;
+}

@@ -1,7 +1,26 @@
 // src/features/scenarioEditor/core/ui/nodes/shared/NodeEditModal/types.ts
 
 import type { ReactNode } from 'react';
+import type { Edge } from '@xyflow/react';
 import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
+
+/**
+ * Параметры для рендеринга контента ноды
+ */
+export interface RenderContentParams<TDto = any> {
+    node: FlowNode;
+    dto: TDto;
+    onChange: (updatedDto: Partial<TDto>) => void;
+}
+
+/**
+ * Параметры для рендеринга контента связи (edge)
+ */
+export interface EdgeRenderContentParams<TDto = any> {
+    edge: Edge;
+    dto: TDto;
+    onChange: (updatedDto: Partial<TDto>) => void;
+}
 
 /**
  * Контракт для редактирования ноды
@@ -10,15 +29,8 @@ import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
 export interface NodeEditContract<TDto = any> {
     /**
      * Рендерит содержимое формы редактирования
-     * @param node - текущая нода
-     * @param dto - текущие данные DTO
-     * @param onChange - callback для изменения данных
      */
-    renderContent: (props: {
-        node: FlowNode;
-        dto: TDto;
-        onChange: (updatedDto: Partial<TDto>) => void;
-    }) => ReactNode;
+    renderContent: (props: RenderContentParams<TDto>) => ReactNode;
 
     /**
      * Валидация данных перед сохранением (опционально)
@@ -39,10 +51,44 @@ export interface NodeEditContract<TDto = any> {
 }
 
 /**
- * Состояние модального окна редактирования
+ * Контракт для редактирования связи (edge)
+ */
+export interface EdgeEditContract<TDto = any> {
+    /**
+     * Рендерит содержимое формы редактирования
+     */
+    renderContent: (props: EdgeRenderContentParams<TDto>) => ReactNode;
+
+    /**
+     * Валидация данных перед сохранением (опционально)
+     */
+    validate?: (dto: TDto) => string[];
+
+    /**
+     * Заголовок модального окна
+     */
+    title: string;
+
+    /**
+     * Ширина модального окна (опционально, по умолчанию 600px)
+     */
+    width?: string | number;
+}
+
+/**
+ * Состояние модального окна редактирования ноды
  */
 export interface NodeEditModalState {
     isOpen: boolean;
     node: FlowNode | null;
     contract: NodeEditContract | null;
+}
+
+/**
+ * Состояние модального окна редактирования связи
+ */
+export interface EdgeEditModalState {
+    isOpen: boolean;
+    edge: Edge | null;
+    contract: EdgeEditContract | null;
 }

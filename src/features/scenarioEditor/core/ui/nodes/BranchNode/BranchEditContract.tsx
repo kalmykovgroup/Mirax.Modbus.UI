@@ -1,23 +1,19 @@
 // src/features/scenarioEditor/core/ui/nodes/BranchNode/BranchEditContract.tsx
 
 import { useState } from 'react';
-import type { NodeEditContract } from '@scenario/core/ui/nodes/shared/NodeEditModal/types';
+import type { NodeEditContract, RenderContentParams } from '@scenario/core/ui/nodes/shared/NodeEditModal/types';
 import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
 import { Block } from '@scenario/core/features/fieldLockSystem';
 
 /**
- * Контракт редактирования для Branch (Ветка)
+ * Компонент содержимого для редактирования Branch
  */
-export const BranchEditContract: NodeEditContract<BranchDto> = {
-    title: 'Редактирование ветки',
-    width: 600,
-
-    renderContent: ({ dto, onChange }) => {
-        const [name, setName] = useState(dto.name);
-        const [description, setDescription] = useState(dto.description);
-        const [waitForCompletion, setWaitForCompletion] = useState(dto.waitForCompletion);
-        const [conditionExpression, setConditionExpression] = useState(dto.conditionExpression || '');
-        const [conditionOrder, setConditionOrder] = useState(dto.conditionOrder);
+function BranchEditContent({ dto, onChange }: RenderContentParams<BranchDto>) {
+    const [name, setName] = useState(dto.name);
+    const [description, setDescription] = useState(dto.description);
+    const [waitForCompletion, setWaitForCompletion] = useState(dto.waitForCompletion);
+    const [conditionExpression, setConditionExpression] = useState(dto.conditionExpression || '');
+    const [conditionOrder, setConditionOrder] = useState(dto.conditionOrder);
 
         const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             const newName = e.target.value;
@@ -193,7 +189,16 @@ export const BranchEditContract: NodeEditContract<BranchDto> = {
                 </div>
             </div>
         );
-    },
+}
+
+/**
+ * Контракт редактирования для Branch (Ветка)
+ */
+export const BranchEditContract: NodeEditContract<BranchDto> = {
+    title: 'Редактирование ветки',
+    width: 600,
+
+    renderContent: (params) => <BranchEditContent {...params} />,
 
     validate: (dto) => {
         const errors: string[] = [];
