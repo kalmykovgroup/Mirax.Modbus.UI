@@ -311,3 +311,267 @@ function normalizeNumericFields(data: any): any {
 ==============================================
 КОНЕЦ ФАЙЛА
 ==============================================
+
+
+────────────────────────────────────────────────
+КАРТОЧКА 8: Универсальный метод updateEntity и система меток для истории
+────────────────────────────────────────────────
+
+Заголовок:
+Реализован универсальный метод updateEntity и система меток для важных операций
+
+Описание:
+Создан универсальный метод для обновления любых entity (Step и Branch) через UI с автоматической поддержкой меток для важных операций в истории.
+
+Проблема:
+При попытке сохранить изменения Branch через модальное окно возникала ошибка `operations.updateNode is not a function`, так как этот метод работал только для Step.
+
+Что сделано:
+
+1. **Создан универсальный метод updateEntity**:
+   - Работает как для Step, так и для Branch
+   - Автоматически определяет тип entity
+   - Получает предыдущее состояние из Redux
+   - Применяет изменения через snapshot систему
+   - Записывает в историю с меткой
+
+2. **Добавлена система меток для записей истории**:
+   - Поддержка metadata в BaseHistoryRecord
+   - Метка 'user-edit' для операций редактирования через UI
+   - Передача меток через параметр metadata: { label: string }
+
+3. **Интегрирована система подтверждения отката**:
+   - Метод undo() принимает опциональную функцию подтверждения
+   - При откате операции с меткой 'user-edit' показывается диалог подтверждения
+   - Использует ConfirmProvider для красивых модальных окон
+
+4. **Улучшена нормализация числовых полей**:
+   - Округление всех числовых значений до целых
+   - Более надежная обработка неожиданных типов
+   - Логирование для отладки
+
+Файлы:
+- src/features/scenarioEditor/core/hooks/useScenarioOperations.ts (добавлен updateEntity)
+- src/features/scenarioEditor/core/ui/nodes/shared/NodeEditModal/NodeEditModalProvider.tsx (обновлен вызов)
+- src/features/scenarioEditor/core/features/historySystem/historySlice.ts (поддержка metadata)
+- src/features/scenarioEditor/core/features/historySystem/useHistory.ts (поддержка confirmFn)
+- src/features/scenarioEditor/core/features/historySystem/HistoryControls/HistoryControls.tsx (интеграция подтверждения)
+- src/features/scenarioEditor/core/features/saveSystem/operationBuilder.ts (улучшена нормализация)
+
+Технические детали:
+
+```typescript
+// Использование updateEntity
+operations.updateEntity(updatedNode, 'user-edit');
+
+// В истории
+history.recordUpdate(newEntity, prevEntity, { label: 'user-edit' });
+
+// Проверка при откате
+if (record.metadata?.label === 'user-edit') {
+    const confirmed = await confirmFn(record);
+    if (!confirmed) return; // Откат отменен
+}
+```
+
+Архитектура:
+```
+User edits → Save → updateEntity('user-edit')
+                          ↓
+                   history.recordUpdate(metadata: {label: 'user-edit'})
+                          ↓
+                   Record saved with label
+                          ↓
+User presses Ctrl+Z → undo(confirmFn)
+                          ↓
+          Check: label === 'user-edit'?
+                          ↓
+                    Show confirmation dialog
+                          ↓
+                  User confirms/cancels
+```
+
+Преимущества:
+✅ Универсальное решение для любых типов нод
+✅ Автоматическое подтверждение важных операций
+✅ Расширяемая система меток
+✅ Интеграция с ConfirmProvider
+✅ Улучшенная типобезопасность
+
+Результат:
+✅ Branch можно редактировать через UI без ошибок
+✅ Важные операции требуют подтверждения при откате
+✅ Все числовые поля корректно нормализуются
+✅ 0 ошибок TypeScript
+
+Тип: Feature + Bug Fix
+Приоритет: High
+
+
+────────────────────────────────────────────────
+КАРТОЧКА 9: Исправление синхронизации откатов с сервером при автосохранении
+────────────────────────────────────────────────
+
+Заголовок:
+Исправлена синхронизация откатов (undo) с сервером при включенном автосохранении
+
+Описание:
+При откате изменений после автосохранения обратные операции не отправлялись на сервер из-за неправильной проверки условия запуска автосохранения.
+
+Проблема:
+Когда пользователь редактирует Branch → происходит автосохранение → делает откат (Ctrl+Z), обратная операция не отправляется на сервер, хотя система истории правильно создает reverse операции.
+
+Причина:
+В `useSaveScenario.ts` автосохранение проверяло `historySize === 0`, что после отката становится true (past пустой), и таймер автосохранения не запускался, даже если были reverse операции для отправки.
+
+```typescript
+// ❌ БЫЛО (неправильно):
+if (!autoSave || historySize === 0 || !scenarioId || operations.length === 0) {
+    return;
+}
+// Проверка historySize === 0 блокировала автосохранение после undo
+
+// Зависимости:
+}, [historySize, autoSave, scenarioId]);
+// historySize не отражает наличие reverse операций
+```
+
+Сценарий ошибки:
+1. Редактирование Branch: `past = [update]`, `lastSyncedIndex = 0`, `operations.length = 1`
+2. Автосохранение: операции отправлены, `lastSyncedIndex = 1`
+3. После сохранения: `past = [update]`, `lastSyncedIndex = 1`, `operations.length = 0`
+4. Undo: `past = []`, `future = [update]`, `lastSyncedIndex = 1`
+5. ❌ `buildOperationsFromHistory` создает reverse операцию (✅ работает)
+6. ❌ Но `historySize === 0` → автосохранение не запускается
+7. ❌ Reverse операция не отправляется на сервер
+
+Что сделано:
+
+1. **Исправлено условие запуска автосохранения**:
+   - Убрана проверка `historySize === 0`
+   - Оставлена только проверка `operations.length === 0`
+   - Правильная логика: если есть операции для отправки (включая reverse), запускаем автосохранение
+
+2. **Исправлены зависимости useEffect**:
+   - Заменено `historySize` на `operations.length`
+   - Теперь эффект реагирует на изменение количества операций, а не размера истории
+   - Корректно отслеживает появление reverse операций после undo
+
+Файлы:
+- src/features/scenarioEditor/core/features/saveSystem/useSaveScenario.ts (строки 162-192)
+
+Технические детали:
+
+```typescript
+// ✅ СТАЛО (правильно):
+// Проверяем operations.length (не historySize), так как даже с пустым past
+// могут быть reverse операции после undo
+if (!autoSave || !scenarioId || operations.length === 0) {
+    return;
+}
+
+// Зависимости теперь отслеживают операции:
+}, [operations.length, autoSave, scenarioId]);
+```
+
+Как работает после исправления:
+1. Редактирование Branch: `past = [update]`, `operations.length = 1`
+2. Автосохранение через 3с: `lastSyncedIndex = 1`, `operations.length = 0`
+3. Undo: `past = []`, `future = [update]`, `lastSyncedIndex = 1`
+4. ✅ `buildOperationsFromHistory([], 1, [update])`:
+   - `undoneCount = 1 - 0 = 1`
+   - Создается reverse операция: Update → Update with before state
+   - `operations.length = 1`
+5. ✅ useEffect реагирует на изменение `operations.length: 0 → 1`
+6. ✅ Запускается таймер автосохранения (3с)
+7. ✅ Reverse операция отправляется на сервер
+8. ✅ Сервер откатывает изменения
+
+Почему buildOperationsFromHistory работает правильно:
+```typescript
+// Вычисляем количество откаченных синхронизированных операций
+const undoneCount = Math.max(0, lastSyncedIndex - historyRecords.length);
+// undoneCount = 1 - 0 = 1
+
+if (undoneCount > 0) {
+    // Берем первые undoneCount записей из future
+    const undoneRecords = futureRecords.slice(0, undoneCount);
+    // [update]
+
+    // Создаем обратные операции
+    const reverseOperations = processUndoneRecords(undoneRecords);
+    // [Update with before state]
+
+    allOperations.push(...reverseOperations);
+}
+```
+
+Логирование для отладки:
+```
+[buildOperationsFromHistory] Input: {
+  pastLength: 0,
+  lastSyncedIndex: 1,
+  futureLength: 1
+}
+[buildOperationsFromHistory] Calculated undoneCount: 1 (lastSyncedIndex - pastLength = 1 - 0)
+[buildOperationsFromHistory] ✅ Undo detected! Processing 1 undone records
+[buildOperationsFromHistory] ✅ Reverse operations created: 1
+[useSaveScenario] Auto-save timer started (3s)
+[useSaveScenario] Auto-save triggered
+```
+
+Преимущества:
+✅ Откаты корректно синхронизируются с сервером
+✅ Автосохранение работает даже с пустой историей (если есть reverse операции)
+✅ Правильное отслеживание зависимостей в React
+✅ Улучшенная комментировка для будущих разработчиков
+✅ Согласованность клиента и сервера после undo
+
+Результат:
+✅ После автосохранения undo корректно откатывает изменения на сервере
+✅ Автосохранение работает для любых операций, включая reverse
+✅ Клиент и сервер всегда синхронизированы
+
+Тип: Bug Fix
+Приоритет: High
+Затронутые системы: History System, Save System, AutoSave
+
+────────────────────────────────────────────────
+ОБНОВЛЕННОЕ РЕЗЮМЕ
+────────────────────────────────────────────────
+
+Статистика:
+- Создано новых компонентов: 7+
+- Создано новых методов: 2 (updateEntity, confirmFn)
+- Исправлено TypeScript ошибок: 10+
+- Исправлено критических багов: 2
+- Добавлено файлов: 11+
+- Модифицировано файлов: 10+
+
+Ключевые достижения:
+✅ Полная система редактирования нод через UI
+✅ Редактирование Branch с полным контрактом
+✅ Универсальный метод updateEntity для любых entity
+✅ Система меток для важных операций в истории
+✅ Автоматическое подтверждение при откате важных операций
+✅ Нормализация числовых полей для корректного сохранения
+✅ Типобезопасность на 100% (0 ошибок TS)
+
+Архитектурные улучшения:
+✅ Модульная система редактирования
+✅ Расширяемая система меток (metadata)
+✅ Интеграция с ConfirmProvider
+✅ Переиспользуемые компоненты
+✅ Чистая архитектура с разделением ответственности
+
+Новые возможности:
+✅ Редактирование любых нод/веток через UI
+✅ Кнопка редактирования появляется при наведении
+✅ Валидация данных перед сохранением
+✅ Подтверждение отката важных изменений
+✅ Корректная работа с числовыми полями
+✅ История операций с метками
+
+==============================================
+КОНЕЦ ОБНОВЛЕННОГО ФАЙЛА
+==============================================

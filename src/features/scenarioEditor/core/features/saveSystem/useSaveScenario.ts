@@ -159,7 +159,6 @@ export function useSaveScenario(scenarioId: Guid | null): UseSaveScenarioResult 
 
     // Автосохранение с debounce
     const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const historySize = historyContext?.past.length || 0;
 
     useEffect(() => {
         // Очищаем предыдущий таймер
@@ -169,7 +168,8 @@ export function useSaveScenario(scenarioId: Guid | null): UseSaveScenarioResult 
         }
 
         // Если автосохранение выключено или нечего сохранять - не запускаем таймер
-        if (!autoSave || historySize === 0 || !scenarioId || operations.length === 0) {
+        // Проверяем operations.length (не historySize), так как даже с пустым past могут быть reverse операции после undo
+        if (!autoSave || !scenarioId || operations.length === 0) {
             return;
         }
 
@@ -188,7 +188,7 @@ export function useSaveScenario(scenarioId: Guid | null): UseSaveScenarioResult 
             }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [historySize, autoSave, scenarioId]); // save не добавляем в deps чтобы избежать циклических пересозданий таймера
+    }, [operations.length, autoSave, scenarioId]); // save не добавляем в deps чтобы избежать циклических пересозданий таймера
 
     return {
         save,

@@ -386,6 +386,12 @@ function mergeOperations(operations: ScenarioOperationDto[], historyRecords: His
  * Создает "обратную" операцию для откаченной записи истории
  */
 function createReverseOperation(record: HistoryRecord): ScenarioOperationDto | null {
+    console.log('[operationBuilder] Creating reverse operation for:', {
+        type: record.type,
+        entityType: record.entityType,
+        entityId: (record as any).entityId,
+    });
+
     if (record.type === 'batch') {
         // Для batch не создаем обратную операцию на этом уровне,
         // они будут обработаны рекурсивно
@@ -399,14 +405,17 @@ function createReverseOperation(record: HistoryRecord): ScenarioOperationDto | n
         // Create была откачена → нужно Delete
         action = DbActionType.Delete;
         payload = extractPayload(record.after, action);
+        console.log('[operationBuilder] Reverse for CREATE: will DELETE', payload);
     } else if (record.type === 'update') {
         // Update была откачена → нужно Update с before состоянием
         action = DbActionType.Update;
         payload = extractPayload(record.before, action);
+        console.log('[operationBuilder] Reverse for UPDATE: will UPDATE to before state', payload);
     } else if (record.type === 'delete') {
         // Delete была откачена → нужно Create с before состоянием
         action = DbActionType.Create;
         payload = extractPayload(record.before, action);
+        console.log('[operationBuilder] Reverse for DELETE: will CREATE', payload);
     } else {
         return null;
     }
@@ -423,12 +432,16 @@ function createReverseOperation(record: HistoryRecord): ScenarioOperationDto | n
         return null;
     }
 
-    return {
+    const operation = {
         opId: crypto.randomUUID(),
         entity: mapEntityType(record.entityType),
         action,
         payload,
     };
+
+    console.log('[operationBuilder] Reverse operation created:', operation);
+
+    return operation;
 }
 
 /**
@@ -467,11 +480,14 @@ export function buildOperationsFromHistory(
     lastSyncedIndex: number = 0,
     futureRecords: HistoryRecord[] = []
 ): ScenarioOperationDto[] {
+    console.log('[buildOperationsFromHistory] ═══════════════════════════════════════');
     console.log('[buildOperationsFromHistory] Input:', {
         pastLength: historyRecords.length,
         lastSyncedIndex,
         futureLength: futureRecords.length,
     });
+    console.log('[buildOperationsFromHistory] Past records:', historyRecords.map(r => ({ type: r.type, entityType: r.entityType, id: (r as any).entityId })));
+    console.log('[buildOperationsFromHistory] Future records:', futureRecords.map(r => ({ type: r.type, entityType: r.entityType, id: (r as any).entityId })));
 
     const allOperations: ScenarioOperationDto[] = [];
 
@@ -482,17 +498,22 @@ export function buildOperationsFromHistory(
     // Эти операции находятся в начале future
     const undoneCount = Math.max(0, lastSyncedIndex - historyRecords.length);
 
+    console.log('[buildOperationsFromHistory] Calculated undoneCount:', undoneCount, '(lastSyncedIndex - pastLength =', lastSyncedIndex, '-', historyRecords.length, ')');
+
     if (undoneCount > 0) {
-        console.log('[buildOperationsFromHistory] Undo detected, undoneCount:', undoneCount);
+        console.log('[buildOperationsFromHistory] ✅ Undo detected! Processing', undoneCount, 'undone records');
 
         // Откаченные операции находятся в начале future
         const undoneRecords = futureRecords.slice(0, undoneCount);
+        console.log('[buildOperationsFromHistory] Undone records to reverse:', undoneRecords);
 
         // Создаем компенсирующие операции для откаченных изменений
         const reverseOperations = processUndoneRecords(undoneRecords);
 
-        console.log('[buildOperationsFromHistory] Reverse operations created:', reverseOperations.length);
+        console.log('[buildOperationsFromHistory] ✅ Reverse operations created:', reverseOperations.length, reverseOperations);
         allOperations.push(...reverseOperations);
+    } else {
+        console.log('[buildOperationsFromHistory] ❌ No undo detected (undoneCount = 0)');
     }
 
     // Часть 2: Обрабатываем новые операции после lastSyncedIndex
