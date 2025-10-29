@@ -90,7 +90,7 @@ export const DelayStepNodeContract: NodeTypeContract<DelayStepDto> = {
     // Пример исправления validateOperation для DelayStepNodeContract.ts
     // Применить аналогичные изменения ко всем контрактам из списка
 
-    validateOperation: (operation,  dto, params) => {
+    validateOperation: (operation, _dto, params) => {
         switch (operation) {
             case 'move':
                 // ReactFlow допускает любые координаты (включая отрицательные)

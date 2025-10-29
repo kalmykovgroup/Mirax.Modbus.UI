@@ -47,7 +47,7 @@ function mapEntityType(entityType: string): DbEntityType {
  *
  * Это позволяет автоматически поддерживать новые поля без изменения кода.
  */
-function cleanPayload(data: any, action: DbActionType): any {
+function cleanPayload(data: any, _action: DbActionType): any {
     // "Чёрный список" - поля которые ТОЧНО НЕ должны отправляться на сервер
     const excludeFields = new Set([
         // Внутренние поля клиента
@@ -254,24 +254,34 @@ function mergeOperations(operations: ScenarioOperationDto[], historyRecords: His
             operationsByEntity.set(key, []);
         }
 
-        operationsByEntity.get(key)!.push(op);
+        const entityOpsArray = operationsByEntity.get(key);
+        if (entityOpsArray) {
+            entityOpsArray.push(op);
+        }
     }
 
     const mergedOperations: ScenarioOperationDto[] = [];
 
     // Обрабатываем каждую группу операций
-    for (const [entityKey, entityOps] of operationsByEntity.entries()) {
+    for (const [_entityKey, entityOps] of operationsByEntity.entries()) {
         if (entityOps.length === 0) continue;
 
         // Если только одна операция - берём её как есть
         if (entityOps.length === 1) {
-            mergedOperations.push(entityOps[0]);
+            const singleOp = entityOps[0];
+            if (singleOp) {
+                mergedOperations.push(singleOp);
+            }
             continue;
         }
 
         // Анализируем последовательность операций
         const firstOp = entityOps[0];
         const lastOp = entityOps[entityOps.length - 1];
+
+        if (!firstOp || !lastOp) {
+            continue;
+        }
 
         // Create + ... + Delete = пропускаем (сущность создана и удалена)
         if (firstOp.action === DbActionType.Create && lastOp.action === DbActionType.Delete) {
@@ -301,10 +311,14 @@ function mergeOperations(operations: ScenarioOperationDto[], historyRecords: His
                     ? extractPayload(historyRecord.before, DbActionType.Delete)
                     : firstUpdate.payload;
 
-                mergedOperations.push({
-                    ...lastOp,
-                    payload: beforePayload, // Используем изначальное состояние
-                });
+                if (beforePayload) {
+                    mergedOperations.push({
+                        ...lastOp,
+                        payload: beforePayload, // Используем изначальное состояние
+                    });
+                } else {
+                    mergedOperations.push(lastOp);
+                }
             } else {
                 mergedOperations.push(lastOp);
             }

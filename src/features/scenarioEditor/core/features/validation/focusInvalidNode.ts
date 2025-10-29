@@ -58,6 +58,7 @@ export function focusOnFirstInvalidNode(
         return;
     }
 
-    const firstInvalidNodeId = invalidNodeIds[0];
+    // Используем non-null assertion, так как мы уже проверили что массив не пустой
+    const firstInvalidNodeId = invalidNodeIds[0]!;
     focusOnInvalidNode(rf, firstInvalidNodeId, duration);
 }

@@ -5,6 +5,8 @@ import { useReactFlow } from '@xyflow/react';
 import { NodeEditButton } from './NodeEditButton';
 import { useNodeEditModal } from '../NodeEditModal';
 import type { NodeEditContract } from '../NodeEditModal/types';
+import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
+import type { BaseNodeDto } from '@scenario/shared/contracts/registry/NodeTypeContract';
 
 /**
  * Хук для добавления функциональности редактирования в ноду.
@@ -35,8 +37,10 @@ export function useNodeEdit<TDto = any>(
 
     const handleEdit = useCallback(() => {
         const node = rf.getNode(nodeId);
-        if (node) {
-            openEditModal(node, editContract);
+        // Type guard: проверяем что нода существует и имеет правильный тип
+        if (node && node.type) {
+            // Приводим к типу FlowNode<BaseNodeDto>
+            openEditModal(node as FlowNode<BaseNodeDto>, editContract);
         }
     }, [nodeId, rf, openEditModal, editContract]);
 
