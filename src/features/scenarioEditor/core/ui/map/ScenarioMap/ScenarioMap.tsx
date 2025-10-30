@@ -46,6 +46,7 @@ import { SaveSettingsButton } from '@scenario/core/ui/map/components/SaveSetting
 import { ManualSaveButton } from '@scenario/core/ui/map/components/ManualSaveButton/ManualSaveButton';
 import { LockButton } from '@scenario/core/ui/map/components/LockButton/LockButton';
 import { FitViewButton } from '@scenario/core/ui/map/components/FitViewButton';
+import { FullscreenButton } from '@scenario/core/ui/map/components/FullscreenButton';
 import { NodeContextMenu, useNodeContextMenu, initializeNodeContextMenuProviders } from '@scenario/core/ui/nodes/shared/NodeContextMenu';
 import { NodeEditModalProvider } from '@scenario/core/ui/nodes/shared/NodeEditModal';
 import { useHistoryHotkeys } from '@scenario/core/hooks/useHistoryHotkeys';
@@ -63,6 +64,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     const rf = useReactFlow<FlowNode, FlowEdge>();
     const dispatch = useDispatch<AppDispatch>();
     const isLocked = useSelector(selectIsLocked);
+    const containerRef = React.useRef<HTMLDivElement>(null);
 
     const nodeTypes = useMemo(() => generateNodeTypes(), []); // ✅ ИСПРАВЛЕНИЕ
     // ============================================================================
@@ -395,7 +397,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     // RENDER
     // ============================================================================
     return (
-        <div data-theme={theme} className={styles.containerScenarioMap} style={{ height: '70vh' }}>
+        <div ref={containerRef} data-theme={theme} className={styles.containerScenarioMap} style={{ height: '70vh' }}>
             <ScenarioOperationsProvider operations={operations}>
                 <NodeEditModalProvider>
                 <ReactFlow
@@ -429,6 +431,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 <Panel className={styles.topLeftPanel} position="top-left">
                     <div className={styles.flowControls} >
                         <FitViewButton />
+                        <FullscreenButton targetRef={containerRef} />
                         <LockButton />
                     </div>
 

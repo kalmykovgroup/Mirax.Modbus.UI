@@ -1,7 +1,7 @@
 // src/features/scenarioEditor/core/ui/map/components/FitViewButton/FitViewButton.tsx
 
 import { useReactFlow } from '@xyflow/react';
-import { Maximize2 } from 'lucide-react';
+import {SquareStop} from 'lucide-react';
 import styles from './FitViewButton.module.css';
 
 /**
@@ -27,7 +27,7 @@ export function FitViewButton() {
             title="Показать все элементы"
             aria-label="Показать все элементы на карте"
         >
-            <Maximize2 size={18} />
+            <SquareStop size={18} />
         </button>
     );
 }

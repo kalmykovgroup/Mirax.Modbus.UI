@@ -16,6 +16,27 @@
     color: var(--map-color);
 }
 
+/* Стили для полноэкранного режима */
+.containerScenarioMap:fullscreen {
+    height: 100vh !important;
+    width: 100vw !important;
+}
+
+.containerScenarioMap:-webkit-full-screen {
+    height: 100vh !important;
+    width: 100vw !important;
+}
+
+.containerScenarioMap:-moz-full-screen {
+    height: 100vh !important;
+    width: 100vw !important;
+}
+
+.containerScenarioMap:-ms-fullscreen {
+    height: 100vh !important;
+    width: 100vw !important;
+}
+
 .rightTopPanel{
     align-items: flex-start;
     pointer-events: none; /* Панель не перехватывает события мыши */
