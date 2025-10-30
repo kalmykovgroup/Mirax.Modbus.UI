@@ -63,9 +63,39 @@
     min-height: 0;
     align-items: flex-end;
     pointer-events: none; /* Контейнер не перехватывает события мыши */
+    position: relative;
+    animation: slideInFromRight 0.3s ease;
+}
+
+.content.closing {
+    animation: slideOutToRight 0.3s ease;
 }
 
 /* Все дочерние элементы остаются интерактивными */
 .content > * {
     pointer-events: auto;
+}
+
+/* Анимация выезда справа налево */
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Анимация выезда слева направо */
+@keyframes slideOutToRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
 }

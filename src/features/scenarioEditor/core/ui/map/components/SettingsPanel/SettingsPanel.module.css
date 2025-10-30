@@ -5,6 +5,7 @@
     display: flex;
     height: 100%;
     overflow: visible;
+    width: 350px;
 }
 
 .settingsPanel {

@@ -1,11 +1,10 @@
 // src/features/scenarioEditor/core/ui/map/RightSidePanel/RightSidePanel.tsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Settings } from 'lucide-react';
 
 import styles from './RightSidePanel.module.css';
 
-import { HistoryPanel } from '@scenario/core/ui/map/components/HistoryPanel/HistoryPanel.tsx';
 import ScenarioPanel from "@scenario/core/ui/map/components/ScenarioPanel/ScenarioPanel.tsx";
 import {NewNodesPanel} from "@scenario/core/ui/map/components/NewNodesPanel/NewNodesPanel.tsx";
 import { SettingsPanel } from '@scenario/core/ui/map/components/SettingsPanel';
@@ -19,10 +18,41 @@ interface RightSidePanelProps {
 
 export function RightSidePanel({ activeTab: externalActiveTab, onTabChange }: RightSidePanelProps = {}) {
     const [internalActiveTab, setInternalActiveTab] = useState<Tab | null>(null);
+    const [isClosing, setIsClosing] = useState(false);
+    const [displayedTab, setDisplayedTab] = useState<Tab | null>(null);
 
     // Используем внешнее состояние, если оно передано, иначе внутреннее
     const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
     const setActiveTab = onTabChange || setInternalActiveTab;
+
+    useEffect(() => {
+        if (activeTab === displayedTab) {
+            // Вкладка не изменилась
+            return;
+        }
+
+        if (activeTab && displayedTab && activeTab !== displayedTab) {
+            // Переключение между вкладками - сначала закрываем текущую
+            setIsClosing(true);
+            const timer = setTimeout(() => {
+                setDisplayedTab(activeTab);
+                setIsClosing(false);
+            }, 300); // Длительность анимации закрытия
+            return () => clearTimeout(timer);
+        } else if (activeTab && !displayedTab) {
+            // Открываем новую вкладку (не было открытых)
+            setIsClosing(false);
+            setDisplayedTab(activeTab);
+        } else if (!activeTab && displayedTab) {
+            // Закрываем текущую вкладку
+            setIsClosing(true);
+            const timer = setTimeout(() => {
+                setDisplayedTab(null);
+                setIsClosing(false);
+            }, 300); // Длительность анимации
+            return () => clearTimeout(timer);
+        }
+    }, [activeTab, displayedTab]);
 
     const handleTabClick = (tab: Tab) => {
         setActiveTab((current) => (current === tab ? null : tab));
@@ -57,11 +87,11 @@ export function RightSidePanel({ activeTab: externalActiveTab, onTabChange }: Ri
                 </button>
             </div>
 
-            {activeTab && (
-                <div className={styles.content}>
-                    {activeTab === 'scenarios' && <ScenarioPanel />}
-                    {activeTab === 'create' && <NewNodesPanel />}
-                    {activeTab === 'settings' && <SettingsPanel />}
+            {displayedTab && (
+                <div className={`${styles.content} ${isClosing ? styles.closing : ''}`}>
+                    {displayedTab === 'scenarios' && <ScenarioPanel />}
+                    {displayedTab === 'create' && <NewNodesPanel />}
+                    {displayedTab === 'settings' && <SettingsPanel />}
                 </div>
             )}
         </div>
