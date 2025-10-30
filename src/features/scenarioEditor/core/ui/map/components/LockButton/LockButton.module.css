@@ -39,3 +39,70 @@
     background: #22c55e20;
     border-color: #22c55e60;
 }
+
+/* Контекстное меню */
+.contextMenu {
+    z-index: 10000;
+    background: var(--bg-primary, #1e1e1e);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    min-width: 250px;
+    padding: 4px;
+}
+
+.contextMenuItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-primary, #ffffff);
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+    text-align: left;
+}
+
+.contextMenuItem:hover {
+    background: var(--bg-hover, rgba(255, 255, 255, 0.1));
+}
+
+.contextMenuItem svg {
+    flex-shrink: 0;
+    color: var(--text-secondary, #888);
+}
+
+.groupCount {
+    margin-left: auto;
+    color: var(--text-secondary, #888);
+    font-size: 12px;
+}
+
+/* Модальное окно с панелью блокировок */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(2px);
+}
+
+.modalContent {
+    background: var(--bg-primary, #1e1e1e);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: auto;
+}
