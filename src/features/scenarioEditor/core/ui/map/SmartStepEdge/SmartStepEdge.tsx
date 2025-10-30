@@ -125,7 +125,7 @@ export default function SmartStepEdge(props: EdgeProps) {
                     viewBox="0 0 40 40"
                     markerHeight={20}
                     markerWidth={20}
-                    refX={8}
+                    refX={6}
                     refY={5}
                     orient="auto-start-reverse"
                 >

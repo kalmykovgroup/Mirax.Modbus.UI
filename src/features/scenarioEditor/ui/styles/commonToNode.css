@@ -11,15 +11,15 @@
 
 /* Стили для Handle (точек соединения) */
 .source {
-    width: 5px !important;
-    height: 5px !important;
+    width: 6px !important;
+    height: 6px !important;
     transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
     opacity: 1;
 }
 
 .target {
-    width: 5px !important;
-    height: 5px !important;
+    width: 6px !important;
+    height: 6px !important;
     transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
     opacity: 0; /* По умолчанию target скрыты */
     pointer-events: none !important; /* ВАЖНО: запрещаем взаимодействие */
