@@ -8,3 +8,10 @@
     font-size: 8px;
     color: var(--coordinates-color, #515151);
 }
+
+/* Стили для Handle (точек соединения) */
+.source,
+.target {
+    width: 10px !important;
+    height: 10px !important;
+}

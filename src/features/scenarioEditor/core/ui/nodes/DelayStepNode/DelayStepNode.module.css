@@ -31,12 +31,13 @@
     box-shadow: 0 0 7px var(--color-delay);
 }
 
-
-
-.inputContainer{
-    display: flex;
-    gap: 5px;
-    align-items: flex-end;
+.timeDisplay {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--color-delay);
+    padding: 8px 12px;
+    text-align: center;
+    user-select: none;
 }
 
 

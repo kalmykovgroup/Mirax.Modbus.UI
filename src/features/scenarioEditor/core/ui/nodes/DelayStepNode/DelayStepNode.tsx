@@ -3,16 +3,11 @@ import styles from "./DelayStepNode.module.css";
 import {formatWithMode} from "@app/lib/utils/format.ts";
 import  {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
 import type {DelayStepDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
-import DelayTimeInput from "@scenario/core/ui/nodes/DelayStepNode/DelayTimeInput/DelayTimeInput.tsx";
+import { formatMsHuman, parseDurationToMs } from "@scenario/core/ui/nodes/DelayStepNode/DelayTimeInput/DelayTimeInput.tsx";
 import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
 import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
 import { useNodeEdit } from '../shared/NodeEditButton';
 import { DelayStepEditContract } from './DelayStepEditContract';
-import { Block } from '@scenario/core/features/fieldLockSystem';
-
-const onChangeDto = (dto: DelayStepDto) =>{
-    console.log(dto);
-}
 
 type Props = NodeProps<Node<FlowNodeData<DelayStepDto>>>;
 
@@ -29,38 +24,26 @@ export function DelayStepNode({ id, data, selected}: Props) {
     const { ValidationIndicator, containerClassName } = useValidationIndicator(id);
     const { EditButton, containerProps } = useNodeEdit(id, selected, DelayStepEditContract);
 
+    // Форматирование времени для отображения
+    const timeMs = parseDurationToMs(dto.timeSpan || '0');
+    const formattedTime = formatMsHuman(timeMs);
+
     return (
-        <div 
+        <div
             className={`${styles.delayStepNodeContainer} ${containerClassName}`}
             aria-selected={selected}
             {...containerProps}
         >
             {ValidationIndicator}
             {EditButton}
-            
+
             <span className={styles.coordinates}>
                 <span>x:{formatWithMode(data.x, 2, true)}</span>
                 <span>y:{formatWithMode(data.y, 2, true)}</span>
             </span>
 
-
-            <div className={styles.inputContainer}>
-                <Block
-                    group="delayNodeTime"
-                    label="Время задержки"
-                    description="Настройка времени задержки выполнения"
-                    mode="inline"
-                >
-                    <div className={`${styles.form__group} ${styles.field}`}>
-                        <DelayTimeInput
-                            id={`delay-time-input-${id}`}
-                            value={dto.timeSpan} // здесь у вас миллисекунды строкой, например "60000"
-                            onChange={(nextMs) => onChangeDto({ ...dto, timeSpan: nextMs })}
-                            minMs={0}
-                            maxMs={Number.MAX_SAFE_INTEGER}
-                        />
-                    </div>
-                </Block>
+            <div className={styles.timeDisplay}>
+                {formattedTime || '0ms'}
             </div>
 
             <Handle

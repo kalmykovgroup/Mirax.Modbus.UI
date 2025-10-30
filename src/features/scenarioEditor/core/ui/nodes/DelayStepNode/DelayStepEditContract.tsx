@@ -1,11 +1,11 @@
 // src/features/scenarioEditor/core/ui/nodes/DelayStepNode/DelayStepEditContract.tsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { NodeEditContract, RenderContentParams } from '@scenario/core/ui/nodes/shared/NodeEditModal/types';
 import type { DelayStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
 import { Block } from '@scenario/core/features/fieldLockSystem';
 import { StepBaseFieldsEditor } from '@scenario/core/ui/nodes/shared/StepBaseFieldsEditor';
-import DelayTimeInput from './DelayTimeInput/DelayTimeInput';
+import DelayTimeInput, { parseDurationToMs, formatMsToNetTimeSpan } from './DelayTimeInput/DelayTimeInput';
 
 /**
  * Компонент содержимого для редактирования DelayStep
@@ -13,9 +13,24 @@ import DelayTimeInput from './DelayTimeInput/DelayTimeInput';
 function DelayStepEditContent({ node, dto, onChange }: RenderContentParams<DelayStepDto>) {
     const [timeSpan, setTimeSpan] = useState(dto.timeSpan);
 
+    // Синхронизация с внешним dto (когда модалка открывается заново)
+    useEffect(() => {
+        console.log('[DelayStepEditContent] dto changed, syncing timeSpan:', dto.timeSpan);
+        setTimeSpan(dto.timeSpan);
+    }, [dto.timeSpan]);
+
     const handleTimeSpanChange = (newTimeSpan: string) => {
+        console.log('[DelayStepEditContent] timeSpan changed - RAW from input:', newTimeSpan);
+
+        // Конвертируем миллисекунды в .NET TimeSpan формат
+        const ms = parseDurationToMs(newTimeSpan);
+        console.log('[DelayStepEditContent] Parsed to milliseconds:', ms);
+
+        const netTimeSpan = formatMsToNetTimeSpan(ms);
+        console.log('[DelayStepEditContent] Formatted to .NET TimeSpan:', netTimeSpan);
+
         setTimeSpan(newTimeSpan);
-        onChange({ timeSpan: newTimeSpan });
+        onChange({ timeSpan: netTimeSpan });
     };
 
     return (

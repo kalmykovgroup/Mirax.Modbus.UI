@@ -35,16 +35,92 @@ const MONTH = 30 * DAY;
 const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
 const isFiniteNumber = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
 
+/**
+ * Конвертирует .NET TimeSpan формат (dd.hh:mm:ss или hh:mm:ss) в миллисекунды
+ * Примеры: "1300.00:00:00" → 1300 дней в мс, "02:30:00" → 2.5 часа в мс
+ */
+export function parseNetTimeSpanToMs(input: string): number {
+    const s = (input ?? '').trim();
+    if (!s) return NaN;
+
+    // Формат: [dd.]hh:mm:ss[.fffffff]
+    const timeSpanRe = /^(?:(\d+)\.)?(\d{1,2}):(\d{2}):(\d{2})(?:\.(\d+))?$/;
+    const m = s.match(timeSpanRe);
+
+    if (m) {
+        const days = Number(m[1] ?? 0);
+        const hours = Number(m[2] ?? 0);
+        const minutes = Number(m[3] ?? 0);
+        const seconds = Number(m[4] ?? 0);
+        // .NET TimeSpan fractional seconds are in 7 digits (100ns ticks)
+        const fractionalPart = m[5] ? Number('0.' + m[5]) : 0;
+
+        const totalSeconds = days * 86400 + hours * 3600 + minutes * 60 + seconds + fractionalPart;
+        return Math.round(totalSeconds * 1000);
+    }
+
+    return NaN;
+}
+
+/**
+ * Конвертирует миллисекунды в .NET TimeSpan строку
+ * Формат: [d.]hh:mm:ss[.fffffff] - минимально необходимый
+ * C# TimeSpan.Parse() сам правильно распарсит
+ */
+export function formatMsToNetTimeSpan(ms: number): string {
+    if (!isFiniteNumber(ms)) return '';
+
+    const sign = ms < 0 ? '-' : '';
+    let rest = Math.abs(ms);
+
+    const days = Math.floor(rest / DAY);
+    rest -= days * DAY;
+
+    const hours = Math.floor(rest / HOUR);
+    rest -= hours * HOUR;
+
+    const minutes = Math.floor(rest / MIN);
+    rest -= minutes * MIN;
+
+    const seconds = Math.floor(rest / SEC);
+    rest -= seconds * SEC;
+
+    const milliseconds = rest;
+
+    const hh = String(hours).padStart(2, '0');
+    const mm = String(minutes).padStart(2, '0');
+    const ss = String(seconds).padStart(2, '0');
+
+    // Формируем базовую строку
+    let result = days > 0 ? `${sign}${days}.${hh}:${mm}:${ss}` : `${sign}${hh}:${mm}:${ss}`;
+
+    // Добавляем миллисекунды если есть
+    if (milliseconds > 0) {
+        // Просто добавляем миллисекунды как дробную часть секунд
+        const msStr = milliseconds.toFixed(0).padStart(3, '0');
+        result += `.${msStr}`;
+    }
+
+    return result;
+}
+
 /** Парсинг строки → миллисекунды (число).
  * Поддерживает:
  *  • чистое число: "1500" → 1500мс
  *  • токены: "1y 2w 3d 4h 5m 6s 7ms", порядок любой, возможны десятичные (кроме y,w,d)
  *  • HH:MM[:SS[.mmm]] → часы/минуты/секунды
  *  • ISO 8601: PnYnMnWnDTnHnMnS (запятая/точка в секундах)
+ *  • .NET TimeSpan: dd.hh:mm:ss или hh:mm:ss
  */
 export function parseDurationToMs(input: string): number {
     const s = (input ?? '').trim();
     if (!s) return NaN;
+
+    // 0) .NET TimeSpan формат: [dd.]hh:mm:ss[.fffffff]
+    const netTimeSpanMs = parseNetTimeSpanToMs(s);
+    if (Number.isFinite(netTimeSpanMs)) {
+        return netTimeSpanMs;
+    }
 
     // 1) Чистое число => миллисекунды
     if (/^[+-]?\d+(\.\d+)?$/.test(s)) {
