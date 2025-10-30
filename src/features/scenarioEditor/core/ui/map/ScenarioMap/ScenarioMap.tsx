@@ -160,7 +160,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
         [refs.shiftDragIdsRef]
     );
 
-    const dragStopHandler = useMemo(
+    const dragStopHandlerInstance = useMemo(
         () =>
             new NodeDragStopHandler({
                 getAll: rf.getNodes,
@@ -254,6 +254,20 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 },
             }),
         [rf, setNodes, setEdges, setHoverBranch, operations, refs.shiftDragIdsRef]
+    );
+
+    // Обертка для обновления позиций Handle после drag
+    const dragStopHandler = useMemo(
+        () => ({
+            onNodeDragStop: (e: React.MouseEvent | React.TouchEvent, node: FlowNode) => {
+                dragStopHandlerInstance.onNodeDragStop(e, node);
+                // Обновляем внутренние позиции Handle после перемещения
+                setTimeout(() => {
+                    rf.updateNodeInternals(node.id);
+                }, 0);
+            },
+        }),
+        [dragStopHandlerInstance, rf]
     );
 
     // ============================================================================

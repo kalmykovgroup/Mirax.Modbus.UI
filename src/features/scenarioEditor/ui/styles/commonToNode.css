@@ -22,23 +22,19 @@
     height: 5px !important;
     transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
     opacity: 0; /* По умолчанию target скрыты */
+    pointer-events: none !important; /* ВАЖНО: запрещаем взаимодействие */
 }
 
 /* Показываем точки, которые помечены как валидные для соединения */
-.source[aria-selected="true"],
 .target[aria-selected="true"] {
     opacity: 1 !important;
+    pointer-events: auto !important; /* Разрешаем взаимодействие с валидными target */
 }
 
-/* Скрываем все source точки, когда идет соединение (есть хотя бы один target с aria-selected) */
-.target[aria-selected="true"] ~ .source,
-.source:has(~ .target[aria-selected="true"]) {
-    opacity: 0 !important;
-}
-
-/* Альтернативный подход: если у body есть класс connecting (добавляется React Flow) */
+/* Скрываем все source точки, когда идет соединение */
 body:has(.target[aria-selected="true"]) .source:not([aria-selected="true"]) {
     opacity: 0 !important;
+    pointer-events: none !important; /* ВАЖНО: запрещаем взаимодействие со скрытыми source */
 }
 
 /* Увеличиваем точки при наведении непосредственно на контейнер ноды */
