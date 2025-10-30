@@ -72,25 +72,26 @@ export function parseDurationToMs(input: string): number {
     {
         // years (y), weeks (w), days (d), hours (h), minutes (m), seconds (s), milliseconds (ms)
         const tokenRe = /([+-]?\d+(?:\.\d+)?)(y|w|d|h|m|s|ms)\b/g;
-        let total = 0;
-        let matched = false;
-        let m: RegExpExecArray | null;
-        while ((m = tokenRe.exec(lower)) !== null) {
-            matched = true;
-            const val = Number(m[1]);
-            const unit = m[2];
-            if (!Number.isFinite(val)) return NaN;
-            switch (unit) {
-                case 'y': total += val * YEAR; break;
-                case 'w': total += val * WEEK; break;
-                case 'd': total += val * DAY; break;
-                case 'h': total += val * HOUR; break;
-                case 'm': total += val * MIN; break;      // минуты!
-                case 's': total += val * SEC; break;
-                case 'ms': total += val; break;
+        const matches = Array.from(lower.matchAll(tokenRe)); // Используем matchAll вместо exec в цикле
+
+        if (matches.length > 0) {
+            let total = 0;
+            for (const m of matches) {
+                const val = Number(m[1]);
+                const unit = m[2];
+                if (!Number.isFinite(val)) return NaN;
+                switch (unit) {
+                    case 'y': total += val * YEAR; break;
+                    case 'w': total += val * WEEK; break;
+                    case 'd': total += val * DAY; break;
+                    case 'h': total += val * HOUR; break;
+                    case 'm': total += val * MIN; break;      // минуты!
+                    case 's': total += val * SEC; break;
+                    case 'ms': total += val; break;
+                }
             }
+            return Math.round(total);
         }
-        if (matched) return Math.round(total);
     }
 
     // 4) ISO 8601: PnYnMnWnDTnHnMnS  (месяцы считаем как 30 дней)

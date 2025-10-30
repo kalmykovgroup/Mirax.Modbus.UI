@@ -3,7 +3,12 @@
     "allow": [
       "Read(//c/Users/Apolon 1/source/repos/Organization-Code-Mirax/Mirax.Modbus.AspNet.Server/**)",
       "Bash(cat:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm run dev:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

@@ -194,7 +194,7 @@ export function BranchNode({ data, selected, id }: Props) {
 
     return (
         <div
-            className={styles.branchNodeContainer}
+            className={`${styles.branchNodeContainer} ${containerClassName}`}
             aria-selected={selected}
             data-ctrl-mode={isCtrlPressed}
             data-shift-mode={isShiftPressed}
@@ -203,6 +203,7 @@ export function BranchNode({ data, selected, id }: Props) {
          {...containerProps}>
             <div className={styles.bg} />
 
+            {ValidationIndicator}
             {EditButton}
 
             <span className={styles.coordinates}>

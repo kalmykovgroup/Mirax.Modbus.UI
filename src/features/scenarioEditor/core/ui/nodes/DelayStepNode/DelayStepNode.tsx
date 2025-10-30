@@ -53,6 +53,7 @@ export function DelayStepNode({ id, data, selected}: Props) {
                 >
                     <div className={`${styles.form__group} ${styles.field}`}>
                         <DelayTimeInput
+                            id={`delay-time-input-${id}`}
                             value={dto.timeSpan} // здесь у вас миллисекунды строкой, например "60000"
                             onChange={(nextMs) => onChangeDto({ ...dto, timeSpan: nextMs })}
                             minMs={0}

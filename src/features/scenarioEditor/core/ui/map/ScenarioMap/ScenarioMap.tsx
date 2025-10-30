@@ -4,7 +4,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
     Background,
     BackgroundVariant,
-    Controls,
     Panel,
     ReactFlow,
     useReactFlow,
@@ -47,6 +46,7 @@ import { SaveSettingsButton } from '@scenario/core/ui/map/components/SaveSetting
 import { ManualSaveButton } from '@scenario/core/ui/map/components/ManualSaveButton/ManualSaveButton';
 import { LockButton } from '@scenario/core/ui/map/components/LockButton/LockButton';
 import { FieldLockPanelButton } from '@scenario/core/ui/map/components/FieldLockPanelButton/FieldLockPanelButton';
+import { FitViewButton } from '@scenario/core/ui/map/components/FitViewButton';
 import { NodeContextMenu, useNodeContextMenu, initializeNodeContextMenuProviders } from '@scenario/core/ui/nodes/shared/NodeContextMenu';
 import { NodeEditModalProvider } from '@scenario/core/ui/nodes/shared/NodeEditModal';
 import { useHistoryHotkeys } from '@scenario/core/hooks/useHistoryHotkeys';
@@ -429,7 +429,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 >
                 <Panel className={styles.topLeftPanel} position="top-left">
                     <div className={styles.flowControls} >
-                        <Controls className={styles.controls!} />
+                        <FitViewButton />
                         <LockButton />
                         <FieldLockPanelButton />
                     </div>

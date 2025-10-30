@@ -42,6 +42,7 @@ function DelayStepEditContent({ node, dto, onChange }: RenderContentParams<Delay
                         Время задержки
                     </label>
                     <DelayTimeInput
+                        id={`delay-time-input-edit-${node.id}`}
                         value={timeSpan}
                         onChange={handleTimeSpanChange}
                         minMs={0}
