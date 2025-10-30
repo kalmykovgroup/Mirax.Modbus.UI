@@ -6,8 +6,6 @@ import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.
 import type {
     ConditionStepDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
-import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
-import { useNodeEdit } from '../shared/NodeEditButton';
 import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
 import {NodeWrapper} from "@scenario/core/ui/nodes/NodeWrapper";
 
@@ -18,19 +16,16 @@ export function ConditionStepNode({ id, data, selected}: Props) {
 
     const handleType = data?.connectContext?.from.handleType;
 
-    const { ValidationIndicator, containerClassName } = useValidationIndicator(id);
-    const { EditButton, containerProps } = useNodeEdit(id, selected, ConditionStepEditContract);
-
     return (
         <NodeWrapper
-            className={`${styles.nodeContainer} ${containerClassName}`}
+            id={id}
+            className={`${styles.nodeContainer}`}
+            classNameWrapper={styles.nodeContainerWrapper}
             selected={selected}
-            containerProps={containerProps}
+            contract={ConditionStepEditContract}
             handleType={handleType}
             validateTarget={true}
         >
-            {ValidationIndicator}
-            {EditButton}
             <span className={styles.coordinates}>
                 <span>x:{formatWithMode(data.x, 2, true)}</span>
                 <span>y:{formatWithMode(data.y, 2, true)}</span>

@@ -19,19 +19,22 @@ interface RightSidePanelProps {
     containerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export function RightSidePanel({ activeTab: externalActiveTab, onTabChange, containerRef }: RightSidePanelProps = {}) {
+export function RightSidePanel({
+    activeTab: externalActiveTab,
+    onTabChange,
+    containerRef
+}: RightSidePanelProps) {
     const [internalActiveTab, setInternalActiveTab] = useState<Tab | null>(null);
     const [isClosing, setIsClosing] = useState(false);
     const [displayedTab, setDisplayedTab] = useState<Tab | null>(null);
 
     // Используем внешнее состояние, если оно передано, иначе внутреннее
     const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
-    const setActiveTab = onTabChange || setInternalActiveTab;
 
     useEffect(() => {
         if (activeTab === displayedTab) {
             // Вкладка не изменилась
-            return;
+            return undefined;
         }
 
         if (activeTab && displayedTab && activeTab !== displayedTab) {
@@ -55,10 +58,20 @@ export function RightSidePanel({ activeTab: externalActiveTab, onTabChange, cont
             }, 300); // Длительность анимации
             return () => clearTimeout(timer);
         }
+
+        return undefined;
+
     }, [activeTab, displayedTab]);
 
     const handleTabClick = (tab: Tab) => {
-        setActiveTab((current) => (current === tab ? null : tab));
+        if (onTabChange) {
+            // Внешнее управление состоянием
+            const newTab = activeTab === tab ? null : tab;
+            onTabChange(newTab);
+        } else {
+            // Внутреннее управление состоянием
+            setInternalActiveTab((current) => (current === tab ? null : tab));
+        }
     };
 
     return (

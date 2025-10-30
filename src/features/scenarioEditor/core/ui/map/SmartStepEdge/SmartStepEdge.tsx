@@ -10,7 +10,7 @@ import { useMemo } from 'react';
 import styles from './SmartStepEdge.module.css';
 import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
 import {resolveEdgeRender} from "@scenario/core/edgeMove/edgeRelations.tsx";
-import { EdgeEditButton } from '@scenario/core/ui/edges/shared/EdgeEditButton';
+import { EditButton } from '@scenario/core/ui/map/components/EditButton';
 import { useNodeEditModal } from '@scenario/core/ui/nodes/shared/NodeEditModal/NodeEditModalProvider';
 import { StepRelationEditContract } from '@scenario/core/ui/edges/StepRelation/StepRelationEditContract';
 import { ConditionStepBranchRelationEditContract } from '@scenario/core/ui/edges/ConditionStepBranchRelation/ConditionStepBranchRelationEditContract';
@@ -152,11 +152,13 @@ export default function SmartStepEdge(props: EdgeProps) {
                 )}
 
                 {/* Кнопка редактирования по центру edge */}
-                <EdgeEditButton
-                    show={hovered}
+                <EditButton
+                    visible={hovered}
+                    position="fixed"
                     x={edgeCenter.x}
                     y={edgeCenter.y}
                     onClick={handleEditClick}
+                    title="Редактировать связь"
                 />
             </EdgeLabelRenderer>
         </>

@@ -13,7 +13,7 @@ import {useNodeValidationErrors} from "@scenario/core/features/validation";
 export function useValidationIndicator(nodeId: string) {
     const scenarioId = useSelector(selectActiveScenarioId);
     const errors = useNodeValidationErrors(scenarioId, nodeId);
-    const hasErrors = errors && errors.length > 0;
+    const hasErrors: boolean = errors && errors.length > 0;
 
     /**
      * Компонент индикации валидации для вставки в ноду

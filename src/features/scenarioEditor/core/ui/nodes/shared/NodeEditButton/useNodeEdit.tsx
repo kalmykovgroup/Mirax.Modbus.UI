@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import { NodeEditButton } from './NodeEditButton';
+import { EditButton } from '../../../map/components/EditButton';
 import { useNodeEditModal } from '../NodeEditModal';
 import type { NodeEditContract } from '../NodeEditModal/types';
 import type { FlowNode } from '@scenario/shared/contracts/models/FlowNode';
@@ -29,7 +29,8 @@ import type { BaseNodeDto } from '@scenario/shared/contracts/registry/NodeTypeCo
 export function useNodeEdit<TDto = any>(
     nodeId: string,
     selected: boolean,
-    editContract: NodeEditContract<TDto>
+    editContract: NodeEditContract<TDto>,
+    hasErrors: boolean,
 ) {
     const [isHovered, setIsHovered] = useState(false);
     const rf = useReactFlow();
@@ -49,8 +50,9 @@ export function useNodeEdit<TDto = any>(
         onMouseLeave: () => setIsHovered(false),
     };
 
-    const EditButton = (
-        <NodeEditButton
+    const EditButtonComponent = (
+        <EditButton
+            hasErrors={hasErrors}
             visible={isHovered || selected}
             onClick={handleEdit}
         />
@@ -58,7 +60,7 @@ export function useNodeEdit<TDto = any>(
 
     return {
         /** Компонент кнопки редактирования для рендера */
-        EditButton,
+        EditButton: EditButtonComponent,
         /** Props для контейнера ноды (onMouseEnter/onMouseLeave) */
         containerProps,
         /** Наведена ли мышь на ноду */

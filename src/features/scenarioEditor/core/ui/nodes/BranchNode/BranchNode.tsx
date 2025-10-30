@@ -123,7 +123,7 @@ export function BranchNode({ data, selected, id }: Props) {
 
         const { branchX, branchY, branchWidth: currentWidth, branchHeight: currentHeight, steps: childSteps } = branchAndStepsData;
 
-        const padding = 12;
+        const padding = 30;
 
         // Находим границы всех степов в АБСОЛЮТНЫХ координатах
         let minAbsX = Infinity;

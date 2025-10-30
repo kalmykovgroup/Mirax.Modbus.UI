@@ -111,13 +111,13 @@ export function useScenarioValidation(scenarioId: Guid | null): ScenarioValidati
 export function useNodeValidationErrors(
     scenarioId: Guid | null,
     nodeId: Guid | null
-): string[] | null {
+): string[] {
     const validation = useScenarioValidation(scenarioId);
 
     if (!nodeId) {
-        return null;
+        return [];
     }
 
     const nodeInfo = validation.invalidNodes.find((n) => n.nodeId === nodeId);
-    return nodeInfo ? nodeInfo.errors : null;
+    return nodeInfo ? nodeInfo.errors : [];
 }

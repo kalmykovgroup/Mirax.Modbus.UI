@@ -5,8 +5,6 @@ import  {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
 import type {DelayStepDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 import { formatMsHuman, parseDurationToMs } from "@scenario/core/ui/nodes/DelayStepNode/DelayTimeInput/DelayTimeInput.tsx";
 import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
-import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
-import { useNodeEdit } from '../shared/NodeEditButton';
 import { DelayStepEditContract } from './DelayStepEditContract';
 import {NodeWrapper} from "@scenario/core/ui/nodes/NodeWrapper";
 import type {ConnectFrom} from "@scenario/shared/contracts/models/ConnectFrom.ts";
@@ -22,24 +20,20 @@ export function DelayStepNode({ id, data, selected}: Props) {
 
     const dto = data.object as DelayStepDto;
 
-    // Валидация
-    const { ValidationIndicator, containerClassName } = useValidationIndicator(id);
-    const { EditButton, containerProps } = useNodeEdit(id, selected, DelayStepEditContract);
-
     // Форматирование времени для отображения
     const timeMs = parseDurationToMs(dto.timeSpan || '0');
     const formattedTime = formatMsHuman(timeMs);
 
     return (
         <NodeWrapper
+            id={id}
             handleType={handleType}
             validateTarget={validateTarget}
-            className={`${styles.nodeContainer} ${containerClassName}`}
+            className={`${styles.nodeContainer}`}
+            classNameWrapper={styles.nodeContainerWrapper}
             selected={selected}
-            containerProps={containerProps}
+            contract={DelayStepEditContract}
         >
-            {ValidationIndicator}
-            {EditButton}
 
             <span className={styles.coordinates}>
                 <span>x:{formatWithMode(data.x, 2, true)}</span>

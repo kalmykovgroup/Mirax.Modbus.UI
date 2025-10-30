@@ -1,8 +1,3 @@
-/* Глобальное правило для всех контейнеров нод - дочерние элементы .react-flow__node */
-.nodeContainer{
-   width: 100%;
-    height: 100%;
-}
 
 .coordinates{
     display: flex;
@@ -13,39 +8,4 @@
     left: 0;
     font-size: 8px;
     color: var(--coordinates-color, #515151);
-}
-
-/* Стили для Handle (точек соединения) */
-.source {
-    width: 6px !important;
-    height: 6px !important;
-    transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
-    opacity: 1;
-}
-
-.target {
-    width: 6px !important;
-    height: 6px !important;
-    transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
-    opacity: 0; /* По умолчанию target скрыты */
-    pointer-events: none !important; /* ВАЖНО: запрещаем взаимодействие */
-}
-
-/* Показываем точки, которые помечены как валидные для соединения */
-.target[aria-selected="true"] {
-    opacity: 1 !important;
-    pointer-events: auto !important; /* Разрешаем взаимодействие с валидными target */
-}
-
-/* Скрываем все source точки, когда идет соединение */
-body:has(.target[aria-selected="true"]) .source:not([aria-selected="true"]) {
-    opacity: 0 !important;
-    pointer-events: none !important; /* ВАЖНО: запрещаем взаимодействие со скрытыми source */
-}
-
-/* Увеличиваем точки при наведении непосредственно на контейнер ноды */
-:hover > .source,
-:hover > .target {
-    width: 10px !important;
-    height: 10px !important;
 }
