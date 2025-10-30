@@ -4,7 +4,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    overflow: hidden;
+    overflow: visible;
     align-items: flex-end;
     pointer-events: none; /* Контейнер не перехватывает события мыши */
 }
@@ -57,7 +57,7 @@
 
 .content {
     flex: 1;
-    overflow: hidden;
+    overflow: visible;
     display: flex;
     flex-direction: column;
     min-height: 0;

@@ -1,0 +1,207 @@
+/* src/features/scenarioEditor/core/ui/map/components/SettingsPanel/SettingsPanel.module.css */
+
+.settingsPanelWrapper {
+    position: relative;
+    display: flex;
+    height: 100%;
+    overflow: visible;
+}
+
+.settingsPanel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg-primary, #1e1e1e);
+    color: var(--text-primary, #ffffff);
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+
+.header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+}
+
+.header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.section {
+    margin-bottom: 32px;
+}
+
+.section:last-child {
+    margin-bottom: 0;
+}
+
+.sectionTitle {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary, #888);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Опции с чекбоксами */
+.option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 6px;
+    background: var(--bg-secondary, #252525);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 12px;
+}
+
+.option:hover {
+    background: var(--bg-hover, #2a2a2a);
+    border-color: var(--border-hover, rgba(255, 255, 255, 0.2));
+}
+
+.checkbox {
+    margin-top: 2px;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.optionText {
+    flex: 1;
+}
+
+.optionTitle {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.optionDescription {
+    font-size: 12px;
+    color: var(--text-secondary, #888);
+    line-height: 1.4;
+}
+
+/* Кнопка истории */
+.historyButton {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 6px;
+    background: var(--bg-secondary, #252525);
+    color: var(--text-primary, #ffffff);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.historyButton:hover {
+    background: var(--bg-hover, #2a2a2a);
+    border-color: var(--border-hover, rgba(255, 255, 255, 0.2));
+}
+
+.historyButton svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--text-secondary, #888);
+}
+
+.historyButtonText {
+    flex: 1;
+}
+
+.historyButtonTitle {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.historyButtonDescription {
+    font-size: 12px;
+    color: var(--text-secondary, #888);
+    line-height: 1.4;
+}
+
+/* Панель истории - выезжающая слева */
+.historyPanelSlide {
+    position: absolute;
+    top: 0;
+    right: 100%;
+    width: 300px;
+    height: 100%;
+    background: var(--bg-primary, #1e1e1e);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    z-index: -1;
+}
+
+.historyPanelSlide.historyPanelOpen {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.historyPanelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    background: var(--bg-secondary, #252525);
+}
+
+.historyPanelHeader h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+}
+
+.historyCloseButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary, #888);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.historyCloseButton:hover {
+    background: var(--bg-hover, rgba(255, 255, 255, 0.1));
+    color: var(--text-primary, #ffffff);
+}
+
+.historyPanelContent {
+    flex: 1;
+    overflow-y: auto;
+}

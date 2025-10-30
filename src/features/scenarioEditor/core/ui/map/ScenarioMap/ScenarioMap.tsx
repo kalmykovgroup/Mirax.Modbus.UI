@@ -42,7 +42,6 @@ import { useShiftDragMode } from './hooks/useShiftDragMode';
 import {edgeTypes, defaultEdgeOptions, flowSettings, generateNodeTypes} from './config/flowConfig';
 import { ScenarioOperationsProvider } from './contexts/ScenarioOperationsContext';
 import { SaveIndicator } from '@scenario/core/ui/map/components/SaveIndicator/SaveIndicator';
-import { SaveSettingsButton } from '@scenario/core/ui/map/components/SaveSettingsButton/SaveSettingsButton';
 import { ManualSaveButton } from '@scenario/core/ui/map/components/ManualSaveButton/ManualSaveButton';
 import { LockButton } from '@scenario/core/ui/map/components/LockButton/LockButton';
 import { FitViewButton } from '@scenario/core/ui/map/components/FitViewButton';
@@ -56,7 +55,7 @@ import { selectIsLocked } from '@scenario/core/features/lockSystem/lockSlice';
 import type { AppDispatch, RootState } from '@/baseStore/store';
 
 
-type RightSidePanelTab = 'create' | 'history' | 'scenarios';
+type RightSidePanelTab = 'create' | 'settings' | 'scenarios';
 export interface ScenarioEditorProps {}
 
 export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
@@ -385,13 +384,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     );
 
 
-    // ============================================================================
-    // PANE CLICK HANDLER - Закрытие правой панели
-    // ============================================================================
-    const handlePaneClick = useCallback(() => {
-        // Закрываем правую панель при клике на пустое поле
-        setRightPanelActiveTab(null);
-    }, []);
 
     // ============================================================================
     // RENDER
@@ -417,7 +409,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     onNodeDragStart={dragStartHandler.onNodeDragStart}
                     onNodeDragStop={dragStopHandler.onNodeDragStop}
                     onNodeContextMenu={handleNodeContextMenu}
-                    onPaneClick={handlePaneClick}
                     proOptions={{ hideAttribution: true }}
                     {...flowSettings}
                     defaultEdgeOptions={defaultEdgeOptions}
@@ -439,7 +430,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
 
                 <Panel className={styles.rightTopPanel} position="top-right">
                     <ManualSaveButton scenarioId={activeId} />
-                    <SaveSettingsButton />
                     <RightSidePanel
                         activeTab={rightPanelActiveTab}
                         onTabChange={setRightPanelActiveTab}

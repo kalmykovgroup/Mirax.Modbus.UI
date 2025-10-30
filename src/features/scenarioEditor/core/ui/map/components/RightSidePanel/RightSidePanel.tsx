@@ -1,15 +1,16 @@
 // src/features/scenarioEditor/core/ui/map/RightSidePanel/RightSidePanel.tsx
 
 import { useState } from 'react';
-import { History, Plus } from 'lucide-react';
+import { Plus, Settings } from 'lucide-react';
 
 import styles from './RightSidePanel.module.css';
 
 import { HistoryPanel } from '@scenario/core/ui/map/components/HistoryPanel/HistoryPanel.tsx';
 import ScenarioPanel from "@scenario/core/ui/map/components/ScenarioPanel/ScenarioPanel.tsx";
 import {NewNodesPanel} from "@scenario/core/ui/map/components/NewNodesPanel/NewNodesPanel.tsx";
+import { SettingsPanel } from '@scenario/core/ui/map/components/SettingsPanel';
 
-type Tab = 'create' | 'history' | 'scenarios';
+type Tab = 'create' | 'settings' | 'scenarios';
 
 interface RightSidePanelProps {
     activeTab?: Tab | null;
@@ -47,12 +48,12 @@ export function RightSidePanel({ activeTab: externalActiveTab, onTabChange }: Ri
                     <span>Создание</span>
                 </button>
                 <button
-                    className={`${styles.tab} ${activeTab === 'history' ? styles.active : ''}`}
-                    onClick={() => handleTabClick('history')}
-                    title="История изменений"
+                    className={`${styles.tab} ${activeTab === 'settings' ? styles.active : ''}`}
+                    onClick={() => handleTabClick('settings')}
+                    title="Настройки"
                 >
-                    <History size={18} />
-                    <span>История</span>
+                    <Settings size={18} />
+                    <span>Настройки</span>
                 </button>
             </div>
 
@@ -60,7 +61,7 @@ export function RightSidePanel({ activeTab: externalActiveTab, onTabChange }: Ri
                 <div className={styles.content}>
                     {activeTab === 'scenarios' && <ScenarioPanel />}
                     {activeTab === 'create' && <NewNodesPanel />}
-                    {activeTab === 'history' && <HistoryPanel />}
+                    {activeTab === 'settings' && <SettingsPanel />}
                 </div>
             )}
         </div>
