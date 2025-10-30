@@ -10,15 +10,27 @@
 }
 
 /* Стили для Handle (точек соединения) */
-.source,
+.source {
+    width: 5px !important;
+    height: 5px !important;
+    transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
+    opacity: 1;
+}
+
 .target {
     width: 5px !important;
     height: 5px !important;
-    transition: width 0.2s ease, height 0.2s ease;
+    transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
+    opacity: 0; /* По умолчанию target скрыты */
+}
+
+/* Показываем точки, которые помечены как валидные для соединения */
+.source[aria-selected="true"],
+.target[aria-selected="true"] {
+    opacity: 1 !important;
 }
 
 /* Увеличиваем точки при наведении непосредственно на контейнер ноды */
-/* Используем прямое наведение на родителя Handle */
 :hover > .source,
 :hover > .target {
     width: 10px !important;
