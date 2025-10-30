@@ -44,8 +44,6 @@ import { ScenarioOperationsProvider } from './contexts/ScenarioOperationsContext
 import { SaveIndicator } from '@scenario/core/ui/map/components/SaveIndicator/SaveIndicator';
 import { ManualSaveButton } from '@scenario/core/ui/map/components/ManualSaveButton/ManualSaveButton';
 import { LockButton } from '@scenario/core/ui/map/components/LockButton/LockButton';
-import { FitViewButton } from '@scenario/core/ui/map/components/FitViewButton';
-import { FullscreenButton } from '@scenario/core/ui/map/components/FullscreenButton';
 import { NodeContextMenu, useNodeContextMenu, initializeNodeContextMenuProviders } from '@scenario/core/ui/nodes/shared/NodeContextMenu';
 import { NodeEditModalProvider } from '@scenario/core/ui/nodes/shared/NodeEditModal';
 import { useHistoryHotkeys } from '@scenario/core/hooks/useHistoryHotkeys';
@@ -421,8 +419,6 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 >
                 <Panel className={styles.topLeftPanel} position="top-left">
                     <div className={styles.flowControls} >
-                        <FitViewButton />
-                        <FullscreenButton targetRef={containerRef} />
                         <LockButton />
                     </div>
 
@@ -433,6 +429,7 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                     <RightSidePanel
                         activeTab={rightPanelActiveTab}
                         onTabChange={setRightPanelActiveTab}
+                        containerRef={containerRef}
                     />
                 </Panel>
 

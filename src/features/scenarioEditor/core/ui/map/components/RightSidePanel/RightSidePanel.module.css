@@ -1,11 +1,13 @@
 /* src/features/scenarioEditor/core/ui/map/RightSidePanel/RightSidePanel.module.css */
 
 .rightSidePanelContainer {
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
     overflow: visible;
     align-items: flex-end;
+    box-sizing: content-box;
     pointer-events: none; /* Контейнер не перехватывает события мыши */
 }
 
@@ -14,17 +16,28 @@
     pointer-events: auto;
 }
 
-.tabs {
+.tabsRow {
     display: flex;
     border-bottom: 1px solid #333;
     background: #1a1a1a;
     flex-shrink: 0;
-    height: 35px;
+    height: 40px;
+}
+
+.tabs {
+    display: flex;
+    flex: 1;
+}
+
+.actionButtons {
+    display: flex;
+    height: 100%;
+    pointer-events: auto;
 }
 
 .tab {
-    width: 150px;
-    flex: 1;
+    aspect-ratio: 1;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -36,13 +49,8 @@
     font-size: 14px;
     font-weight: 500;
     transition: all 0.2s;
-    border-bottom: 2px solid transparent;
-    border-right: 1px solid #333;
 }
 
-.tab:nth-last-child{
-    border-right: none;
-}
 
 .tab:hover {
     background: #252525;
@@ -53,6 +61,10 @@
     color: #3a82f6;
     border-bottom-color: #3a82f6;
     background: #1e1e1e;
+}
+
+.btnScenarios{
+    padding: 0 10px;
 }
 
 .content {

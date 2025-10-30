@@ -1,6 +1,6 @@
 // src/features/scenarioEditor/core/ui/map/RightSidePanel/RightSidePanel.tsx
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Settings } from 'lucide-react';
 
 import styles from './RightSidePanel.module.css';
@@ -8,15 +8,18 @@ import styles from './RightSidePanel.module.css';
 import ScenarioPanel from "@scenario/core/ui/map/components/ScenarioPanel/ScenarioPanel.tsx";
 import {NewNodesPanel} from "@scenario/core/ui/map/components/NewNodesPanel/NewNodesPanel.tsx";
 import { SettingsPanel } from '@scenario/core/ui/map/components/SettingsPanel';
+import { FitViewButton } from '@scenario/core/ui/map/components/FitViewButton';
+import { FullscreenButton } from '@scenario/core/ui/map/components/FullscreenButton';
 
 type Tab = 'create' | 'settings' | 'scenarios';
 
 interface RightSidePanelProps {
     activeTab?: Tab | null;
     onTabChange?: (tab: Tab | null) => void;
+    containerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export function RightSidePanel({ activeTab: externalActiveTab, onTabChange }: RightSidePanelProps = {}) {
+export function RightSidePanel({ activeTab: externalActiveTab, onTabChange, containerRef }: RightSidePanelProps = {}) {
     const [internalActiveTab, setInternalActiveTab] = useState<Tab | null>(null);
     const [isClosing, setIsClosing] = useState(false);
     const [displayedTab, setDisplayedTab] = useState<Tab | null>(null);
@@ -60,31 +63,35 @@ export function RightSidePanel({ activeTab: externalActiveTab, onTabChange }: Ri
 
     return (
         <div className={styles.rightSidePanelContainer}>
-            <div className={styles.tabs}>
-                <button
-                    className={`${styles.tab} ${activeTab === 'scenarios' ? styles.active : ''}`}
-                    onClick={() => handleTabClick('scenarios')}
-                    title="Сценарии"
-                >
-                    <Plus size={18} />
-                    <span>Сценарии</span>
-                </button>
-                <button
-                    className={`${styles.tab} ${activeTab === 'create' ? styles.active : ''}`}
-                    onClick={() => handleTabClick('create')}
-                    title="Создание элементов"
-                >
-                    <Plus size={18} />
-                    <span>Создание</span>
-                </button>
-                <button
-                    className={`${styles.tab} ${activeTab === 'settings' ? styles.active : ''}`}
-                    onClick={() => handleTabClick('settings')}
-                    title="Настройки"
-                >
-                    <Settings size={18} />
-                    <span>Настройки</span>
-                </button>
+            <div className={styles.tabsRow}>
+                <div className={styles.tabs}>
+                    <button
+                        className={`${styles.tab} ${activeTab === 'scenarios' ? styles.active : ''}`}
+                        onClick={() => handleTabClick('scenarios')}
+                        title="Сценарии"
+                    >
+                        <span className={styles.btnScenarios}>Сценарии</span>
+                    </button>
+                    <button
+                        className={`${styles.tab} ${activeTab === 'create' ? styles.active : ''}`}
+                        onClick={() => handleTabClick('create')}
+                        title="Создание элементов"
+                    >
+                        <Plus size={18} />
+                    </button>
+                    <button
+                        className={`${styles.tab} ${activeTab === 'settings' ? styles.active : ''}`}
+                        onClick={() => handleTabClick('settings')}
+                        title="Настройки"
+                    >
+                        <Settings size={18} />
+                    </button>
+                </div>
+
+                <div className={styles.actionButtons}>
+                    <FitViewButton />
+                    {containerRef && <FullscreenButton targetRef={containerRef} />}
+                </div>
             </div>
 
             {displayedTab && (
