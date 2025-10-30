@@ -30,6 +30,17 @@
     opacity: 1 !important;
 }
 
+/* Скрываем все source точки, когда идет соединение (есть хотя бы один target с aria-selected) */
+.target[aria-selected="true"] ~ .source,
+.source:has(~ .target[aria-selected="true"]) {
+    opacity: 0 !important;
+}
+
+/* Альтернативный подход: если у body есть класс connecting (добавляется React Flow) */
+body:has(.target[aria-selected="true"]) .source:not([aria-selected="true"]) {
+    opacity: 0 !important;
+}
+
 /* Увеличиваем точки при наведении непосредственно на контейнер ноды */
 :hover > .source,
 :hover > .target {
