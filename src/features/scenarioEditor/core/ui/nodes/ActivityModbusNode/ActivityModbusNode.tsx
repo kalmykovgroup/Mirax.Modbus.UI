@@ -1,4 +1,4 @@
-import {Handle, type Node, type NodeProps, Position} from "@xyflow/react";
+import {type Node, type NodeProps} from "@xyflow/react";
 
 import styles from "./ActivityModbusNode.module.css";
 import {formatWithMode} from "@app/lib/utils/format.ts";
@@ -10,6 +10,7 @@ import type {
 import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
 import { useNodeEdit } from '../shared/NodeEditButton';
 import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
+import {NodeWrapper} from "@scenario/core/ui/nodes/NodeWrapper";
 
 type Props = NodeProps<Node<FlowNodeData<ActivityModbusStepDto>>>;
 
@@ -24,7 +25,13 @@ export function ActivityModbusNode({ id, data, selected }: Props) {
     const { EditButton, containerProps } = useNodeEdit(id, selected, ActivityModbusEditContract);
 
     return (
-        <div className={`${styles.nodeContainer} ${containerClassName}`} aria-selected={selected} {...containerProps}>
+        <NodeWrapper
+            className={`${styles.nodeContainer} ${containerClassName}`}
+            selected={selected}
+            containerProps={containerProps}
+            handleType={handleType}
+            validateTarget={validateTarget}
+        >
             {ValidationIndicator}
             {EditButton}
             <span className={styles.coordinates}>
@@ -33,23 +40,7 @@ export function ActivityModbusNode({ id, data, selected }: Props) {
             </span>
             <span className={styles.name}>Modbus</span>
 
-            <Handle
-                className={`${styles.target}`} aria-selected={handleType === 'source'}
-                key="t1"
-                id="t1"
-                type="target"
-                position={Position.Left}
-            />
 
-
-            <Handle
-                className={`${styles.source}`} aria-selected={handleType === 'target' && validateTarget}
-                key="s1"
-                id="s1"
-                type="source"
-                position={Position.Right}
-            />
-
-        </div>
+        </NodeWrapper>
     );
 }

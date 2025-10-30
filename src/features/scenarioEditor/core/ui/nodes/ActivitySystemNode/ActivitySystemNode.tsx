@@ -1,6 +1,6 @@
 import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
 
-import {Handle, type Node, type NodeProps, Position} from "@xyflow/react";
+import {type Node, type NodeProps} from "@xyflow/react";
 import styles from "./ActivitySystemNode.module.css";
 import {formatWithMode} from "@app/lib/utils/format.ts";
 import  {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
@@ -22,10 +22,12 @@ export function ActivitySystemNode({ id, data, selected }: Props) {
     const { EditButton, containerProps } = useNodeEdit(id, selected, ActivitySystemEditContract);
 
     return (
-        <div 
+        <NodeWrapper
             className={`${styles.nodeContainer} ${containerClassName}`}
-            aria-selected={selected}
-            {...containerProps}
+            selected={selected}
+            containerProps={containerProps}
+            handleType={handleType}
+            validateTarget={validateTarget}
         >
             {ValidationIndicator}
             {EditButton}
@@ -37,23 +39,7 @@ export function ActivitySystemNode({ id, data, selected }: Props) {
 
             <span className={styles.name}>System</span>
 
-            <Handle
-                className={`${styles.target}`} aria-selected={handleType === 'source'}
-                key="t1"
-                id="t1"
-                type="target"
-                position={Position.Left}
-            />
 
-
-            <Handle
-                className={`${styles.source}`} aria-selected={handleType === 'target' && validateTarget}
-                key="s1"
-                id="s1"
-                type="source"
-                position={Position.Right}
-            />
-
-        </div>
+        </NodeWrapper>
     );
 }

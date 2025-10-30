@@ -18,14 +18,6 @@
     box-shadow: 0 0 7px var(--color-delay);
 }
 
-.source[aria-selected="true"]{
-    background: var(--source-active-styles-bkg);
-    box-shadow: var(--source-active-styles-box-shadow);
-}
-.target[aria-selected="true"]{
-    background: var(--target-active-styles-bkg);
-    box-shadow: var(--target-active-styles-box-shadow);
-}
 
 .nodeContainer[aria-selected="true"] {
     box-shadow: 0 0 7px var(--color-delay);

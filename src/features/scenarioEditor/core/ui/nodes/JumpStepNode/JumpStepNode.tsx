@@ -1,5 +1,5 @@
 import styles from "./JumpStepNode.module.css";
-import {type NodeProps, Handle, Position, type Node} from "@xyflow/react";
+import {type NodeProps, type Node} from "@xyflow/react";
 import {formatWithMode} from "@app/lib/utils/format.ts";
 import  {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
 import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
@@ -9,6 +9,7 @@ import type {
 import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
 import { useNodeEdit } from '../shared/NodeEditButton';
 import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
+import {NodeWrapper} from "@scenario/core/ui/nodes/NodeWrapper";
 
 type Props = NodeProps<Node<FlowNodeData<JumpStepDto>>>;
 
@@ -25,7 +26,13 @@ export function JumpStepNode({ id, data, selected}: Props) {
     const { EditButton, containerProps } = useNodeEdit(id, selected, JumpStepEditContract);
 
     return (
-        <div className={`${styles.nodeContainer} ${containerClassName}`} aria-selected={selected} {...containerProps}>
+        <NodeWrapper
+            className={`${styles.nodeContainer} ${containerClassName}`}
+            selected={selected}
+            containerProps={containerProps}
+            handleType={handleType}
+            validateTarget={validateTarget}
+        >
             {ValidationIndicator}
             {EditButton}
             <span className={styles.coordinates}>
@@ -36,39 +43,6 @@ export function JumpStepNode({ id, data, selected}: Props) {
 
             <span className={styles.name}>Переход</span>
 
-            <Handle
-                className={`${styles.target} ${styles.connectTop}`} aria-selected={handleType === 'source'}
-                key="t1"
-                id="t1"
-                type="target"
-                position={Position.Left}
-            />
-
-            <Handle
-                className={`${styles.source} ${styles.connectRightBottom}`} aria-selected={handleType === 'target' && validateTarget}
-                key="s1"
-                id="s1"
-                type="source"
-                position={Position.Left}
-            />
-
-
-            <Handle
-                className={`${styles.source} ${styles.connectTop}`} aria-selected={handleType === 'target' && validateTarget}
-                key="s2"
-                id="s2"
-                type="source"
-                position={Position.Right}
-            />
-
-            <Handle
-                className={`${styles.target} ${styles.connectLeftBottom}`} aria-selected={handleType === 'source'}
-                key="t2"
-                id="t2"
-                type="target"
-                position={Position.Right}
-            />
-
-        </div>
+        </NodeWrapper>
     );
 }

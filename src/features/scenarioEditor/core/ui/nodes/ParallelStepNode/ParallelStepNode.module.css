@@ -17,14 +17,7 @@
     box-shadow: 0 0 7px var(--color-parallel);
 }
 
-.source[aria-selected="true"]{
-    background: var(--source-active-styles-bkg);
-    box-shadow: var(--source-active-styles-box-shadow);
-}
-.target[aria-selected="true"]{
-    background: var(--target-active-styles-bkg);
-    box-shadow: var(--target-active-styles-box-shadow);
-}
+
 
 .name{
     position: absolute;
@@ -39,12 +32,4 @@
    box-shadow: 0 0 7px var(--color-parallel);
 }
 
-.sourceTop{
-    top: 3px;
-}
 
-.sourceBottom{
-    top: auto;
-    bottom: 3px;
-    transform: translate(50%, 50%);
-}

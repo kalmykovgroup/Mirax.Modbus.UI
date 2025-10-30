@@ -9,6 +9,7 @@ import type {
 import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
 import { useNodeEdit } from '../shared/NodeEditButton';
 import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
+import {NodeWrapper} from "@scenario/core/ui/nodes/NodeWrapper";
 
 type Props = NodeProps<Node<FlowNodeData<ConditionStepDto>>>;
 
@@ -21,7 +22,13 @@ export function ConditionStepNode({ id, data, selected}: Props) {
     const { EditButton, containerProps } = useNodeEdit(id, selected, ConditionStepEditContract);
 
     return (
-        <div className={`${styles.nodeContainer} ${containerClassName}`} aria-selected={selected} {...containerProps}>
+        <NodeWrapper
+            className={`${styles.nodeContainer} ${containerClassName}`}
+            selected={selected}
+            containerProps={containerProps}
+            handleType={handleType}
+            validateTarget={true}
+        >
             {ValidationIndicator}
             {EditButton}
             <span className={styles.coordinates}>
@@ -65,7 +72,7 @@ export function ConditionStepNode({ id, data, selected}: Props) {
                 position={Position.Right}
             />
 
-        </div>
+        </NodeWrapper>
     );
 }
 
