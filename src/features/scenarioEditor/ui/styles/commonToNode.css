@@ -12,6 +12,15 @@
 /* Стили для Handle (точек соединения) */
 .source,
 .target {
+    width: 5px !important;
+    height: 5px !important;
+    transition: width 0.2s ease, height 0.2s ease;
+}
+
+/* Увеличиваем точки при наведении непосредственно на контейнер ноды */
+/* Используем прямое наведение на родителя Handle */
+:hover > .source,
+:hover > .target {
     width: 10px !important;
     height: 10px !important;
 }
