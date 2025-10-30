@@ -1,6 +1,6 @@
 @import '@scenario/ui/styles/commonToNode.css';
 
-.delayStepNodeContainer{
+.nodeContainer{
     position: relative;
     box-sizing: border-box;
     background-clip: content-box; /* фон остаётся у исходного размера */
@@ -14,7 +14,7 @@
     padding: 2px;
 }
 
-.delayStepNodeContainer:hover{
+.nodeContainer:hover{
     box-shadow: 0 0 7px var(--color-delay);
 }
 
@@ -27,7 +27,7 @@
     box-shadow: var(--target-active-styles-box-shadow);
 }
 
-.delayStepNodeContainer[aria-selected="true"] {
+.nodeContainer[aria-selected="true"] {
     box-shadow: 0 0 7px var(--color-delay);
 }
 

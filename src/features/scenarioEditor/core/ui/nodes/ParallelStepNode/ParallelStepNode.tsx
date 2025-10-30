@@ -21,7 +21,7 @@ export function ParallelStepNode({ id, data, selected}: Props) {
     const { EditButton, containerProps } = useNodeEdit(id, selected, ParallelStepEditContract);
 
     return (
-        <div className={`${styles.parallelStepNodeContainer} ${containerClassName}`} aria-selected={selected}  {...containerProps}>
+        <div className={`${styles.nodeContainer} ${containerClassName}`} aria-selected={selected}  {...containerProps}>
             {ValidationIndicator}
             {EditButton}
             <span className={styles.coordinates}>

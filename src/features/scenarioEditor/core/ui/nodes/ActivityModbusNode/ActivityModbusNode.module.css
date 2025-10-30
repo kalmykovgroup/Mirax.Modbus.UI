@@ -1,6 +1,6 @@
 @import '@scenario/ui/styles/commonToNode.css';
 
-.activityModbusStepNodeContainer{
+.nodeContainer{
     position: relative;
     box-sizing: border-box;
     border: 1px solid var(--color-activity-modbus);
@@ -14,7 +14,7 @@
 
 }
 
-.activityModbusStepNodeContainer:hover{
+.nodeContainer:hover{
     box-shadow: 0 0 7px var(--color-activity-modbus);
 }
 
@@ -35,7 +35,7 @@
     color: var(--color-activity-modbus);
 }
 
-.activityModbusStepNodeContainer[aria-selected="true"] {
+.nodeContainer[aria-selected="true"] {
     box-shadow: 0 0 7px var(--color-activity-modbus);
 }
 

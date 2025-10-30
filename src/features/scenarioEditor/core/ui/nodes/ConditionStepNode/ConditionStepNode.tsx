@@ -21,7 +21,7 @@ export function ConditionStepNode({ id, data, selected}: Props) {
     const { EditButton, containerProps } = useNodeEdit(id, selected, ConditionStepEditContract);
 
     return (
-        <div className={`${styles.conditionStepNodeContainer} ${containerClassName}`} aria-selected={selected} {...containerProps}>
+        <div className={`${styles.nodeContainer} ${containerClassName}`} aria-selected={selected} {...containerProps}>
             {ValidationIndicator}
             {EditButton}
             <span className={styles.coordinates}>

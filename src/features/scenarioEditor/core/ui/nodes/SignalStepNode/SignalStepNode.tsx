@@ -23,7 +23,7 @@ export function SignalStepNode({ id, data, selected}: Props) {
     const { EditButton, containerProps } = useNodeEdit(id, selected, SignalStepEditContract);
 
     return (
-        <div className={`${styles.signalStepNodeContainer} ${containerClassName}`} aria-selected={selected}  {...containerProps}>
+        <div className={`${styles.nodeContainer} ${containerClassName}`} aria-selected={selected}  {...containerProps}>
             {ValidationIndicator}
             {EditButton}
             <span className={styles.coordinates}>
@@ -49,9 +49,6 @@ export function SignalStepNode({ id, data, selected}: Props) {
                 type="source"
                 position={Position.Right}
             />
-
-
-
         </div>
     );
 }

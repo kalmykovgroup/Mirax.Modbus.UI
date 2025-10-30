@@ -194,7 +194,7 @@ export function BranchNode({ data, selected, id }: Props) {
 
     return (
         <div
-            className={`${styles.branchNodeContainer} ${containerClassName}`}
+            className={`${styles.nodeContainer} ${containerClassName}`}
             aria-selected={selected}
             data-ctrl-mode={isCtrlPressed}
             data-shift-mode={isShiftPressed}

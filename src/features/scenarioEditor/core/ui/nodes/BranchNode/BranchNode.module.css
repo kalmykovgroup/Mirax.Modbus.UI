@@ -1,6 +1,6 @@
 @import '@scenario/ui/styles/commonToNode.css';
 
-.branchNodeContainer {
+.nodeContainer {
     position: relative;
     box-sizing: border-box;
     background-clip: content-box;
@@ -14,12 +14,12 @@
     /* НЕ добавляем cursor здесь - ReactFlow сам управляет курсорами */
 }
 
-.branchNodeContainer:hover{
+.nodeContainer:hover{
     box-shadow: 0 0 7px var(--color-branch);
 }
 
 /* Выделенная ветка — показываем границу */
-.branchNodeContainer[aria-selected='true'] {
+.nodeContainer[aria-selected='true'] {
     box-shadow: 0 0 7px var(--color-branch);
 }
 
@@ -35,24 +35,24 @@
 }
 
 /* При Ctrl — меняем цвет и показываем что можно взаимодействовать */
-.branchNodeContainer[data-ctrl-mode='true'] .bg {
+.nodeContainer[data-ctrl-mode='true'] .bg {
     background: var(--branch-bg-ctrl, rgba(100, 200, 255, 0.15));
     border-color: var(--branch-border-ctrl, rgba(100, 200, 255, 0.5));
 }
 
 /* При Shift — меняем цвет */
-.branchNodeContainer[data-shift-mode='true'] .bg {
+.nodeContainer[data-shift-mode='true'] .bg {
     background: var(--branch-bg-shift, rgba(255, 255, 255, 0.15));
     border-color: var(--branch-bg-shift, rgba(255, 255, 255, 0.4));
 }
 
 /* Визуальный индикатор что нода неактивна (без Ctrl) */
-.branchNodeContainer[data-ctrl-mode='false'] {
+.nodeContainer[data-ctrl-mode='false'] {
     opacity: 0.7;
 }
 
 /* Возвращаем полную видимость при Ctrl */
-.branchNodeContainer[data-ctrl-mode='true'] {
+.nodeContainer[data-ctrl-mode='true'] {
     opacity: 1;
 }
 
@@ -79,7 +79,7 @@
 }
 
 /* Меняем цвет названия при Ctrl для лучшей видимости */
-.branchNodeContainer[data-ctrl-mode='true'] .name {
+.nodeContainer[data-ctrl-mode='true'] .name {
     color: rgba(100, 200, 255, 0.9);
     font-weight: 500;
 }
