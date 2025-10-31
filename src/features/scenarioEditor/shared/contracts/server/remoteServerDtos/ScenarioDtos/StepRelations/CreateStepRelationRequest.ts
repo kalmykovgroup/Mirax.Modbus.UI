@@ -13,4 +13,7 @@ export interface CreateStepRelationRequest {
      * Порядок проверки переходов: чем меньше, тем выше приоритет.
      */
     conditionOrder: number;
+
+    sourceHandle: string;
+    targetHandle: string;
 }

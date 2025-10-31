@@ -36,6 +36,7 @@ export function NodeWrapper({
 
     const { EditButton, containerProps } = useNodeEdit(id, selected, contract, hasErrors);
 
+    //id у <Handle> должен быть уникальным только в рамках одной ноды.
     return (
         <div
             className={`${styles.nodeWrapper} ${classNameWrapper}`}

@@ -8,4 +8,7 @@ export interface ParallelStepBranchRelationDto {
     branchId: Guid;
     /** Параллельный шаг (родитель). */
     parallelStepId: Guid;
+
+    sourceHandle: string;
+    targetHandle: string;
 }

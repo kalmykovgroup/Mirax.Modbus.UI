@@ -6,4 +6,7 @@ import type {Guid} from "@app/lib/types/Guid.ts";
 export interface UpdateParallelStepBranchRelationRequest {
     /** Новая целевая ветка */
     branchId: Guid;
+
+    sourceHandle: string;
+    targetHandle: string;
 }

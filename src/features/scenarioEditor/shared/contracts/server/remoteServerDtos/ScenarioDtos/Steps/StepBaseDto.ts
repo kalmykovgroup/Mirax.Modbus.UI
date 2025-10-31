@@ -76,6 +76,8 @@ export interface SignalStepDto extends StepBaseDto {
 
 export interface JumpStepDto extends StepBaseDto {
     jumpToStepId: Guid;
+    sourceHandle: string;
+    targetHandle: string;
 }
 
 export interface ParallelStepDto extends StepBaseDto {

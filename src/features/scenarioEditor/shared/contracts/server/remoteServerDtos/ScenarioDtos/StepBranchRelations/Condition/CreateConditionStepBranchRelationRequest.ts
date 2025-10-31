@@ -18,16 +18,22 @@ export interface CreateConditionStepBranchRelationRequest {
 
     /** Меньше => выше приоритет (по умолчанию 0) */
     conditionOrder?: number | null;
+
+    sourceHandle: string;
+    targetHandle: string;
 }
 
 /** Фабрика с дефолтами */
 export const createConditionStepBranchRelationRequest = (
     required: Pick<CreateConditionStepBranchRelationRequest, "branchId" | "conditionStepId">,
     init: Partial<Omit<CreateConditionStepBranchRelationRequest, "branchId" | "conditionStepId">> = {},
+    sourceHandle: string, targetHandle: string
 ): CreateConditionStepBranchRelationRequest => ({
     id: null,
     conditionExpression: null,
     conditionOrder: 0,
+    sourceHandle: sourceHandle,
+    targetHandle: targetHandle,
     ...required,   // обязательные поля всегда есть
     ...init,       // и можно переопределить дефолты
 });

@@ -16,4 +16,7 @@ export interface ConditionStepBranchRelationDto {
 
     /** Меньше => выше приоритет. */
     conditionOrder: number;
+
+    sourceHandle: string;
+    targetHandle: string;
 }

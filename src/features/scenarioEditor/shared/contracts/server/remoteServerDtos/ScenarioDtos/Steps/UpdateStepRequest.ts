@@ -8,11 +8,11 @@ interface UpdateStepBase {
     /** Guid — обязательный */
     id: Guid;
 
-    name?: string | null;
+    name: string | null;
     description?: string | null;
-    taskQueue?: string | null;
+    taskQueue: string;
     /** перенос шага в другую ветку (если разрешён) */
-    branchId?: Guid | null; // Guid
+    branchId: Guid;
 
     /** координаты/размеры: не nullable в C#, поэтому передаём числа
      *  (если хочешь «не менять» — бэкенд должен отличать отсутствие поля от 0) */
@@ -21,10 +21,10 @@ interface UpdateStepBase {
     width: number;
     height: number;
 
-    /** для кандидатов в Condition */
+    /** для кандидатов в Condition
     conditionParentStepId?: Guid | null; // Guid
     conditionOrder?: number | null;
-    conditionExpression?: string | null;
+    conditionExpression?: string | null;*/
 }
 
 /** База Update для Activity (C# UpdateActivityStepBase) */
@@ -65,7 +65,9 @@ export interface UpdateSignalStepRequest extends UpdateStepBase {
 /** Jump (C# UpdateJumpStepRequest) */
 export interface UpdateJumpStepRequest extends UpdateStepBase {
     type: StepType.Jump;
-    jumpToStepId?: Guid | null; // Guid?
+    jumpToStepId: Guid;
+    sourceHandle: string;
+    targetHandle: string;
 }
 
 /** Parallel (C# UpdateParallelStepRequest) */

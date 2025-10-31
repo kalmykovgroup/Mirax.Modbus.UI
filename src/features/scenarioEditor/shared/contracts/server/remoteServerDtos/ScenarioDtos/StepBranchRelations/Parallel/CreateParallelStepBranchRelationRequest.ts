@@ -12,14 +12,20 @@ export interface CreateParallelStepBranchRelationRequest {
 
     /** Родительский Parallel-шаг */
     parallelStepId: Guid;
+
+    sourceHandle: string;
+    targetHandle: string;
 }
 
 /** Фабрика с дефолтами (на случай удобного конструирования) */
 export const createParallelStepBranchRelationRequest = (
     required: Pick<CreateParallelStepBranchRelationRequest, "branchId" | "parallelStepId">,
     init: Partial<Omit<CreateParallelStepBranchRelationRequest, "branchId" | "parallelStepId">> = {},
+    sourceHandle: string, targetHandle: string
 ): CreateParallelStepBranchRelationRequest => ({
     id: null,
+    sourceHandle,
+    targetHandle,
     ...required,
     ...init,
 });

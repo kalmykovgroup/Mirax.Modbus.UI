@@ -22,10 +22,10 @@ interface CreateStepBase {
     width: number;
     height: number;
 
-    /** кандидаты в Condition (опционально) */
+    /** кандидаты в Condition (опционально)
     conditionParentStepId?: Guid | null; // Guid
     conditionOrder?: number | null;
-    conditionExpression?: string | null;
+    conditionExpression?: string | null;*/
 }
 
 /** База для Activity (C# CreateActivityStepBase) */
@@ -68,7 +68,9 @@ export interface CreateSignalStepRequest extends CreateStepBase {
 /** Jump (C# CreateJumpStepRequest) */
 export interface CreateJumpStepRequest extends CreateStepBase {
     type: StepType.Jump;
-    jumpToStepId?: string | null; // Guid?
+    jumpToStepId: string;
+    sourceHandle: string;
+    targetHandle: string;
 }
 
 /** Parallel (C# CreateParallelStepRequest) */

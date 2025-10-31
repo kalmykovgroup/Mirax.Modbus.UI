@@ -14,6 +14,9 @@ export interface StepRelationDto {
      * Порядок проверки переходов: чем меньше, тем выше приоритет.
      */
     conditionOrder: number;
+
+   sourceHandle: string;
+   targetHandle: string;
 }
 
 
@@ -24,6 +27,8 @@ export const StepRelationDto = {
         childStepId: string;
         conditionExpression?: string | null;
         conditionOrder?: number;
+        sourceHandle: string;
+        targetHandle: string;
     }): StepRelationDto {
         return {
             id: p.id ?? Guid.NewGuid(),
@@ -31,6 +36,8 @@ export const StepRelationDto = {
             childStepId: p.childStepId,
             conditionExpression: p.conditionExpression ?? null,
             conditionOrder: p.conditionOrder ?? 0,
+            sourceHandle: p.sourceHandle,
+            targetHandle: p.targetHandle,
         };
     },
 } as const;

@@ -12,4 +12,7 @@ export interface UpdateConditionStepBranchRelationRequest {
 
     /** Меньше => выше приоритет */
     conditionOrder: number;
+
+    sourceHandle: string;
+    targetHandle: string;
 }
