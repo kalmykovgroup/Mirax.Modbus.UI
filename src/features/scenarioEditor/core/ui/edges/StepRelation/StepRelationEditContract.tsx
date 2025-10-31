@@ -1,20 +1,23 @@
 // src/features/scenarioEditor/core/ui/edges/StepRelation/StepRelationEditContract.tsx
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/baseStore/store';
 import type { EdgeEditContract, EdgeRenderContentParams } from '@scenario/core/ui/nodes/components/NodeEditModal/types.ts';
 import type { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto';
 import { Block } from '@scenario/core/features/fieldLockSystem';
 import { selectActiveScenarioId, selectStepById } from '@scenario/store/scenarioSelectors';
+import { EdgePathTypeSelector } from '@scenario/core/ui/edges/components/EdgePathTypeSelector/EdgePathTypeSelector';
+import EdgePathType, { DefaultEdgePathType } from '@scenario/core/types/EdgePathType';
 import styles from './StepRelationEditContract.module.css';
 
 /**
  * Компонент содержимого для редактирования StepRelation
  */
-function StepRelationEditContent({ edge, dto, onChange }: EdgeRenderContentParams<StepRelationDto>) {
+function StepRelationEditContent({ /*edge*/ dto, onChange }: EdgeRenderContentParams<StepRelationDto>) {
     const [conditionExpression, setConditionExpression] = useState(dto.conditionExpression || '');
     const [conditionOrder, setConditionOrder] = useState(dto.conditionOrder);
+    const [edgePathType, setEdgePathType] = useState<EdgePathType>(dto.edgePathType ?? DefaultEdgePathType.step);
 
     const activeScenarioId = useSelector(selectActiveScenarioId);
 
@@ -30,13 +33,18 @@ function StepRelationEditContent({ edge, dto, onChange }: EdgeRenderContentParam
     const handleConditionExpressionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const newExpression = e.target.value;
         setConditionExpression(newExpression);
-        onChange({ conditionExpression: newExpression || null });
+        onChange({ conditionExpression: newExpression || undefined });
     };
 
     const handleConditionOrderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newOrder = parseInt(e.target.value, 10);
         setConditionOrder(isNaN(newOrder) ? 0 : newOrder);
         onChange({ conditionOrder: isNaN(newOrder) ? 0 : newOrder });
+    };
+
+    const handleEdgePathTypeChange = (newEdgePathType: EdgePathType) => {
+        setEdgePathType(newEdgePathType);
+        onChange({ edgePathType: newEdgePathType });
     };
 
     return (
@@ -106,6 +114,20 @@ function StepRelationEditContent({ edge, dto, onChange }: EdgeRenderContentParam
                         Меньше значение = выше приоритет проверки условия
                     </span>
                 </div>
+            </Block>
+
+            {/* Тип визуального пути */}
+            <Block
+                group="stepRelationPathType"
+                label="Визуальный стиль линии"
+                description="Выберите как отображать линию связи на схеме"
+                mode="wrap"
+            >
+                <EdgePathTypeSelector
+                    value={edgePathType}
+                    onChange={handleEdgePathTypeChange}
+                    label="Тип линии"
+                />
             </Block>
         </div>
     );

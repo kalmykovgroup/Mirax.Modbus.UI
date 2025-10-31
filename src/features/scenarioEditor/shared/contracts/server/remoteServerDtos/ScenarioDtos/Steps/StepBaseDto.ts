@@ -78,6 +78,8 @@ export interface JumpStepDto extends StepBaseDto {
     jumpToStepId: Guid;
     sourceHandle: string;
     targetHandle: string;
+    /** Тип визуального пути jump-связи */
+    edgePathType: import("@scenario/core/types/EdgePathType").default;
 }
 
 export interface ParallelStepDto extends StepBaseDto {

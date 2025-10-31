@@ -1,7 +1,6 @@
 import {
     BaseEdge,
     EdgeLabelRenderer,
-    getBezierPath,
     type EdgeProps,
     useStore,
     useReactFlow,
@@ -9,6 +8,8 @@ import {
 import { useMemo } from 'react';
 import styles from './JumpEdge.module.css';
 import type {FlowNode} from "@scenario/shared/contracts/models/FlowNode.ts";
+import { getEdgePath } from '@scenario/core/utils/getEdgePath';
+import  { DefaultEdgePathType } from '@scenario/core/types/EdgePathType';
 
 /** Безопасно получаем ноду по id (nodeInternals/nodeLookup + fallback) */
 function useNodeById(id?: string) {
@@ -30,8 +31,10 @@ export default function JumpEdge(props: EdgeProps) {
         data
     } = props;
 
-    // Используем Bezier path для более плавной кривой
-    const [edgePath] = getBezierPath({
+    // Получаем тип пути из JumpStepDto или используем дефолтный (Bezier)
+    const edgePathType = (data as any)?.edgePathType ?? DefaultEdgePathType.jump;
+
+    const [edgePath] = getEdgePath(edgePathType, {
         sourceX, sourceY, sourcePosition,
         targetX, targetY, targetPosition,
     });
@@ -42,12 +45,12 @@ export default function JumpEdge(props: EdgeProps) {
     // hover-флаг
     const hovered = Boolean((data as any)?.__hovered);
 
-    // Особый цвет для jump-связей
+    // Особый цвет для jump-связей (красный, как у JumpStepNode)
     const color = selected
-        ? 'var(--edge-jump-selected-color, #ff9500)'
+        ? 'var(--edge-jump-selected-color)'
         : hovered
-            ? 'var(--edge-jump-hovered-color, #ffcc00)'
-            : 'var(--edge-jump-default-color, #ffa500)';
+            ? 'var(--edge-jump-hovered-color)'
+            : 'var(--edge-jump-default-color)';
 
     // Уникальный маркер для jump-связей
     const markerId = `jump-edge-arrow-${id}-${selected ? 's' : hovered ? 'h' : 'n'}`;

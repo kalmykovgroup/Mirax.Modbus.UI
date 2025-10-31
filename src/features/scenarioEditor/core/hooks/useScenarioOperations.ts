@@ -38,7 +38,8 @@ export function useScenarioOperations(scenarioId: Guid | null) {
             conditionExpression?: string | null,
             conditionOrder?: number,
             sourceHandle?: string,
-            targetHandle?: string
+            targetHandle?: string,
+            edgePathType?: import("@scenario/core/types/EdgePathType").default
         ) => {
             if (isLocked) {
                 console.warn('[useScenarioOperations] Operation blocked: scenario is locked');
@@ -67,6 +68,7 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 conditionOrder,
                 sourceHandle,
                 targetHandle,
+                edgePathType,
             } as StepRelationDto);
 
             const snapshot = stepRelationContract.createSnapshot(relationDto);

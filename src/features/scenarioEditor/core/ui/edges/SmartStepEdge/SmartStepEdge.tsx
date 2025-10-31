@@ -1,7 +1,6 @@
 import {
     BaseEdge,
     EdgeLabelRenderer,
-    getSmoothStepPath,
     type EdgeProps,
     useStore,
     useReactFlow,
@@ -15,6 +14,8 @@ import { useNodeEditModal } from '@scenario/core/ui/nodes/components/NodeEditMod
 import { StepRelationEditContract } from '@scenario/core/ui/edges/StepRelation/StepRelationEditContract.tsx';
 import { ConditionStepBranchRelationEditContract } from '@scenario/core/ui/edges/ConditionStepBranchRelation/ConditionStepBranchRelationEditContract.tsx';
 import { ParallelStepBranchRelationEditContract } from '@scenario/core/ui/edges/ParallelStepBranchRelation/ParallelStepBranchRelationEditContract.tsx';
+import { getEdgePath } from '@scenario/core/utils/getEdgePath';
+import { DefaultEdgePathType } from '@scenario/core/types/EdgePathType';
 
 /** Безопасно получаем ноду по id (nodeInternals/nodeLookup + fallback) */
 function useNodeById(id?: string) {
@@ -38,7 +39,10 @@ export default function SmartStepEdge(props: EdgeProps) {
 
     const { openEdgeEditModal } = useNodeEditModal();
 
-    const [edgePath] = getSmoothStepPath({
+    // Получаем тип пути из данных edge или используем дефолтный
+    const edgePathType = (data as any)?.relationDto?.edgePathType ?? DefaultEdgePathType.step;
+
+    const [edgePath] = getEdgePath(edgePathType, {
         sourceX, sourceY, sourcePosition,
         targetX, targetY, targetPosition,
         borderRadius: 8,

@@ -34,6 +34,11 @@
     --edge-hovered-color: #2f9aff;
     --edge-width: 1.5px;
 
+    /* Jump edges - используют цвета JumpStepNode */
+    --edge-jump-default-color: var(--color-jump);
+    --edge-jump-selected-color: #ff4444;
+    --edge-jump-hovered-color: #ff6666;
+
     /* ===== Фон карты и сетка ===== */
     --map-background: #121212;
     --map-color: #ffffff;
@@ -88,6 +93,11 @@
     --edge-selected-color: #d32f2f;
     --edge-hovered-color: #1976d2;
     --edge-width: 2px;
+
+    /* Jump edges - используют цвета JumpStepNode */
+    --edge-jump-default-color: var(--color-jump);
+    --edge-jump-selected-color: #e53935;
+    --edge-jump-hovered-color: #ef5350;
 
     /* ===== Фон карты и сетка ===== */
     --map-background: #ffffff;

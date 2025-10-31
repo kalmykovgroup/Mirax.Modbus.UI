@@ -7,6 +7,8 @@ import type { EdgeEditContract, EdgeRenderContentParams } from '@scenario/core/u
 import type { ConditionStepBranchRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepBranchRelations/Condition/ConditionStepBranchRelationDto';
 import { Block } from '@scenario/core/features/fieldLockSystem';
 import { selectActiveScenarioId, selectStepById, selectBranchById } from '@scenario/store/scenarioSelectors';
+import { EdgePathTypeSelector } from '@scenario/core/ui/edges/components/EdgePathTypeSelector/EdgePathTypeSelector';
+import EdgePathType, { DefaultEdgePathType } from '@scenario/core/types/EdgePathType';
 import styles from './ConditionStepBranchRelationEditContract.module.css';
 
 /**
@@ -15,6 +17,7 @@ import styles from './ConditionStepBranchRelationEditContract.module.css';
 function ConditionStepBranchRelationEditContent({ edge, dto, onChange }: EdgeRenderContentParams<ConditionStepBranchRelationDto>) {
     const [conditionExpression, setConditionExpression] = useState(dto.conditionExpression || '');
     const [conditionOrder, setConditionOrder] = useState(dto.conditionOrder);
+    const [edgePathType, setEdgePathType] = useState<EdgePathType>(dto.edgePathType ?? DefaultEdgePathType.branchLink);
 
     const activeScenarioId = useSelector(selectActiveScenarioId);
 
@@ -37,6 +40,11 @@ function ConditionStepBranchRelationEditContent({ edge, dto, onChange }: EdgeRen
         const newOrder = parseInt(e.target.value, 10);
         setConditionOrder(isNaN(newOrder) ? 0 : newOrder);
         onChange({ conditionOrder: isNaN(newOrder) ? 0 : newOrder });
+    };
+
+    const handleEdgePathTypeChange = (newEdgePathType: EdgePathType) => {
+        setEdgePathType(newEdgePathType);
+        onChange({ edgePathType: newEdgePathType });
     };
 
     return (
@@ -106,6 +114,20 @@ function ConditionStepBranchRelationEditContent({ edge, dto, onChange }: EdgeRen
                         Меньше значение = выше приоритет (проверяется раньше)
                     </span>
                 </div>
+            </Block>
+
+            {/* Тип визуального пути */}
+            <Block
+                group="conditionBranchRelationPathType"
+                label="Визуальный стиль линии"
+                description="Выберите как отображать линию связи на схеме"
+                mode="wrap"
+            >
+                <EdgePathTypeSelector
+                    value={edgePathType}
+                    onChange={handleEdgePathTypeChange}
+                    label="Тип линии"
+                />
             </Block>
         </div>
     );

@@ -133,6 +133,7 @@ export function mapScenarioToFlow(
                             type: 'jump',
                             data: {
                                 jumpToStepId: jumpStep.jumpToStepId,
+                                edgePathType: jumpStep.edgePathType, // Передаем тип пути для jump
                             },
                         });
 

@@ -5,6 +5,7 @@ import  { Guid } from '@app/lib/types/Guid';
 import type { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto';
 import { store } from '@/baseStore/store';
 import { addRelation, deleteRelation, findScenarioIdByStepId, findScenarioIdByRelationId } from '@scenario/store/scenarioSlice';
+import { DefaultEdgePathType } from '@scenario/core/types/EdgePathType';
 
 
 export interface StepRelationContract {
@@ -20,6 +21,7 @@ export interface StepRelationContract {
         conditionOrder?: number;
         sourceHandle?: string;
         targetHandle?: string;
+        edgePathType?: import("@scenario/core/types/EdgePathType").default;
     }) => StepRelationDto;
 
     /**
@@ -72,6 +74,7 @@ export const stepRelationContract: StepRelationContract = {
             conditionOrder: params.conditionOrder ?? 0,
             sourceHandle: params.sourceHandle ?? 's1',
             targetHandle: params.targetHandle ?? 'k1',
+            edgePathType: params.edgePathType ?? DefaultEdgePathType.step,
         };
     },
 

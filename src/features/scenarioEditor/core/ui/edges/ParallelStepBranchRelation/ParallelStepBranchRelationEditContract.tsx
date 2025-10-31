@@ -1,17 +1,21 @@
 // src/features/scenarioEditor/core/ui/edges/ParallelStepBranchRelation/ParallelStepBranchRelationEditContract.tsx
 
+import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/baseStore/store';
 import type { EdgeEditContract, EdgeRenderContentParams } from '@scenario/core/ui/nodes/components/NodeEditModal/types.ts';
 import type { ParallelStepBranchRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepBranchRelations/Parallel/ParallelStepBranchRelationDto';
 import { Block } from '@scenario/core/features/fieldLockSystem';
 import { selectActiveScenarioId, selectStepById, selectBranchById } from '@scenario/store/scenarioSelectors';
+import { EdgePathTypeSelector } from '@scenario/core/ui/edges/components/EdgePathTypeSelector/EdgePathTypeSelector';
+import EdgePathType, { DefaultEdgePathType } from '@scenario/core/types/EdgePathType';
 import styles from './ParallelStepBranchRelationEditContract.module.css';
 
 /**
  * Компонент содержимого для редактирования ParallelStepBranchRelation
  */
-function ParallelStepBranchRelationEditContent({ edge, dto, onChange }: EdgeRenderContentParams<ParallelStepBranchRelationDto>) {
+function ParallelStepBranchRelationEditContent({ /*edge*/ dto, onChange }: EdgeRenderContentParams<ParallelStepBranchRelationDto>) {
+    const [edgePathType, setEdgePathType] = useState<EdgePathType>(dto.edgePathType ?? DefaultEdgePathType.branchLink);
     const activeScenarioId = useSelector(selectActiveScenarioId);
 
     // Получаем информацию о parallel-шаге и ветке
@@ -22,6 +26,11 @@ function ParallelStepBranchRelationEditContent({ edge, dto, onChange }: EdgeRend
     const branch = useSelector((state: RootState) =>
         activeScenarioId ? selectBranchById(state, activeScenarioId, dto.branchId) : undefined
     );
+
+    const handleEdgePathTypeChange = (newEdgePathType: EdgePathType) => {
+        setEdgePathType(newEdgePathType);
+        onChange({ edgePathType: newEdgePathType });
+    };
 
     return (
         <div className={styles.container}>
@@ -59,6 +68,20 @@ function ParallelStepBranchRelationEditContent({ edge, dto, onChange }: EdgeRend
                     Все ветки, связанные с parallel-шагом, выполняются одновременно.
                 </p>
             </div>
+
+            {/* Тип визуального пути */}
+            <Block
+                group="parallelBranchRelationPathType"
+                label="Визуальный стиль линии"
+                description="Выберите как отображать линию связи на схеме"
+                mode="wrap"
+            >
+                <EdgePathTypeSelector
+                    value={edgePathType}
+                    onChange={handleEdgePathTypeChange}
+                    label="Тип линии"
+                />
+            </Block>
         </div>
     );
 }

@@ -1,6 +1,7 @@
 // src/shared/contracts/Dtos/ScenarioDtos/StepBranchRelations/Condition/ConditionStepBranchRelationDto.ts
 
 import type {Guid} from "@app/lib/types/Guid.ts";
+import EdgePathType from "@scenario/core/types/EdgePathType";
 
 export interface ConditionStepBranchRelationDto {
     id: Guid;
@@ -19,4 +20,7 @@ export interface ConditionStepBranchRelationDto {
 
     sourceHandle: string;
     targetHandle: string;
+
+    /** Тип визуального пути связи */
+    edgePathType: EdgePathType;
 }

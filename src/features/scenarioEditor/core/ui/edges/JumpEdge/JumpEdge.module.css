@@ -13,22 +13,22 @@
 
 /* Стиль при выборе */
 .jumpEdge[aria-selected="true"] {
-    stroke: var(--edge-jump-selected-color, #ff9500) !important;
-    filter: drop-shadow(0 0 6px var(--edge-jump-selected-color, #ff9500));
+    stroke: var(--edge-jump-selected-color) !important;
+    filter: drop-shadow(0 0 6px var(--edge-jump-selected-color));
     stroke-width: 3px !important;
 }
 
 /* Стиль при наведении */
 .jumpEdge.hovered {
-    stroke: var(--edge-jump-hovered-color, #ffcc00) !important;
-    filter: drop-shadow(0 0 6px var(--edge-jump-hovered-color, #ffcc00));
+    stroke: var(--edge-jump-hovered-color) !important;
+    filter: drop-shadow(0 0 6px var(--edge-jump-hovered-color));
     stroke-width: 3px !important;
 }
 
 /* Метка JUMP */
 .jumpLabel {
-    background: var(--edge-jump-default-color, #ffa500);
-    color: #000;
+    background: var(--edge-jump-default-color);
+    color: #fff;
     padding: 2px 8px;
     border-radius: 4px;
     font-size: 10px;
@@ -41,13 +41,13 @@
 }
 
 .jumpLabel.selected {
-    background: var(--edge-jump-selected-color, #ff9500);
-    box-shadow: 0 0 8px var(--edge-jump-selected-color, #ff9500);
+    background: var(--edge-jump-selected-color);
+    box-shadow: 0 0 8px var(--edge-jump-selected-color);
     transform: scale(1.1);
 }
 
 .jumpLabel.hovered {
-    background: var(--edge-jump-hovered-color, #ffcc00);
-    box-shadow: 0 0 8px var(--edge-jump-hovered-color, #ffcc00);
+    background: var(--edge-jump-hovered-color);
+    box-shadow: 0 0 8px var(--edge-jump-hovered-color);
     transform: scale(1.1);
 }
