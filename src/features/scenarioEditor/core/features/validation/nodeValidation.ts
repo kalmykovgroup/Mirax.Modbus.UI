@@ -1,7 +1,7 @@
 // src/features/scenarioEditor/core/features/validation/nodeValidation.ts
 
 import type { Guid } from '@app/lib/types/Guid';
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import { FlowType } from '@scenario/core/types/flowType';
 import { validationRegistry } from './ValidationRegistry';
 import type { ValidationResult } from './contracts/ValidationContract';
 

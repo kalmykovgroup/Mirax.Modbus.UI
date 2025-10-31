@@ -1,11 +1,12 @@
 // src/features/scenarioEditor/core/ui/nodes/DelayStepNode/DelayStepEditContract.tsx
 
 import { useState, useEffect } from 'react';
-import type { NodeEditContract, RenderContentParams } from '@scenario/core/ui/nodes/shared/NodeEditModal/types';
+import type { NodeEditContract, RenderContentParams } from '@scenario/core/ui/nodes/components/NodeEditModal/types.ts';
 import type { DelayStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
 import { Block } from '@scenario/core/features/fieldLockSystem';
-import { StepBaseFieldsEditor } from '@scenario/core/ui/nodes/shared/StepBaseFieldsEditor';
 import DelayTimeInput, { parseDurationToMs, formatMsToNetTimeSpan } from './DelayTimeInput/DelayTimeInput';
+import {StepBaseFieldsEditor} from "@scenario/core/ui/nodes/components/StepBaseFieldsEditor";
+
 
 /**
  * Компонент содержимого для редактирования DelayStep

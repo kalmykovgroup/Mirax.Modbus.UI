@@ -1,7 +1,7 @@
 import {
     ReactFlowProvider,
 } from '@xyflow/react';
-import {ScenarioMap} from "@scenario/core/ui/map/ScenarioMap/ScenarioMap.tsx";
+import {ScenarioMap} from "@scenario/core/ui/ScenarioMap/ScenarioMap.tsx";
 
 import styles from '../styles/theme.module.css'
 

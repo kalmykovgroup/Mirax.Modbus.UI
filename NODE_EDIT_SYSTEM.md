@@ -78,7 +78,7 @@ export const YourNodeEditContract: NodeEditContract<YourNodeDto> = {
 ### Добавление кнопки в новую ноду
 
 ```tsx
-import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
+import { useValidationIndicator } from '@scenario/core/ui/nodes/components/ValidationIndicator';
 import { useNodeEdit } from '../shared/NodeEditButton';
 import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
 

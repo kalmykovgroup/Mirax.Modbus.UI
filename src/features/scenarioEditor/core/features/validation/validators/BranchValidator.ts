@@ -1,7 +1,7 @@
 // src/features/scenarioEditor/core/features/validation/validators/BranchValidator.ts
 
 import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import { FlowType } from '@scenario/core/types/flowType';
 import type { NodeValidationContract, ValidationResult } from '../contracts/ValidationContract';
 import { createValidationResult } from '../contracts/ValidationContract';
 

@@ -2,7 +2,7 @@
 
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/baseStore/store';
-import type { EdgeEditContract, EdgeRenderContentParams } from '@scenario/core/ui/nodes/shared/NodeEditModal/types';
+import type { EdgeEditContract, EdgeRenderContentParams } from '@scenario/core/ui/nodes/components/NodeEditModal/types.ts';
 import type { ParallelStepBranchRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepBranchRelations/Parallel/ParallelStepBranchRelationDto';
 import { Block } from '@scenario/core/features/fieldLockSystem';
 import { selectActiveScenarioId, selectStepById, selectBranchById } from '@scenario/store/scenarioSelectors';

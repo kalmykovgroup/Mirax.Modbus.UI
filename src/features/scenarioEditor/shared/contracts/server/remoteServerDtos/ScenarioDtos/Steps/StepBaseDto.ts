@@ -19,7 +19,7 @@ import type {
     ModbusDeviceAddressDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ModbusDtos/ModbusDeviceAddresses/ModbusDeviceAddressDto.ts";
 import type {Guid} from "@app/lib/types/Guid.ts";
-import {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
+import {FlowType} from "@scenario/core/types/flowType.ts";
 
 // ---------------- Базовый тип ----------------
 
@@ -250,6 +250,8 @@ export const JumpStepDto = {
             name?: string | undefined;
             taskQueue?: string | undefined;
             jumpToStepId?: string | undefined;
+            sourceHandle?: string | undefined;
+            targetHandle?: string | undefined;
             defaultInput?: string | undefined;
             defaultOutput?: string | undefined;
             x?: number | undefined;
@@ -263,6 +265,8 @@ export const JumpStepDto = {
         return {
             ...base(FlowType.Jump, p),
             jumpToStepId: p.jumpToStepId ?? undefined,
+            sourceHandle: p.sourceHandle ?? '',
+            targetHandle: p.targetHandle ?? '',
         } as JumpStepDto;
     },
 } as const;

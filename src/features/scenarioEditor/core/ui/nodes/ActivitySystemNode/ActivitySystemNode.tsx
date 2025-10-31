@@ -3,7 +3,7 @@ import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.
 import {type Node, type NodeProps} from "@xyflow/react";
 import styles from "./ActivitySystemNode.module.css";
 import {formatWithMode} from "@app/lib/utils/format.ts";
-import  {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
+import  {FlowType} from "@scenario/core/types/flowType.ts";
 import type {
     ActivitySystemStepDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";

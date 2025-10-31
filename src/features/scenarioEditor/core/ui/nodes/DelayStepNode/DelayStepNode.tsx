@@ -1,7 +1,7 @@
 import {type Node, type NodeProps} from "@xyflow/react";
 import styles from "./DelayStepNode.module.css";
 import {formatWithMode} from "@app/lib/utils/format.ts";
-import  {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
+import  {FlowType} from "@scenario/core/types/flowType.ts";
 import type {DelayStepDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 import { formatMsHuman, parseDurationToMs } from "@scenario/core/ui/nodes/DelayStepNode/DelayTimeInput/DelayTimeInput.tsx";
 import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";

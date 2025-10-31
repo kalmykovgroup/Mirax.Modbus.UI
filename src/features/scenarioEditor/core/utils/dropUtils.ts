@@ -1,7 +1,7 @@
 // src/app/scenario-designer/graph/dnd/dropUtils.ts
 import type {ReactFlowInstance} from '@xyflow/react';
 import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
-import {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
+import {FlowType} from "@scenario/core/types/flowType.ts";
 
 // ——— базовые helpers ———
 export const getAll = (rf: ReactFlowInstance<FlowNode>) => rf.getNodes() as FlowNode[];

@@ -1,6 +1,6 @@
 import React from "react";
 import {Position} from "@xyflow/react";
-import {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
+import {FlowType} from "@scenario/core/types/flowType.ts";
 import {
     positionClassMap
 } from "@scenario/core/ui/edges/ConditionExpressionTextarea/positionClassMap.ts";

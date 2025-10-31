@@ -1,7 +1,7 @@
 // src/features/scenarioEditor/shared/contracts/models/FlowNode.ts
 
 import type { Node, Edge } from '@xyflow/react';
-import type { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import type { FlowType } from '@scenario/core/types/flowType';
 import type { FlowNodeData } from './FlowNodeData';
 import type { BaseNodeDto } from '@scenario/shared/contracts/registry/NodeTypeContract';
 

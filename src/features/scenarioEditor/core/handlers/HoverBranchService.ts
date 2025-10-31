@@ -1,6 +1,6 @@
 // src/app/scenario-designer/core/handlers/HoverBranchService.ts
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode'
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts'
+import { FlowType } from '@scenario/core/types/flowType.ts'
 
 type SetNodes = (updater: (prev: FlowNode[]) => FlowNode[]) => void
 

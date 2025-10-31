@@ -1,6 +1,6 @@
 // src/app/scenario-designer/graph/connectionRules.ts
 
-import { FlowType } from "@scenario/core/ui/nodes/types/flowType.ts";
+import { FlowType } from "@scenario/core/types/flowType.ts";
 
 type Rules = Partial<Record<FlowType, ReadonlySet<FlowType>>>;
 

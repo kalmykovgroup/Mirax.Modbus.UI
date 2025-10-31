@@ -18,6 +18,8 @@ export interface StepRelationContract {
         childStepId: Guid;
         conditionExpression?: string | null;
         conditionOrder?: number;
+        sourceHandle?: string;
+        targetHandle?: string;
     }) => StepRelationDto;
 
     /**
@@ -68,6 +70,8 @@ export const stepRelationContract: StepRelationContract = {
             childStepId: params.childStepId,
             conditionExpression: params.conditionExpression ?? null,
             conditionOrder: params.conditionOrder ?? 0,
+            sourceHandle: params.sourceHandle ?? 's1',
+            targetHandle: params.targetHandle ?? 'k1',
         };
     },
 

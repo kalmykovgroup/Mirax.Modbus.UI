@@ -4,10 +4,10 @@ import { Handle, Position } from '@xyflow/react';
 import type {ReactNode} from 'react';
 import styles from './NodeWrapper.module.css';
 import type {ConnectFrom} from "@scenario/shared/contracts/models/ConnectFrom.ts";
-import {useValidationIndicator} from "@scenario/core/ui/nodes/shared/ValidationIndicator";
+import {useValidationIndicator} from "@scenario/core/ui/nodes/components/ValidationIndicator";
 import type {Guid} from "@app/lib/types/Guid.ts";
-import {useNodeEdit} from "@scenario/core/ui/nodes/shared/NodeEditButton";
-import type {NodeEditContract} from "@scenario/core/ui/nodes/shared/NodeEditModal";
+import {useNodeEdit} from "@scenario/core/ui/nodes/components/NodeEditButton";
+import type {NodeEditContract} from "@scenario/core/ui/nodes/components/NodeEditModal";
 
 interface NodeWrapperProps {
     id: Guid;

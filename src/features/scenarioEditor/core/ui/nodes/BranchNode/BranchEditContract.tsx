@@ -1,7 +1,7 @@
 // src/features/scenarioEditor/core/ui/nodes/BranchNode/BranchEditContract.tsx
 
 import { useState } from 'react';
-import type { NodeEditContract, RenderContentParams } from '@scenario/core/ui/nodes/shared/NodeEditModal/types';
+import type { NodeEditContract, RenderContentParams } from '@scenario/core/ui/nodes/components/NodeEditModal/types.ts';
 import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
 import { Block } from '@scenario/core/features/fieldLockSystem';
 

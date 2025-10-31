@@ -32,7 +32,14 @@ export function useScenarioOperations(scenarioId: Guid | null) {
     }, []);
 
     const createRelation = useCallback(
-        (parentStepId: Guid, childStepId: Guid, conditionExpression?: string | null, conditionOrder?: number) => {
+        (
+            parentStepId: Guid,
+            childStepId: Guid,
+            conditionExpression?: string | null,
+            conditionOrder?: number,
+            sourceHandle?: string,
+            targetHandle?: string
+        ) => {
             if (isLocked) {
                 console.warn('[useScenarioOperations] Operation blocked: scenario is locked');
                 return null;
@@ -58,6 +65,8 @@ export function useScenarioOperations(scenarioId: Guid | null) {
                 childStepId,
                 conditionExpression,
                 conditionOrder,
+                sourceHandle,
+                targetHandle,
             } as StepRelationDto);
 
             const snapshot = stepRelationContract.createSnapshot(relationDto);

@@ -4,7 +4,7 @@ import type { HistoryRecord, BatchRecord } from '@scenario/core/features/history
 import type { ScenarioOperationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/ScenarioOperationDto';
 import { DbActionType } from '@scenario/shared/contracts/server/types/Api.Shared/Scenario/DbActionType';
 import { DbEntityType } from '@scenario/shared/contracts/server/types/Api.Shared/Scenario/DbEntityType';
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import { FlowType } from '@scenario/core/types/flowType';
 
 /**
  * Маппинг типов сущностей из FlowType в DbEntityType

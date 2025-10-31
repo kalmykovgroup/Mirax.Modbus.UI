@@ -4,19 +4,19 @@ import { Handle, type NodeProps, type Node, Position, useReactFlow } from '@xyfl
 import { useSelector } from 'react-redux';
 import styles from './BranchNode.module.css';
 import { formatWithMode } from '@app/lib/utils/format';
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
+import { FlowType } from '@scenario/core/types/flowType.ts';
 import type { FlowNodeData } from '@/features/scenarioEditor/shared/contracts/models/FlowNodeData';
 import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
 import { useCtrlKey } from "@app/lib/hooks/useCtrlKey.ts";
 import { useShiftKey } from "@app/lib/hooks/useShiftKey.ts";
-import { useScenarioOperationsContext } from '@scenario/core/ui/map/ScenarioMap/contexts/ScenarioOperationsContext';
+import { useScenarioOperationsContext } from '@scenario/core/ui/ScenarioMap/contexts/ScenarioOperationsContext';
 
 import { selectIsBatching } from '@scenario/core/features/historySystem/historySlice';
 import type { RootState } from '@/baseStore/store';
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
 import {selectActiveScenarioId} from "@scenario/store/scenarioSelectors.ts";
-import { useValidationIndicator } from '@scenario/core/ui/nodes/shared/ValidationIndicator';
-import { useNodeEdit } from '../shared/NodeEditButton';
+import { useValidationIndicator } from '@scenario/core/ui/nodes/components/ValidationIndicator';
+import { useNodeEdit } from '../components/NodeEditButton';
 import { BranchEditContract } from './BranchEditContract';
 
 type Props = NodeProps<Node<FlowNodeData<BranchDto>>>;

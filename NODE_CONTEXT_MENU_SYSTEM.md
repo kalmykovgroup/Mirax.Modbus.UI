@@ -108,7 +108,7 @@ import {
     NodeContextMenu,
     useNodeContextMenu,
     initializeNodeContextMenuProviders
-} from '@scenario/core/ui/nodes/shared/NodeContextMenu';
+} from '@scenario/core/ui/nodes/components/NodeContextMenu';
 ```
 
 2. **Состояние:**

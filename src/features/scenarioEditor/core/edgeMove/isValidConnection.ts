@@ -1,7 +1,7 @@
 // src/app/scenario-designer/graph/isValidConnection.ts
 import type { Connection, IsValidConnection } from '@xyflow/react';
 import type {FlowEdge} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
-import type {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
+import type {FlowType} from "@scenario/core/types/flowType.ts";
 
 type Rules = Partial<Record<FlowType, ReadonlySet<FlowType>>>;
 

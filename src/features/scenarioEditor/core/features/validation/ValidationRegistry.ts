@@ -1,6 +1,6 @@
 // src/features/scenarioEditor/core/features/validation/ValidationRegistry.ts
 
-import type { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import type { FlowType } from '@scenario/core/types/flowType';
 import type { NodeValidationContract } from './contracts/ValidationContract';
 
 // Импортируем все валидаторы

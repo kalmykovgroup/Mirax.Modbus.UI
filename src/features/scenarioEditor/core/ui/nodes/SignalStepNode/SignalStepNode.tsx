@@ -5,7 +5,7 @@ import {formatWithMode} from "@app/lib/utils/format.ts";
 import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
 import type {SignalStepDto} from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
 
-import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
+import { createPlaceholderContract } from '@scenario/core/ui/nodes/components/NodeEditModal/contracts/PlaceholderEditContract';
 import {NodeWrapper} from "@scenario/core/ui/nodes/NodeWrapper";
 
 

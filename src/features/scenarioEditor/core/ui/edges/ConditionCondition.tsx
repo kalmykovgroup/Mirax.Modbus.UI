@@ -6,7 +6,7 @@ import type {StepRelationDto} from "@scenario/shared/contracts/server/remoteServ
 import {
     ConditionExpressionTextarea
 } from "@scenario/core/ui/edges/ConditionExpressionTextarea/ConditionExpressionTextarea.tsx";
-import {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
+import {FlowType} from "@scenario/core/types/flowType.ts";
 import type {NodeOf} from "@scenario/core/edgeMove/edgeRelations.tsx";
 
 export const ConditionCondition: React.FC<{

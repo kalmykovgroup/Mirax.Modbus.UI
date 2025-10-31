@@ -1,6 +1,6 @@
 // src/features/scenarioEditor/core/ui/nodes/BranchNode/BranchNodeContract.ts
 
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import { FlowType } from '@scenario/core/types/flowType';
 import type { NodeTypeContract } from '@scenario/shared/contracts/registry/NodeTypeContract';
 import type { BranchDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Branch/BranchDto';
 import type { EntitySnapshot, Entity } from '@scenario/core/features/historySystem/types';

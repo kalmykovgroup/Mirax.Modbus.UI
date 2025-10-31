@@ -1,7 +1,7 @@
 // src/features/scenarioEditor/shared/contracts/registry/NodeTypeRegistry.ts
 
 import type { NodeTypeContract, BaseNodeDto } from '@scenario/shared/contracts/registry/NodeTypeContract';
-import type { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import type { FlowType } from '@scenario/core/types/flowType';
 
 class NodeTypeRegistry {
     private readonly registry = new Map<FlowType, NodeTypeContract<any>>();

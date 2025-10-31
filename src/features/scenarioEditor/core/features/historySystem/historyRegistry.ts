@@ -3,7 +3,7 @@
 import type { EntitySnapshot } from './types';
 import { nodeTypeRegistry } from '@scenario/shared/contracts/registry/NodeTypeRegistry';
 import { relationRegistry } from '@scenario/core/ui/edges/RelationRegistry';
-import type { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import type { FlowType } from '@scenario/core/types/flowType';
 import type { Guid } from '@app/lib/types/Guid';
 
 /**

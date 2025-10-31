@@ -1,6 +1,6 @@
 import {useReactFlow} from "@xyflow/react";
 import {useEffect, useRef} from "react";
-import {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
+import {FlowType} from "@scenario/core/types/flowType.ts";
 import {ctrlKeyStore} from "@app/lib/hooks/ctrlKeyStore.ts";
 
 /**

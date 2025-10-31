@@ -3,7 +3,7 @@
 
 import type { RootState } from '@/baseStore/store';
 import type { Guid } from '@app/lib/types/Guid';
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import { FlowType } from '@scenario/core/types/flowType';
 import type { FlowEdge, FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode';
 import { nodeTypeRegistry } from '@scenario/shared/contracts/registry/NodeTypeRegistry';
 import {
@@ -105,7 +105,8 @@ export function mapScenarioToFlow(
                     id: rel.id,
                     source: rel.parentStepId,
                     target: rel.childStepId,
-                    ...(maybeHandle != null ? { sourceHandle: maybeHandle } : {}),
+                    sourceHandle: rel.sourceHandle ?? (maybeHandle != null ? maybeHandle : undefined),
+                    targetHandle: rel.targetHandle ?? undefined,
                     type: 'step',
                     data: {
                         order: rel.conditionOrder ?? undefined,
@@ -114,6 +115,30 @@ export function mapScenarioToFlow(
                 });
 
                 addedEdgeKeys.add(rel.id);
+            }
+
+            // 🔗 JUMP СВЯЗИ: Создаем связь по jumpToStepId
+            if (step.type === FlowType.Jump) {
+                const jumpStep = step as any;
+                if (jumpStep.jumpToStepId) {
+                    const jumpEdgeId = `jump-${step.id}-${jumpStep.jumpToStepId}`;
+
+                    if (!addedEdgeKeys.has(jumpEdgeId)) {
+                        edges.push({
+                            id: jumpEdgeId,
+                            source: step.id,
+                            target: jumpStep.jumpToStepId,
+                            sourceHandle: jumpStep.sourceHandle ?? undefined,
+                            targetHandle: jumpStep.targetHandle ?? undefined,
+                            type: 'jump',
+                            data: {
+                                jumpToStepId: jumpStep.jumpToStepId,
+                            },
+                        });
+
+                        addedEdgeKeys.add(jumpEdgeId);
+                    }
+                }
             }
 
             if (stepContract.canHaveChildBranches === true) {
@@ -140,11 +165,12 @@ export function mapScenarioToFlow(
                         id: relation.id,
                         source: step.id,
                         target: childBranch.id,
-                        sourceHandle:
+                        sourceHandle: relation.sourceHandle ?? (
                             isCondition && relation.conditionOrder != null
                                 ? handleFromOrder(relation.conditionOrder) ?? null
-                                : null,
-                        targetHandle: 't1',
+                                : null
+                        ),
+                        targetHandle: relation.targetHandle ?? 't1',
                         type: 'branchLink',
                         data: {
                             mode,

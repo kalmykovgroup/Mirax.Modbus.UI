@@ -2,12 +2,12 @@ import {type Node, type NodeProps} from "@xyflow/react";
 
 import styles from "./ActivityModbusNode.module.css";
 import {formatWithMode} from "@app/lib/utils/format.ts";
-import {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
+import {FlowType} from "@scenario/core/types/flowType.ts";
 import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
 import type {
     ActivityModbusStepDto
 } from "@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto.ts";
-import { createPlaceholderContract } from '../shared/NodeEditModal/contracts/PlaceholderEditContract';
+import { createPlaceholderContract } from '@scenario/core/ui/nodes/components/NodeEditModal/contracts/PlaceholderEditContract';
 import {NodeWrapper} from "@scenario/core/ui/nodes/NodeWrapper";
 
 type Props = NodeProps<Node<FlowNodeData<ActivityModbusStepDto>>>;

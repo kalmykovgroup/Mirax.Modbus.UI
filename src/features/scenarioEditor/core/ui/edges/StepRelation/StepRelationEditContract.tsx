@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/baseStore/store';
-import type { EdgeEditContract, EdgeRenderContentParams } from '@scenario/core/ui/nodes/shared/NodeEditModal/types';
+import type { EdgeEditContract, EdgeRenderContentParams } from '@scenario/core/ui/nodes/components/NodeEditModal/types.ts';
 import type { StepRelationDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/StepRelations/StepRelationDto';
 import { Block } from '@scenario/core/features/fieldLockSystem';
 import { selectActiveScenarioId, selectStepById } from '@scenario/store/scenarioSelectors';

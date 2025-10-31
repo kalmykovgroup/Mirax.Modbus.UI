@@ -5,7 +5,7 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '@/baseStore/store';
 import type { Guid } from '@app/lib/types/Guid';
 import { validateNodeDto, type InvalidNodeInfo, shouldValidateBeforeSave } from './nodeValidation';
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import { FlowType } from '@scenario/core/types/flowType';
 
 export interface ScenarioValidationResult {
     /**

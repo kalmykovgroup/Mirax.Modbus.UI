@@ -1,7 +1,7 @@
 // @scenario/core/handlers/NodeDragStopHandler.ts
 import type React from 'react';
 import type { FlowNode, FlowEdge } from '@/features/scenarioEditor/shared/contracts/models/FlowNode.ts';
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
+import { FlowType } from '@scenario/core/types/flowType.ts';
 
 type Utils = {
     absOf: (n: FlowNode, all: FlowNode[]) => { x: number; y: number };

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { FlowNode } from '@/features/scenarioEditor/shared/contracts/models/FlowNode'
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts'
+import { FlowType } from '@scenario/core/types/flowType.ts'
 
 /**
  * useBranchSizeValidation

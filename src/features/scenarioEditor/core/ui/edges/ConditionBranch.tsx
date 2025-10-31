@@ -5,7 +5,7 @@ import {
     ConditionExpressionTextarea
 } from "@scenario/core/ui/edges/ConditionExpressionTextarea/ConditionExpressionTextarea.tsx";
 import type {NodeOf} from "@scenario/core/edgeMove/edgeRelations.tsx";
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType.ts';
+import { FlowType } from '@scenario/core/types/flowType.ts';
 
 export const ConditionBranch: React.FC<{
     branch: NodeOf<FlowType>;

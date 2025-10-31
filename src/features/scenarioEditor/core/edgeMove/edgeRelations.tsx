@@ -8,7 +8,7 @@ import {ConditionParallel} from "@scenario/core/ui/edges/ConditionParallel.tsx";
 import {ConditionSystem} from "@scenario/core/ui/edges/ConditionSystem.tsx";
 import {ConditionModbus} from "@scenario/core/ui/edges/ConditionModbus.tsx";
 import {SignalSignal} from "@scenario/core/ui/edges/SignalSignal.tsx";
-import {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
+import {FlowType} from "@scenario/core/types/flowType.ts";
 import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
 
 /** Сужение FlowNode до конкретного типа enum */

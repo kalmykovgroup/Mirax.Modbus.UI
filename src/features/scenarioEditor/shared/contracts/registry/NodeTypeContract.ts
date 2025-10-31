@@ -1,7 +1,7 @@
 // src/features/scenarioEditor/shared/contracts/registry/NodeTypeContract.ts
 
 import type { ComponentType } from 'react';
-import type { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import type { FlowType } from '@scenario/core/types/flowType';
 import type { NodeProps } from '@xyflow/react';
 import type { Guid } from '@app/lib/types/Guid';
 import type { Entity, EntitySnapshot } from '@scenario/core/features/historySystem/types';

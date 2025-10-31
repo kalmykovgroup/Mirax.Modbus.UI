@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { OnConnectStartParams } from '@xyflow/react';
 import type {FlowNodeData} from "@scenario/shared/contracts/models/FlowNodeData.ts";
-import type {FlowType} from "@scenario/core/ui/nodes/types/flowType.ts";
+import type {FlowType} from "@scenario/core/types/flowType.ts";
 import type {ConnectContext} from "@/features/scenarioEditor/shared/contracts/models/ConnectContext.ts";
 import type {FlowNode} from "@/features/scenarioEditor/shared/contracts/models/FlowNode.ts";
 

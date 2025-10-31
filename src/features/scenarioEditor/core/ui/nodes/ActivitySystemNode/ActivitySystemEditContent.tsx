@@ -1,7 +1,7 @@
 // src/features/scenarioEditor/core/ui/nodes/ActivitySystemNode/ActivitySystemEditContent.tsx
 
 import type { ActivitySystemStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
-import type { NodeEditContract } from '../shared/NodeEditModal';
+import type { NodeEditContract } from '../components/NodeEditModal';
 import styles from './ActivitySystemEditContent.module.css';
 
 /**

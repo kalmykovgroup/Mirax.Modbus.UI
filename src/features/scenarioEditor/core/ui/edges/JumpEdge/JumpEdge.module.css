@@ -1,0 +1,53 @@
+/* Базовый стиль для jump edge */
+.jumpEdge {
+    stroke-width: 2px !important;
+    animation: dash 1s linear infinite;
+}
+
+/* Анимация пунктира для показа направления */
+@keyframes dash {
+    to {
+        stroke-dashoffset: -10;
+    }
+}
+
+/* Стиль при выборе */
+.jumpEdge[aria-selected="true"] {
+    stroke: var(--edge-jump-selected-color, #ff9500) !important;
+    filter: drop-shadow(0 0 6px var(--edge-jump-selected-color, #ff9500));
+    stroke-width: 3px !important;
+}
+
+/* Стиль при наведении */
+.jumpEdge.hovered {
+    stroke: var(--edge-jump-hovered-color, #ffcc00) !important;
+    filter: drop-shadow(0 0 6px var(--edge-jump-hovered-color, #ffcc00));
+    stroke-width: 3px !important;
+}
+
+/* Метка JUMP */
+.jumpLabel {
+    background: var(--edge-jump-default-color, #ffa500);
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    font-family: monospace;
+    user-select: none;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+.jumpLabel.selected {
+    background: var(--edge-jump-selected-color, #ff9500);
+    box-shadow: 0 0 8px var(--edge-jump-selected-color, #ff9500);
+    transform: scale(1.1);
+}
+
+.jumpLabel.hovered {
+    background: var(--edge-jump-hovered-color, #ffcc00);
+    box-shadow: 0 0 8px var(--edge-jump-hovered-color, #ffcc00);
+    transform: scale(1.1);
+}

@@ -1,6 +1,6 @@
 // src/features/scenarioEditor/core/ui/nodes/ActivityModbusNode/ActivityModbusNodeContract.ts
 
-import { FlowType } from '@scenario/core/ui/nodes/types/flowType';
+import { FlowType } from '@scenario/core/types/flowType';
 import type { NodeTypeContract } from '@scenario/shared/contracts/registry/NodeTypeContract';
 import type { ActivityModbusStepDto } from '@scenario/shared/contracts/server/remoteServerDtos/ScenarioDtos/Steps/StepBaseDto';
 import type { EntitySnapshot, Entity } from '@scenario/core/features/historySystem/types';
