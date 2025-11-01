@@ -39,6 +39,15 @@ const workflowSlice = createSlice({
             const { scenarioId } = action.payload;
             state.runningScenarios = state.runningScenarios.filter(x => x.scenarioId !== scenarioId);
         },
+
+        /** УСТАНОВИТЬ флаг паузы для сценария */
+        setScenarioPaused(state, action: PayloadAction<{ scenarioId: string; isPaused: boolean }>) {
+            const { scenarioId, isPaused } = action.payload;
+            const scenario = state.runningScenarios.find(x => x.scenarioId === scenarioId);
+            if (scenario) {
+                scenario.isPaused = isPaused;
+            }
+        },
     },
     extraReducers: _builder => {
         // тут можно подписаться на RTK Query/asyncThunk, если появится загрузка с сервера
@@ -49,6 +58,7 @@ export const {
     setRunningScenarios,
     addRunningScenario,
     removeRunningScenario,
+    setScenarioPaused,
 } = workflowSlice.actions;
 
 

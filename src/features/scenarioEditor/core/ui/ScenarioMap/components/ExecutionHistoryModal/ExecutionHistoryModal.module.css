@@ -1,0 +1,568 @@
+/* ExecutionHistoryModal Styles */
+
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+}
+
+.modalContent {
+    background: #1e1e1e;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 1200px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    border-bottom: 1px solid #333;
+}
+
+.modalHeader h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.modalClose {
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    background: transparent;
+    border: none;
+    color: #888;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.modalClose:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.modalBody {
+    flex: 1;
+    display: flex;
+    gap: 1px;
+    background: #333;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sidebar {
+    width: 350px;
+    background: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #333;
+}
+
+.filterSection {
+    padding: 16px;
+    background: #252525;
+    border-bottom: 1px solid #333;
+}
+
+.filterLabel {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.filterSelect {
+    width: 100%;
+    padding: 8px 12px;
+    background: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.filterSelect:hover {
+    border-color: #3a82f6;
+}
+
+.filterSelect:focus {
+    outline: none;
+    border-color: #3a82f6;
+}
+
+.executionsList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.executionsList::-webkit-scrollbar {
+    width: 8px;
+}
+
+.executionsList::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.executionsList::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+.executionsList::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+.executionItem {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: #2a2a2a;
+    border-radius: 6px;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.executionItem:hover {
+    background: #333;
+}
+
+.executionItemActive {
+    background: #2d3748;
+    border-left-color: #3a82f6;
+}
+
+.executionItemHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.executionStatus {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.executionStatus_Running {
+    background: #3b82f6;
+    color: #fff;
+}
+
+.executionStatus_Completed {
+    background: #10b981;
+    color: #fff;
+}
+
+.executionStatus_Failed {
+    background: #ef4444;
+    color: #fff;
+}
+
+.executionStatus_Terminated {
+    background: #f59e0b;
+    color: #fff;
+}
+
+.executionStatus_Canceled {
+    background: #6b7280;
+    color: #fff;
+}
+
+.executionStatus_TimedOut {
+    background: #f97316;
+    color: #fff;
+}
+
+.executionStatus_Paused {
+    background: #8b5cf6;
+    color: #fff;
+}
+
+.executionTime {
+    font-size: 11px;
+    color: #888;
+}
+
+.executionInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.executionWorkflowId {
+    font-size: 12px;
+    color: #aaa;
+    font-family: 'Courier New', monospace;
+}
+
+.executionDuration {
+    font-size: 12px;
+    color: #888;
+}
+
+.emptyState {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #888;
+    font-size: 14px;
+    font-style: italic;
+}
+
+.detailsPanel {
+    flex: 1;
+    background: #1e1e1e;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.detailsPanel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.detailsPanel::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.detailsPanel::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+.detailsPanel::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+.noSelection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #888;
+    font-size: 16px;
+    font-style: italic;
+}
+
+.detailsContent {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.detailsSection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sectionTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.detailsGrid {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+}
+
+.detailLabel {
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+}
+
+.detailValue {
+    font-size: 13px;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+}
+
+.errorBox {
+    padding: 16px;
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid #ef4444;
+    border-radius: 4px;
+}
+
+.errorMessage {
+    font-size: 14px;
+    color: #ef4444;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.errorDetails {
+    font-size: 12px;
+    color: #aaa;
+    font-family: 'Courier New', monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.recoveryLogsList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.recoveryLogItem {
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    border-left: 3px solid #3a82f6;
+}
+
+.recoveryLogHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.recoveryResult {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.recoveryResult_SuccessfullyRestored {
+    background: #10b981;
+    color: #fff;
+}
+
+.recoveryResult_PartiallyRestored {
+    background: #f59e0b;
+    color: #fff;
+}
+
+.recoveryResult_WorkflowNotFound,
+.recoveryResult_WorkflowFailed,
+.recoveryResult_RecoveryError {
+    background: #ef4444;
+    color: #fff;
+}
+
+.recoveryResult_WorkflowCompleted {
+    background: #10b981;
+    color: #fff;
+}
+
+.recoveryResult_WorkflowCanceled,
+.recoveryResult_WorkflowTerminated {
+    background: #6b7280;
+    color: #fff;
+}
+
+.recoveryTime {
+    font-size: 11px;
+    color: #888;
+}
+
+.recoveryDescription {
+    font-size: 13px;
+    color: #ddd;
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.recoveryDetails {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.recoveryDetailLabel {
+    color: #888;
+    font-weight: 500;
+}
+
+.recoveryDetailValue {
+    color: #fff;
+    font-family: 'Courier New', monospace;
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.statCard {
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    border-left: 3px solid #3a82f6;
+}
+
+.statLabel {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.statValue {
+    font-size: 24px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.noRecoveryLogs {
+    padding: 32px;
+    text-align: center;
+    color: #888;
+    font-style: italic;
+}
+
+/* Recovery Logs - Additional Styles */
+.recoveryResultBadge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.recoverySuccess {
+    background: #10b981;
+    color: #fff;
+}
+
+.recoveryPartial {
+    background: #f59e0b;
+    color: #fff;
+}
+
+.recoveryError {
+    background: #ef4444;
+    color: #fff;
+}
+
+.recoveryInfo {
+    background: #3a82f6;
+    color: #fff;
+}
+
+.recoveryWarning {
+    background: #6b7280;
+    color: #fff;
+}
+
+.recoveryLogDate {
+    font-size: 12px;
+    color: #888;
+    font-family: 'Courier New', monospace;
+}
+
+.recoveryLogDescription {
+    font-size: 13px;
+    color: #ddd;
+    margin: 12px 0;
+    line-height: 1.5;
+    padding: 8px 0;
+}
+
+.recoveryLogDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.recoveryLogDetailRow {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 12px;
+    font-size: 12px;
+    align-items: baseline;
+}
+
+.recoveryLogDetailLabel {
+    color: #888;
+    font-weight: 500;
+}
+
+.recoveryLogDetailValue {
+    color: #fff;
+    font-family: 'Courier New', monospace;
+}
+
+.recoveryLogError {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 4px;
+}
+
+.recoveryLogErrorMessage {
+    font-size: 13px;
+    color: #ef4444;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.recoveryLogErrorDetails {
+    font-size: 12px;
+    color: #ff8888;
+    font-family: 'Courier New', monospace;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 150px;
+    overflow-y: auto;
+}

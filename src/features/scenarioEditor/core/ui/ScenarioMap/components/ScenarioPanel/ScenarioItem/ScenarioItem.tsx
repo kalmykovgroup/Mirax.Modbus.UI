@@ -5,7 +5,6 @@ import type {RootState} from "@/baseStore/store.ts";
 import {selectScenarioStatus} from "@scenario/store/scenarioSelectors.ts";
 import React, {useCallback, useMemo} from "react";
 import {RotateCw} from "lucide-react";
-import {SimpleMenu} from "@scenario/core/ui/ScenarioMap/components/ScenarioPanel/HoverActionMenu/SimpleMenu.tsx";
 
 interface ScenarioItemProps {
     scenarioId: string;
@@ -15,11 +14,6 @@ interface ScenarioItemProps {
     isRefreshing: boolean;
     onSelect: (id: string, status: ScenarioLoadStatus) => void;
     onRefresh: (id: string, event: React.MouseEvent) => void;
-    onPlay: (id: string) => void;
-    onPause: (id: string) => void;
-    onResume: (id: string) => void;
-    onCancel: (id: string) => void;
-    onTerminate: (id: string) => void;
 }
 
 export function ScenarioItem({
@@ -30,11 +24,6 @@ export function ScenarioItem({
                           isRefreshing,
                           onSelect,
                           onRefresh,
-                          onPlay,
-                          onPause,
-                          onResume,
-                          onCancel,
-                          onTerminate,
                       }: ScenarioItemProps){
     const status = useSelector((state: RootState) => selectScenarioStatus(state, scenarioId));
 
@@ -79,30 +68,6 @@ export function ScenarioItem({
             >
                 <RotateCw size={14} />
             </button>
-
-            <SimpleMenu
-                label="Действия"
-                placement="bottom"
-                onAction={(action) => {
-                    switch (action) {
-                        case 'play':
-                            onPlay(scenarioId);
-                            break;
-                        case 'pause':
-                            onPause(scenarioId);
-                            break;
-                        case 'resume':
-                            onResume(scenarioId);
-                            break;
-                        case 'cancel':
-                            onCancel(scenarioId);
-                            break;
-                        case 'terminated':
-                            onTerminate(scenarioId);
-                            break;
-                    }
-                }}
-            />
         </div>
     );
 }

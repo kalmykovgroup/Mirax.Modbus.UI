@@ -184,4 +184,20 @@ export const API = {
         ME: `/api/user/me`,
     },
 
+    SCENARIO_EXECUTION_HISTORY: {
+        ALL: `/api/scenario-execution-history/all`,
+        BY_WORKFLOW_ID: (workflowId: string) => `/api/scenario-execution-history/workflow/${workflowId}`,
+        BY_SCENARIO_ID: (scenarioId: Guid) => `/api/scenario-execution-history/scenario/${scenarioId}`,
+        ACTIVE: `/api/scenario-execution-history/active`,
+        CREATE: `/api/scenario-execution-history/create`,
+        UPDATE_STATUS: `/api/scenario-execution-history/update-status`,
+    },
+
+    SCENARIO_RECOVERY_LOG: {
+        CREATE: `/api/scenario-recovery-log/create`,
+        BY_SCENARIO_ID: (scenarioId: Guid) => `/api/scenario-recovery-log/scenario/${scenarioId}`,
+        BY_WORKFLOW_ID: (workflowId: string) => `/api/scenario-recovery-log/workflow/${workflowId}`,
+        RECENT: (count: number = 100) => `/api/scenario-recovery-log/recent?count=${count}`,
+    },
+
 };

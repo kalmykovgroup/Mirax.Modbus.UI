@@ -44,6 +44,8 @@ import { ScenarioOperationsProvider } from './contexts/ScenarioOperationsContext
 import { SaveIndicator } from '@scenario/core/ui/ScenarioMap/components/SaveIndicator/SaveIndicator.tsx';
 import { ManualSaveButton } from '@scenario/core/ui/ScenarioMap/components/ManualSaveButton/ManualSaveButton.tsx';
 import { LockButton } from '@scenario/core/ui/ScenarioMap/components/LockButton/LockButton.tsx';
+import { ExecutionHistoryButton } from '@scenario/core/ui/ScenarioMap/components/ExecutionHistoryButton';
+import { ExecutionHistoryModal } from '@scenario/core/ui/ScenarioMap/components/ExecutionHistoryModal';
 import { NodeContextMenu, useNodeContextMenu, initializeNodeContextMenuProviders } from '@scenario/core/ui/nodes/components/NodeContextMenu';
 import { NodeEditModalProvider } from '@scenario/core/ui/nodes/components/NodeEditModal';
 import { useHistoryHotkeys } from '@scenario/core/hooks/useHistoryHotkeys.ts';
@@ -51,6 +53,23 @@ import { useDispatch, useSelector } from 'react-redux';
 import { undoThunk, redoThunk, selectCanUndo, selectCanRedo } from '@scenario/core/features/historySystem/historySlice.ts';
 import { selectIsLocked } from '@scenario/core/features/lockSystem/lockSlice.ts';
 import type { AppDispatch, RootState } from '@/baseStore/store.ts';
+import {
+    usePauseScenarioMutation,
+    useResumeScenarioMutation,
+    useRunScenarioMutation,
+    useStopScenarioMutation,
+} from '@scenario/shared/api/workflowApi.ts';
+import type { RunScenarioResponse } from '@scenario/shared/contracts/server/localDtos/ScenarioEngine/RunScenarioResponse.ts';
+import {
+    addRunningScenario,
+    removeRunningScenario,
+    setScenarioPaused,
+} from '@scenario/store/workflowSlice.ts';
+import type { ScenarioStopMode } from '@scenario/shared/contracts/server/types/ScenarioEngine/ScenarioStopMode.ts';
+import { selectScenarioById } from '@scenario/store/scenarioSelectors.ts';
+import { ScenarioControlPanel } from '@scenario/core/ui/ScenarioMap/components/ScenarioControlPanel/ScenarioControlPanel.tsx';
+import {setActiveScenarioId} from "@scenario/store/scenarioSlice.ts";
+import { selectRunningScenarioById } from '@scenario/store/workflowSlice.ts';
 
 
 type RightSidePanelTab = 'create' | 'settings' | 'scenarios';
@@ -343,6 +362,105 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
     }, !!activeId); // Включены только если есть активный сценарий
 
     // ============================================================================
+    // SCENARIO CONTROL (Play, Pause, Resume, Cancel, Terminate)
+    // ============================================================================
+    const [runScenario, runState] = useRunScenarioMutation();
+    const [pauseScenario, pauseState] = usePauseScenarioMutation();
+    const [resumeScenario, resumeState] = useResumeScenarioMutation();
+    const [stopScenario, stopState] = useStopScenarioMutation();
+
+    const activeScenario = useSelector((state: RootState) =>
+        activeId ? selectScenarioById(state, activeId) : undefined
+    );
+
+    const runningScenarioData = useSelector((state: RootState) =>
+        activeId ? selectRunningScenarioById(activeId)(state) : null
+    );
+
+    const handleScenarioPlay = useCallback(
+        async (scenarioId: string) => {
+            if (runState.isLoading) return;
+            try {
+                const response: RunScenarioResponse = await runScenario({
+                    id: scenarioId,
+                }).unwrap();
+                dispatch(
+                    addRunningScenario({
+                        workflowId: response.workflowId,
+                        runId: response.runId,
+                        scenarioId: response.scenarioId,
+                        sessions: response.sessions,
+                    })
+                );
+                dispatch(setActiveScenarioId(scenarioId));
+            } catch (err) {
+                console.error('RunScenario error:', err);
+            }
+        },
+        [dispatch, runScenario, runState.isLoading]
+    );
+
+    const handleScenarioPause = useCallback(
+        async (scenarioId: string) => {
+            if (pauseState.isLoading) return;
+            try {
+                await pauseScenario({ scenarioId }).unwrap();
+                // Устанавливаем флаг паузы
+                dispatch(setScenarioPaused({ scenarioId, isPaused: true }));
+            } catch (err) {
+                console.error('PauseScenario error:', err);
+            }
+        },
+        [dispatch, pauseScenario, pauseState.isLoading]
+    );
+
+    const handleScenarioResume = useCallback(
+        async (scenarioId: string) => {
+            if (resumeState.isLoading) return;
+            try {
+                await resumeScenario({ scenarioId }).unwrap();
+                // Снимаем флаг паузы
+                dispatch(setScenarioPaused({ scenarioId, isPaused: false }));
+            } catch (err) {
+                console.error('ResumeScenario error:', err);
+            }
+        },
+        [dispatch, resumeScenario, resumeState.isLoading]
+    );
+
+    const handleScenarioCancel = useCallback(
+        async (scenarioId: string) => {
+            if (stopState.isLoading) return;
+            try {
+                await stopScenario({
+                    scenarioId,
+                    mode: 'Cancel' as ScenarioStopMode,
+                }).unwrap();
+                dispatch(removeRunningScenario({ scenarioId }));
+            } catch (err) {
+                console.error('CancelScenario error:', err);
+            }
+        },
+        [dispatch, stopScenario, stopState.isLoading]
+    );
+
+    const handleScenarioTerminate = useCallback(
+        async (scenarioId: string) => {
+            if (stopState.isLoading) return;
+            try {
+                await stopScenario({
+                    scenarioId,
+                    mode: 'Terminate' as ScenarioStopMode,
+                }).unwrap();
+                dispatch(removeRunningScenario({ scenarioId }));
+            } catch (err) {
+                console.error('TerminateScenario error:', err);
+            }
+        },
+        [dispatch, stopScenario, stopState.isLoading]
+    );
+
+    // ============================================================================
     // EDGE HOVER
     // ============================================================================
     const handleEdgeMouseEnter = useCallback(
@@ -430,8 +548,23 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
                 <Panel className={styles.topLeftPanel} position="top-left">
                     <div className={styles.flowControls} >
                         <LockButton />
+                        <ExecutionHistoryButton />
                     </div>
+                </Panel>
 
+                <Panel position="top-center">
+                    <ScenarioControlPanel
+                        scenarioId={activeId ?? ''}
+                        scenarioTitle={activeScenario?.name}
+                        isRunning={!!runningScenarioData}
+                        isPaused={runningScenarioData?.isPaused ?? false}
+                        runningData={runningScenarioData}
+                        onPlay={handleScenarioPlay}
+                        onPause={handleScenarioPause}
+                        onResume={handleScenarioResume}
+                        onCancel={handleScenarioCancel}
+                        onTerminate={handleScenarioTerminate}
+                    />
                 </Panel>
 
                 <Panel className={styles.rightTopPanel} position="top-right">
@@ -473,6 +606,9 @@ export const ScenarioMap: React.FC<ScenarioEditorProps> = () => {
             </ReactFlow>
                 </NodeEditModalProvider>
             </ScenarioOperationsProvider>
+
+            {/* Execution History Modal */}
+            <ExecutionHistoryModal />
         </div>
     );
 };

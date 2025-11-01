@@ -7,12 +7,14 @@ import { workflowApi } from '@/features/scenarioEditor/shared/api/workflowApi';
 import { branchApi } from '@/features/scenarioEditor/shared/api/branchApi';
 import { stepApi } from '@/features/scenarioEditor/shared/api/stepApi';
 import { stepRelationApi } from '@/features/scenarioEditor/shared/api/stepRelationApi';
+import { scenarioExecutionHistoryApi } from '@scenario/shared/api/scenarioExecutionHistoryApi.ts';
 
 // обычные слайсы
 import { authReducer } from '@login/store/authSlice';
 import userReducer from '@/features/user/store/userSlice';
 import { scenarioReducer } from '@scenario/store/scenarioSlice';
 import { workflowReducer } from '@scenario/store/workflowSlice';
+import { executionHistoryReducer } from '@scenario/store/executionHistorySlice';
 
 import {chartsSettingsReducer} from "@chartsPage/charts/core/store/chartsSettingsSlice.ts";
 import {chartsMetaReducer} from "@chartsPage/metaData/store/chartsMetaSlice.ts";
@@ -38,6 +40,7 @@ export const rootReducer = combineReducers({
     chartsTemplates: chartsTemplatesReducer,
     scenario: scenarioReducer,
     workflow: workflowReducer,
+    executionHistory: executionHistoryReducer,
     chartsSettings: chartsSettingsReducer,
 
     charts: persistedChartsReducer,
@@ -62,6 +65,7 @@ export const rootReducer = combineReducers({
     [branchApi.reducerPath]: branchApi.reducer,
     [stepApi.reducerPath]: stepApi.reducer,
     [stepRelationApi.reducerPath]: stepRelationApi.reducer,
+    [scenarioExecutionHistoryApi.reducerPath]: scenarioExecutionHistoryApi.reducer,
     [chartsApi.reducerPath]: chartsApi.reducer,
     [chartReqTemplatesApi.reducerPath]: chartReqTemplatesApi.reducer,
     [metadataApi.reducerPath]: metadataApi.reducer,

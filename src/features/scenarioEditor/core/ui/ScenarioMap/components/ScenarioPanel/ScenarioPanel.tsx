@@ -292,11 +292,6 @@ export function ScenarioPanel(){
                                 isRefreshing={isRefreshing}
                                 onSelect={onSelect}
                                 onRefresh={onRefreshScenario}
-                                onPlay={ScenarioPlay}
-                                onPause={ScenarioPause}
-                                onResume={ScenarioResume}
-                                onCancel={ScenarioCancel}
-                                onTerminate={ScenarioTerminated}
                             />
                         );
                     })}

@@ -1,0 +1,239 @@
+.container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    padding-right: 12px;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.controls {
+    display: flex;
+    gap: 8px;
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn svg {
+    flex-shrink: 0;
+}
+
+/* Специфичные цвета для кнопок */
+.btnPlay {
+    border-color: rgba(76, 175, 80, 0.5);
+}
+
+.btnPlay:hover {
+    background: rgba(76, 175, 80, 0.2);
+    border-color: rgba(76, 175, 80, 0.8);
+}
+
+.btnPause {
+    border-color: rgba(255, 152, 0, 0.5);
+}
+
+.btnPause:hover {
+    background: rgba(255, 152, 0, 0.2);
+    border-color: rgba(255, 152, 0, 0.8);
+}
+
+.btnResume {
+    border-color: rgba(33, 150, 243, 0.5);
+}
+
+.btnResume:hover {
+    background: rgba(33, 150, 243, 0.2);
+    border-color: rgba(33, 150, 243, 0.8);
+}
+
+.btnCancel {
+    border-color: rgba(156, 39, 176, 0.5);
+}
+
+.btnCancel:hover {
+    background: rgba(156, 39, 176, 0.2);
+    border-color: rgba(156, 39, 176, 0.8);
+}
+
+.btnTerminate {
+    border-color: rgba(244, 67, 54, 0.5);
+}
+
+.btnTerminate:hover {
+    background: rgba(244, 67, 54, 0.2);
+    border-color: rgba(244, 67, 54, 0.8);
+}
+
+.btnInfo {
+    border-color: rgba(33, 150, 243, 0.5);
+}
+
+.btnInfo:hover {
+    background: rgba(33, 150, 243, 0.2);
+    border-color: rgba(33, 150, 243, 0.8);
+}
+
+/* Модальное окно */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+}
+
+.modalContent {
+    background: #1e1e1e;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: auto;
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modalHeader h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.modalClose {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.modalClose:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.modalBody {
+    padding: 20px;
+    color: #fff;
+}
+
+.infoRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.infoLabel {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.infoValue {
+    color: #fff;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.sessionsSection {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sessionsSection h4 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.sessionItem {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.sessionItem:last-child {
+    margin-bottom: 0;
+}
+
+/* Адаптивность - скрыть текст на маленьких экранах */
+@media (max-width: 768px) {
+    .btn span {
+        display: none;
+    }
+
+    .btn {
+        padding: 6px 8px;
+    }
+
+    .modalContent {
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .modalBody {
+        padding: 16px;
+    }
+
+    .infoRow {
+        flex-direction: column;
+        gap: 4px;
+    }
+}

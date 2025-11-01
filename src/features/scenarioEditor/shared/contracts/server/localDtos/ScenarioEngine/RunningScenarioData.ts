@@ -8,4 +8,6 @@ export interface RunningScenarioData {
     runId: string;
     scenarioId: Guid;
     sessions: DeviceSessionConfig[];
+    /** Флаг паузы сценария */
+    isPaused?: boolean;
 }

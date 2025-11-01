@@ -9,6 +9,7 @@ import { scenarioApi } from '@/features/scenarioEditor/shared/api/scenarioApi';
 import { workflowApi } from '@/features/scenarioEditor/shared/api/workflowApi';
 import { branchApi } from '@/features/scenarioEditor/shared/api/branchApi';
 import { stepApi } from '@/features/scenarioEditor/shared/api/stepApi';
+import { scenarioExecutionHistoryApi } from '@scenario/shared/api/scenarioExecutionHistoryApi.ts';
 import { chartReqTemplatesApi } from '@chartsPage/template/shared//api/chartReqTemplatesApi.ts';
 import { metadataApi } from '@chartsPage/metaData/shared/api/metadataApi.ts';
 import { chartsApi } from '@chartsPage/charts/core/api/chartsApi.ts';
@@ -53,6 +54,9 @@ export const store = configureStore({
                     'charts.view',
                     // ⚡ История может хранить большие снимки
                     'history.contexts',
+                    // ⚡ История выполнения сценариев содержит даты
+                    'executionHistory.executions',
+                    'executionHistory.recoveryLogs',
                 ],
                 warnAfter: 128,
             },
@@ -66,6 +70,7 @@ export const store = configureStore({
             workflowApi.middleware,
             branchApi.middleware,
             stepApi.middleware,
+            scenarioExecutionHistoryApi.middleware,
             chartsApi.middleware,
             chartReqTemplatesApi.middleware,
             metadataApi.middleware,
